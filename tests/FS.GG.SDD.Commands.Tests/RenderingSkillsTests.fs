@@ -88,6 +88,11 @@ module RenderingSkillsTests =
 
         Assert.Equal<string list>([ feedbackReportSha256 ], recorded)
 
+        Assert.Equal(
+            Some "template/feedback-report/skill/",
+            outcome.MaterializedSuppliers |> Map.tryFind "fs-gg-feedback-report"
+        )
+
     [<Fact>]
     let ``every shipped delivered body matches its declared sha256 (ADR-0014)`` () =
         let manifestText =
@@ -349,7 +354,32 @@ module RenderingSkillsTests =
         Some(sprintf """{ "schemaVersion": 1, "skills": [ %s ] }""" rows)
 
     let private row id sha predicate =
-        sprintf """{ "id": "%s", "scope": "product", "sha256": "%s", "materializes-when": "%s" }""" id sha predicate
+        sprintf
+            """{ "id": "%s", "scope": "product", "sha256": "%s", "materializes-when": "%s", "supplied-by": "template/product-skills/%s/" }"""
+            id
+            sha
+            predicate
+            id
+
+    [<Fact>]
+    let ``planFrom fails closed when a delivered rendering row has no supplier attribution`` () =
+        let body = "rendering skill body\n"
+        let digest = Fsgg.SkillMirror.sha256 body
+
+        let unattributed =
+            manifestOf (
+                sprintf
+                    """{ "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always" }"""
+                    digest
+            )
+
+        let outcome =
+            RenderingSkills.planFrom unattributed (Map.ofList [ "fs-gg-widget", body ]) [] Map.empty
+
+        Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
+        Assert.Empty outcome.MaterializedIds
+        Assert.Empty outcome.MaterializedSuppliers
+        Assert.Empty outcome.Writes
 
     [<Fact>]
     let ``planFrom fails closed on a tampered body digest`` () =
@@ -462,13 +492,24 @@ module RenderingSkillsTests =
     let ``schema-v2 materializes every declared sidecar into every agent root`` () =
         let body = "skill body\n"
         let sidecar = "tool body\n"
+
         let manifest =
-            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 sidecar))
+            Some(
+                sprintf
+                    """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "supplied-by": "template/product-skills/fs-gg-widget/", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }"""
+                    (Fsgg.SkillMirror.sha256 body)
+                    (Fsgg.SkillMirror.sha256 body)
+                    (Fsgg.SkillMirror.sha256 sidecar)
+            )
+
         let files =
-            Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                         ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+            Map.ofList
+                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                  ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+
         let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
         Assert.Empty outcome.VerifyFailedIds
+
         for root in roots do
             Assert.Contains($"{root}/skills/fs-gg-widget/SKILL.md", outcome.ProvenancePaths |> List.map fst)
             Assert.Contains($"{root}/skills/fs-gg-widget/scripts/tool.fsx", outcome.ProvenancePaths |> List.map fst)
@@ -480,9 +521,19 @@ module RenderingSkillsTests =
 
         for filesProperty in [ ""; "\"files\": []" ] do
             let separator = if filesProperty = "" then "" else ", "
+
             let manifest =
-                Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always"%s%s } ] }""" digest separator filesProperty)
-            let files = Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]
+                Some(
+                    sprintf
+                        """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "supplied-by": "template/product-skills/fs-gg-widget/"%s%s } ] }"""
+                        digest
+                        separator
+                        filesProperty
+                )
+
+            let files =
+                Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]
+
             let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
             Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
             Assert.Empty outcome.Writes
@@ -494,9 +545,21 @@ module RenderingSkillsTests =
 
         for filesProperty in [ ""; ", \"files\": []" ] do
             let manifest =
-                Some(sprintf """{ "schemaVersion": 1, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always"%s } ] }""" digest filesProperty)
-            let outcome = RenderingSkills.planFilesFrom manifest (Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]) Map.empty
+                Some(
+                    sprintf
+                        """{ "schemaVersion": 1, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "supplied-by": "template/product-skills/fs-gg-widget/"%s } ] }"""
+                        digest
+                        filesProperty
+                )
+
+            let outcome =
+                RenderingSkills.planFilesFrom
+                    manifest
+                    (Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ])
+                    Map.empty
+
             Assert.Empty outcome.VerifyFailedIds
+
             for root in roots do
                 Assert.Contains($"{root}/skills/fs-gg-widget/SKILL.md", outcome.ProvenancePaths |> List.map fst)
 
@@ -504,10 +567,25 @@ module RenderingSkillsTests =
     let ``schema-v2 fails closed when a sidecar is missing or undeclared`` () =
         let body = "skill body\n"
         let sidecar = "tool body\n"
+
         let manifest =
-            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 sidecar))
-        let missing = Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]
-        let extra = Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body; ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar; ("fs-gg-widget", "extra.fsx"), System.Text.Encoding.UTF8.GetBytes "x" ]
+            Some(
+                sprintf
+                    """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "supplied-by": "template/product-skills/fs-gg-widget/", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }"""
+                    (Fsgg.SkillMirror.sha256 body)
+                    (Fsgg.SkillMirror.sha256 body)
+                    (Fsgg.SkillMirror.sha256 sidecar)
+            )
+
+        let missing =
+            Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]
+
+        let extra =
+            Map.ofList
+                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                  ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar
+                  ("fs-gg-widget", "extra.fsx"), System.Text.Encoding.UTF8.GetBytes "x" ]
+
         for files in [ missing; extra ] do
             let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
             Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
@@ -517,11 +595,22 @@ module RenderingSkillsTests =
     let ``schema-v2 fails closed on a duplicate declared path before it can schedule duplicate writes`` () =
         let body = "skill body\n"
         let sidecar = "tool body\n"
+
         let manifest =
-            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 sidecar) (Fsgg.SkillMirror.sha256 sidecar))
+            Some(
+                sprintf
+                    """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "supplied-by": "template/product-skills/fs-gg-widget/", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }"""
+                    (Fsgg.SkillMirror.sha256 body)
+                    (Fsgg.SkillMirror.sha256 body)
+                    (Fsgg.SkillMirror.sha256 sidecar)
+                    (Fsgg.SkillMirror.sha256 sidecar)
+            )
+
         let files =
-            Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                         ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+            Map.ofList
+                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                  ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+
         let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
         Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
         Assert.Empty outcome.Writes
@@ -532,13 +621,29 @@ module RenderingSkillsTests =
         let sidecar = "tool body\n"
         let digest = Fsgg.SkillMirror.sha256 sidecar
 
-        for path in [ "/escape.fsx"; "../escape.fsx"; "scripts\\escape.fsx"; "scripts/./escape.fsx"; "scripts//escape.fsx" ] do
+        for path in
+            [ "/escape.fsx"
+              "../escape.fsx"
+              "scripts\\escape.fsx"
+              "scripts/./escape.fsx"
+              "scripts//escape.fsx" ] do
             let jsonPath = System.Text.Json.JsonSerializer.Serialize path
+
             let manifest =
-                Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": %s, "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) jsonPath digest)
+                Some(
+                    sprintf
+                        """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "supplied-by": "template/product-skills/fs-gg-widget/", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": %s, "sha256": "%s" } ] } ] }"""
+                        (Fsgg.SkillMirror.sha256 body)
+                        (Fsgg.SkillMirror.sha256 body)
+                        jsonPath
+                        digest
+                )
+
             let files =
-                Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                             ("fs-gg-widget", path), System.Text.Encoding.UTF8.GetBytes sidecar ]
+                Map.ofList
+                    [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                      ("fs-gg-widget", path), System.Text.Encoding.UTF8.GetBytes sidecar ]
+
             let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
             Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
             Assert.Empty outcome.Writes
@@ -548,12 +653,24 @@ module RenderingSkillsTests =
         let body = "skill body\n"
         let sidecar = "tool body\n"
         let nested = "scripts/validation/tool.fsx"
+
         let manifest =
-            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "%s", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) nested (Fsgg.SkillMirror.sha256 sidecar))
+            Some(
+                sprintf
+                    """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "supplied-by": "template/product-skills/fs-gg-widget/", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "%s", "sha256": "%s" } ] } ] }"""
+                    (Fsgg.SkillMirror.sha256 body)
+                    (Fsgg.SkillMirror.sha256 body)
+                    nested
+                    (Fsgg.SkillMirror.sha256 sidecar)
+            )
+
         let files =
-            Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                         ("fs-gg-widget", nested), System.Text.Encoding.UTF8.GetBytes sidecar ]
+            Map.ofList
+                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                  ("fs-gg-widget", nested), System.Text.Encoding.UTF8.GetBytes sidecar ]
+
         let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
         Assert.Empty outcome.VerifyFailedIds
+
         for root in roots do
             Assert.Contains($"{root}/skills/fs-gg-widget/{nested}", outcome.ProvenancePaths |> List.map fst)

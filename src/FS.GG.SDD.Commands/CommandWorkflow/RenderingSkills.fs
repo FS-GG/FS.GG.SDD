@@ -75,16 +75,22 @@ module internal RenderingSkills =
     /// filesystem path: slash-separated non-empty names only, with no dot/traversal, drive, or
     /// backslash form. The caller rejects the whole row before it constructs a `WriteFile`.
     let private tryNormalizeSkillRelativePath (path: string) : string option =
-        if System.String.IsNullOrWhiteSpace path
-           || path.Contains('\\')
-           || path.Contains(':')
-           || System.IO.Path.IsPathRooted path then
+        if
+            System.String.IsNullOrWhiteSpace path
+            || path.Contains('\\')
+            || path.Contains(':')
+            || System.IO.Path.IsPathRooted path
+        then
             None
         else
             let segments = path.Split('/', System.StringSplitOptions.None) |> Array.toList
 
-            if List.isEmpty segments
-               || segments |> List.exists (fun segment -> System.String.IsNullOrWhiteSpace segment || segment = "." || segment = "..") then
+            if
+                List.isEmpty segments
+                || segments
+                   |> List.exists (fun segment ->
+                       System.String.IsNullOrWhiteSpace segment || segment = "." || segment = "..")
+            then
                 None
             else
                 Some(String.concat "/" segments)
@@ -150,7 +156,8 @@ module internal RenderingSkills =
     let embeddedFiles () : Map<string * string, byte array> =
         embeddedFileNames ()
         |> List.choose (fun (id, relative, resourceName) ->
-            tryLoadResourceBytes resourceName |> Option.map (fun bytes -> (id, relative), bytes))
+            tryLoadResourceBytes resourceName
+            |> Option.map (fun bytes -> (id, relative), bytes))
         |> Map.ofList
 
     /// Every embedded delivered file that is NOT the manifest-declared canonical body, as
@@ -178,6 +185,11 @@ module internal RenderingSkills =
           // The declared `scope` of each materialized owner-skill id (from its manifest row), so a
           // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
           MaterializedScopes: Map<string, string>
+          // The stable producer-relative source attribution carried by each materialized manifest
+          // row. Unlike provider-owned rows, these bytes are injected by SDD after the provider
+          // has run, so retaining this field is what marks them as co-tenants rather than silently
+          // presenting them as output owned by the workspace producer.
+          MaterializedSuppliers: Map<string, string>
           VerifyFailedIds: string list
           PredicateUnevaluatedIds: string list
           NamespaceCollisionIds: string list
@@ -195,6 +207,7 @@ module internal RenderingSkills =
           ProvenancePaths = []
           MaterializedIds = []
           MaterializedScopes = Map.empty
+          MaterializedSuppliers = Map.empty
           VerifyFailedIds = []
           PredicateUnevaluatedIds = []
           NamespaceCollisionIds = []
@@ -217,7 +230,8 @@ module internal RenderingSkills =
         { Collisions: string list
           PredicateUnevaluated: string list
           VerifyFailed: string list
-          Materializable: (ProductSkillManifest.ProductManifestEntry * (ProductSkillManifest.ProductManifestFile * string) list) list }
+          Materializable:
+              (ProductSkillManifest.ProductManifestEntry * (ProductSkillManifest.ProductManifestFile * string) list) list }
 
     let private classifyEntry
         (parameters: Map<string, string>)
@@ -231,6 +245,12 @@ module internal RenderingSkills =
         elif entry.Id.StartsWith(reservedNamespacePrefix, System.StringComparison.Ordinal) then
             { acc with
                 Collisions = acc.Collisions @ [ entry.Id ] }
+        elif Option.isNone entry.SuppliedBy then
+            // A Rendering-owned row without its source producer would be indistinguishable in the
+            // folded product manifest from a provider-owned product row. Attribution is therefore
+            // part of this channel's verified transport, not optional decoration.
+            { acc with
+                VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
         else
             match ProductPredicate.evaluate entry.MaterializesWhen parameters with
             | None ->
@@ -249,15 +269,18 @@ module internal RenderingSkills =
                         let implicitFile: ProductSkillManifest.ProductManifestFile =
                             { Path = canonicalBodyPath
                               Sha256 = entry.Sha256 }
+
                         [ implicitFile ]
-                    else entry.Files
+                    else
+                        entry.Files
                 // A schema-v2 file set is a closed transport, not a list of suggested writes.
                 // Validate every path and its uniqueness BEFORE looking up bytes or emitting any
                 // `WriteFile`: duplicate paths would otherwise schedule two writes, while rooted,
                 // traversal, or backslash paths could escape the skill directory on a receiver.
                 let normalizedDeclared =
                     declared
-                    |> List.map (fun file -> tryNormalizeSkillRelativePath file.Path |> Option.map (fun path -> path, file))
+                    |> List.map (fun file ->
+                        tryNormalizeSkillRelativePath file.Path |> Option.map (fun path -> path, file))
 
                 let declaredAreSafe = normalizedDeclared |> List.forall Option.isSome
 
@@ -268,8 +291,13 @@ module internal RenderingSkills =
 
                 let declaredPaths = declared |> List.map _.Path |> Set.ofList
                 let declaredAreUnique = declaredPaths.Count = declared.Length
+
                 let actualPaths =
-                    files |> Map.toList |> List.choose (fun ((id, path), _) -> if id = entry.Id then Some path else None) |> Set.ofList
+                    files
+                    |> Map.toList
+                    |> List.choose (fun ((id, path), _) -> if id = entry.Id then Some path else None)
+                    |> Set.ofList
+
                 let verified =
                     declared
                     |> List.choose (fun file ->
@@ -278,17 +306,24 @@ module internal RenderingSkills =
                             match Fsgg.SkillMirror.decodeBody bytes with
                             | Ok body when Fsgg.SkillMirror.sha256 body = file.Sha256 -> Some(file, body)
                             | _ -> None))
+
                 let canonicalOk =
-                    verified |> List.tryFind (fun (file, _) -> file.Path = canonicalBodyPath)
+                    verified
+                    |> List.tryFind (fun (file, _) -> file.Path = canonicalBodyPath)
                     |> Option.exists (fun (_, body) -> Fsgg.SkillMirror.sha256 body = entry.Sha256)
-                if declaredAreSafe
-                   && declaredAreUnique
-                   && verified.Length = declared.Length
-                   && (schemaVersion < 2 || actualPaths = declaredPaths)
-                   && canonicalOk then
-                    { acc with Materializable = acc.Materializable @ [ entry, verified ] }
+
+                if
+                    declaredAreSafe
+                    && declaredAreUnique
+                    && verified.Length = declared.Length
+                    && (schemaVersion < 2 || actualPaths = declaredPaths)
+                    && canonicalOk
+                then
+                    { acc with
+                        Materializable = acc.Materializable @ [ entry, verified ] }
                 else
-                    { acc with VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
+                    { acc with
+                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
 
     /// Plan owner-skill materialization from an explicit manifest text + id→body map, gated by the
     /// effective scaffold parameter set. The pure core of `plan`, factored out so the fail-closed
@@ -333,13 +368,21 @@ module internal RenderingSkills =
                                   yield $"{root}/skills/{entry.Id}/{file.Path}", body ])
 
                 { Writes =
-                    materializedFiles |> List.map (fun (path, body) -> WriteFile(path, body, AgentGuidanceTarget))
+                    materializedFiles
+                    |> List.map (fun (path, body) -> WriteFile(path, body, AgentGuidanceTarget))
                   ProvenancePaths =
-                    materializedFiles |> List.map (fun (path, body) -> path, Fsgg.SkillMirror.sha256 body)
+                    materializedFiles
+                    |> List.map (fun (path, body) -> path, Fsgg.SkillMirror.sha256 body)
                   MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
                   MaterializedScopes =
                     classified.Materializable
-                    |> List.choose (fun (entry, _) -> Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
+                    |> List.choose (fun (entry, _) ->
+                        Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
+                    |> Map.ofList
+                  MaterializedSuppliers =
+                    classified.Materializable
+                    |> List.choose (fun (entry, _) ->
+                        entry.SuppliedBy |> Option.map (fun supplier -> entry.Id, supplier))
                     |> Map.ofList
                   VerifyFailedIds = classified.VerifyFailed
                   PredicateUnevaluatedIds = classified.PredicateUnevaluated
@@ -351,7 +394,11 @@ module internal RenderingSkills =
     /// v1-compatible test seam: callers supplying bodies still exercise the canonical file path.
     let planFrom manifestText (bodies: Map<string, string>) (_sidecars: string list) parameters =
         let files =
-            bodies |> Map.toList |> List.map (fun (id, body) -> (id, canonicalBodyPath), Encoding.UTF8.GetBytes body) |> Map.ofList
+            bodies
+            |> Map.toList
+            |> List.map (fun (id, body) -> (id, canonicalBodyPath), Encoding.UTF8.GetBytes body)
+            |> Map.ofList
+
         planFilesFrom manifestText files parameters
 
     /// Plan owner-skill materialization from the CLI's embedded package bytes, gated by the
@@ -360,9 +407,14 @@ module internal RenderingSkills =
     let plan (parameters: Map<string, string>) : RenderingSkillOutcome =
         let manifest = manifestText ()
         let outcome = planFilesFrom manifest (embeddedFiles ()) parameters
-        match manifest |> Option.bind (fun text -> ProductSkillManifest.tryParse text |> Result.toOption) with
+
+        match
+            manifest
+            |> Option.bind (fun text -> ProductSkillManifest.tryParse text |> Result.toOption)
+        with
         | Some(schemaVersion, _) when schemaVersion < 2 ->
             let materialized = outcome.MaterializedIds |> Set.ofList
+
             { outcome with
                 UndeliverableSidecars =
                     undeliverableSidecars ()
