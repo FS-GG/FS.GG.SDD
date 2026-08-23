@@ -11,7 +11,7 @@ sourceAnalysis: readiness/892-rendering-skills-v2-consumer/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/892-rendering-skills-v2-consumer/analysis.json
-    digest: c53cd01f55d6ab1cad3dd88e7d56a8966b3e08be7447a14e373df1f8c3516089
+    digest: a5cc0a513751cb4d453e0479cf91d5af9fcc4f6d89c0a0b8e521bb4c388be629
     schemaVersion: 1
   - label: checklist
     path: work/892-rendering-skills-v2-consumer/checklist.md
@@ -52,10 +52,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
-      digest: "sha256:903a266a3fe7179211328bef337902382d7125e094b864f8c944fbddc7d57978"
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 29
+      passed: 31
       failed: 0
       skipped: 0
     notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
@@ -77,10 +77,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
-      digest: "sha256:903a266a3fe7179211328bef337902382d7125e094b864f8c944fbddc7d57978"
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 29
+      passed: 31
       failed: 0
       skipped: 0
     notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
@@ -102,10 +102,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
-      digest: "sha256:903a266a3fe7179211328bef337902382d7125e094b864f8c944fbddc7d57978"
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 29
+      passed: 31
       failed: 0
       skipped: 0
     notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
@@ -127,10 +127,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
-      digest: "sha256:903a266a3fe7179211328bef337902382d7125e094b864f8c944fbddc7d57978"
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 29
+      passed: 31
       failed: 0
       skipped: 0
     notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
@@ -152,10 +152,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
-      digest: "sha256:903a266a3fe7179211328bef337902382d7125e094b864f8c944fbddc7d57978"
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 29
+      passed: 31
       failed: 0
       skipped: 0
     notes: [Focused schema-v2 materialization and fail-closed mutations passed.]

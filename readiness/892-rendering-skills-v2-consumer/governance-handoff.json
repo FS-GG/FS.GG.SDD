@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/892-rendering-skills-v2-consumer/ship.json",
-      "digest": "sha256:56b04e2138f41d0b66e53f8e17bbe6f4b1a3f7d4986cfcccbd7468bee8a6849f",
+      "digest": "sha256:5583116597a40fb3cd8877bc44a755f7beff0755a5fb7027937f5feeb2c3a57e",
       "schemaVersion": 1
     },
     {
       "path": "readiness/892-rendering-skills-v2-consumer/verify.json",
-      "digest": "sha256:879b357bfd0fb777c4004f183f8856d132d670b3ae4a515779cc9f85fb08d02c",
+      "digest": "sha256:9205955d1f8a4d83ca4696c82c627bbbb7de5e9de23be608aa7bf02a1cd3a70f",
       "schemaVersion": 1
     },
     {
       "path": "readiness/892-rendering-skills-v2-consumer/work-model.json",
-      "digest": "sha256:4e3e03a565b4544ff29fac8e683f165560428b02845fe13623316b1208349845",
+      "digest": "sha256:d4e9872d45730a60dcb2058e808617b4187b5a7bf734fc86245ab77ae3a4d9a2",
       "schemaVersion": 1
     }
   ],

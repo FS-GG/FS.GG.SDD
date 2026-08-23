@@ -242,7 +242,10 @@ module internal RenderingSkills =
                 // each declared sidecar is verified before ANY row write, and an undeclared
                 // embedded byte refuses the whole row rather than leaking a partial skill.
                 let declared =
-                    if List.isEmpty entry.Files then
+                    // Schema v1 had no per-file transport, so its sole row digest still
+                    // implicitly names SKILL.md. Schema v2 is a closed declaration: absent or
+                    // empty `files` cannot be promoted into an invented write target.
+                    if schemaVersion < 2 && List.isEmpty entry.Files then
                         let implicitFile: ProductSkillManifest.ProductManifestFile =
                             { Path = canonicalBodyPath
                               Sha256 = entry.Sha256 }

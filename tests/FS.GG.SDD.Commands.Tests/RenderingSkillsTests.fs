@@ -474,6 +474,33 @@ module RenderingSkillsTests =
             Assert.Contains($"{root}/skills/fs-gg-widget/scripts/tool.fsx", outcome.ProvenancePaths |> List.map fst)
 
     [<Fact>]
+    let ``schema-v2 fails closed when its required files set is absent or empty`` () =
+        let body = "skill body\n"
+        let digest = Fsgg.SkillMirror.sha256 body
+
+        for filesProperty in [ ""; "\"files\": []" ] do
+            let separator = if filesProperty = "" then "" else ", "
+            let manifest =
+                Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always"%s%s } ] }""" digest separator filesProperty)
+            let files = Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]
+            let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
+            Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
+            Assert.Empty outcome.Writes
+
+    [<Fact>]
+    let ``schema-v1 retains its implicit canonical SKILL body compatibility path`` () =
+        let body = "skill body\n"
+        let digest = Fsgg.SkillMirror.sha256 body
+
+        for filesProperty in [ ""; ", \"files\": []" ] do
+            let manifest =
+                Some(sprintf """{ "schemaVersion": 1, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always"%s } ] }""" digest filesProperty)
+            let outcome = RenderingSkills.planFilesFrom manifest (Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]) Map.empty
+            Assert.Empty outcome.VerifyFailedIds
+            for root in roots do
+                Assert.Contains($"{root}/skills/fs-gg-widget/SKILL.md", outcome.ProvenancePaths |> List.map fst)
+
+    [<Fact>]
     let ``schema-v2 fails closed when a sidecar is missing or undeclared`` () =
         let body = "skill body\n"
         let sidecar = "tool body\n"
