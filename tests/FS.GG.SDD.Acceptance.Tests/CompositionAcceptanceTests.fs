@@ -52,7 +52,8 @@ module CompositionAcceptanceTests =
               ".fsgg/agents.yml"
               "AGENTS.md"
               "CLAUDE.md"
-              ".fsgg/constitution.md" ]
+              ".fsgg/constitution.md"
+              ".gitignore" ]
             @ seededSkillPaths
         )
 

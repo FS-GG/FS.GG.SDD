@@ -1,0 +1,9 @@
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-gitignore-root
+    source: __FIXTURE__/gitignore-root
+    parameters:
+      - key: productName
+        required: true

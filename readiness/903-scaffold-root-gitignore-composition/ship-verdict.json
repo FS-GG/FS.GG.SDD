@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "068-readiness-golden",
+  "workId": "903-scaffold-root-gitignore-composition",
   "stage": "ship",
   "status": "shipReady",
   "generator": "FS.GG.SDD.Artifacts/1.2.3",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "155ec21dca2fa1f9a3b83cb35282bc31a5ef2bae2aa99a90a81737d1d46cdaeb"
+    "value": "69678d09acd520674a85ab4a25bb8e18c2577b5ec56481a535a418b2484db98c"
   },
   "verificationReadiness": {
     "status": "verificationReady",
     "evidenceSupportedCount": 5,
-    "evidenceSelfAttestedCount": 5,
-    "evidenceObservedCount": 0
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 5
   },
   "disposition": {
     "state": "shipReady",

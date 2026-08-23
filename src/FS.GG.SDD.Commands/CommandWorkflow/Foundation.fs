@@ -584,6 +584,18 @@ nuget-cache/
         // constitution/early-stage guidance above; prior init effects stay byte-identical.
         @ SeededSkills.skillEffects ()
 
+    /// Scaffold establishes the same SDD skeleton as `init`, except that its root ignore seed is
+    /// staged until after the external provider runs. A provider is allowed to author a root
+    /// `.gitignore`; placing the seed before `dotnet new -o .` would make the provider fail with
+    /// its normal no-overwrite exit. `HandlersScaffold` composes the two complete inputs after the
+    /// provider has succeeded, rather than forwarding `--force` or weakening `init`'s no-clobber
+    /// policy for ordinary initialization.
+    let scaffoldInitEffects (request: CommandRequest) =
+        initEffects request
+        |> List.filter (function
+            | WriteFile(path, _, _) when normalizeRelativePath path = ".gitignore" -> false
+            | _ -> true)
+
     // Feature 084: single-source the stage artifact paths in LifecycleSensing (compiled earlier),
     // so the paths SENSED for the footer are byte-identical to the paths these commands READ.
     let charterPath = LifecycleSensing.charterPath

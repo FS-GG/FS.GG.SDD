@@ -316,16 +316,18 @@ module internal HandlersScaffold =
             @ (if request.Force then [ "--force" ] else [])
 
         // install (+ update by default; skipped by `--no-update`), then the SDD
-        // skeleton (reused init effects, unchanged), then the create — so the create's
-        // after-snapshot includes the skeleton (which the diff subtracts) and the
-        // provider's product.
+        // skeleton with its root ignore seed deliberately staged, then the create. The
+        // provider may author `.gitignore` without a false no-overwrite conflict; the
+        // handler composes that product file with the SDD seed only after create succeeds.
+        // The after-snapshot still includes the rest of the skeleton (which the diff
+        // subtracts) and the provider's product.
         let refreshEffects =
             if request.TemplateUpdate then
                 [ installEffect; updateEffect ]
             else
                 [ installEffect ]
 
-        refreshEffects @ initEffects request @ [ RunProcess("dotnet", createArgs, "") ]
+        refreshEffects @ scaffoldInitEffects request @ [ RunProcess("dotnet", createArgs, "") ]
 
     let plannedCreateCommand
         (descriptor: ProviderDescriptor)
@@ -341,6 +343,28 @@ module internal HandlersScaffold =
         let parameterSegment = if parameters = "" then "" else " " + parameters
         let forceSegment = if request.Force then " --force" else ""
         $"dotnet new {descriptor.TemplateId} -o .{parameterSegment}{forceSegment}"
+
+    let private rootGitignorePath = ".gitignore"
+
+    /// Preserve the provider file byte-for-byte after a deterministic SDD-owned prefix. The
+    /// provider's own ordering, comments, blank lines, negations, and final newline remain its
+    /// authored content; SDD only supplies the lifecycle fragment that was intentionally staged
+    /// before the `dotnet new` invocation. This avoids both a blanket provider `--force` and a
+    /// lossy line-normalizing "merge".
+    let private composeRootGitignore providerText =
+        match providerText with
+        | Some text when text <> "" -> gitignoreSeedText + text
+        | _ -> gitignoreSeedText
+
+    let private isRootGitignoreRead effect =
+        match effect with
+        | ReadFile path -> normalizeRelativePath path = rootGitignorePath
+        | _ -> false
+
+    let private isRootGitignoreCompositionWrite effect =
+        match effect with
+        | WriteFile(path, _, HybridArtifact _) -> normalizeRelativePath path = rootGitignorePath
+        | _ -> false
 
     // ----- CLI version coherence (feature 052; pure, no new effect — D11) -----
 
@@ -1052,6 +1076,88 @@ module internal HandlersScaffold =
                 else
                     FinalizeSuccess(ProviderSucceeded, producedPaths)
 
+    // ----- root `.gitignore` composition (between provider create and post-instantiation) -----
+
+    /// The provider is the only actor that may initially create its root `.gitignore`; after that
+    /// successful create, SDD reads the exact provider bytes and writes a HybridArtifact whose
+    /// body preserves those bytes after the SDD lifecycle prefix. Keeping the two effects staged
+    /// makes unreadable or concurrently-replaced files fail at the existing write edge instead of
+    /// treating an unknown provider file as absent.
+    let private rootGitignoreCompositionNext
+        onComposed
+        model
+        (descriptor: ProviderDescriptor)
+        outcome
+        (producedPaths: string list)
+        (effective: Map<string, string>)
+        =
+        let readEffect = ReadFile rootGitignorePath
+
+        let readResult =
+            model.InterpretedEffects |> List.tryFind (fun result -> isRootGitignoreRead result.Effect)
+
+        match readResult with
+        | None ->
+            if model.PendingEffects |> List.exists isRootGitignoreRead then
+                model, []
+            else
+                { model with
+                    PendingEffects = model.PendingEffects @ [ readEffect ] },
+                [ readEffect ]
+        | Some _ ->
+            let providerText = snapshot rootGitignorePath model |> Option.map (fun value -> value.Text)
+
+            // The policy is deliberately hybrid: the handler has already preserved the complete
+            // provider-owned region and only added SDD's declared prefix. AgentGuidanceTarget
+            // would correctly refuse this existing authored file, while GeneratedView would
+            // wrongly claim that the provider's body is tool-only output.
+            let writeEffect =
+                WriteFile(
+                    rootGitignorePath,
+                    composeRootGitignore providerText,
+                    HybridArtifact(SectionMerge([], [], []))
+                )
+
+            let writeResult =
+                model.InterpretedEffects
+                |> List.tryFind (fun result -> isRootGitignoreCompositionWrite result.Effect)
+
+            match writeResult with
+            | None ->
+                if model.PendingEffects |> List.exists isRootGitignoreCompositionWrite then
+                    model, []
+                else
+                    { model with
+                        PendingEffects = model.PendingEffects @ [ writeEffect ] },
+                    [ writeEffect ]
+            | Some result when result.Succeeded -> onComposed model
+            | Some _ ->
+                // The effect interpreter has already supplied the exact unsafe/unreadable write
+                // diagnostic. Do not continue into provenance/post-instantiation and claim a
+                // complete scaffold when the composition boundary did not land.
+                let summary: ScaffoldSummary =
+                    { ProviderName = Some descriptor.Name
+                      ProviderContractVersion = Some descriptor.ContractVersion
+                      RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
+                      Outcome = scaffoldOutcomeValue ProviderFailed
+                      SkeletonCreated = true
+                      ProviderInvoked = true
+                      ProducedPathCount = List.length producedPaths
+                      ProducedPaths = producedPaths
+                      MirroredPaths = []
+                      MaterializedDriverPaths = []
+                      MaterializedGameSkillPaths = []
+                      MaterializedRenderingSkillPaths = []
+                      EffectiveParameters = Map.toList effective
+                      RepoInitOutcome = "notApplicable"
+                      ToolManifestOutcome = "notApplicable"
+                      ExecutableScriptCount = 0
+                      ExecutableScriptsSkipped = 0
+                      NextActionHint = "Resolve the root .gitignore composition failure, then re-run scaffold."
+                      ProviderInvocation = None }
+
+                { model with Scaffold = Some summary }, []
+
     // ----- post-instantiation staging (TICK A → B → C) -----
 
     // TICK C: compute the terminal success summary from the interpreted post-instantiation
@@ -1590,4 +1696,10 @@ module internal HandlersScaffold =
                             @ cliCoherenceDiagnostics descriptor model.Request },
                     provenanceEffects
                 | FinalizeSuccess(outcome, producedPaths) ->
-                    postInstantiationNext model descriptor outcome producedPaths effective
+                    rootGitignoreCompositionNext
+                        (fun composed -> postInstantiationNext composed descriptor outcome producedPaths effective)
+                        model
+                        descriptor
+                        outcome
+                        producedPaths
+                        effective
