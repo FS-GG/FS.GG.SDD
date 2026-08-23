@@ -10,7 +10,11 @@ open Xunit
 /// workflow in-process over a disposable project (`init` → … → `ship` plus the
 /// cross-cutting `agents` and `refresh` generators) and pins the documented
 /// bootstrap experience to real command output. Adds no new public surface — it
-/// only exercises the existing `TestSupport` run helpers.
+/// includes direct built-product coverage where lifecycle behavior crosses the CLI boundary.
+///
+/// The direct host route mutates process-global child-process state, so it is serialized with the
+/// other production-host tests.
+[<Collection("ProcessGlobalEnv")>]
 module LifecycleSmokeTests =
     let private workId = "001-bootstrap-smoke"
     let private title = "Bootstrap Smoke"
@@ -53,10 +57,66 @@ module LifecycleSmokeTests =
         + "  config: .fsgg/sdd.yml\n"
         + "  agents: .fsgg/agents.yml\n"
 
+    let private addActivePerformanceEvidence root =
+        let evidencePath = $"work/{workId}/evidence.yml"
+        let artifactPath = $"readiness/{workId}/performance-evidence.json"
+
+        TestSupport.readRelative root evidencePath
+        |> fun evidence ->
+            evidence.Replace(
+                "    result: pass\n    synthetic: false",
+                $"""    performanceBudget:
+      artifactPath: {artifactPath}
+      intent:
+        id: PI-001
+        disposition: active
+        targetFps: 60
+        workloadIds: [normal-play]
+        workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+        maximumExpectedScale: 10000 sprites
+        maxP95Ms: 16.67
+        maxP99Ms: 25
+        maxCatchUpFrames: 0
+        structuralCostBudgets: [draw-calls<=500]
+        requiredCapability: bounded-headless-update-render
+        liveCompositorRequired: false
+        evidenceRefs: []
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: [pointer-stress]
+      workloadDefinitionDigests: [normal-play=sha256:normal-v1, pointer-stress=sha256:stress-v1]
+      currencyToken: commit:bootstrap-smoke
+      capturedAfterUtc: 2026-08-22T00:00:00Z
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+    result: pass
+    synthetic: false"""
+            )
+        |> TestSupport.writeRelative root evidencePath
+
+        let durations =
+            (List.replicate 95 "12" @ List.replicate 5 "20") |> String.concat ","
+
+        TestSupport.writeRelative
+            root
+            artifactPath
+            $$"""{"contractVersion":"performance-evidence-v1","claimedBudgetPassed":true,"sampleSets":[{
+"workloadId":"normal-play","workloadDefinitionDigest":"sha256:normal-v1","workloadClass":"normal-play",
+"targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,"maxCatchUpFrames":0,
+"measurementScope":"normal","requiredCapability":"bounded-headless-update-render",
+"hostProfile":"linux-x64-ci","packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless",
+"capabilities":["bounded-headless-update-render"],"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/100",
+"capturedAtUtc":"2026-08-22T00:00:00Z","currencyToken":"commit:bootstrap-smoke","probeReadbackContaminated":false,
+"durationSamplesMs":[{{durations}}],"catchUpFrames":[0]}]}"""
+
     /// Drive one disposable project through the full lifecycle plus generators.
     /// When [pinConfig] is set, the project config is fixed after init so two runs
     /// share identical inputs for the determinism comparison.
-    let private driveLifecycleWith pinConfig =
+    let private driveLifecycleWith pinConfig includeActivePerformanceEvidence =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
@@ -65,6 +125,7 @@ module LifecycleSmokeTests =
 
         let charter = TestSupport.runCharter root workId title
         let specify = TestSupport.runSpecify root workId title
+
         // specify carried no ambiguity, so clarify runs with no extra intent (the
         // same known-green path TestSupport.initializePlanReadyProject uses).
         let clarify =
@@ -80,6 +141,10 @@ module LifecycleSmokeTests =
         let tasks = TestSupport.runTasks root workId title
         // Authored passing task evidence so analyze/evidence/verify/ship are ready.
         TestSupport.writePassingTaskEvidenceFor root workId
+
+        if includeActivePerformanceEvidence then
+            addActivePerformanceEvidence root
+
         let analyze = TestSupport.runAnalyze root workId title
         let evidence = TestSupport.runEvidence root workId title
         let verify = TestSupport.runVerify root workId title
@@ -104,7 +169,7 @@ module LifecycleSmokeTests =
     // The read-only assertions (stage artifacts, next-action chain, no-Governance,
     // well-formed readiness) all observe one full drive; sharing it keeps the
     // in-process smoke well under the <10s budget.
-    let private driveLifecycle () = driveLifecycleWith false
+    let private driveLifecycle () = driveLifecycleWith false false
 
     let private driven = lazy (driveLifecycle ())
 
@@ -125,6 +190,9 @@ module LifecycleSmokeTests =
 
     let private nextCommand (report: CommandReport) =
         report.NextAction |> Option.bind (fun action -> action.Command)
+
+    let private runBuiltCli root command =
+        TestSupport.runCliRaw 120000 [ command; "--root"; root; "--work"; workId ]
 
     // --- T007: happy-path drive — every stage succeeds and writes its source/view ---
 
@@ -173,6 +241,192 @@ module LifecycleSmokeTests =
 
         for (path, expected) in before do
             Assert.Equal(expected, TestSupport.readRelative d.Root path)
+
+    [<Fact>]
+    let ``post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point`` () =
+        // Regression for #868: analyze receives no explicit evidence input, but on a post-evidence
+        // replay it must use the recovered snapshot for both ordinary and performance evidence.
+        // Otherwise analyze drops this artifact and verify/ship restore it, rewriting the model.
+        let d = driveLifecycle ()
+        addActivePerformanceEvidence d.Root
+
+        // Exercise the initial post-evidence production route before converging the fixture.  The
+        // fallback mutation is judged below by the same per-stage report and byte gate as replay,
+        // so an earlier assertion cannot mask whether the direct gate itself kills it.
+        let initialExit, initialOutput, initialError = runBuiltCli d.Root "analyze"
+        Assert.Equal("", initialError.Trim())
+        Assert.Equal(0, initialExit)
+        Assert.DoesNotContain("\"outcome\": \"blocked\"", initialOutput)
+
+        let settleExit, settleOutput, settleError = runBuiltCli d.Root "analyze"
+        Assert.Equal("", settleError.Trim())
+        Assert.Equal(0, settleExit)
+        Assert.DoesNotContain("\"outcome\": \"blocked\"", settleOutput)
+
+        // The authored fixture changes the evidence declaration after its initial source snapshot.
+        // Regenerate it once, then establish a ship-ready fixed point before direct replay.
+        TestSupport.runEvidence d.Root workId title |> notBlocked "fixture evidence"
+
+        let reportPath = $"readiness/{workId}/production-route.trx"
+
+        TestSupport.writeRelative
+            d.Root
+            reportPath
+            """<?xml version="1.0" encoding="UTF-8"?>
+<TestRun id="performance-replay" name="run" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <ResultSummary outcome="Completed"><Counters total="5" executed="5" passed="5" failed="0" error="0" notExecuted="0" /></ResultSummary>
+</TestRun>"""
+
+        let evidenceExit, evidenceOutput, evidenceError =
+            TestSupport.runCliRaw
+                120000
+                [ "evidence"
+                  "--root"
+                  d.Root
+                  "--work"
+                  workId
+                  "--from-test-report"
+                  reportPath ]
+
+        Assert.Equal("", evidenceError.Trim())
+        Assert.Equal(0, evidenceExit)
+        Assert.Contains("evidenceReady", evidenceOutput)
+
+        // Analyze once after recording the observed run, then refresh evidence snapshots against
+        // that analysis.  The measured replay begins only after this authored-fixture setup has
+        // converged; otherwise verify correctly reports the deliberately old source snapshot.
+        let setupAnalyzeExit, setupAnalyzeOutput, setupAnalyzeError =
+            runBuiltCli d.Root "analyze"
+
+        Assert.Equal("", setupAnalyzeError.Trim())
+        Assert.Equal(0, setupAnalyzeExit)
+        Assert.DoesNotContain("\"outcome\": \"blocked\"", setupAnalyzeOutput)
+
+        let syncExit, syncOutput, syncError =
+            TestSupport.runCliRaw
+                120000
+                [ "evidence"
+                  "--root"
+                  d.Root
+                  "--work"
+                  workId
+                  "--from-test-report"
+                  reportPath ]
+
+        Assert.Equal("", syncError.Trim())
+        Assert.Equal(0, syncExit)
+        Assert.Contains("evidenceReady", syncOutput)
+
+        // Establish the direct-host fixture through individually observed stages.  This is not a
+        // replay list: each child completes and is checked before the next is launched.
+        for stage in [ "analyze"; "verify"; "ship" ] do
+            let exitCode, output, error = runBuiltCli d.Root stage
+            Assert.Equal("", error.Trim())
+            Assert.Equal(0, exitCode)
+            Assert.DoesNotContain("\"outcome\": \"blocked\"", output)
+
+        let captureTracked () =
+            Directory.EnumerateFiles(d.Root, "*", SearchOption.AllDirectories)
+            |> Seq.map (fun path -> Path.GetRelativePath(d.Root, path).Replace('\\', '/'))
+            |> Seq.filter (fun path -> path.StartsWith("work/") || path.StartsWith("readiness/"))
+            |> Seq.sort
+            |> Seq.map (fun path -> path, TestSupport.readRelative d.Root path)
+            |> Seq.toList
+
+        let assertDirectStage expectedFiles (stage: string) (expectedReadiness: string) (summaryProperty: string) =
+            // This must remain one child process at a time.  Constructing an eager replay list
+            // makes every later assertion observe only the post-ship filesystem state.
+            let exitCode, output, error = runBuiltCli d.Root stage
+
+            Assert.Equal("", error.Trim())
+            Assert.Equal(0, exitCode)
+
+            // Parse this child's report before launching the next stage.  Exit zero alone also
+            // admits succeeded-with-warnings and stale generated views, so it cannot prove the
+            // green/current fixed point that this regression exists to protect.
+            use document = JsonDocument.Parse output
+            let report = document.RootElement
+            let outcome = report.GetProperty("outcome").GetString()
+            Assert.True((outcome = "noChange"), sprintf "%s outcome was %s: %s" stage outcome output)
+            Assert.True(report.GetProperty("coherent").GetBoolean())
+
+            Assert.Equal(expectedReadiness, report.GetProperty(summaryProperty).GetProperty("readiness").GetString())
+
+            let generatedViews =
+                report.GetProperty("generatedViews").EnumerateArray() |> Seq.toList
+
+            Assert.True(generatedViews.Length > 0, $"{stage} reported no generated views")
+
+            for view in generatedViews do
+                Assert.Equal("current", view.GetProperty("currency").GetString())
+
+            for (path, expected) in expectedFiles do
+                Assert.Equal(expected, TestSupport.readRelative d.Root path)
+
+        // Make the first post-setup operation the parsed production `analyze` gate.  The exact
+        // fallback-to-None mutation must die here, before a fixture assertion or later stage can
+        // obscure which route caught the rewrite.
+        let preflightBytes = captureTracked ()
+        assertDirectStage preflightBytes "analyze" "implementationReady" "analysis"
+
+        // Prove the fixture's subject is live before taking the two-cycle replay baseline.  Without
+        // these assertions a missing performance declaration makes byte stability vacuously green.
+        use workModel =
+            JsonDocument.Parse(TestSupport.readRelative d.Root $"readiness/{workId}/work-model.json")
+
+        let performanceEvidence =
+            workModel.RootElement.GetProperty("evidence").EnumerateArray()
+            |> Seq.tryFind (fun item -> item.GetProperty("performanceBudget").ValueKind = JsonValueKind.Object)
+
+        Assert.True(performanceEvidence.IsSome, "generated work model has no active performance evidence")
+        let performanceEvidence = performanceEvidence.Value
+        let budget = performanceEvidence.GetProperty("performanceBudget")
+        let intent = budget.GetProperty("intent")
+        Assert.Equal("active", intent.GetProperty("disposition").GetString())
+
+        Assert.Equal(
+            "performance-evidence-v1",
+            performanceEvidence.GetProperty("performanceEvidenceArtifact").GetProperty("contractVersion").GetString()
+        )
+
+        let hasNormalWorkload =
+            budget.GetProperty("workloadIds").EnumerateArray()
+            |> Seq.exists (fun workload -> workload.GetString() = "normal-play")
+
+        let hasStressWorkload =
+            budget.GetProperty("stressWorkloadIds").EnumerateArray()
+            |> Seq.exists (fun workload -> workload.GetString() = "pointer-stress")
+
+        Assert.True(hasNormalWorkload, "generated work model has no normal-play workload")
+        Assert.True(hasStressWorkload, "generated work model has no pointer-stress workload")
+
+        use verifyView =
+            JsonDocument.Parse(TestSupport.readRelative d.Root $"readiness/{workId}/verify.json")
+
+        let performanceEvidenceId = performanceEvidence.GetProperty("id").GetString()
+
+        let performanceEvidenceWasObserved =
+            verifyView.RootElement.GetProperty("evidenceDispositions").EnumerateArray()
+            |> Seq.exists (fun disposition ->
+                disposition.GetProperty("obligationId").GetString() = performanceEvidenceId
+                && disposition.GetProperty("observed").GetBoolean())
+
+        Assert.True(
+            performanceEvidenceWasObserved,
+            "generated verification model has no observed-run evidence for the active performance declaration"
+        )
+
+        let tracked = captureTracked ()
+
+        // Two direct, unwrapped, production-default cycles must leave every work/readiness byte
+        // (including the Governance handoff and compact ship verdict) unchanged immediately after
+        // each child command—not merely after a later verify or ship can repair analyze.
+        for _ in 1..2 do
+            for (stage, expectedReadiness, summaryProperty) in
+                [ "analyze", "implementationReady", "analysis"
+                  "verify", "verificationReady", "verification"
+                  "ship", "shipReady", "ship" ] do
+                assertDirectStage tracked stage expectedReadiness summaryProperty
 
     [<Fact>]
     let ``analyze ignores only tool-owned evidence snapshots when calculating work-model currency`` () =
@@ -383,8 +637,8 @@ module LifecycleSmokeTests =
             let projectId = (DirectoryInfo root).Name.ToLowerInvariant()
             text.Replace(root, "<ROOT>").Replace(root.Replace('\\', '/'), "<ROOT>").Replace(projectId, "<ID>")
 
-        let first = driveLifecycleWith true
-        let second = driveLifecycleWith true
+        let first = driveLifecycleWith true false
+        let second = driveLifecycleWith true false
 
         for path in readinessViews do
             let a = normalize first.Root (TestSupport.readRelative first.Root path)
