@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/903-scaffold-root-gitignore-composition/ship.json",
-      "digest": "sha256:f33bcacf13761984fb73758e82d975683bb239eb354eccba7134d3fce9b7897d",
+      "digest": "sha256:4438e90643499bdc595025f5d81014cd335a8c0bd26c04d16af57926e34ce4d0",
       "schemaVersion": 1
     },
     {
       "path": "readiness/903-scaffold-root-gitignore-composition/verify.json",
-      "digest": "sha256:96b4eeee695c525c4e6cf1c3357896d79ac097315bde0b6a86142b3f137f47e4",
+      "digest": "sha256:aa0866f955ceef242d311456470a0f670cde1bb8d4439c76cc8dd7ce10d245b9",
       "schemaVersion": 1
     },
     {
       "path": "readiness/903-scaffold-root-gitignore-composition/work-model.json",
-      "digest": "sha256:624f58be90c7da656fd60117bd2336d77cf39d71633a240a13f8991144630246",
+      "digest": "sha256:b388ab5e1d7d2b54964204fd5aaf222b08e02ffad68cfbd3ddcbba92f7a51d3f",
       "schemaVersion": 1
     }
   ],

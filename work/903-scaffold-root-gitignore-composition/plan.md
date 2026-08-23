@@ -16,9 +16,9 @@ publicOrToolFacingImpact: true
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/903-scaffold-root-gitignore-composition/spec.md sha256:5a3b39d02651498231f305ef000fcbc37b860fe655e04df388c20209fd75e279 schemaVersion:1
+- spec: work/903-scaffold-root-gitignore-composition/spec.md sha256:ecedeaf189c1a22e5b6c6f211c5167921eabb9df3db1d645d5775659647f3c33 schemaVersion:1
 - clarifications: work/903-scaffold-root-gitignore-composition/clarifications.md sha256:3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44 schemaVersion:1
-- checklist: work/903-scaffold-root-gitignore-composition/checklist.md sha256:05de078f06fa9cd0b2c13252dee02f45405dcc144839592055828432b6b0a4d6 schemaVersion:1
+- checklist: work/903-scaffold-root-gitignore-composition/checklist.md sha256:886f8d59bcc2baa925c7167670089d06c2375483d3a7b681a1a8955385f23e7a schemaVersion:1
 
 ## Plan Scope
 - Work item 903-scaffold-root-gitignore-composition is planned from the current specification, clarification, and checklist facts.
@@ -27,13 +27,13 @@ Prose status: planned
 - Checklist result count: 1.
 
 ## Plan Decisions
-- PD-001 [AC-001] [FR-001] complete: Scaffold will retain the SDD-generated root `.gitignore` as a temporary composition input, run the provider without generic overwrite, then read the provider-authored root file and write the deterministic SDD lifecycle-ignore prefix followed by the provider body byte-for-byte. The provider suffix retains its original order, comments, blank lines, negations, and final-newline state; composition performs no line de-duplication or normalization. Explicit provider `--force` behavior is not inferred or widened by SDD.
+- PD-001 [AC-001] [FR-001] complete: Scaffold will retain the SDD-generated root `.gitignore` as a temporary composition input, run the provider without generic overwrite, then read the provider-authored root raw bytes and atomically write the deterministic UTF-8 SDD lifecycle-ignore prefix followed by those bytes byte-for-byte. The provider suffix retains any UTF-8 preamble plus its original order, comments, blank lines, negations, and final-newline state; composition performs no line de-duplication, decoding, or normalization. Explicit provider `--force` behavior is not inferred or widened by SDD.
 
 ## Contract Impact
-- PC-001 [PD-001] command report: `fsgg-sdd scaffold` keeps its existing provider invocation and report schema. Its default root-file composition becomes a generic behavior contract: a provider-emitted `.gitignore` is compatible with SDD's seeded root ignore content because its authored bytes are retained exactly as a suffix after the deterministic SDD prefix, with no line de-duplication or normalization; a provider failure or an attempt to write an SDD-owned subtree remains fail-closed.
+- PC-001 [PD-001] command report: `fsgg-sdd scaffold` keeps its existing provider invocation and report schema. Its default root-file composition becomes a generic behavior contract: a provider-emitted `.gitignore` is compatible with SDD's seeded root ignore content because its raw bytes are retained exactly as a suffix after the deterministic UTF-8 SDD prefix through an atomic binary write, with no line de-duplication, decoding, or normalization; a provider failure or an attempt to write an SDD-owned subtree remains fail-closed.
 
 ## Verification Obligations
-- VO-001 [PD-001] [PC-001] semanticTest: Add focused command tests that assert the scaffolded `.gitignore` starts with the deterministic SDD prefix and ends with the provider-emitted body byte-for-byte, that generic `--force` is not forwarded, and that a direct-overwrite mutation is red. Add opt-in real-provider composition acceptance proving the same direct-versus-scaffold output contract through the published provider route; run focused tests, CLI smoke evidence, and the release dry gates before handoff.
+- VO-001 [PD-001] [PC-001] semanticTest: Add focused command tests that assert the scaffolded `.gitignore` starts with the deterministic UTF-8 SDD prefix and ends with the provider-emitted raw bytes byte-for-byte, including a UTF-8-BOM plus CRLF producer boundary, that generic `--force` is not forwarded, and that a direct-overwrite mutation is red. Add opt-in real-provider composition acceptance proving the same direct-versus-scaffold output contract through the published provider route; run focused tests, CLI smoke evidence, and the release dry gates before handoff.
 
 ## Performance Intent
 No performance intent is declared for this work item.

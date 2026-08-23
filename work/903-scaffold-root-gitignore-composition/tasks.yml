@@ -13,7 +13,7 @@ work:
 sources:
   - label: spec
     path: work/903-scaffold-root-gitignore-composition/spec.md
-    digest: 5a3b39d02651498231f305ef000fcbc37b860fe655e04df388c20209fd75e279
+    digest: ecedeaf189c1a22e5b6c6f211c5167921eabb9df3db1d645d5775659647f3c33
     schemaVersion: 1
   - label: clarifications
     path: work/903-scaffold-root-gitignore-composition/clarifications.md
@@ -21,11 +21,11 @@ sources:
     schemaVersion: 1
   - label: checklist
     path: work/903-scaffold-root-gitignore-composition/checklist.md
-    digest: 05de078f06fa9cd0b2c13252dee02f45405dcc144839592055828432b6b0a4d6
+    digest: 886f8d59bcc2baa925c7167670089d06c2375483d3a7b681a1a8955385f23e7a
     schemaVersion: 1
   - label: plan
     path: work/903-scaffold-root-gitignore-composition/plan.md
-    digest: 70a13c4b2fb1a40dc4a6ba628f0cd046980574b87e384b778a202f683f878700
+    digest: 0fd8b3431cb7de4af0b01003aed8d02a925e7a1cebb73176aaa94e6105be0a8d
     schemaVersion: 1
 tasks:
   - id: T001

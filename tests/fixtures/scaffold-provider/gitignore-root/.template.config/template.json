@@ -6,6 +6,11 @@
   "name": "FS.GG.SDD scaffold fixture (root gitignore)",
   "shortName": "fsgg-fixture-gitignore-root",
   "tags": { "language": "F#", "type": "project" },
+  "sources": [
+    {
+      "copyOnly": [ "**/.gitignore" ]
+    }
+  ],
   "symbols": {
     "productName": {
       "type": "parameter",

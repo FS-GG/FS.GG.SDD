@@ -28,7 +28,7 @@ Product template authors can provide their root ignore rules while scaffolded wo
 - AC-001 [US-001] [FR-001]: Given a provider emits a root `.gitignore`, when a user runs default scaffold, then the output retains the deterministic SDD lifecycle-ignore prefix and the provider-authored `.gitignore` bytes unchanged as its suffix, without forwarding generic `--force`.
 
 ## Functional Requirements
-- FR-001: Given a provider that emits a root `.gitignore`, default scaffold preserves the deterministic SDD-generated lifecycle-ignore prefix and appends the provider-authored `.gitignore` body byte-for-byte, in its original order, comments, blank lines, negations, and final-newline state, without generic `--force`. The composition performs no line de-duplication or normalization. A mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit provider `--force` remains separately observable. (Stories: US-001; Acceptance: AC-001)
+- FR-001: Given a provider that emits a root `.gitignore`, default scaffold preserves the deterministic UTF-8 SDD-generated lifecycle-ignore prefix and atomically appends the provider-authored `.gitignore` raw bytes byte-for-byte, including any UTF-8 preamble, its original order, comments, blank lines, negations, and final-newline state, without generic `--force`. The composition performs no line de-duplication, decoding, or normalization. A mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit provider `--force` remains separately observable. (Stories: US-001; Acceptance: AC-001)
 
 ## Ambiguities
 No material ambiguities recorded.

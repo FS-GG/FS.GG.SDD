@@ -351,10 +351,14 @@ module internal HandlersScaffold =
     /// authored content; SDD only supplies the lifecycle fragment that was intentionally staged
     /// before the `dotnet new` invocation. This avoids both a blanket provider `--force` and a
     /// lossy line-normalizing "merge".
-    let private composeRootGitignore providerText =
-        match providerText with
-        | Some text when text <> "" -> gitignoreSeedText + text
-        | _ -> gitignoreSeedText
+    let private composeRootGitignore (providerBytes: byte array option) =
+        let prefix = System.Text.Encoding.UTF8.GetBytes gitignoreSeedText
+
+        match providerBytes with
+        | Some bytes when bytes.Length > 0 -> Array.append prefix bytes
+        | _ -> prefix
+        |> System.Convert.ToBase64String
+        |> fun encoded -> "\uDC00fsgg-sdd-atomic-bytes:" + encoded
 
     let private isRootGitignoreRead effect =
         match effect with
@@ -1105,7 +1109,9 @@ module internal HandlersScaffold =
                     PendingEffects = model.PendingEffects @ [ readEffect ] },
                 [ readEffect ]
         | Some _ ->
-            let providerText = snapshot rootGitignorePath model |> Option.map (fun value -> value.Text)
+            let providerBytes =
+                snapshot rootGitignorePath model
+                |> Option.bind (fun value -> value.RawBytes)
 
             // The policy is deliberately hybrid: the handler has already preserved the complete
             // provider-owned region and only added SDD's declared prefix. AgentGuidanceTarget
@@ -1114,7 +1120,7 @@ module internal HandlersScaffold =
             let writeEffect =
                 WriteFile(
                     rootGitignorePath,
-                    composeRootGitignore providerText,
+                    composeRootGitignore providerBytes,
                     HybridArtifact(SectionMerge([], [], []))
                 )
 

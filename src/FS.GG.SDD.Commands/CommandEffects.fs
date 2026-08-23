@@ -5,6 +5,7 @@ open System.Diagnostics
 open System.Globalization
 open System.IO
 open System.Reflection
+open System.Text
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
@@ -45,14 +46,14 @@ module CommandEffects =
     /// Two inode-identity consequences remain, both accepted: a symlink at `absolute` is *replaced*
     /// rather than written through, and a hardlink elsewhere stops tracking the file. No SDD artifact
     /// path is a symlink or a hardlink.
-    let private writeFileAtomic (absolute: string) (text: string) =
+    let private writeBytesAtomic (absolute: string) (bytes: byte array) =
         let directory = parentDirectory absolute
 
         let temp =
             Path.Combine(directory, $".{Path.GetFileName absolute}.{Guid.NewGuid():N}.tmp")
 
         try
-            File.WriteAllText(temp, text)
+            File.WriteAllBytes(temp, bytes)
 
             if not (OperatingSystem.IsWindows()) && File.Exists absolute then
                 File.SetUnixFileMode(temp, File.GetUnixFileMode absolute)
@@ -67,6 +68,18 @@ module CommandEffects =
                 File.Delete temp
             with _ ->
                 ()
+
+    let private writeFileAtomic (absolute: string) (text: string) =
+        writeBytesAtomic absolute (Encoding.UTF8.GetBytes text)
+
+    let private atomicBytesMarker = "\uDC00fsgg-sdd-atomic-bytes:"
+
+    let encodeAtomicBytes (bytes: byte array) = atomicBytesMarker + Convert.ToBase64String bytes
+
+    let private tryDecodeAtomicBytes (text: string) =
+        if text.StartsWith(atomicBytesMarker, StringComparison.Ordinal) then
+            Some(Convert.FromBase64String(text.Substring atomicBytesMarker.Length))
+        else None
 
     /// Why a file read did not yield a body — the file edge's states, before they are projected
     /// onto `ReadResult`. Local to this module, and deliberately NOT a fifth `ReadResult` case.
@@ -303,6 +316,17 @@ module CommandEffects =
         match existing, kind with
         | None, _ -> true
         | Some snapshot, _ when snapshot.Text = text -> true
+        | Some _, HybridArtifact _ -> true
+        | Some _, GeneratedView -> true
+        | Some _, _ -> false
+
+    /// Exact-byte counterpart for the narrowly-scoped provider composition seam. A binary write
+    /// uses the same ownership gate as text, but equality must be over observed bytes: decoded
+    /// text intentionally strips BOMs and cannot decide whether a no-op is safe.
+    let private canOverwriteBytes (kind: ArtifactWriteKind) (existing: FileSnapshot option) (bytes: byte array) =
+        match existing, kind with
+        | None, _ -> true
+        | Some snapshot, _ when snapshot.RawBytes |> Option.exists (fun current -> current = bytes) -> true
         | Some _, HybridArtifact _ -> true
         | Some _, GeneratedView -> true
         | Some _, _ -> false
@@ -846,16 +870,21 @@ module CommandEffects =
                     // `refresh`. The truncating write it replaced had no such side effect, so this keeps a
                     // no-op run genuinely no-op. `ArtifactOperation.NoChange` is unchanged: it is derived from
                     // `existing` at report assembly and never depended on the write happening.
+                    let rawBytes = tryDecodeAtomicBytes text
+
                     let unchanged =
-                        match existing with
-                        | Some snapshot -> snapshot.Text = text
-                        | None -> false
+                        match existing, rawBytes with
+                        | Some snapshot, Some bytes -> snapshot.RawBytes |> Option.exists (fun current -> current = bytes)
+                        | Some snapshot, None -> snapshot.Text = text
+                        | None, _ -> false
 
                     if canOverwrite kind existing text then
                         if not dryRun && not unchanged then
                             let absolute = fullPath projectRoot path
                             Directory.CreateDirectory(parentDirectory absolute) |> ignore
-                            writeFileAtomic absolute text
+                            match rawBytes with
+                            | Some bytes -> writeBytesAtomic absolute bytes
+                            | None -> writeFileAtomic absolute text
 
                         success effect existingRead
                     else
