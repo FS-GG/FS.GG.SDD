@@ -1,6 +1,8 @@
 namespace FS.GG.SDD.Commands.Tests
 
+open System
 open System.IO
+open System.Text
 open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.ArtifactRef
@@ -173,6 +175,103 @@ module ScaffoldCommandTests =
             report.ChangedArtifacts |> List.tryFind (fun c -> c.Path = "Program.fs")
 
         Assert.Equal(Some "generatedProduct", productChange |> Option.map (fun c -> c.Ownership))
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold composes a provider root gitignore without forwarding force`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "gitignore-root.providers.yml"
+
+        let model, report =
+            runScaffoldModel (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        let composed = TestSupport.readRelative root ".gitignore"
+        let providerBody = "# Template-owned ignore rule.\ntemplate-output/\n"
+
+        Assert.StartsWith(FS.GG.SDD.Commands.Internal.Foundation.gitignoreSeedText, composed)
+        Assert.EndsWith(providerBody, composed)
+
+        let create =
+            model.InterpretedEffects
+            |> List.tryFind (fun result ->
+                match result.Effect with
+                | RunProcess("dotnet", args, _) -> List.contains "-o" args
+                | _ -> false)
+            |> Option.defaultWith (fun () -> failwith "Expected the provider create process.")
+
+        match create.Effect with
+        | RunProcess(_, args, _) ->
+            Assert.DoesNotContain("--force", args)
+        | _ -> failwith "Expected the provider create process."
+
+        let createIndex =
+            model.InterpretedEffects
+            |> List.findIndex (fun result -> result.Effect = create.Effect)
+
+        let composeReadIndex =
+            model.InterpretedEffects
+            |> List.findIndex (fun result -> result.Effect = ReadFile ".gitignore")
+
+        Assert.True(createIndex < composeReadIndex, "Root ignore composition must run after the provider create.")
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold preserves provider root gitignore bytes across BOM and CRLF boundary`` () =
+        // This is a producer-side mutation, not a synthetic snapshot: `dotnet new` must carry
+        // these exact bytes into the scaffold directory. The BOM plus CRLF distinguishes raw-byte
+        // composition from the decoder's intentionally-normalized `Text` projection.
+        let providerBytes =
+            Array.append
+                [| 0xEFuy; 0xBBuy; 0xBFuy |]
+                (Encoding.UTF8.GetBytes "# Template-owned ignore rule.\r\ntemplate-output/\r\n")
+
+        let root = TestSupport.tempDirectory ()
+        let source = TestSupport.tempDirectory ()
+        let config = Path.Combine(source, ".template.config")
+        Directory.CreateDirectory config |> ignore
+
+        for file in [ "App.fsproj"; "Program.fs"; "packages.lock.json" ] do
+            File.Copy(Path.Combine(fixturesRoot, "gitignore-root", file), Path.Combine(source, file))
+
+        let template =
+            File.ReadAllText(Path.Combine(fixturesRoot, "gitignore-root", ".template.config", "template.json"))
+                .Replace("FsggSdd.Fixture.GitignoreRoot", "FsggSdd.Fixture.GitignoreRawBytes")
+                .Replace("fsgg-fixture-gitignore-root", "fsgg-fixture-gitignore-raw-bytes")
+
+        File.WriteAllText(Path.Combine(config, "template.json"), template)
+        File.WriteAllBytes(Path.Combine(source, ".gitignore"), providerBytes)
+
+        let sourceForRegistry = source.Replace('\\', '/')
+        TestSupport.writeRelative
+            root
+            ".fsgg/providers.yml"
+            $"""schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-gitignore-raw-bytes
+    source: {sourceForRegistry}
+    parameters:
+      - key: productName
+        required: true
+"""
+
+        let model, report =
+            runScaffoldModel (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        let expected = Array.append (Encoding.UTF8.GetBytes Foundation.gitignoreSeedText) providerBytes
+        let actual = File.ReadAllBytes(Path.Combine(root, ".gitignore"))
+        Assert.Equal<byte array>(expected, actual)
+
+        Assert.Contains(
+            model.InterpretedEffects,
+            fun result ->
+                match result.Effect with
+                | WriteFile(".gitignore", _, HybridArtifact _) -> result.Succeeded
+                | _ -> false
+        )
 
     [<Fact>]
     let ``scaffold --dry-run plans without spawning, writing, or provenance`` () =

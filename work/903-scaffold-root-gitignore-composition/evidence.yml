@@ -1,0 +1,163 @@
+schemaVersion: 1
+workId: 903-scaffold-root-gitignore-composition
+stage: evidence
+status: evidenceReady
+sourceSpec: work/903-scaffold-root-gitignore-composition/spec.md
+sourceClarifications: work/903-scaffold-root-gitignore-composition/clarifications.md
+sourceChecklist: work/903-scaffold-root-gitignore-composition/checklist.md
+sourcePlan: work/903-scaffold-root-gitignore-composition/plan.md
+sourceTasks: work/903-scaffold-root-gitignore-composition/tasks.yml
+sourceAnalysis: readiness/903-scaffold-root-gitignore-composition/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/903-scaffold-root-gitignore-composition/analysis.json
+    digest: 2b0209c13c9f755954cac30ce6af678f536119bf1ccd34898ad1fb96ff7fd99b
+    schemaVersion: 1
+  - label: checklist
+    path: work/903-scaffold-root-gitignore-composition/checklist.md
+    digest: 886f8d59bcc2baa925c7167670089d06c2375483d3a7b681a1a8955385f23e7a
+    schemaVersion: 1
+  - label: clarifications
+    path: work/903-scaffold-root-gitignore-composition/clarifications.md
+    digest: 3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44
+    schemaVersion: 1
+  - label: plan
+    path: work/903-scaffold-root-gitignore-composition/plan.md
+    digest: 0fd8b3431cb7de4af0b01003aed8d02a925e7a1cebb73176aaa94e6105be0a8d
+    schemaVersion: 1
+  - label: spec
+    path: work/903-scaffold-root-gitignore-composition/spec.md
+    digest: ecedeaf189c1a22e5b6c6f211c5167921eabb9df3db1d645d5775659647f3c33
+    schemaVersion: 1
+  - label: tasks
+    path: work/903-scaffold-root-gitignore-composition/tasks.yml
+    digest: 4982cd8467b8f350a8b8420f14f14f5ba41f494e44684ce2d85bdf7f6f159671
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:2481ee0297311d7b6435ae24ff9b0136494a90b5c590307c7270059a94c717da"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1325
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` raw bytes, including UTF-8 BOM and CRLF boundary coverage, are atomically retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV002]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:2481ee0297311d7b6435ae24ff9b0136494a90b5c590307c7270059a94c717da"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1325
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` raw bytes, including UTF-8 BOM and CRLF boundary coverage, are atomically retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV003]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:2481ee0297311d7b6435ae24ff9b0136494a90b5c590307c7270059a94c717da"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1325
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` raw bytes, including UTF-8 BOM and CRLF boundary coverage, are atomically retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV004]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:2481ee0297311d7b6435ae24ff9b0136494a90b5c590307c7270059a94c717da"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1325
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` raw bytes, including UTF-8 BOM and CRLF boundary coverage, are atomically retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV005]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:2481ee0297311d7b6435ae24ff9b0136494a90b5c590307c7270059a94c717da"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1325
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` raw bytes, including UTF-8 BOM and CRLF boundary coverage, are atomically retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
+lifecycleNotes:
+  - "Next lifecycle action: verify."

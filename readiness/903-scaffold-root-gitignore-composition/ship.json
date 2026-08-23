@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "068-readiness-golden",
+  "workId": "903-scaffold-root-gitignore-composition",
   "stage": "ship",
   "status": "shipReady",
   "generator": "FS.GG.SDD.Artifacts/1.2.3",
@@ -21,7 +21,7 @@
       "kind": "projectConfig",
       "digest": {
         "algorithm": "sha256",
-        "value": "42f9a714e54b6a148cecdd5d4b3f702c53faad65ee8ac62125845c851e0d2f02"
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -37,91 +37,91 @@
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/903-scaffold-root-gitignore-composition/analysis.json",
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "80391ce8c246ed78b1a4f8a2862f20294e2bd3be352348f8a69aefa37f187db9"
+        "value": "2b0209c13c9f755954cac30ce6af678f536119bf1ccd34898ad1fb96ff7fd99b"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/verify.json",
+      "path": "readiness/903-scaffold-root-gitignore-composition/verify.json",
       "kind": "source",
       "digest": {
         "algorithm": "sha256",
-        "value": "7e8daa5664d851c9239e253adf622be29f409731edf4eda75b6e47ba9875d397"
+        "value": "b56c2e00d9b23e0b1f8002ea58aa293e05dcad8c0e7a5989d5c0dc22a3567d3a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/903-scaffold-root-gitignore-composition/work-model.json",
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "e678db41b593b79df6f13af6f0a42706247d1336ecbe5158bad8f50168906628"
+        "value": "b388ab5e1d7d2b54964204fd5aaf222b08e02ffad68cfbd3ddcbba92f7a51d3f"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/checklist.md",
+      "path": "work/903-scaffold-root-gitignore-composition/checklist.md",
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "3c5b5f41feed6d37bf164f11c60ae912ef0dd1b06cf910ba09c80caca3eeac79"
+        "value": "886f8d59bcc2baa925c7167670089d06c2375483d3a7b681a1a8955385f23e7a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/clarifications.md",
+      "path": "work/903-scaffold-root-gitignore-composition/clarifications.md",
       "kind": "clarification",
       "digest": {
         "algorithm": "sha256",
-        "value": "3ff8766f120ff472917b7904492ab4e80e2b4b0d17067c5667a8cad78d799e9f"
+        "value": "3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/evidence.yml",
+      "path": "work/903-scaffold-root-gitignore-composition/evidence.yml",
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "005a4653c3c054a7a1f2474e2584d947ff8a160e52ed992c853e5ce9809920af"
+        "value": "00ff2c89f1685192a646b080e244c93577cdf21551f452d550212112c809e9a0"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/plan.md",
+      "path": "work/903-scaffold-root-gitignore-composition/plan.md",
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "1cf7d0eb4afbbde8b5218d18e4a08b49dbf0b6b53081268a1c447df724582ca1"
+        "value": "0fd8b3431cb7de4af0b01003aed8d02a925e7a1cebb73176aaa94e6105be0a8d"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/spec.md",
+      "path": "work/903-scaffold-root-gitignore-composition/spec.md",
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "9181f6ded8f26df9d848187d53b36272d59bbb1928145601663371f5c03963a7"
+        "value": "ecedeaf189c1a22e5b6c6f211c5167921eabb9df3db1d645d5775659647f3c33"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/tasks.yml",
+      "path": "work/903-scaffold-root-gitignore-composition/tasks.yml",
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "98a46330c2dd89d7812499b56ab88c181c37a572c40ded08b817574fdda390a4"
+        "value": "4982cd8467b8f350a8b8420f14f14f5ba41f494e44684ce2d85bdf7f6f159671"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -168,8 +168,8 @@
     "status": "verificationReady",
     "blockingFindingIds": [],
     "evidenceSupportedCount": 5,
-    "evidenceSelfAttestedCount": 5,
-    "evidenceObservedCount": 0,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 5,
     "evidenceDeferredCount": 0,
     "evidenceMissingCount": 0,
     "evidenceStaleCount": 0,
@@ -181,7 +181,7 @@
       "id": "ED-EV001",
       "obligationId": "EV001",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -189,7 +189,7 @@
       "id": "ED-EV002",
       "obligationId": "EV002",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -197,7 +197,7 @@
       "id": "ED-EV003",
       "obligationId": "EV003",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -205,7 +205,7 @@
       "id": "ED-EV004",
       "obligationId": "EV004",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -213,26 +213,26 @@
       "id": "ED-EV005",
       "obligationId": "EV005",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     }
   ],
   "generatedViews": [
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/903-scaffold-root-gitignore-composition/analysis.json",
       "kind": "analysis",
       "currency": "current",
       "diagnosticIds": []
     },
     {
-      "path": "readiness/068-readiness-golden/verify.json",
+      "path": "readiness/903-scaffold-root-gitignore-composition/verify.json",
       "kind": "verification",
       "currency": "current",
       "diagnosticIds": []
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/903-scaffold-root-gitignore-composition/work-model.json",
       "kind": "workModel",
       "currency": "current",
       "diagnosticIds": []

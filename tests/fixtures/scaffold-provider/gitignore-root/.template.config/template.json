@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.GitignoreRoot",
+  "name": "FS.GG.SDD scaffold fixture (root gitignore)",
+  "shortName": "fsgg-fixture-gitignore-root",
+  "tags": { "language": "F#", "type": "project" },
+  "sources": [
+    {
+      "copyOnly": [ "**/.gitignore" ]
+    }
+  ],
+  "symbols": {
+    "productName": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PRODUCT_NAME",
+      "defaultValue": "Product"
+    }
+  }
+}

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "modelVersion": "1.2.0",
-  "workId": "247-full-shape-golden",
+  "workId": "903-scaffold-root-gitignore-composition",
   "project": {
-    "id": "247-full-shape-golden",
+    "id": "fs.gg.sdd-833",
     "defaultWorkRoot": "work",
     "profile": null
   },
@@ -29,7 +29,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "f8f1f5985f56f10a5810b9fee0ca5d66830709fb66a5cb5b50de2cccc997e984"
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
       }
     },
     {
@@ -45,7 +45,7 @@
       }
     },
     {
-      "path": "work/247-full-shape-golden/checklist.md",
+      "path": "work/903-scaffold-root-gitignore-composition/checklist.md",
       "kind": "checklist",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -53,11 +53,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "41bf3db807b9102f1d86f0fa4044ccf51726ae124a575fd43461a3b22ff3b962"
+        "value": "886f8d59bcc2baa925c7167670089d06c2375483d3a7b681a1a8955385f23e7a"
       }
     },
     {
-      "path": "work/247-full-shape-golden/clarifications.md",
+      "path": "work/903-scaffold-root-gitignore-composition/clarifications.md",
       "kind": "clarifications",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -65,11 +65,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "4542445521975c320a043e9839f530beba8346bce1e1942b59485d29a46d119f"
+        "value": "3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44"
       }
     },
     {
-      "path": "work/247-full-shape-golden/evidence.yml",
+      "path": "work/903-scaffold-root-gitignore-composition/evidence.yml",
       "kind": "evidence",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -77,11 +77,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "5769a71e4d9ef1c11397dc0a78fa9b52545920eb34ff7f520561a322a7afb497"
+        "value": "984adb9ca635464440bb6144513cea394735132beb476ecaf49aa659e942a68e"
       }
     },
     {
-      "path": "work/247-full-shape-golden/plan.md",
+      "path": "work/903-scaffold-root-gitignore-composition/plan.md",
       "kind": "plan",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -89,11 +89,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "041794a1345a817362553cc831a625a4a5b466f9fa4a56489113df715b8d32a8"
+        "value": "0fd8b3431cb7de4af0b01003aed8d02a925e7a1cebb73176aaa94e6105be0a8d"
       }
     },
     {
-      "path": "work/247-full-shape-golden/spec.md",
+      "path": "work/903-scaffold-root-gitignore-composition/spec.md",
       "kind": "spec",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -101,11 +101,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "0ee3ca5951c1c32227cc99360053008408d1006e7409d9d09a2d8f7fec0c7ff5"
+        "value": "ecedeaf189c1a22e5b6c6f211c5167921eabb9df3db1d645d5775659647f3c33"
       }
     },
     {
-      "path": "work/247-full-shape-golden/tasks.yml",
+      "path": "work/903-scaffold-root-gitignore-composition/tasks.yml",
       "kind": "tasks",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -113,13 +113,13 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "eb96c6a7e2c44b03d88171c3c93fc985c59be85d6b23e731c67f80e6adff256f"
+        "value": "4982cd8467b8f350a8b8420f14f14f5ba41f494e44684ce2d85bdf7f6f159671"
       }
     }
   ],
   "workItem": {
-    "id": "247-full-shape-golden",
-    "title": "Full Shape Golden",
+    "id": "903-scaffold-root-gitignore-composition",
+    "title": "Scaffold Root Gitignore Composition",
     "stage": "specify",
     "changeTier": "tier1",
     "status": "specified"
@@ -128,14 +128,14 @@
   "requirements": [
     {
       "id": "FR-001",
-      "title": "create a specification artifact with stable ids (Stories: US-001; Acceptance: AC-001)",
-      "text": "create a specification artifact with stable ids (Stories: US-001; Acceptance: AC-001)",
+      "title": "Given a provider that emits a root \u0060.gitignore\u0060, default scaffold preserves the deterministic UTF-8 SDD-generated lifecycle-ignore prefix and atomically appends the provider-authored \u0060.gitignore\u0060 raw bytes byte-for-byte, including any UTF-8 preamble, its original order, comments, blank lines, negations, and final-newline state, without generic \u0060--force\u0060. The composition performs no line de-duplication, decoding, or normalization. A mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit provider \u0060--force\u0060 remains separately observable. (Stories: US-001; Acceptance: AC-001)",
+      "text": "Given a provider that emits a root \u0060.gitignore\u0060, default scaffold preserves the deterministic UTF-8 SDD-generated lifecycle-ignore prefix and atomically appends the provider-authored \u0060.gitignore\u0060 raw bytes byte-for-byte, including any UTF-8 preamble, its original order, comments, blank lines, negations, and final-newline state, without generic \u0060--force\u0060. The composition performs no line de-duplication, decoding, or normalization. A mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit provider \u0060--force\u0060 remains separately observable. (Stories: US-001; Acceptance: AC-001)",
       "acceptanceCriteria": [
         "AC-001"
       ],
       "priority": null,
       "classification": [],
-      "source": "work/247-full-shape-golden/spec.md",
+      "source": "work/903-scaffold-root-gitignore-composition/spec.md",
       "sourceLocation": {
         "line": 31,
         "column": 1
@@ -143,7 +143,9 @@
       "linkedTaskIds": [
         "T001"
       ],
-      "linkedEvidenceIds": []
+      "linkedEvidenceIds": [
+        "EV001"
+      ]
     }
   ],
   "decisions": [],
@@ -151,7 +153,7 @@
     {
       "id": "T001",
       "title": "Implement requirement FR-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -170,7 +172,7 @@
       "requiredEvidence": [
         "EV001"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/tasks.yml",
       "sourceLocation": {
         "line": 1,
         "column": 1
@@ -179,7 +181,7 @@
     {
       "id": "T002",
       "title": "Update contract surface PC-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -196,7 +198,7 @@
       "requiredEvidence": [
         "EV002"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/tasks.yml",
       "sourceLocation": {
         "line": 2,
         "column": 1
@@ -205,7 +207,7 @@
     {
       "id": "T003",
       "title": "Record verification evidence VO-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -224,7 +226,7 @@
       "requiredEvidence": [
         "EV003"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/tasks.yml",
       "sourceLocation": {
         "line": 3,
         "column": 1
@@ -233,7 +235,7 @@
     {
       "id": "T004",
       "title": "Handle migration posture PM-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -250,7 +252,7 @@
       "requiredEvidence": [
         "EV004"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/tasks.yml",
       "sourceLocation": {
         "line": 4,
         "column": 1
@@ -259,7 +261,7 @@
     {
       "id": "T005",
       "title": "Refresh generated view impact GV-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -276,7 +278,7 @@
       "requiredEvidence": [
         "EV005"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/tasks.yml",
       "sourceLocation": {
         "line": 5,
         "column": 1
@@ -292,9 +294,11 @@
       "taskRefs": [
         "T001"
       ],
-      "requirementRefs": [],
+      "requirementRefs": [
+        "FR-001"
+      ],
       "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T001Tests.fs"
+        "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -302,7 +306,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/evidence.yml",
       "sourceLocation": {
         "line": 1,
         "column": 1
@@ -318,7 +322,7 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T002Tests.fs"
+        "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -326,7 +330,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/evidence.yml",
       "sourceLocation": {
         "line": 2,
         "column": 1
@@ -342,7 +346,7 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T003Tests.fs"
+        "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -350,7 +354,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/evidence.yml",
       "sourceLocation": {
         "line": 3,
         "column": 1
@@ -366,7 +370,7 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T004Tests.fs"
+        "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -374,7 +378,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/evidence.yml",
       "sourceLocation": {
         "line": 4,
         "column": 1
@@ -390,7 +394,7 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T005Tests.fs"
+        "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -398,7 +402,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/903-scaffold-root-gitignore-composition/evidence.yml",
       "sourceLocation": {
         "line": 5,
         "column": 1
@@ -407,7 +411,7 @@
   ],
   "generatedViews": [
     {
-      "path": "readiness/247-full-shape-golden/work-model.json",
+      "path": "readiness/903-scaffold-root-gitignore-composition/work-model.json",
       "kind": "workModel",
       "schemaVersion": 1,
       "generator": {
@@ -427,7 +431,7 @@
           "path": ".fsgg/project.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "f8f1f5985f56f10a5810b9fee0ca5d66830709fb66a5cb5b50de2cccc997e984"
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
           },
           "schemaVersion": 1
         },
@@ -440,57 +444,57 @@
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/checklist.md",
+          "path": "work/903-scaffold-root-gitignore-composition/checklist.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "41bf3db807b9102f1d86f0fa4044ccf51726ae124a575fd43461a3b22ff3b962"
+            "value": "886f8d59bcc2baa925c7167670089d06c2375483d3a7b681a1a8955385f23e7a"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/clarifications.md",
+          "path": "work/903-scaffold-root-gitignore-composition/clarifications.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "4542445521975c320a043e9839f530beba8346bce1e1942b59485d29a46d119f"
+            "value": "3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/evidence.yml",
+          "path": "work/903-scaffold-root-gitignore-composition/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "5769a71e4d9ef1c11397dc0a78fa9b52545920eb34ff7f520561a322a7afb497"
+            "value": "984adb9ca635464440bb6144513cea394735132beb476ecaf49aa659e942a68e"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/plan.md",
+          "path": "work/903-scaffold-root-gitignore-composition/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "041794a1345a817362553cc831a625a4a5b466f9fa4a56489113df715b8d32a8"
+            "value": "0fd8b3431cb7de4af0b01003aed8d02a925e7a1cebb73176aaa94e6105be0a8d"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/spec.md",
+          "path": "work/903-scaffold-root-gitignore-composition/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "0ee3ca5951c1c32227cc99360053008408d1006e7409d9d09a2d8f7fec0c7ff5"
+            "value": "ecedeaf189c1a22e5b6c6f211c5167921eabb9df3db1d645d5775659647f3c33"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/tasks.yml",
+          "path": "work/903-scaffold-root-gitignore-composition/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "eb96c6a7e2c44b03d88171c3c93fc985c59be85d6b23e731c67f80e6adff256f"
+            "value": "4982cd8467b8f350a8b8420f14f14f5ba41f494e44684ce2d85bdf7f6f159671"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "bc83d21ce0d601c3467c0f74057be2365f01aea56f8fcde1e967c0657ab0886c"
+        "value": "04870ce5290f308ec386fe052ce8ae5d6fee4dc1a16289f8637972ffc8cbafcd"
       },
       "currency": "current"
     }

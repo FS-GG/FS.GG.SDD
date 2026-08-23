@@ -1,0 +1,86 @@
+schemaVersion: 1
+work:
+  id: 903-scaffold-root-gitignore-composition
+  title: "Scaffold Root Gitignore Composition"
+  stage: tasks
+  status: tasksReady
+  sourceSpec: work/903-scaffold-root-gitignore-composition/spec.md
+  sourceClarifications: work/903-scaffold-root-gitignore-composition/clarifications.md
+  sourceChecklist: work/903-scaffold-root-gitignore-composition/checklist.md
+  sourcePlan: work/903-scaffold-root-gitignore-composition/plan.md
+  publicOrToolFacingImpact: true
+
+sources:
+  - label: spec
+    path: work/903-scaffold-root-gitignore-composition/spec.md
+    digest: ecedeaf189c1a22e5b6c6f211c5167921eabb9df3db1d645d5775659647f3c33
+    schemaVersion: 1
+  - label: clarifications
+    path: work/903-scaffold-root-gitignore-composition/clarifications.md
+    digest: 3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44
+    schemaVersion: 1
+  - label: checklist
+    path: work/903-scaffold-root-gitignore-composition/checklist.md
+    digest: 886f8d59bcc2baa925c7167670089d06c2375483d3a7b681a1a8955385f23e7a
+    schemaVersion: 1
+  - label: plan
+    path: work/903-scaffold-root-gitignore-composition/plan.md
+    digest: 0fd8b3431cb7de4af0b01003aed8d02a925e7a1cebb73176aaa94e6105be0a8d
+    schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement requirement FR-001
+    status: done
+    owner: sdd
+    dependencies: []
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: [AC-001, FR-001, PD-001]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Update contract surface PC-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PD-001]
+    requiredSkills: [fsharp]
+    requiredEvidence: [EV002]
+  - id: T003
+    title: Record verification evidence VO-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PD-001, VO-001]
+    requiredSkills: [automated-tests, readiness-evidence]
+    requiredEvidence: [EV003]
+  - id: T004
+    title: Handle migration posture PM-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PM-001]
+    requiredSkills: [schema-versioning]
+    requiredEvidence: [EV004]
+  - id: T005
+    title: Refresh generated view impact GV-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [GV-001, PD-001]
+    requiredSkills: [deterministic-json]
+    requiredEvidence: [EV005]
+acceptedDeferrals: []
+findings: []
+advisoryNotes:
+  - "Optional Governance pointers remain compatibility facts only."
+lifecycleNotes:
+  - "Next lifecycle action: fsgg-sdd analyze --work 903-scaffold-root-gitignore-composition."

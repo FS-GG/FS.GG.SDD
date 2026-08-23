@@ -2,21 +2,21 @@
   "schemaVersion": 1,
   "contractVersion": "2.0.0",
   "generatorVersion": "FS.GG.SDD.Artifacts/1.2.3",
-  "workId": "247-full-shape-golden",
+  "workId": "903-scaffold-root-gitignore-composition",
   "sources": [
     {
-      "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:3147ea2c5542be1ec4ab7edf6faa2062353d3fa1466402de291f37f515248935",
+      "path": "readiness/903-scaffold-root-gitignore-composition/ship.json",
+      "digest": "sha256:02d2706f83d0b29b54421de03b634ef778307aa883ec7be0efb3ccdac9d7bf5a",
       "schemaVersion": 1
     },
     {
-      "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:6ad42901dbe22a30d2d07e338bb9cc3efb19a0557b14bdbd9376a7908b12c909",
+      "path": "readiness/903-scaffold-root-gitignore-composition/verify.json",
+      "digest": "sha256:b56c2e00d9b23e0b1f8002ea58aa293e05dcad8c0e7a5989d5c0dc22a3567d3a",
       "schemaVersion": 1
     },
     {
-      "path": "readiness/247-full-shape-golden/work-model.json",
-      "digest": "sha256:f341afd1c04dae17a31c352cd59d3090d3af90765a99c75a8f8a5647bd3d9937",
+      "path": "readiness/903-scaffold-root-gitignore-composition/work-model.json",
+      "digest": "sha256:b388ab5e1d7d2b54964204fd5aaf222b08e02ffad68cfbd3ddcbba92f7a51d3f",
       "schemaVersion": 1
     }
   ],
@@ -49,27 +49,27 @@
       },
       {
         "id": "task:T001",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T002",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T003",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T004",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T005",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       }
     ],
