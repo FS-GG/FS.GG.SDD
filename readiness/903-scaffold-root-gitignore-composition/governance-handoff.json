@@ -6,12 +6,12 @@
   "sources": [
     {
       "path": "readiness/903-scaffold-root-gitignore-composition/ship.json",
-      "digest": "sha256:4438e90643499bdc595025f5d81014cd335a8c0bd26c04d16af57926e34ce4d0",
+      "digest": "sha256:02d2706f83d0b29b54421de03b634ef778307aa883ec7be0efb3ccdac9d7bf5a",
       "schemaVersion": 1
     },
     {
       "path": "readiness/903-scaffold-root-gitignore-composition/verify.json",
-      "digest": "sha256:aa0866f955ceef242d311456470a0f670cde1bb8d4439c76cc8dd7ce10d245b9",
+      "digest": "sha256:b56c2e00d9b23e0b1f8002ea58aa293e05dcad8c0e7a5989d5c0dc22a3567d3a",
       "schemaVersion": 1
     },
     {

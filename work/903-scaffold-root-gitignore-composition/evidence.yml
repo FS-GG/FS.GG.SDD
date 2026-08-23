@@ -11,7 +11,7 @@ sourceAnalysis: readiness/903-scaffold-root-gitignore-composition/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/903-scaffold-root-gitignore-composition/analysis.json
-    digest: e326396bbbb60467d583f6b5e8efa74e1e8ecdee8e8254472ddd57554d17b74f
+    digest: 2b0209c13c9f755954cac30ce6af678f536119bf1ccd34898ad1fb96ff7fd99b
     schemaVersion: 1
   - label: checklist
     path: work/903-scaffold-root-gitignore-composition/checklist.md
