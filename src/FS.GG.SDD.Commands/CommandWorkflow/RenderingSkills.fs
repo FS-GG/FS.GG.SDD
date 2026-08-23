@@ -68,6 +68,27 @@ module internal RenderingSkills =
     /// The one canonical body path a schema-v1 owner manifest's per-skill `sha256` covers.
     let private canonicalBodyPath = "SKILL.md"
 
+    /// Normalize the *portable* relative form accepted by the manifest transport. The manifest
+    /// travels from a package into both Unix and Windows workspaces, so accepting a path that one
+    /// platform treats as rooted or a separator and the other does not would make the declared
+    /// byte set depend on the receiving host. Keep the transport deliberately narrower than a
+    /// filesystem path: slash-separated non-empty names only, with no dot/traversal, drive, or
+    /// backslash form. The caller rejects the whole row before it constructs a `WriteFile`.
+    let private tryNormalizeSkillRelativePath (path: string) : string option =
+        if System.String.IsNullOrWhiteSpace path
+           || path.Contains('\\')
+           || path.Contains(':')
+           || System.IO.Path.IsPathRooted path then
+            None
+        else
+            let segments = path.Split('/', System.StringSplitOptions.None) |> Array.toList
+
+            if List.isEmpty segments
+               || segments |> List.exists (fun segment -> System.String.IsNullOrWhiteSpace segment || segment = "." || segment = "..") then
+                None
+            else
+                Some(String.concat "/" segments)
+
     let private tryLoadResourceBytes (name: string) : byte array option =
         let assembly = Assembly.GetExecutingAssembly()
 
@@ -227,7 +248,23 @@ module internal RenderingSkills =
                               Sha256 = entry.Sha256 }
                         [ implicitFile ]
                     else entry.Files
+                // A schema-v2 file set is a closed transport, not a list of suggested writes.
+                // Validate every path and its uniqueness BEFORE looking up bytes or emitting any
+                // `WriteFile`: duplicate paths would otherwise schedule two writes, while rooted,
+                // traversal, or backslash paths could escape the skill directory on a receiver.
+                let normalizedDeclared =
+                    declared
+                    |> List.map (fun file -> tryNormalizeSkillRelativePath file.Path |> Option.map (fun path -> path, file))
+
+                let declaredAreSafe = normalizedDeclared |> List.forall Option.isSome
+
+                let declared =
+                    normalizedDeclared
+                    |> List.choose id
+                    |> List.map (fun (path, file) -> { file with Path = path })
+
                 let declaredPaths = declared |> List.map _.Path |> Set.ofList
+                let declaredAreUnique = declaredPaths.Count = declared.Length
                 let actualPaths =
                     files |> Map.toList |> List.choose (fun ((id, path), _) -> if id = entry.Id then Some path else None) |> Set.ofList
                 let verified =
@@ -241,7 +278,11 @@ module internal RenderingSkills =
                 let canonicalOk =
                     verified |> List.tryFind (fun (file, _) -> file.Path = canonicalBodyPath)
                     |> Option.exists (fun (_, body) -> Fsgg.SkillMirror.sha256 body = entry.Sha256)
-                if verified.Length = declared.Length && (schemaVersion < 2 || actualPaths = declaredPaths) && canonicalOk then
+                if declaredAreSafe
+                   && declaredAreUnique
+                   && verified.Length = declared.Length
+                   && (schemaVersion < 2 || actualPaths = declaredPaths)
+                   && canonicalOk then
                     { acc with Materializable = acc.Materializable @ [ entry, verified ] }
                 else
                     { acc with VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }

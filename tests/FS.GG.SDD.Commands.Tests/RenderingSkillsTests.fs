@@ -485,3 +485,48 @@ module RenderingSkillsTests =
             let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
             Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
             Assert.Empty outcome.Writes
+
+    [<Fact>]
+    let ``schema-v2 fails closed on a duplicate declared path before it can schedule duplicate writes`` () =
+        let body = "skill body\n"
+        let sidecar = "tool body\n"
+        let manifest =
+            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 sidecar) (Fsgg.SkillMirror.sha256 sidecar))
+        let files =
+            Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                         ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+        let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
+        Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
+        Assert.Empty outcome.Writes
+
+    [<Fact>]
+    let ``schema-v2 fails closed on absolute traversal and backslash declared paths`` () =
+        let body = "skill body\n"
+        let sidecar = "tool body\n"
+        let digest = Fsgg.SkillMirror.sha256 sidecar
+
+        for path in [ "/escape.fsx"; "../escape.fsx"; "scripts\\escape.fsx"; "scripts/./escape.fsx"; "scripts//escape.fsx" ] do
+            let jsonPath = System.Text.Json.JsonSerializer.Serialize path
+            let manifest =
+                Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": %s, "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) jsonPath digest)
+            let files =
+                Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                             ("fs-gg-widget", path), System.Text.Encoding.UTF8.GetBytes sidecar ]
+            let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
+            Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
+            Assert.Empty outcome.Writes
+
+    [<Fact>]
+    let ``schema-v2 permits one unique nested skill-relative path`` () =
+        let body = "skill body\n"
+        let sidecar = "tool body\n"
+        let nested = "scripts/validation/tool.fsx"
+        let manifest =
+            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "%s", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) nested (Fsgg.SkillMirror.sha256 sidecar))
+        let files =
+            Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                         ("fs-gg-widget", nested), System.Text.Encoding.UTF8.GetBytes sidecar ]
+        let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
+        Assert.Empty outcome.VerifyFailedIds
+        for root in roots do
+            Assert.Contains($"{root}/skills/fs-gg-widget/{nested}", outcome.ProvenancePaths |> List.map fst)
