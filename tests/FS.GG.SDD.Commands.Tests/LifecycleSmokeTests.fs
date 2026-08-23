@@ -98,7 +98,8 @@ module LifecycleSmokeTests =
             )
         |> TestSupport.writeRelative root evidencePath
 
-        let durations = (List.replicate 95 "12" @ List.replicate 5 "20") |> String.concat ","
+        let durations =
+            (List.replicate 95 "12" @ List.replicate 5 "20") |> String.concat ","
 
         TestSupport.writeRelative
             root
@@ -257,7 +258,8 @@ module LifecycleSmokeTests =
             TestSupport.readRelative d.Root $"readiness/{workId}/work-model.json"
         )
 
-        TestSupport.runAnalyze d.Root workId title |> notBlocked "settle fixture analyze"
+        TestSupport.runAnalyze d.Root workId title
+        |> notBlocked "settle fixture analyze"
 
         // The authored fixture changes the evidence declaration after its initial source snapshot.
         // Regenerate it once, then establish a ship-ready fixed point before direct replay.
@@ -307,7 +309,7 @@ module LifecycleSmokeTests =
 
         // Two direct, unwrapped, production-default cycles must leave every work/readiness byte
         // (including the Governance handoff and compact ship verdict) unchanged after each stage.
-        for _ in 1 .. 2 do
+        for _ in 1..2 do
             for (stage, (exitCode, output, error)) in replay () do
                 Assert.Equal("", error.Trim())
                 Assert.Equal(0, exitCode)
