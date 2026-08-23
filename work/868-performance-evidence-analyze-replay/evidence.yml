@@ -11,7 +11,7 @@ sourceAnalysis: readiness/868-performance-evidence-analyze-replay/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/868-performance-evidence-analyze-replay/analysis.json
-    digest: 50d71c526893f5e4d00bd1bd8fc002b9f12730cf4bf6ffb71a3a681401283412
+    digest: 3316aca2e6f3a8adacaf7c553bed64d89cb66fe5012bb9188086c92b2a2513b3
     schemaVersion: 1
   - label: checklist
     path: work/868-performance-evidence-analyze-replay/checklist.md

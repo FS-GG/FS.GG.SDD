@@ -4,10 +4,10 @@
   "workId": "868-performance-evidence-analyze-replay",
   "stage": "ship",
   "status": "shipReady",
-  "generator": "FS.GG.SDD.Artifacts/1.1.0",
+  "generator": "FS.GG.SDD.Artifacts/1.2.0",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "ea2ffd121bacd6e645c5acda6b2b0e31c9efd43644f1c902df6d64c914129562"
+    "value": "2d781e51fd9afcf6f22704dbf398e9ab628b2e43695bde8127cb27be42502cb6"
   },
   "verificationReadiness": {
     "status": "verificationReady",
