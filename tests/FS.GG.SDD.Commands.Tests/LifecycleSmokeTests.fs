@@ -10,7 +10,11 @@ open Xunit
 /// workflow in-process over a disposable project (`init` → … → `ship` plus the
 /// cross-cutting `agents` and `refresh` generators) and pins the documented
 /// bootstrap experience to real command output. Adds no new public surface — it
-/// only exercises the existing `TestSupport` run helpers.
+/// includes direct built-product coverage where lifecycle behavior crosses the CLI boundary.
+///
+/// The direct host route mutates process-global child-process state, so it is serialized with the
+/// other production-host tests.
+[<Collection("ProcessGlobalEnv")>]
 module LifecycleSmokeTests =
     let private workId = "001-bootstrap-smoke"
     let private title = "Bootstrap Smoke"
@@ -186,6 +190,9 @@ module LifecycleSmokeTests =
     let private nextCommand (report: CommandReport) =
         report.NextAction |> Option.bind (fun action -> action.Command)
 
+    let private runBuiltCli root command =
+        TestSupport.runCliRaw 120000 [ command; "--root"; root; "--work"; workId ]
+
     // --- T007: happy-path drive — every stage succeeds and writes its source/view ---
 
     [<Fact>]
@@ -256,24 +263,57 @@ module LifecycleSmokeTests =
         // Regenerate it once, then establish a ship-ready fixed point before direct replay.
         TestSupport.runEvidence d.Root workId title |> notBlocked "fixture evidence"
 
-        let replay () =
-            [ "analyze", TestSupport.runAnalyze d.Root workId title
-              "verify", TestSupport.runVerify d.Root workId title
-              "ship", TestSupport.runShip d.Root workId title ]
+        let reportPath = $"readiness/{workId}/production-route.trx"
 
-        // Bring the manually authored active fixture to its first generated fixed point.
-        for (stage, report) in replay () do
-            notBlocked stage report
+        TestSupport.writeRelative
+            d.Root
+            reportPath
+            """<?xml version="1.0" encoding="UTF-8"?>
+<TestRun id="performance-replay" name="run" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <ResultSummary outcome="Completed"><Counters total="5" executed="5" passed="5" failed="0" error="0" notExecuted="0" /></ResultSummary>
+</TestRun>"""
+
+        let evidenceExit, evidenceOutput, evidenceError =
+            TestSupport.runCliRaw
+                120000
+                [ "evidence"
+                  "--root"
+                  d.Root
+                  "--work"
+                  workId
+                  "--from-test-report"
+                  reportPath ]
+
+        Assert.Equal("", evidenceError.Trim())
+        Assert.Equal(0, evidenceExit)
+        Assert.Contains("evidenceReady", evidenceOutput)
+
+        let replay () =
+            [ "analyze", runBuiltCli d.Root "analyze"
+              "verify", runBuiltCli d.Root "verify"
+              "ship", runBuiltCli d.Root "ship" ]
+
+        for (_, (exitCode, _, error)) in replay () do
+            Assert.Equal("", error.Trim())
+            Assert.Equal(0, exitCode)
 
         let tracked =
-            readinessViews
-            |> List.map (fun path -> path, TestSupport.readRelative d.Root path)
+            Directory.EnumerateFiles(d.Root, "*", SearchOption.AllDirectories)
+            |> Seq.map (fun path -> Path.GetRelativePath(d.Root, path).Replace('\\', '/'))
+            |> Seq.filter (fun path -> path.StartsWith("work/") || path.StartsWith("readiness/"))
+            |> Seq.sort
+            |> Seq.map (fun path -> path, TestSupport.readRelative d.Root path)
+            |> Seq.toList
 
-        for (stage, report) in replay () do
-            notBlocked stage report
+        // Two direct, unwrapped, production-default cycles must leave every work/readiness byte
+        // (including the Governance handoff and compact ship verdict) unchanged after each stage.
+        for _ in 1 .. 2 do
+            for (stage, (exitCode, output, error)) in replay () do
+                Assert.Equal("", error.Trim())
+                Assert.Equal(0, exitCode)
 
-            for (path, expected) in tracked do
-                Assert.Equal(expected, TestSupport.readRelative d.Root path)
+                for (path, expected) in tracked do
+                    Assert.Equal(expected, TestSupport.readRelative d.Root path)
 
     [<Fact>]
     let ``analyze ignores only tool-owned evidence snapshots when calculating work-model currency`` () =
