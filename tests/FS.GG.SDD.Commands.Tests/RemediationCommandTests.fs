@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Commands.Tests
 open System.IO
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.ScaffoldProvenance
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.Internal
@@ -480,6 +481,48 @@ module UpgradeCommandTests =
         |> tryParse
         |> Option.defaultWith (fun () -> failwith "provenance must parse")
 
+    let private providerManifestEntry: ProductSkillManifest.ProductManifestEntry =
+        let body = "# provider-owned\n"
+
+        { Id = "fs-gg-provider-owned"
+          Scope = "product"
+          Sha256 = Fsgg.SkillMirror.sha256 body
+          ResolvablePath = Some ".agents/skills/fs-gg-provider-owned/SKILL.md"
+          MaterializesWhen = "always"
+          SuppliedBy = Some "template/product-skills/fs-gg-provider-owned/"
+          Files =
+            [ { Path = "SKILL.md"
+                Sha256 = Fsgg.SkillMirror.sha256 body } ] }
+
+    /// A pre-owner-backfill workspace whose provider already shipped a supported schema-v2 product
+    /// manifest into all three roots. Its recorded manifest digests model the real scaffold shape,
+    /// so the upgrade assertion covers both governing declarations rather than only the new row.
+    let private ownerMissingWithProductManifest manifestText =
+        let root = ownerMissingFixture ()
+        let manifestDigest = Fsgg.SkillMirror.sha256 manifestText
+
+        for path in HandlersScaffold.productSkillManifestPaths do
+            TestSupport.writeRelative root path manifestText
+
+        let record = provenanceOf root
+
+        let updated =
+            { record with
+                ProducedPaths =
+                    [ { Path = HandlersScaffold.productSkillManifestSourcePath
+                        Owner = ArtifactOwner.GeneratedProduct
+                        Sha256 = Some manifestDigest } ]
+                MirroredPaths =
+                    HandlersScaffold.productSkillManifestPaths
+                    |> List.filter ((<>) HandlersScaffold.productSkillManifestSourcePath)
+                    |> List.map (fun path ->
+                        { Path = path
+                          Owner = ArtifactOwner.Mirrored
+                          Sha256 = Some manifestDigest }) }
+
+        TestSupport.writeRelative root provenancePath (serialize updated)
+        root
+
     // AC1 + AC2 + AC3 + AC5.
     [<Fact>]
     let ``--yes backfilling a GameSkill copy declares it in gameSkillPaths with the verified digest`` () =
@@ -549,6 +592,143 @@ module UpgradeCommandTests =
             Assert.False second.ResidualDrift
             Assert.Empty second.SkillDriftPaths
             Assert.Equal(before, treeHash root)
+
+    // Reopened #798: the product manifest is part of the same owner-backfill transaction as
+    // scaffold provenance. This is the exact shape the public fable-bindings composition exercises:
+    // Rendering's always-on feedback skill is absent from an older scaffold, while the provider's
+    // schema-v2 manifest already exists and must retain a supplier-attributed, closed file set.
+    [<Fact>]
+    let ``upgrade manifest projection preserves nonfallback Rendering scope and predicate`` () =
+        let id = "fs-gg-rendering-fixture"
+        let body = "# rendering fixture\n"
+        let digest = Fsgg.SkillMirror.sha256 body
+        let predicate = "profile in [game, sample-pack]"
+        let scope = "process"
+
+        let sourceEntry: ProductSkillManifest.ProductManifestEntry =
+            { Id = id
+              Scope = scope
+              Sha256 = digest
+              ResolvablePath = Some $".agents/skills/{id}/SKILL.md"
+              MaterializesWhen = predicate
+              SuppliedBy = Some "template/rendering-fixture/skill/"
+              Files = [ { Path = "SKILL.md"; Sha256 = digest } ] }
+
+        let sourceManifest = ProductSkillManifest.serialize 2 [ sourceEntry ]
+
+        let rendering =
+            { RenderingSkills.empty with
+                ProvenancePaths =
+                    Fsgg.Schemas.agentSkillRoots
+                    |> List.map (fun root -> $"{root}/skills/{id}/SKILL.md", digest)
+                MaterializedIds = [ id ]
+                MaterializedScopes = Map.ofList [ id, scope ]
+                MaterializedSuppliers = Map.ofList [ id, sourceEntry.SuppliedBy.Value ] }
+
+        let additions =
+            HandlersUpgrade.ownerBackfillManifestAdditionsFromRenderingManifest
+                (Set.singleton id)
+                (Some sourceManifest)
+                DriverSkills.empty
+                GameSkills.empty
+                rendering
+
+        let addition = Assert.Single additions
+        Assert.Equal(scope, addition.Scope)
+        Assert.Equal(predicate, addition.MaterializesWhen)
+        Assert.Equal(sourceEntry.SuppliedBy, addition.SuppliedBy)
+        Assert.Equal<ProductSkillManifest.ProductManifestFile list>(sourceEntry.Files, addition.Files)
+
+        let amended =
+            ProductSkillManifest.amend (ProductSkillManifest.serialize 2 [ providerManifestEntry ]) additions
+            |> Result.defaultWith (sprintf "%A" >> failwith)
+
+        let _, amendedEntries =
+            ProductSkillManifest.tryParse amended |> Result.defaultWith failwith
+
+        Assert.Contains(amendedEntries, fun entry -> entry = sourceEntry)
+
+    [<Fact>]
+    let ``upgrade backfill appends the verified Rendering row to every product manifest and converges`` () =
+        let initialManifest = ProductSkillManifest.serialize 2 [ providerManifestEntry ]
+        let root = ownerMissingWithProductManifest initialManifest
+
+        let first = upgradeYes root
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade first).AppliedStepIds)
+        Assert.Equal(0, exitCode first)
+
+        let manifestText =
+            TestSupport.readRelative root HandlersScaffold.productSkillManifestSourcePath
+
+        let schemaVersion, entries =
+            manifestText |> ProductSkillManifest.tryParse |> Result.defaultWith failwith
+
+        Assert.Equal(2, schemaVersion)
+        Assert.Contains(entries, fun entry -> entry = providerManifestEntry)
+
+        let feedback =
+            entries |> List.find (fun entry -> entry.Id = "fs-gg-feedback-report")
+
+        let sourceFeedback =
+            RenderingSkills.manifestText ()
+            |> Option.defaultWith (fun () -> failwith "rendering source manifest must be embedded")
+            |> ProductSkillManifest.tryParse
+            |> Result.defaultWith failwith
+            |> snd
+            |> List.find (fun entry -> entry.Id = feedback.Id)
+
+        Assert.Equal(sourceFeedback.Scope, feedback.Scope)
+        Assert.Equal(sourceFeedback.Sha256, feedback.Sha256)
+        Assert.Equal(sourceFeedback.MaterializesWhen, feedback.MaterializesWhen)
+        Assert.Equal(sourceFeedback.SuppliedBy, feedback.SuppliedBy)
+        Assert.NotEmpty feedback.Files
+
+        let onDiskFiles =
+            let skillRoot = Path.Combine(root, ".agents", "skills", feedback.Id)
+
+            Directory.GetFiles(skillRoot, "*", SearchOption.AllDirectories)
+            |> Array.map (fun path ->
+                Path.GetRelativePath(skillRoot, path).Replace('\\', '/'),
+                Fsgg.SkillMirror.sha256 (File.ReadAllText path))
+            |> Array.sortBy fst
+            |> Array.toList
+
+        Assert.Equal<(string * string) list>(
+            feedback.Files
+            |> List.map (fun file -> file.Path, file.Sha256)
+            |> List.sortBy fst,
+            onDiskFiles
+        )
+
+        for path in HandlersScaffold.productSkillManifestPaths do
+            Assert.Equal(manifestText, TestSupport.readRelative root path)
+
+        let manifestDigest = Fsgg.SkillMirror.sha256 manifestText
+        let provenance = provenanceOf root
+
+        for path in HandlersScaffold.productSkillManifestPaths do
+            let row =
+                provenance.ProducedPaths @ provenance.MirroredPaths
+                |> List.find (fun row -> row.Path = path)
+
+            Assert.Equal(Some manifestDigest, row.Sha256)
+
+        let beforeSecond = treeHash root
+        let second = upgradeYes root
+        Assert.True (upgrade second).AlreadyCoherent
+        Assert.Equal(beforeSecond, treeHash root)
+
+    [<Theory>]
+    [<InlineData("{ not-json")>]
+    [<InlineData("{\"schemaVersion\":999,\"skills\":[]}")>]
+    let ``upgrade refuses an unround-trippable product manifest before any owner backfill write`` manifestText =
+        let root = ownerMissingWithProductManifest manifestText
+        let before = treeHash root
+        let report = upgradeYes root
+
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).FailedStepIds)
+        Assert.Equal(before, treeHash root)
+        Assert.False(TestSupport.existsRelative root ".agents/skills/fs-gg-feedback-report/SKILL.md")
 
     // The other half of the #798 rule, and the reason `ownerBackfillPreservedFiles` grew the game
     // arm alongside the recording: a file is attested only after it has been READ and matched.

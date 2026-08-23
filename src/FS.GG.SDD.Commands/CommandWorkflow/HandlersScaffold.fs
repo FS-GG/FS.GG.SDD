@@ -654,10 +654,10 @@ module internal HandlersScaffold =
     // (ADR-0063) and the drivers were never in it — so the consumer skill-union gate flags each as
     // [dangling]. SDD, the sole materialize authority, is the only producer that knows the full set,
     // so it folds them in here (mirroring the `scaffold-provenance.json` driver/owner-sourced treatment).
-    let private productSkillManifestSourcePath =
+    let productSkillManifestSourcePath =
         Fsgg.SkillMirror.providerSourceRoot + "/skills/skill-manifest.json"
 
-    let private productSkillManifestPaths =
+    let productSkillManifestPaths =
         Fsgg.Schemas.agentSkillRoots
         |> List.map (fun root -> root + "/skills/skill-manifest.json")
 
@@ -718,6 +718,7 @@ module internal HandlersScaffold =
         (provenancePaths: (string * string) list)
         (materializedScopes: Map<string, string>)
         (materializedSuppliers: Map<string, string>)
+        (materializedPredicates: Map<string, string>)
         (fallbackScope: string)
         =
         provenancePaths
@@ -743,7 +744,7 @@ module internal HandlersScaffold =
                       Scope = materializedScopes |> Map.tryFind id |> Option.defaultValue fallbackScope
                       Sha256 = skillSha256
                       ResolvablePath = Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
-                      MaterializesWhen = "always"
+                      MaterializesWhen = materializedPredicates |> Map.tryFind id |> Option.defaultValue "always"
                       SuppliedBy = materializedSuppliers |> Map.tryFind id
                       Files = declaredFiles }
 
@@ -751,11 +752,23 @@ module internal HandlersScaffold =
 
     // All manifest additions for a scaffold: the drivers (scope from their manifest, `process`
     // fallback) unioned with the owner-sourced skills (scope `product` fallback), id-deduped.
-    let productManifestAdditions
+    let productManifestAdditionsFromRenderingManifest
+        (renderingManifestText: string option)
         (driverOutcome: DriverSkills.DriverOutcome)
         (gameSkillOutcome: GameSkills.GameSkillOutcome)
         (renderingSkillOutcome: RenderingSkills.RenderingSkillOutcome)
         =
+        // The folded row preserves the source manifest's predicate rather than replacing it with
+        // a post-materialization `always`. This matters to `upgrade`, which reconstructs the same
+        // declaration transaction later: supplier, scope, predicate and file set all come from the
+        // verified embedded transport, while the product manifest remains a faithful union of its
+        // suppliers rather than an inventory that silently discards their gating contract.
+        let renderingPredicates =
+            renderingManifestText
+            |> Option.bind (ProductSkillManifest.tryParse >> Result.toOption)
+            |> Option.map (snd >> List.map (fun entry -> entry.Id, entry.MaterializesWhen) >> Map.ofList)
+            |> Option.defaultValue Map.empty
+
         // FS.GG.SDD#864: the rendering arm is appended LAST, and the `distinctBy` below is why the
         // order is load-bearing rather than cosmetic. `plannedRenderingSkillOutcome` has already
         // removed every path the established channel kept, so on the four doubly-shipped ids there is
@@ -763,14 +776,31 @@ module internal HandlersScaffold =
         // means `distinctBy` keeps the entry whose bytes were actually WRITTEN (the established channel's,
         // which the no-clobber write laid down first) instead of silently declaring a digest for a
         // body no file on disk carries.
-        manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes Map.empty "process"
-        @ manifestEntriesOf gameSkillOutcome.ProvenancePaths gameSkillOutcome.MaterializedScopes Map.empty "product"
+        manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes Map.empty Map.empty "process"
+        @ manifestEntriesOf
+            gameSkillOutcome.ProvenancePaths
+            gameSkillOutcome.MaterializedScopes
+            Map.empty
+            Map.empty
+            "product"
         @ manifestEntriesOf
             renderingSkillOutcome.ProvenancePaths
             renderingSkillOutcome.MaterializedScopes
             renderingSkillOutcome.MaterializedSuppliers
+            renderingPredicates
             "product"
         |> List.distinctBy (fun (entry: ProductSkillManifest.ProductManifestEntry) -> entry.Id)
+
+    let productManifestAdditions
+        (driverOutcome: DriverSkills.DriverOutcome)
+        (gameSkillOutcome: GameSkills.GameSkillOutcome)
+        (renderingSkillOutcome: RenderingSkills.RenderingSkillOutcome)
+        =
+        productManifestAdditionsFromRenderingManifest
+            (RenderingSkills.manifestText ())
+            driverOutcome
+            gameSkillOutcome
+            renderingSkillOutcome
 
     // FS.GG.SDD#739: the amend as ONE function of the model plus the plan, so the tick that consumes
     // the TEXT and the finalize that consumes the VERDICT cannot disagree about what happened.
