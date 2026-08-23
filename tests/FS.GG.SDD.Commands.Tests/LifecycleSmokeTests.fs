@@ -250,16 +250,23 @@ module LifecycleSmokeTests =
         let d = driveLifecycle ()
         addActivePerformanceEvidence d.Root
 
-        let initialAnalyze = TestSupport.runAnalyze d.Root workId title
-        notBlocked "fixture analyze" initialAnalyze
+        // The fallback mutation is proved at the production boundary: this exact child is the
+        // one that loses performanceEvidenceArtifact when it is given the absent input instead
+        // of the recovered evidence snapshot.
+        let initialExit, initialOutput, initialError = runBuiltCli d.Root "analyze"
+        Assert.Equal("", initialError.Trim())
+        Assert.Equal(0, initialExit)
+        Assert.DoesNotContain("\"outcome\": \"blocked\"", initialOutput)
 
         Assert.Contains(
             "\"performanceEvidenceArtifact\": {",
             TestSupport.readRelative d.Root $"readiness/{workId}/work-model.json"
         )
 
-        TestSupport.runAnalyze d.Root workId title
-        |> notBlocked "settle fixture analyze"
+        let settleExit, settleOutput, settleError = runBuiltCli d.Root "analyze"
+        Assert.Equal("", settleError.Trim())
+        Assert.Equal(0, settleExit)
+        Assert.DoesNotContain("\"outcome\": \"blocked\"", settleOutput)
 
         // The authored fixture changes the evidence declaration after its initial source snapshot.
         // Regenerate it once, then establish a ship-ready fixed point before direct replay.
@@ -290,14 +297,13 @@ module LifecycleSmokeTests =
         Assert.Equal(0, evidenceExit)
         Assert.Contains("evidenceReady", evidenceOutput)
 
-        let replay () =
-            [ "analyze", runBuiltCli d.Root "analyze"
-              "verify", runBuiltCli d.Root "verify"
-              "ship", runBuiltCli d.Root "ship" ]
-
-        for (_, (exitCode, _, error)) in replay () do
+        // Establish the direct-host fixture through individually observed stages.  This is not a
+        // replay list: each child completes and is checked before the next is launched.
+        for stage in [ "analyze"; "verify"; "ship" ] do
+            let exitCode, output, error = runBuiltCli d.Root stage
             Assert.Equal("", error.Trim())
             Assert.Equal(0, exitCode)
+            Assert.DoesNotContain("\"outcome\": \"blocked\"", output)
 
         let tracked =
             Directory.EnumerateFiles(d.Root, "*", SearchOption.AllDirectories)
@@ -307,15 +313,24 @@ module LifecycleSmokeTests =
             |> Seq.map (fun path -> path, TestSupport.readRelative d.Root path)
             |> Seq.toList
 
-        // Two direct, unwrapped, production-default cycles must leave every work/readiness byte
-        // (including the Governance handoff and compact ship verdict) unchanged after each stage.
-        for _ in 1..2 do
-            for (stage, (exitCode, output, error)) in replay () do
-                Assert.Equal("", error.Trim())
-                Assert.Equal(0, exitCode)
+        let assertDirectStage stage =
+            // This must remain one child process at a time.  Constructing an eager replay list
+            // makes every later assertion observe only the post-ship filesystem state.
+            let exitCode, output, error = runBuiltCli d.Root stage
 
-                for (path, expected) in tracked do
-                    Assert.Equal(expected, TestSupport.readRelative d.Root path)
+            Assert.Equal("", error.Trim())
+            Assert.Equal(0, exitCode)
+            Assert.DoesNotContain("\"outcome\": \"blocked\"", output)
+
+            for (path, expected) in tracked do
+                Assert.Equal(expected, TestSupport.readRelative d.Root path)
+
+        // Two direct, unwrapped, production-default cycles must leave every work/readiness byte
+        // (including the Governance handoff and compact ship verdict) unchanged immediately after
+        // each child command—not merely after a later verify or ship can repair analyze.
+        for _ in 1..2 do
+            for stage in [ "analyze"; "verify"; "ship" ] do
+                assertDirectStage stage
 
     [<Fact>]
     let ``analyze ignores only tool-owned evidence snapshots when calculating work-model currency`` () =
