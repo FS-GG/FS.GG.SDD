@@ -598,6 +598,57 @@ module UpgradeCommandTests =
     // Rendering's always-on feedback skill is absent from an older scaffold, while the provider's
     // schema-v2 manifest already exists and must retain a supplier-attributed, closed file set.
     [<Fact>]
+    let ``upgrade manifest projection preserves nonfallback Rendering scope and predicate`` () =
+        let id = "fs-gg-rendering-fixture"
+        let body = "# rendering fixture\n"
+        let digest = Fsgg.SkillMirror.sha256 body
+        let predicate = "profile in [game, sample-pack]"
+        let scope = "process"
+
+        let sourceEntry: ProductSkillManifest.ProductManifestEntry =
+            { Id = id
+              Scope = scope
+              Sha256 = digest
+              ResolvablePath = Some $".agents/skills/{id}/SKILL.md"
+              MaterializesWhen = predicate
+              SuppliedBy = Some "template/rendering-fixture/skill/"
+              Files = [ { Path = "SKILL.md"; Sha256 = digest } ] }
+
+        let sourceManifest = ProductSkillManifest.serialize 2 [ sourceEntry ]
+
+        let rendering =
+            { RenderingSkills.empty with
+                ProvenancePaths =
+                    Fsgg.Schemas.agentSkillRoots
+                    |> List.map (fun root -> $"{root}/skills/{id}/SKILL.md", digest)
+                MaterializedIds = [ id ]
+                MaterializedScopes = Map.ofList [ id, scope ]
+                MaterializedSuppliers = Map.ofList [ id, sourceEntry.SuppliedBy.Value ] }
+
+        let additions =
+            HandlersUpgrade.ownerBackfillManifestAdditionsFromRenderingManifest
+                (Set.singleton id)
+                (Some sourceManifest)
+                DriverSkills.empty
+                GameSkills.empty
+                rendering
+
+        let addition = Assert.Single additions
+        Assert.Equal(scope, addition.Scope)
+        Assert.Equal(predicate, addition.MaterializesWhen)
+        Assert.Equal(sourceEntry.SuppliedBy, addition.SuppliedBy)
+        Assert.Equal<ProductSkillManifest.ProductManifestFile list>(sourceEntry.Files, addition.Files)
+
+        let amended =
+            ProductSkillManifest.amend (ProductSkillManifest.serialize 2 [ providerManifestEntry ]) additions
+            |> Result.defaultWith (sprintf "%A" >> failwith)
+
+        let _, amendedEntries =
+            ProductSkillManifest.tryParse amended |> Result.defaultWith failwith
+
+        Assert.Contains(amendedEntries, fun entry -> entry = sourceEntry)
+
+    [<Fact>]
     let ``upgrade backfill appends the verified Rendering row to every product manifest and converges`` () =
         let initialManifest = ProductSkillManifest.serialize 2 [ providerManifestEntry ]
         let root = ownerMissingWithProductManifest initialManifest

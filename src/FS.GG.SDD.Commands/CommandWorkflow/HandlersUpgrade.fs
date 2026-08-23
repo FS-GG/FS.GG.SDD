@@ -135,6 +135,22 @@ module internal HandlersUpgrade =
         |> List.map (fun (_, paths) -> List.last paths)
         |> List.sortBy (fun path -> path.Path)
 
+    // The manifest projection used by upgrade is explicit over its producer manifest so the
+    // preservation contract is independently testable with non-fallback scope and predicate rows.
+    // Production passes the exact embedded manifest that RenderingSkills verified; tests can pass a
+    // producer-valid synthetic document without replacing package bytes or weakening that runtime
+    // boundary. Filtering remains here, in the upgrade lane, so the fixture proves only ids this
+    // re-seed actually targets can enter its declaration transaction.
+    let ownerBackfillManifestAdditionsFromRenderingManifest
+        (affectedSkillIds: Set<string>)
+        (renderingManifestText: string option)
+        (driver: DriverSkills.DriverOutcome)
+        (product: GameSkills.GameSkillOutcome)
+        (rendering: RenderingSkills.RenderingSkillOutcome)
+        =
+        HandlersScaffold.productManifestAdditionsFromRenderingManifest renderingManifestText driver product rendering
+        |> List.filter (fun entry -> affectedSkillIds.Contains entry.Id)
+
     // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced (driver + product classes) skill copies among a
     // re-seed step's targets, reconstructed as no-clobber writes from the SAME embedded, content-
     // addressed plan the drift preview used (`Drift.ownerSourcedBackfill`, filtered to the step's
@@ -211,8 +227,12 @@ module internal HandlersUpgrade =
             // actually writes, and amend only an existing provider manifest — a workspace without
             // one does not acquire a new contract during remediation.
             let manifestAdditions =
-                HandlersScaffold.productManifestAdditions driver product rendering
-                |> List.filter (fun entry -> affectedSkillIds.Contains entry.Id)
+                ownerBackfillManifestAdditionsFromRenderingManifest
+                    affectedSkillIds
+                    (RenderingSkills.manifestText ())
+                    driver
+                    product
+                    rendering
 
             let manifestPlan = HandlersScaffold.productManifestAmend model manifestAdditions
 

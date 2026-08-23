@@ -752,7 +752,8 @@ module internal HandlersScaffold =
 
     // All manifest additions for a scaffold: the drivers (scope from their manifest, `process`
     // fallback) unioned with the owner-sourced skills (scope `product` fallback), id-deduped.
-    let productManifestAdditions
+    let productManifestAdditionsFromRenderingManifest
+        (renderingManifestText: string option)
         (driverOutcome: DriverSkills.DriverOutcome)
         (gameSkillOutcome: GameSkills.GameSkillOutcome)
         (renderingSkillOutcome: RenderingSkills.RenderingSkillOutcome)
@@ -763,7 +764,7 @@ module internal HandlersScaffold =
         // verified embedded transport, while the product manifest remains a faithful union of its
         // suppliers rather than an inventory that silently discards their gating contract.
         let renderingPredicates =
-            RenderingSkills.manifestText ()
+            renderingManifestText
             |> Option.bind (ProductSkillManifest.tryParse >> Result.toOption)
             |> Option.map (snd >> List.map (fun entry -> entry.Id, entry.MaterializesWhen) >> Map.ofList)
             |> Option.defaultValue Map.empty
@@ -789,6 +790,17 @@ module internal HandlersScaffold =
             renderingPredicates
             "product"
         |> List.distinctBy (fun (entry: ProductSkillManifest.ProductManifestEntry) -> entry.Id)
+
+    let productManifestAdditions
+        (driverOutcome: DriverSkills.DriverOutcome)
+        (gameSkillOutcome: GameSkills.GameSkillOutcome)
+        (renderingSkillOutcome: RenderingSkills.RenderingSkillOutcome)
+        =
+        productManifestAdditionsFromRenderingManifest
+            (RenderingSkills.manifestText ())
+            driverOutcome
+            gameSkillOutcome
+            renderingSkillOutcome
 
     // FS.GG.SDD#739: the amend as ONE function of the model plus the plan, so the tick that consumes
     // the TEXT and the finalize that consumes the VERDICT cannot disagree about what happened.
