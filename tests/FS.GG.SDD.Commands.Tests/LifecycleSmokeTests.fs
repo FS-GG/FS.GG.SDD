@@ -250,18 +250,13 @@ module LifecycleSmokeTests =
         let d = driveLifecycle ()
         addActivePerformanceEvidence d.Root
 
-        // The fallback mutation is proved at the production boundary: this exact child is the
-        // one that loses performanceEvidenceArtifact when it is given the absent input instead
-        // of the recovered evidence snapshot.
+        // Exercise the initial post-evidence production route before converging the fixture.  The
+        // fallback mutation is judged below by the same per-stage report and byte gate as replay,
+        // so an earlier assertion cannot mask whether the direct gate itself kills it.
         let initialExit, initialOutput, initialError = runBuiltCli d.Root "analyze"
         Assert.Equal("", initialError.Trim())
         Assert.Equal(0, initialExit)
         Assert.DoesNotContain("\"outcome\": \"blocked\"", initialOutput)
-
-        Assert.Contains(
-            "\"performanceEvidenceArtifact\": {",
-            TestSupport.readRelative d.Root $"readiness/{workId}/work-model.json"
-        )
 
         let settleExit, settleOutput, settleError = runBuiltCli d.Root "analyze"
         Assert.Equal("", settleError.Trim())
@@ -297,6 +292,31 @@ module LifecycleSmokeTests =
         Assert.Equal(0, evidenceExit)
         Assert.Contains("evidenceReady", evidenceOutput)
 
+        // Analyze once after recording the observed run, then refresh evidence snapshots against
+        // that analysis.  The measured replay begins only after this authored-fixture setup has
+        // converged; otherwise verify correctly reports the deliberately old source snapshot.
+        let setupAnalyzeExit, setupAnalyzeOutput, setupAnalyzeError =
+            runBuiltCli d.Root "analyze"
+
+        Assert.Equal("", setupAnalyzeError.Trim())
+        Assert.Equal(0, setupAnalyzeExit)
+        Assert.DoesNotContain("\"outcome\": \"blocked\"", setupAnalyzeOutput)
+
+        let syncExit, syncOutput, syncError =
+            TestSupport.runCliRaw
+                120000
+                [ "evidence"
+                  "--root"
+                  d.Root
+                  "--work"
+                  workId
+                  "--from-test-report"
+                  reportPath ]
+
+        Assert.Equal("", syncError.Trim())
+        Assert.Equal(0, syncExit)
+        Assert.Contains("evidenceReady", syncOutput)
+
         // Establish the direct-host fixture through individually observed stages.  This is not a
         // replay list: each child completes and is checked before the next is launched.
         for stage in [ "analyze"; "verify"; "ship" ] do
@@ -313,14 +333,32 @@ module LifecycleSmokeTests =
             |> Seq.map (fun path -> path, TestSupport.readRelative d.Root path)
             |> Seq.toList
 
-        let assertDirectStage stage =
+        let assertDirectStage (stage: string) (expectedReadiness: string) (summaryProperty: string) =
             // This must remain one child process at a time.  Constructing an eager replay list
             // makes every later assertion observe only the post-ship filesystem state.
             let exitCode, output, error = runBuiltCli d.Root stage
 
             Assert.Equal("", error.Trim())
             Assert.Equal(0, exitCode)
-            Assert.DoesNotContain("\"outcome\": \"blocked\"", output)
+
+            // Parse this child's report before launching the next stage.  Exit zero alone also
+            // admits succeeded-with-warnings and stale generated views, so it cannot prove the
+            // green/current fixed point that this regression exists to protect.
+            use document = JsonDocument.Parse output
+            let report = document.RootElement
+            let outcome = report.GetProperty("outcome").GetString()
+            Assert.True((outcome = "noChange"), sprintf "%s outcome was %s: %s" stage outcome output)
+            Assert.True(report.GetProperty("coherent").GetBoolean())
+
+            Assert.Equal(expectedReadiness, report.GetProperty(summaryProperty).GetProperty("readiness").GetString())
+
+            let generatedViews =
+                report.GetProperty("generatedViews").EnumerateArray() |> Seq.toList
+
+            Assert.True(generatedViews.Length > 0, $"{stage} reported no generated views")
+
+            for view in generatedViews do
+                Assert.Equal("current", view.GetProperty("currency").GetString())
 
             for (path, expected) in tracked do
                 Assert.Equal(expected, TestSupport.readRelative d.Root path)
@@ -329,8 +367,11 @@ module LifecycleSmokeTests =
         // (including the Governance handoff and compact ship verdict) unchanged immediately after
         // each child command—not merely after a later verify or ship can repair analyze.
         for _ in 1..2 do
-            for stage in [ "analyze"; "verify"; "ship" ] do
-                assertDirectStage stage
+            for (stage, expectedReadiness, summaryProperty) in
+                [ "analyze", "implementationReady", "analysis"
+                  "verify", "verificationReady", "verification"
+                  "ship", "shipReady", "ship" ] do
+                assertDirectStage stage expectedReadiness summaryProperty
 
     [<Fact>]
     let ``analyze ignores only tool-owned evidence snapshots when calculating work-model currency`` () =

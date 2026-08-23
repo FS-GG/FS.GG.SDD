@@ -1,20 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="37237b9e-276e-47ea-a2df-b859f8abe637" name="@c2756152e150 2026-08-23 01:55:17" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2026-08-23T01:55:17.3109427+02:00" queuing="2026-08-23T01:55:17.3109428+02:00" start="2026-08-23T01:55:16.1805846+02:00" finish="2026-08-23T01:55:17.3136389+02:00" />
-  <TestSettings name="default" id="32340724-67e0-4abd-b93d-08995d98223b">
-    <Deployment runDeploymentRoot="_c2756152e150_2026-08-23_01_55_17" />
+<TestRun id="e6f1ab07-4423-4156-bfdc-2f7647adbf57" name="@c2756152e150 2026-08-23 02:46:59" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-23T02:46:59.2345719+02:00" queuing="2026-08-23T02:46:59.2345719+02:00" start="2026-08-23T02:46:52.3978616+02:00" finish="2026-08-23T02:46:59.2375622+02:00" />
+  <TestSettings name="default" id="cd0d00b0-ba96-434c-826a-c018a5f3f909">
+    <Deployment runDeploymentRoot="_c2756152e150_2026-08-23_02_46_59" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="46c8fa65-b579-4d6c-b0bf-c32d7115dd96" testId="11500538-1485-f56b-f34c-3f6a4600714d" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point" computerName="c2756152e150" duration="00:00:00.7070578" startTime="2026-08-23T01:55:16.5385904+02:00" endTime="2026-08-23T01:55:17.2489416+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="46c8fa65-b579-4d6c-b0bf-c32d7115dd96" />
+    <UnitTestResult executionId="a014a220-697a-4986-8d67-b5d001596d09" testId="11500538-1485-f56b-f34c-3f6a4600714d" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point" computerName="c2756152e150" duration="00:00:06.4330407" startTime="2026-08-23T02:46:52.7445569+02:00" endTime="2026-08-23T02:46:59.1805564+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a014a220-697a-4986-8d67-b5d001596d09" />
   </Results>
   <TestDefinitions>
-    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point" storage="/home/developer/projects/fs.gg.sdd-shrike-9f9d/tests/fs.gg.sdd.commands.tests/bin/debug/net10.0/fs.gg.sdd.commands.tests.dll" id="11500538-1485-f56b-f34c-3f6a4600714d">
-      <Execution id="46c8fa65-b579-4d6c-b0bf-c32d7115dd96" />
-      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-shrike-9f9d/tests/FS.GG.SDD.Commands.Tests/bin/Debug/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point" />
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point" storage="/home/developer/projects/fs.gg.sdd-snipe-900e/tests/fs.gg.sdd.commands.tests/bin/debug/net10.0/fs.gg.sdd.commands.tests.dll" id="11500538-1485-f56b-f34c-3f6a4600714d">
+      <Execution id="a014a220-697a-4986-8d67-b5d001596d09" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-snipe-900e/tests/FS.GG.SDD.Commands.Tests/bin/Debug/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="11500538-1485-f56b-f34c-3f6a4600714d" executionId="46c8fa65-b579-4d6c-b0bf-c32d7115dd96" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="11500538-1485-f56b-f34c-3f6a4600714d" executionId="a014a220-697a-4986-8d67-b5d001596d09" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
@@ -25,9 +25,9 @@
     <Output>
       <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.10)
 [xUnit.net 00:00:00.07]   Discovering: FS.GG.SDD.Commands.Tests
-[xUnit.net 00:00:00.15]   Discovered:  FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:00.14]   Discovered:  FS.GG.SDD.Commands.Tests
 [xUnit.net 00:00:00.16]   Starting:    FS.GG.SDD.Commands.Tests
-[xUnit.net 00:00:00.89]   Finished:    FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:06.61]   Finished:    FS.GG.SDD.Commands.Tests
 </StdOut>
     </Output>
   </ResultSummary>
