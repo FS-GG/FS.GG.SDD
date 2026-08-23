@@ -11,11 +11,11 @@ sourceAnalysis: readiness/903-scaffold-root-gitignore-composition/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/903-scaffold-root-gitignore-composition/analysis.json
-    digest: 2624bc3606068fff7efa7415d2c01dc796e13d37c968f82a981283f227c2040f
+    digest: 3dc801c349f30f2812f5d4715c53c7e1493d6704db0df4ecb03e7bebd7d36399
     schemaVersion: 1
   - label: checklist
     path: work/903-scaffold-root-gitignore-composition/checklist.md
-    digest: b1cdbf675fd62886bd98ce1710830fa22e1fc2a1626b123edf5af5236914afec
+    digest: 05de078f06fa9cd0b2c13252dee02f45405dcc144839592055828432b6b0a4d6
     schemaVersion: 1
   - label: clarifications
     path: work/903-scaffold-root-gitignore-composition/clarifications.md
@@ -23,15 +23,15 @@ sourceSnapshots:
     schemaVersion: 1
   - label: plan
     path: work/903-scaffold-root-gitignore-composition/plan.md
-    digest: eb826c20ba4d8e5d590689efe0924acf2784cf7b81b6f150625de003479486ee
+    digest: 70a13c4b2fb1a40dc4a6ba628f0cd046980574b87e384b778a202f683f878700
     schemaVersion: 1
   - label: spec
     path: work/903-scaffold-root-gitignore-composition/spec.md
-    digest: d826fc7488a4cdda236fe2d9527ab89fa9ae4542c766f21be1eea61b3fbc0530
+    digest: 5a3b39d02651498231f305ef000fcbc37b860fe655e04df388c20209fd75e279
     schemaVersion: 1
   - label: tasks
     path: work/903-scaffold-root-gitignore-composition/tasks.yml
-    digest: e09a2f87e51279ed41751c3c2093b8908a43110a5126d27c2e111b1a4471f0de
+    digest: 4d21ab89461c0175090ed9d5a1af5db24f57a9d6a4db9357185c41a66af84196
     schemaVersion: 1
 evidence:
   - id: EV001
@@ -52,13 +52,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:fce9224154054d2065366597f1084b602357669bf7f85c557bfe8187b89e8dc0"
+      digest: "sha256:c29577a66afd56ef8cd32342876134c616f8a51e832d0bed3278eea9c08fac5f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 1324
       failed: 0
       skipped: 0
-    notes: [Observed by the full Release scaffold and version-regression suite.]
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` body is retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
   - id: EV002
     kind: verification
     subject:
@@ -77,13 +77,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:fce9224154054d2065366597f1084b602357669bf7f85c557bfe8187b89e8dc0"
+      digest: "sha256:c29577a66afd56ef8cd32342876134c616f8a51e832d0bed3278eea9c08fac5f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 1324
       failed: 0
       skipped: 0
-    notes: [Observed by the full Release scaffold and version-regression suite.]
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` body is retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
   - id: EV003
     kind: verification
     subject:
@@ -102,13 +102,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:fce9224154054d2065366597f1084b602357669bf7f85c557bfe8187b89e8dc0"
+      digest: "sha256:c29577a66afd56ef8cd32342876134c616f8a51e832d0bed3278eea9c08fac5f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 1324
       failed: 0
       skipped: 0
-    notes: [Observed by the full Release scaffold and version-regression suite.]
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` body is retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
   - id: EV004
     kind: verification
     subject:
@@ -127,13 +127,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:fce9224154054d2065366597f1084b602357669bf7f85c557bfe8187b89e8dc0"
+      digest: "sha256:c29577a66afd56ef8cd32342876134c616f8a51e832d0bed3278eea9c08fac5f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 1324
       failed: 0
       skipped: 0
-    notes: [Observed by the full Release scaffold and version-regression suite.]
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` body is retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
   - id: EV005
     kind: verification
     subject:
@@ -152,12 +152,12 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/903-scaffold-root-gitignore-composition/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:fce9224154054d2065366597f1084b602357669bf7f85c557bfe8187b89e8dc0"
+      digest: "sha256:c29577a66afd56ef8cd32342876134c616f8a51e832d0bed3278eea9c08fac5f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 1324
       failed: 0
       skipped: 0
-    notes: [Observed by the full Release scaffold and version-regression suite.]
+    notes: ["Observed by the full Release scaffold and version-regression suite: the emitted provider root `.gitignore` body is retained byte-for-byte after the deterministic SDD prefix, with no generic `--force`."]
 lifecycleNotes:
   - "Next lifecycle action: verify."

@@ -53,7 +53,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "b1cdbf675fd62886bd98ce1710830fa22e1fc2a1626b123edf5af5236914afec"
+        "value": "05de078f06fa9cd0b2c13252dee02f45405dcc144839592055828432b6b0a4d6"
       }
     },
     {
@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "abd1b2953fc5358b3a2cb0c800b7893a0b15a47c9430f6aebe51e99e94c6595d"
+        "value": "00bc4d3531e50b6f78128e4d8bb22eb2529b92ca4cbe06f77222cc5b1245946c"
       }
     },
     {
@@ -89,7 +89,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "eb826c20ba4d8e5d590689efe0924acf2784cf7b81b6f150625de003479486ee"
+        "value": "70a13c4b2fb1a40dc4a6ba628f0cd046980574b87e384b778a202f683f878700"
       }
     },
     {
@@ -101,7 +101,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "d826fc7488a4cdda236fe2d9527ab89fa9ae4542c766f21be1eea61b3fbc0530"
+        "value": "5a3b39d02651498231f305ef000fcbc37b860fe655e04df388c20209fd75e279"
       }
     },
     {
@@ -113,7 +113,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "e09a2f87e51279ed41751c3c2093b8908a43110a5126d27c2e111b1a4471f0de"
+        "value": "4d21ab89461c0175090ed9d5a1af5db24f57a9d6a4db9357185c41a66af84196"
       }
     }
   ],
@@ -128,8 +128,8 @@
   "requirements": [
     {
       "id": "FR-001",
-      "title": "Given a provider that emits a root .gitignore, default scaffold preserves the SDD-generated and provider-authored entries without --force; a mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit --force remains separately observable. (Stories: US-001; Acceptance: AC-001)",
-      "text": "Given a provider that emits a root .gitignore, default scaffold preserves the SDD-generated and provider-authored entries without --force; a mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit --force remains separately observable. (Stories: US-001; Acceptance: AC-001)",
+      "title": "Given a provider that emits a root \u0060.gitignore\u0060, default scaffold preserves the deterministic SDD-generated lifecycle-ignore prefix and appends the provider-authored \u0060.gitignore\u0060 body byte-for-byte, in its original order, comments, blank lines, negations, and final-newline state, without generic \u0060--force\u0060. The composition performs no line de-duplication or normalization. A mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit provider \u0060--force\u0060 remains separately observable. (Stories: US-001; Acceptance: AC-001)",
+      "text": "Given a provider that emits a root \u0060.gitignore\u0060, default scaffold preserves the deterministic SDD-generated lifecycle-ignore prefix and appends the provider-authored \u0060.gitignore\u0060 body byte-for-byte, in its original order, comments, blank lines, negations, and final-newline state, without generic \u0060--force\u0060. The composition performs no line de-duplication or normalization. A mutation that reintroduces direct overwrite exits with a conflict or loses a required entry; explicit provider \u0060--force\u0060 remains separately observable. (Stories: US-001; Acceptance: AC-001)",
       "acceptanceCriteria": [
         "AC-001"
       ],
@@ -447,7 +447,7 @@
           "path": "work/903-scaffold-root-gitignore-composition/checklist.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "b1cdbf675fd62886bd98ce1710830fa22e1fc2a1626b123edf5af5236914afec"
+            "value": "05de078f06fa9cd0b2c13252dee02f45405dcc144839592055828432b6b0a4d6"
           },
           "schemaVersion": 1
         },
@@ -463,7 +463,7 @@
           "path": "work/903-scaffold-root-gitignore-composition/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "abd1b2953fc5358b3a2cb0c800b7893a0b15a47c9430f6aebe51e99e94c6595d"
+            "value": "00bc4d3531e50b6f78128e4d8bb22eb2529b92ca4cbe06f77222cc5b1245946c"
           },
           "schemaVersion": 1
         },
@@ -471,7 +471,7 @@
           "path": "work/903-scaffold-root-gitignore-composition/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "eb826c20ba4d8e5d590689efe0924acf2784cf7b81b6f150625de003479486ee"
+            "value": "70a13c4b2fb1a40dc4a6ba628f0cd046980574b87e384b778a202f683f878700"
           },
           "schemaVersion": 1
         },
@@ -479,7 +479,7 @@
           "path": "work/903-scaffold-root-gitignore-composition/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "d826fc7488a4cdda236fe2d9527ab89fa9ae4542c766f21be1eea61b3fbc0530"
+            "value": "5a3b39d02651498231f305ef000fcbc37b860fe655e04df388c20209fd75e279"
           },
           "schemaVersion": 1
         },
@@ -487,14 +487,14 @@
           "path": "work/903-scaffold-root-gitignore-composition/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "e09a2f87e51279ed41751c3c2093b8908a43110a5126d27c2e111b1a4471f0de"
+            "value": "4d21ab89461c0175090ed9d5a1af5db24f57a9d6a4db9357185c41a66af84196"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "614b7da2b70a7f756b0ae4b18e7f862f5bbd35cc38b48508ee1926f5a4520457"
+        "value": "83570d54bb9204ef6feb7d0cc5c888c3c7b7fccee18285a1baf056de682c500c"
       },
       "currency": "current"
     }

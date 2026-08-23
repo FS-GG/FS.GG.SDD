@@ -21,7 +21,7 @@ Prose status: checklistReady
 - work/903-scaffold-root-gitignore-composition/clarifications.md
 
 ## Source Snapshot
-- spec: work/903-scaffold-root-gitignore-composition/spec.md sha256:d826fc7488a4cdda236fe2d9527ab89fa9ae4542c766f21be1eea61b3fbc0530 schemaVersion:1
+- spec: work/903-scaffold-root-gitignore-composition/spec.md sha256:5a3b39d02651498231f305ef000fcbc37b860fe655e04df388c20209fd75e279 schemaVersion:1
 - clarifications: work/903-scaffold-root-gitignore-composition/clarifications.md sha256:3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44 schemaVersion:1
 
 ## Checklist Items

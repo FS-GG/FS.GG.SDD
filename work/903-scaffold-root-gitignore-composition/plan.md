@@ -16,9 +16,9 @@ publicOrToolFacingImpact: true
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/903-scaffold-root-gitignore-composition/spec.md sha256:d826fc7488a4cdda236fe2d9527ab89fa9ae4542c766f21be1eea61b3fbc0530 schemaVersion:1
+- spec: work/903-scaffold-root-gitignore-composition/spec.md sha256:5a3b39d02651498231f305ef000fcbc37b860fe655e04df388c20209fd75e279 schemaVersion:1
 - clarifications: work/903-scaffold-root-gitignore-composition/clarifications.md sha256:3b21cffd21f648977c2ef6f3039778a4c0fa2d9faca59fdc9bfb852722863c44 schemaVersion:1
-- checklist: work/903-scaffold-root-gitignore-composition/checklist.md sha256:b1cdbf675fd62886bd98ce1710830fa22e1fc2a1626b123edf5af5236914afec schemaVersion:1
+- checklist: work/903-scaffold-root-gitignore-composition/checklist.md sha256:05de078f06fa9cd0b2c13252dee02f45405dcc144839592055828432b6b0a4d6 schemaVersion:1
 
 ## Plan Scope
 - Work item 903-scaffold-root-gitignore-composition is planned from the current specification, clarification, and checklist facts.
@@ -27,19 +27,19 @@ Prose status: planned
 - Checklist result count: 1.
 
 ## Plan Decisions
-- PD-001 [AC-001] [FR-001] complete: Scaffold will retain the SDD-generated root `.gitignore` as a temporary composition input, run the provider without generic overwrite, then deterministically merge the pre-existing SDD lines and provider-authored lines into one root file. The merge is line-preserving and de-duplicates exact lines in first-seen order, so neither source is clobbered; explicit provider `--force` behavior is not inferred or widened by SDD.
+- PD-001 [AC-001] [FR-001] complete: Scaffold will retain the SDD-generated root `.gitignore` as a temporary composition input, run the provider without generic overwrite, then read the provider-authored root file and write the deterministic SDD lifecycle-ignore prefix followed by the provider body byte-for-byte. The provider suffix retains its original order, comments, blank lines, negations, and final-newline state; composition performs no line de-duplication or normalization. Explicit provider `--force` behavior is not inferred or widened by SDD.
 
 ## Contract Impact
-- PC-001 [PD-001] command report: `fsgg-sdd scaffold` keeps its existing provider invocation and report schema. Its default root-file composition becomes a generic behavior contract: a provider-emitted `.gitignore` is compatible with SDD's seeded root ignore content, while a provider failure or an attempt to write an SDD-owned subtree remains fail-closed.
+- PC-001 [PD-001] command report: `fsgg-sdd scaffold` keeps its existing provider invocation and report schema. Its default root-file composition becomes a generic behavior contract: a provider-emitted `.gitignore` is compatible with SDD's seeded root ignore content because its authored bytes are retained exactly as a suffix after the deterministic SDD prefix, with no line de-duplication or normalization; a provider failure or an attempt to write an SDD-owned subtree remains fail-closed.
 
 ## Verification Obligations
-- VO-001 [PD-001] [PC-001] semanticTest: Add focused command tests that assert both SDD and provider entries survive default scaffold, prove a direct-overwrite mutation is red, and prove an existing authored root file is not clobbered. Add opt-in real-provider composition acceptance proving the same output shape through the published provider route; run focused tests, CLI smoke evidence, and the release dry gates before handoff.
+- VO-001 [PD-001] [PC-001] semanticTest: Add focused command tests that assert the scaffolded `.gitignore` starts with the deterministic SDD prefix and ends with the provider-emitted body byte-for-byte, that generic `--force` is not forwarded, and that a direct-overwrite mutation is red. Add opt-in real-provider composition acceptance proving the same direct-versus-scaffold output contract through the published provider route; run focused tests, CLI smoke evidence, and the release dry gates before handoff.
 
 ## Performance Intent
 No performance intent is declared for this work item.
 
 ## Migration Posture
-- PM-001 [PC-001] additiveBehavior: Existing providers without a root `.gitignore` keep the current scaffold result. Providers that do emit one gain safe default composition without registry schema, provenance schema, or command-line changes. No migration or rewrite of existing scaffolded workspaces is required.
+- PM-001 [PC-001] additiveBehavior: Existing providers without a root `.gitignore` keep the current scaffold result. Providers that do emit one gain safe default composition whose provider-authored body is preserved byte-for-byte after the SDD prefix, without registry schema, provenance schema, or command-line changes. No migration or rewrite of existing scaffolded workspaces is required.
 
 ## Generated View Impact
 - GV-001 [PD-001] workModel: Refresh the work model and generated readiness views after the authored plan/tasks/evidence are current; generated views must record the composition contract and report stale input rather than silently treating scaffold evidence as current.
