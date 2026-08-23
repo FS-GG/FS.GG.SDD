@@ -37,6 +37,16 @@
       "schemaStatus": "current"
     },
     {
+      "path": "readiness/892-rendering-skills-v2-consumer/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "5ecd4248c89b7d02205b180ebe451e9e4303f28cdbcdf2e80e8b001b8a1103c2"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
       "path": "work/892-rendering-skills-v2-consumer/checklist.md",
       "kind": "checklist",
       "digest": {
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "b14a1295fe11599ebd8fe4f94fc4f28d3468ae89bdc33eb4f3f8d301ccb9ec44"
+        "value": "3509a9d7b9c68b506dc581ac795337fe586c4286a692e3d6ef01fc516fcb448a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -316,7 +326,7 @@
     {
       "path": "readiness/892-rendering-skills-v2-consumer/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],

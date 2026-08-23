@@ -1,7 +1,7 @@
 schemaVersion: 1
 workId: 892-rendering-skills-v2-consumer
 stage: evidence
-status: needsEvidenceCorrection
+status: evidenceReady
 sourceSpec: work/892-rendering-skills-v2-consumer/spec.md
 sourceClarifications: work/892-rendering-skills-v2-consumer/clarifications.md
 sourceChecklist: work/892-rendering-skills-v2-consumer/checklist.md
@@ -11,7 +11,7 @@ sourceAnalysis: readiness/892-rendering-skills-v2-consumer/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/892-rendering-skills-v2-consumer/analysis.json
-    digest: 93625ba3c945d766e84b478a14ec13a14592e4a962e27f5252c6eec560da15c6
+    digest: 7167656027d2551a8ee30ee56158e63f15cb12d312bd1e4b35b671905ecab403
     schemaVersion: 1
   - label: checklist
     path: work/892-rendering-skills-v2-consumer/checklist.md
@@ -31,11 +31,11 @@ sourceSnapshots:
     schemaVersion: 1
   - label: tasks
     path: work/892-rendering-skills-v2-consumer/tasks.yml
-    digest: b14a1295fe11599ebd8fe4f94fc4f28d3468ae89bdc33eb4f3f8d301ccb9ec44
+    digest: 3509a9d7b9c68b506dc581ac795337fe586c4286a692e3d6ef01fc516fcb448a
     schemaVersion: 1
 evidence:
   - id: EV001
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T001
@@ -46,13 +46,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001]
     obligationRefs: [EV001]
-    artifacts: []
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: tests/FS.GG.SDD.Commands.Tests/TestResults/892-rendering-v2.trx
+      digest: "sha256:359c74dc0f4289de9603cc977c480c343bdc8dd452efc95d70d26ef8ebc1514e"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 26
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
   - id: EV002
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T002
@@ -63,13 +71,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001]
     obligationRefs: [EV002]
-    artifacts: []
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: tests/FS.GG.SDD.Commands.Tests/TestResults/892-rendering-v2.trx
+      digest: "sha256:359c74dc0f4289de9603cc977c480c343bdc8dd452efc95d70d26ef8ebc1514e"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 26
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
   - id: EV003
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T003
@@ -80,13 +96,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001]
     obligationRefs: [EV003]
-    artifacts: []
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: tests/FS.GG.SDD.Commands.Tests/TestResults/892-rendering-v2.trx
+      digest: "sha256:359c74dc0f4289de9603cc977c480c343bdc8dd452efc95d70d26ef8ebc1514e"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 26
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
   - id: EV004
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T004
@@ -97,13 +121,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV004]
-    artifacts: []
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: tests/FS.GG.SDD.Commands.Tests/TestResults/892-rendering-v2.trx
+      digest: "sha256:359c74dc0f4289de9603cc977c480c343bdc8dd452efc95d70d26ef8ebc1514e"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 26
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
   - id: EV005
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T005
@@ -114,10 +146,18 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001]
     obligationRefs: [EV005]
-    artifacts: []
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: tests/FS.GG.SDD.Commands.Tests/TestResults/892-rendering-v2.trx
+      digest: "sha256:359c74dc0f4289de9603cc977c480c343bdc8dd452efc95d70d26ef8ebc1514e"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 26
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
 lifecycleNotes:
   - "Next lifecycle action: verify."

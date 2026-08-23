@@ -16,9 +16,9 @@
       },
       "FS.GG.Rendering.Skills": {
         "type": "Direct",
-        "requested": "[0.1.0, )",
-        "resolved": "0.1.0",
-        "contentHash": "m+lXFYPFTrN48Mez68g4/oJFIG1cmYEjlSsb60KrOdgBJ1TEiDfAqbbOSFrytqOUoECBE7IrRG0pdB8DHonDog=="
+        "requested": "[0.1.1, )",
+        "resolved": "0.1.1",
+        "contentHash": "dPjrZFqoA6PHdIsVG2s6SzUODz7I9AVfocvvaaAKexLZqgLJfbwTlAqNvSP8WgO0emW9qiI7Idhm2cH8frBJBA=="
       },
       "FSharp.Core": {
         "type": "Direct",
