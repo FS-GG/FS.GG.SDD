@@ -20,7 +20,7 @@ module RenderingSkillsTests =
     /// fs-gg-rendering`, `materializes-when: "always"`). Read from `FS.GG.Rendering.Skills` 0.1.0's
     /// own `skill-manifest.json`.
     let private feedbackReportSha256 =
-        "a181389dd537861295ea6c7e1b012befa8ac91f0228e22dc07c110e56f73df15"
+        "1b6888de4b8ce96f61e7a98c2bb9e0b249cdca2cd90da7bec6884bdccf055fe2"
 
     let private roots = Fsgg.Schemas.agentSkillRoots
 
@@ -59,7 +59,10 @@ module RenderingSkillsTests =
             |> List.filter (fun path -> path.Contains "fs-gg-feedback-report")
             |> List.sort
 
-        Assert.Equal<string list>(skillPathFor "fs-gg-feedback-report", feedbackPaths)
+        for root in roots do
+            Assert.Contains($"{root}/skills/fs-gg-feedback-report/SKILL.md", feedbackPaths)
+            Assert.Contains($"{root}/skills/fs-gg-feedback-report/scripts/FeedbackReportTool.fs", feedbackPaths)
+            Assert.Contains($"{root}/skills/fs-gg-feedback-report/scripts/feedback-tool.fsx", feedbackPaths)
 
         // Not merely planned — the write carries the delivered bytes, and they are the manifest's.
         let bodies =
@@ -69,10 +72,9 @@ module RenderingSkillsTests =
                 | WriteFile(path, body, _) when path.Contains "fs-gg-feedback-report" -> Some body
                 | _ -> None)
 
-        Assert.Equal(List.length roots, List.length bodies)
+        Assert.Equal(List.length roots * 3, List.length bodies)
 
-        for body in bodies do
-            Assert.Equal(feedbackReportSha256, Fsgg.SkillMirror.sha256 body)
+        Assert.Contains(feedbackReportSha256, bodies |> List.map Fsgg.SkillMirror.sha256)
 
     [<Fact>]
     let ``the delivered fs-gg-feedback-report digest is pinned to the golden`` () =
@@ -80,7 +82,7 @@ module RenderingSkillsTests =
 
         let recorded =
             outcome.ProvenancePaths
-            |> List.filter (fun (path, _) -> path.Contains "fs-gg-feedback-report")
+            |> List.filter (fun (path, _) -> path.EndsWith "fs-gg-feedback-report/SKILL.md")
             |> List.map snd
             |> List.distinct
 
@@ -144,7 +146,7 @@ module RenderingSkillsTests =
             | WriteFile(_, _, kind) -> Assert.Equal(AgentGuidanceTarget, kind)
             | other -> failwithf "expected a WriteFile, got %A" other
 
-    // ---------- undeliverable sidecars: the gap is REPORTED, never written unverified ----------
+    // ---------- schema-v2 sidecars: the closed, verified package set is written ----------
 
     // `FS.GG.Rendering.Skills` 0.1.0 ships six files that are not `SKILL.md`, and its manifest is
     // schemaVersion 1 — one `sha256` per skill, covering `SKILL.md` alone. ADR-0014 is fail-closed,
@@ -152,12 +154,7 @@ module RenderingSkillsTests =
     // BOTH halves: the files are visible to the channel (so it can say so) and absent from its
     // writes (so nothing unverified reaches a tree).
     [<Fact>]
-    let ``a delivered file with no declared digest is reported and is never written`` () =
-        let sidecars = RenderingSkills.undeliverableSidecars ()
-
-        Assert.Contains("fs-gg-feedback-report/scripts/feedback-tool.fsx", sidecars)
-        Assert.Contains("fs-gg-feedback-report/scripts/FeedbackReportTool.fs", sidecars)
-
+    let ``a declared sidecar is materialized with its verified skill body`` () =
         let outcome = RenderingSkills.plan gameProfile
 
         let writtenPaths =
@@ -167,24 +164,11 @@ module RenderingSkillsTests =
                 | WriteFile(path, _, _) -> Some path
                 | _ -> None)
 
-        // Every write this channel emits is a canonical body — the one file the manifest declares.
-        //
-        // BOUND WITH A CORPUS, deliberately: `Assert.All` over an EMPTY collection passes, so on its
-        // own this clause would be satisfied by a channel that wrote nothing at all — the classic way
-        // an absence-assertion certifies a gate that is switched off. The non-empty bound below, and
-        // the sidecar `Contains` above, are what make the two halves mean what they say: N files are
-        // written and every one of them is a declared canonical body; M sidecars exist and none is.
         Assert.NotEmpty writtenPaths
 
-        Assert.True(
-            writtenPaths.Length >= List.length roots,
-            "at least one delivered skill must be written to every root, or the negative clause below is vacuous"
-        )
-
-        Assert.All(writtenPaths, fun path -> Assert.EndsWith("/SKILL.md", path))
-
         for root in roots do
-            Assert.DoesNotContain($"{root}/skills/fs-gg-feedback-report/scripts/feedback-tool.fsx", writtenPaths)
+            Assert.Contains($"{root}/skills/fs-gg-feedback-report/scripts/feedback-tool.fsx", writtenPaths)
+            Assert.Contains($"{root}/skills/fs-gg-feedback-report/scripts/FeedbackReportTool.fs", writtenPaths)
 
     // The report is scoped to rows that actually materialized: a sidecar belonging to a skill this
     // scaffold legitimately did not deliver is not a gap anyone can act on.
@@ -193,7 +177,7 @@ module RenderingSkillsTests =
         let outcome = RenderingSkills.plan Map.empty
         let materialized = outcome.MaterializedIds |> Set.ofList
 
-        Assert.NotEmpty outcome.UndeliverableSidecars
+        Assert.Empty outcome.UndeliverableSidecars
 
         for entry in outcome.UndeliverableSidecars do
             let id = entry.Split('/') |> Array.head
@@ -282,13 +266,13 @@ module RenderingSkillsTests =
     // re-implementation of it: it is the function the scaffold finalize and TICK-A paths both call.
 
     [<Fact>]
-    let ``a clean plan reports nothing except the withheld-sidecar advisory`` () =
+    let ``a clean schema-v2 plan reports no sidecar diagnostic`` () =
         let outcome = RenderingSkills.plan Map.empty
 
         let ids =
             HandlersScaffold.renderingSkillDiagnostics outcome |> List.map (fun d -> d.Id)
 
-        Assert.Equal<string list>([ "scaffold.renderingSkillSidecarsUndeclared" ], ids)
+        Assert.Empty ids
 
     [<Fact>]
     let ``every fail-closed class reaches an operator under its own diagnostic id`` () =

@@ -22,7 +22,7 @@
          its bytes embedded and materialized at scaffold time (offline). Measured on nuget.org at
          implementation time (2026-08-16): 0.1.0 is the ONLY published version, listed, prefix
          `verified: true`; the registration index carries `count: 1`. The pin binds that literal. -->
-    <PackageVersion Include="FS.GG.Rendering.Skills" Version="0.1.0" />
+    <PackageVersion Include="FS.GG.Rendering.Skills" Version="0.1.1" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.9" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
