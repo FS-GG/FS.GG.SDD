@@ -719,14 +719,10 @@ module ScaffoldCommandTests =
         Assert.Equal(1, countOf "\"owner\": \"sdd\"")
         // 108: the work-roadmap driver, materialized into all three roots (owner `driver`).
         Assert.Equal(driverPaths.Length, countOf "\"owner\": \"driver\"")
-        // FS.GG.SDD#864: the withheld-sidecar advisory reaches an operator through the REAL route —
-        // the whole MVU loop, the report the CLI actually prints — not merely through the plan's
-        // data. The channel embeds files it cannot content-verify (the pinned package ships sidecars
-        // under a schemaVersion-1 manifest that declares one digest per skill), withholds them, and
-        // must SAY SO; a withheld file that is never reported is the silent half-truth this row
-        // exists to end. On a clean scaffold it is the only diagnostic, so the assertion is exact
-        // rather than a `Contains` that a noisier report could satisfy by accident.
-        Assert.Equal<string list>([ "scaffold.renderingSkillSidecarsUndeclared" ], diagnosticIds report)
+        // FS.GG.SDD#892: schema-v2 manifests declare and digest every sidecar, so the normal
+        // rendering package materializes all of them and a clean scaffold carries no advisory.
+        // The dedicated mutation tests retain the fail-closed diagnostic coverage.
+        Assert.Empty(diagnosticIds report)
 
         // FS.GG.SDD#864 acceptance 3: the newly delivered paths are ATTRIBUTED, under their own
         // owner token, exactly as `driverPaths` attributes the driver channel. An unattributed path
@@ -771,7 +767,7 @@ module ScaffoldCommandTests =
                 let onDisk = TestSupport.readRelative appRoot path
 
                 Assert.Equal(
-                    "a181389dd537861295ea6c7e1b012befa8ac91f0228e22dc07c110e56f73df15",
+                    "1b6888de4b8ce96f61e7a98c2bb9e0b249cdca2cd90da7bec6884bdccf055fe2",
                     Fsgg.SkillMirror.sha256 onDisk
                 )
 
