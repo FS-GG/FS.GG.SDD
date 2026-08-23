@@ -1,0 +1,86 @@
+schemaVersion: 1
+work:
+  id: 892-rendering-skills-v2-consumer
+  title: "Rendering Skills V2 Consumer"
+  stage: tasks
+  status: tasksReady
+  sourceSpec: work/892-rendering-skills-v2-consumer/spec.md
+  sourceClarifications: work/892-rendering-skills-v2-consumer/clarifications.md
+  sourceChecklist: work/892-rendering-skills-v2-consumer/checklist.md
+  sourcePlan: work/892-rendering-skills-v2-consumer/plan.md
+  publicOrToolFacingImpact: true
+
+sources:
+  - label: spec
+    path: work/892-rendering-skills-v2-consumer/spec.md
+    digest: 3656d9c80a82b82b3eab46add8165cb1e1275a62f18bb6ce325f4c51c2f5a5a2
+    schemaVersion: 1
+  - label: clarifications
+    path: work/892-rendering-skills-v2-consumer/clarifications.md
+    digest: b683a03db399f83d9070dd67c94003c58f691a5e00ab8fddb3acdbc030f00e70
+    schemaVersion: 1
+  - label: checklist
+    path: work/892-rendering-skills-v2-consumer/checklist.md
+    digest: ecd1ef3c8bee242e7b29d103055a4e0710beb704f4ab3ec7af0a53a096c9017c
+    schemaVersion: 1
+  - label: plan
+    path: work/892-rendering-skills-v2-consumer/plan.md
+    digest: 80571801f1d4dd5097d87756afe8246842df37606703adca3d51286dc5924376
+    schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement requirement FR-001
+    status: done
+    owner: sdd
+    dependencies: []
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: [AC-001, FR-001, PD-001]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Update contract surface PC-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PD-001]
+    requiredSkills: [fsharp]
+    requiredEvidence: [EV002]
+  - id: T003
+    title: Record verification evidence VO-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PD-001, VO-001]
+    requiredSkills: [automated-tests, readiness-evidence]
+    requiredEvidence: [EV003]
+  - id: T004
+    title: Handle migration posture PM-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PM-001]
+    requiredSkills: [schema-versioning]
+    requiredEvidence: [EV004]
+  - id: T005
+    title: Refresh generated view impact GV-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [GV-001, PD-001]
+    requiredSkills: [deterministic-json]
+    requiredEvidence: [EV005]
+acceptedDeferrals: []
+findings: []
+advisoryNotes:
+  - "Optional Governance pointers remain compatibility facts only."
+lifecycleNotes:
+  - "Next lifecycle action: fsgg-sdd analyze --work 892-rendering-skills-v2-consumer."

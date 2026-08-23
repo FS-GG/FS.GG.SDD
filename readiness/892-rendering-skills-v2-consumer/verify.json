@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "068-readiness-golden",
+  "workId": "892-rendering-skills-v2-consumer",
   "stage": "verify",
   "status": "verificationReady",
   "generator": "FS.GG.SDD.Artifacts/1.2.2",
@@ -21,7 +21,7 @@
       "kind": "projectConfig",
       "digest": {
         "algorithm": "sha256",
-        "value": "42f9a714e54b6a148cecdd5d4b3f702c53faad65ee8ac62125845c851e0d2f02"
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -37,81 +37,81 @@
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/892-rendering-skills-v2-consumer/analysis.json",
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "dc8df433440979c69068050199177017ade4ef5703bad60e6fd20727b0c51add"
+        "value": "a5cc0a513751cb4d453e0479cf91d5af9fcc4f6d89c0a0b8e521bb4c388be629"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/892-rendering-skills-v2-consumer/work-model.json",
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "2ad9d7075fc4a0d6dd35b97f297cf9c5600d88515993a8cd70a7b0566d459110"
+        "value": "d4e9872d45730a60dcb2058e808617b4187b5a7bf734fc86245ab77ae3a4d9a2"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/checklist.md",
+      "path": "work/892-rendering-skills-v2-consumer/checklist.md",
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "3c5b5f41feed6d37bf164f11c60ae912ef0dd1b06cf910ba09c80caca3eeac79"
+        "value": "ecd1ef3c8bee242e7b29d103055a4e0710beb704f4ab3ec7af0a53a096c9017c"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/clarifications.md",
+      "path": "work/892-rendering-skills-v2-consumer/clarifications.md",
       "kind": "clarification",
       "digest": {
         "algorithm": "sha256",
-        "value": "3ff8766f120ff472917b7904492ab4e80e2b4b0d17067c5667a8cad78d799e9f"
+        "value": "b683a03db399f83d9070dd67c94003c58f691a5e00ab8fddb3acdbc030f00e70"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/evidence.yml",
+      "path": "work/892-rendering-skills-v2-consumer/evidence.yml",
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "941450e84d89eee9b11acbb3f118d8c1a2456d9f118d4d1160c5e889c68cc15a"
+        "value": "87beff600c430c50fa85a3c09ed88a3fc5e118dc72b8f1a093d7ee36f5b8cabc"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/plan.md",
+      "path": "work/892-rendering-skills-v2-consumer/plan.md",
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "1cf7d0eb4afbbde8b5218d18e4a08b49dbf0b6b53081268a1c447df724582ca1"
+        "value": "80571801f1d4dd5097d87756afe8246842df37606703adca3d51286dc5924376"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/spec.md",
+      "path": "work/892-rendering-skills-v2-consumer/spec.md",
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "9181f6ded8f26df9d848187d53b36272d59bbb1928145601663371f5c03963a7"
+        "value": "3656d9c80a82b82b3eab46add8165cb1e1275a62f18bb6ce325f4c51c2f5a5a2"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/tasks.yml",
+      "path": "work/892-rendering-skills-v2-consumer/tasks.yml",
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "98a46330c2dd89d7812499b56ab88c181c37a572c40ded08b817574fdda390a4"
+        "value": "3509a9d7b9c68b506dc581ac795337fe586c4286a692e3d6ef01fc516fcb448a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -162,7 +162,7 @@
       "id": "ED-EV001",
       "obligationId": "EV001",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -185,7 +185,7 @@
       "id": "ED-EV002",
       "obligationId": "EV002",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -207,7 +207,7 @@
       "id": "ED-EV003",
       "obligationId": "EV003",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -230,7 +230,7 @@
       "id": "ED-EV004",
       "obligationId": "EV004",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -252,7 +252,7 @@
       "id": "ED-EV005",
       "obligationId": "EV005",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -276,7 +276,7 @@
       "id": "TD-EV001",
       "obligationId": "EV001",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV001"
@@ -295,7 +295,7 @@
       "id": "TD-EV002",
       "obligationId": "EV002",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV002"
@@ -312,7 +312,7 @@
       "id": "TD-EV003",
       "obligationId": "EV003",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV003"
@@ -329,7 +329,7 @@
       "id": "TD-EV004",
       "obligationId": "EV004",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV004"
@@ -346,7 +346,7 @@
       "id": "TD-EV005",
       "obligationId": "EV005",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV005"
@@ -367,7 +367,7 @@
         "T003"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/892-rendering-skills-v2-consumer/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -378,7 +378,7 @@
         "T005"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/892-rendering-skills-v2-consumer/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -390,7 +390,7 @@
         "T002"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/892-rendering-skills-v2-consumer/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -401,7 +401,7 @@
         "T001"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/892-rendering-skills-v2-consumer/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -412,7 +412,7 @@
         "T003"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/892-rendering-skills-v2-consumer/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -423,7 +423,7 @@
         "T004"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/892-rendering-skills-v2-consumer/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -431,13 +431,13 @@
   ],
   "generatedViews": [
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/892-rendering-skills-v2-consumer/analysis.json",
       "kind": "verification",
       "currency": "current",
       "diagnosticIds": []
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/892-rendering-skills-v2-consumer/work-model.json",
       "kind": "workModel",
       "currency": "current",
       "diagnosticIds": []

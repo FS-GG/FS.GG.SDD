@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "247-full-shape-golden",
+  "workId": "892-rendering-skills-v2-consumer",
   "targetId": "claude",
   "generator": "FS.GG.SDD.Artifacts/1.2.2",
   "generated": true,
   "sources": [
     {
-      "path": "readiness/247-full-shape-golden/work-model.json",
+      "path": "readiness/892-rendering-skills-v2-consumer/work-model.json",
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "ffecbd8f6e96d27a09ebe1ecc3cae1ba90653e8ce779998cfd1d912a5f1c4d14"
+        "value": "5ecd4248c89b7d02205b180ebe451e9e4303f28cdbcdf2e80e8b001b8a1103c2"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -19,14 +19,14 @@
   ],
   "behaviorModelDigest": {
     "algorithm": "sha256",
-    "value": "f5285214867e4743291f3ee904c8a0ff568e4812e81a9e2ff4aa531ca67525e8"
+    "value": "fa1461f51966953ea09b6711e68b95e8e66b5d6b814d23afa4fcf4b07ebd4047"
   },
   "commands": [
     {
       "id": "T001",
       "title": "Implement requirement FR-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T001 (pending) covering AC-001, FR-001, PD-001.",
+      "purpose": "Carry out lifecycle task T001 (done) covering AC-001, FR-001, PD-001.",
       "relatedIds": [
         "AC-001",
         "FR-001",
@@ -37,7 +37,7 @@
       "id": "T002",
       "title": "Update contract surface PC-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T002 (pending) covering PC-001, PD-001.",
+      "purpose": "Carry out lifecycle task T002 (done) covering PC-001, PD-001.",
       "relatedIds": [
         "PC-001",
         "PD-001"
@@ -47,7 +47,7 @@
       "id": "T003",
       "title": "Record verification evidence VO-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T003 (pending) covering PC-001, PD-001, VO-001.",
+      "purpose": "Carry out lifecycle task T003 (done) covering PC-001, PD-001, VO-001.",
       "relatedIds": [
         "PC-001",
         "PD-001",
@@ -58,7 +58,7 @@
       "id": "T004",
       "title": "Handle migration posture PM-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T004 (pending) covering PC-001, PM-001.",
+      "purpose": "Carry out lifecycle task T004 (done) covering PC-001, PM-001.",
       "relatedIds": [
         "PC-001",
         "PM-001"
@@ -68,7 +68,7 @@
       "id": "T005",
       "title": "Refresh generated view impact GV-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T005 (pending) covering GV-001, PD-001.",
+      "purpose": "Carry out lifecycle task T005 (done) covering GV-001, PD-001.",
       "relatedIds": [
         "GV-001",
         "PD-001"
@@ -128,11 +128,11 @@
   ],
   "renderedFiles": [
     {
-      "path": "readiness/247-full-shape-golden/agent-commands/claude/commands.md",
+      "path": "readiness/892-rendering-skills-v2-consumer/agent-commands/claude/commands.md",
       "kind": "commands"
     },
     {
-      "path": "readiness/247-full-shape-golden/agent-commands/claude/skills.md",
+      "path": "readiness/892-rendering-skills-v2-consumer/agent-commands/claude/skills.md",
       "kind": "skills"
     }
   ],

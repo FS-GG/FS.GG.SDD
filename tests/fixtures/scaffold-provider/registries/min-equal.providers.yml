@@ -17,7 +17,7 @@ providers:
     # tests/FS.GG.SDD.Commands.Tests/ScaffoldCliCoherenceTests.fs — now fails loudly about instead of
     # leaving to review.
     minimumFsggSdd:
-      version: "1.2.1"
+      version: "1.2.2"
     parameters:
       - key: productName
         required: true

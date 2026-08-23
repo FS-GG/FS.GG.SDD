@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System.Reflection
+open System.Text
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Artifacts
 
@@ -67,15 +68,44 @@ module internal RenderingSkills =
     /// The one canonical body path a schema-v1 owner manifest's per-skill `sha256` covers.
     let private canonicalBodyPath = "SKILL.md"
 
-    let private tryLoadResource (name: string) : string option =
+    /// Normalize the *portable* relative form accepted by the manifest transport. The manifest
+    /// travels from a package into both Unix and Windows workspaces, so accepting a path that one
+    /// platform treats as rooted or a separator and the other does not would make the declared
+    /// byte set depend on the receiving host. Keep the transport deliberately narrower than a
+    /// filesystem path: slash-separated non-empty names only, with no dot/traversal, drive, or
+    /// backslash form. The caller rejects the whole row before it constructs a `WriteFile`.
+    let private tryNormalizeSkillRelativePath (path: string) : string option =
+        if System.String.IsNullOrWhiteSpace path
+           || path.Contains('\\')
+           || path.Contains(':')
+           || System.IO.Path.IsPathRooted path then
+            None
+        else
+            let segments = path.Split('/', System.StringSplitOptions.None) |> Array.toList
+
+            if List.isEmpty segments
+               || segments |> List.exists (fun segment -> System.String.IsNullOrWhiteSpace segment || segment = "." || segment = "..") then
+                None
+            else
+                Some(String.concat "/" segments)
+
+    let private tryLoadResourceBytes (name: string) : byte array option =
         let assembly = Assembly.GetExecutingAssembly()
 
         match assembly.GetManifestResourceStream(name) with
         | null -> None
         | stream ->
             use stream = stream
-            use reader = new StreamReader(stream)
-            Some(reader.ReadToEnd())
+            use buffer = new System.IO.MemoryStream()
+            stream.CopyTo buffer
+            Some(buffer.ToArray())
+
+    let private tryLoadResource name =
+        tryLoadResourceBytes name
+        |> Option.bind (fun bytes ->
+            match Fsgg.SkillMirror.decodeBody bytes with
+            | Ok body -> Some body
+            | Error _ -> None)
 
     /// The embedded delivered owner-skill manifest text; `None` when no rendering-skills package is embedded (e.g. a build without the pin) — the materializer then no-ops rather than
     /// failing, exactly as the driver and owner-skill seams do.
@@ -112,6 +142,15 @@ module internal RenderingSkills =
                 tryLoadResource resourceName |> Option.map (fun body -> id, body)
             else
                 None)
+        |> Map.ofList
+
+    /// Complete embedded transport, keyed by skill id and skill-relative path.  Schema-v2 rows
+    /// close this set: every declared file must be present and digest-matching and no extra bytes
+    /// may reach a workspace.
+    let embeddedFiles () : Map<string * string, byte array> =
+        embeddedFileNames ()
+        |> List.choose (fun (id, relative, resourceName) ->
+            tryLoadResourceBytes resourceName |> Option.map (fun bytes -> (id, relative), bytes))
         |> Map.ofList
 
     /// Every embedded delivered file that is NOT the manifest-declared canonical body, as
@@ -171,20 +210,21 @@ module internal RenderingSkills =
 
     // Every product-scoped row is a delivered owner skill; the retired legacy `mirrored`
     // classification is not a materialization input, exactly as in the sibling owner-skill seam.
-    let private isDelivered (entry: GameSkillManifest.GameSkillManifestEntry) = entry.Scope = "product"
+    let private isDelivered (entry: ProductSkillManifest.ProductManifestEntry) = entry.Scope = "product"
 
     // The intermediate per-row classification, folded into the output classes.
     type private Classified =
         { Collisions: string list
           PredicateUnevaluated: string list
           VerifyFailed: string list
-          Materializable: (string * string * string) list } // (id, body, sha256)
+          Materializable: (ProductSkillManifest.ProductManifestEntry * (ProductSkillManifest.ProductManifestFile * string) list) list }
 
     let private classifyEntry
         (parameters: Map<string, string>)
-        (bodies: Map<string, string>)
+        (schemaVersion: int)
+        (files: Map<string * string, byte array>)
         (acc: Classified)
-        (entry: GameSkillManifest.GameSkillManifestEntry)
+        (entry: ProductSkillManifest.ProductManifestEntry)
         =
         if not (isDelivered entry) then
             acc // Any non-product row belongs to another delivery seam.
@@ -198,102 +238,133 @@ module internal RenderingSkills =
                     PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ] }
             | Some false -> acc // deliberately not materialized off-profile (predicate held false)
             | Some true ->
-                // ONE provenance class, ONE digest domain (FS.GG.SDD#752 AC3). The body arrives
-                // through a BOM-stripping `StreamReader` and is verified, recorded and later
-                // re-verified with `Fsgg.SkillMirror.sha256`: BOM stripped, `\r\n` folded.
-                match Map.tryFind entry.Id bodies with
-                | Some body when Fsgg.SkillMirror.sha256 body = entry.Sha256 ->
-                    { acc with
-                        Materializable = acc.Materializable @ [ entry.Id, body, entry.Sha256 ] }
-                | _ ->
-                    // Body absent or digest mismatch: cannot produce a verified body ⇒ fail closed,
-                    // write nothing for this row (FR-003).
-                    { acc with
-                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
+                // v1 implicitly declares its canonical body. v2 is a closed per-file transport:
+                // each declared sidecar is verified before ANY row write, and an undeclared
+                // embedded byte refuses the whole row rather than leaking a partial skill.
+                let declared =
+                    // Schema v1 had no per-file transport, so its sole row digest still
+                    // implicitly names SKILL.md. Schema v2 is a closed declaration: absent or
+                    // empty `files` cannot be promoted into an invented write target.
+                    if schemaVersion < 2 && List.isEmpty entry.Files then
+                        let implicitFile: ProductSkillManifest.ProductManifestFile =
+                            { Path = canonicalBodyPath
+                              Sha256 = entry.Sha256 }
+                        [ implicitFile ]
+                    else entry.Files
+                // A schema-v2 file set is a closed transport, not a list of suggested writes.
+                // Validate every path and its uniqueness BEFORE looking up bytes or emitting any
+                // `WriteFile`: duplicate paths would otherwise schedule two writes, while rooted,
+                // traversal, or backslash paths could escape the skill directory on a receiver.
+                let normalizedDeclared =
+                    declared
+                    |> List.map (fun file -> tryNormalizeSkillRelativePath file.Path |> Option.map (fun path -> path, file))
+
+                let declaredAreSafe = normalizedDeclared |> List.forall Option.isSome
+
+                let declared =
+                    normalizedDeclared
+                    |> List.choose id
+                    |> List.map (fun (path, file) -> { file with Path = path })
+
+                let declaredPaths = declared |> List.map _.Path |> Set.ofList
+                let declaredAreUnique = declaredPaths.Count = declared.Length
+                let actualPaths =
+                    files |> Map.toList |> List.choose (fun ((id, path), _) -> if id = entry.Id then Some path else None) |> Set.ofList
+                let verified =
+                    declared
+                    |> List.choose (fun file ->
+                        Map.tryFind (entry.Id, file.Path) files
+                        |> Option.bind (fun bytes ->
+                            match Fsgg.SkillMirror.decodeBody bytes with
+                            | Ok body when Fsgg.SkillMirror.sha256 body = file.Sha256 -> Some(file, body)
+                            | _ -> None))
+                let canonicalOk =
+                    verified |> List.tryFind (fun (file, _) -> file.Path = canonicalBodyPath)
+                    |> Option.exists (fun (_, body) -> Fsgg.SkillMirror.sha256 body = entry.Sha256)
+                if declaredAreSafe
+                   && declaredAreUnique
+                   && verified.Length = declared.Length
+                   && (schemaVersion < 2 || actualPaths = declaredPaths)
+                   && canonicalOk then
+                    { acc with Materializable = acc.Materializable @ [ entry, verified ] }
+                else
+                    { acc with VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
 
     /// Plan owner-skill materialization from an explicit manifest text + id→body map, gated by the
     /// effective scaffold parameter set. The pure core of `plan`, factored out so the fail-closed
     /// classes (tamper, id collision, unevaluable predicate) are testable without the compiled-in
     /// bytes. `sidecars` is the already-computed undeliverable set; it is an input rather than a
     /// resource read so a test can exercise the report without a package that ships one.
-    let planFrom
+    let planFilesFrom
         (manifestText: string option)
-        (bodies: Map<string, string>)
-        (sidecars: string list)
+        (files: Map<string * string, byte array>)
         (parameters: Map<string, string>)
         : RenderingSkillOutcome =
         match manifestText with
         | None -> empty
         | Some text ->
-            match GameSkillManifest.tryParse text with
+            match ProductSkillManifest.tryParse text with
             | Error message ->
                 { empty with
                     ManifestError = Some message }
-            | Ok manifest ->
+            | Ok(schemaVersion, entries) ->
                 let classified =
                     ({ Collisions = []
                        PredicateUnevaluated = []
                        VerifyFailed = []
                        Materializable = [] },
-                     manifest.Skills |> List.sortBy (fun skill -> skill.Id))
-                    ||> List.fold (classifyEntry parameters bodies)
-
-                let materializedIds =
-                    classified.Materializable |> List.map (fun (id, _, _) -> id) |> Set.ofList
-
-                let shaById =
-                    classified.Materializable
-                    |> List.map (fun (id, _, sha256) -> id, sha256)
-                    |> Map.ofList
+                     entries |> List.sortBy (fun skill -> skill.Id))
+                    ||> List.fold (fun acc entry -> classifyEntry parameters schemaVersion files acc entry)
 
                 // The declared scope of each manifest row, so a materialized id can be declared in
                 // the product manifest with the scope its own producer assigned it (ADR-0063 tail).
                 let scopeById =
-                    manifest.Skills |> List.map (fun skill -> skill.Id, skill.Scope) |> Map.ofList
+                    entries |> List.map (fun skill -> skill.Id, skill.Scope) |> Map.ofList
 
                 // Fan the verified bodies into every declared root through the shared mirror,
                 // exactly as the seeded skeleton and the driver/owner-skill seams do — deterministic
                 // (id-sorted, roots in order), byte-identical across roots by construction, all
                 // no-clobber.
-                let mirrorWrites =
+                let materializedFiles =
                     classified.Materializable
-                    |> List.map (fun (id, body, _) -> id, body)
-                    |> Fsgg.SkillMirror.mirror Fsgg.Schemas.agentSkillRoots
+                    |> List.collect (fun (entry, verified) ->
+                        [ for root in Fsgg.Schemas.agentSkillRoots do
+                              for file, body in verified do
+                                  yield $"{root}/skills/{entry.Id}/{file.Path}", body ])
 
                 { Writes =
-                    mirrorWrites
-                    |> List.map (fun write -> WriteFile(write.Path, write.Body, AgentGuidanceTarget))
+                    materializedFiles |> List.map (fun (path, body) -> WriteFile(path, body, AgentGuidanceTarget))
                   ProvenancePaths =
-                    mirrorWrites
-                    |> List.map (fun write ->
-                        let sha256 =
-                            Fsgg.SkillMirror.skillIdOfPath write.Path
-                            |> Option.bind (fun id -> Map.tryFind id shaById)
-                            |> Option.defaultValue ""
-
-                        write.Path, sha256)
-                  MaterializedIds = classified.Materializable |> List.map (fun (id, _, _) -> id)
+                    materializedFiles |> List.map (fun (path, body) -> path, Fsgg.SkillMirror.sha256 body)
+                  MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
                   MaterializedScopes =
                     classified.Materializable
-                    |> List.choose (fun (id, _, _) -> Map.tryFind id scopeById |> Option.map (fun scope -> id, scope))
+                    |> List.choose (fun (entry, _) -> Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
                     |> Map.ofList
                   VerifyFailedIds = classified.VerifyFailed
                   PredicateUnevaluatedIds = classified.PredicateUnevaluated
                   NamespaceCollisionIds = classified.Collisions
                   YieldedIds = []
-                  // Only a row that actually materialized can be missing sidecars a reader would
-                  // reach for: an off-profile row was not delivered at all, and reporting its
-                  // sidecars would be noise about a skill that is legitimately absent.
-                  UndeliverableSidecars =
-                    sidecars
-                    |> List.filter (fun entry ->
-                        match entry.Split('/') |> Array.tryHead with
-                        | Some id -> materializedIds.Contains id
-                        | None -> false)
+                  UndeliverableSidecars = []
                   ManifestError = None }
+
+    /// v1-compatible test seam: callers supplying bodies still exercise the canonical file path.
+    let planFrom manifestText (bodies: Map<string, string>) (_sidecars: string list) parameters =
+        let files =
+            bodies |> Map.toList |> List.map (fun (id, body) -> (id, canonicalBodyPath), Encoding.UTF8.GetBytes body) |> Map.ofList
+        planFilesFrom manifestText files parameters
 
     /// Plan owner-skill materialization from the CLI's embedded package bytes, gated by the
     /// effective scaffold parameter set (`profile`, …) for `materializes-when` evaluation. Pure —
     /// reads only compiled-in resources (FR-002 — no NuGet cache / network at scaffold time).
     let plan (parameters: Map<string, string>) : RenderingSkillOutcome =
-        planFrom (manifestText ()) (embeddedBodies ()) (undeliverableSidecars ()) parameters
+        let manifest = manifestText ()
+        let outcome = planFilesFrom manifest (embeddedFiles ()) parameters
+        match manifest |> Option.bind (fun text -> ProductSkillManifest.tryParse text |> Result.toOption) with
+        | Some(schemaVersion, _) when schemaVersion < 2 ->
+            let materialized = outcome.MaterializedIds |> Set.ofList
+            { outcome with
+                UndeliverableSidecars =
+                    undeliverableSidecars ()
+                    |> List.filter (fun entry -> materialized.Contains(entry.Split('/') |> Array.head)) }
+        | _ -> outcome

@@ -1,0 +1,163 @@
+schemaVersion: 1
+workId: 892-rendering-skills-v2-consumer
+stage: evidence
+status: evidenceReady
+sourceSpec: work/892-rendering-skills-v2-consumer/spec.md
+sourceClarifications: work/892-rendering-skills-v2-consumer/clarifications.md
+sourceChecklist: work/892-rendering-skills-v2-consumer/checklist.md
+sourcePlan: work/892-rendering-skills-v2-consumer/plan.md
+sourceTasks: work/892-rendering-skills-v2-consumer/tasks.yml
+sourceAnalysis: readiness/892-rendering-skills-v2-consumer/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/892-rendering-skills-v2-consumer/analysis.json
+    digest: a5cc0a513751cb4d453e0479cf91d5af9fcc4f6d89c0a0b8e521bb4c388be629
+    schemaVersion: 1
+  - label: checklist
+    path: work/892-rendering-skills-v2-consumer/checklist.md
+    digest: ecd1ef3c8bee242e7b29d103055a4e0710beb704f4ab3ec7af0a53a096c9017c
+    schemaVersion: 1
+  - label: clarifications
+    path: work/892-rendering-skills-v2-consumer/clarifications.md
+    digest: b683a03db399f83d9070dd67c94003c58f691a5e00ab8fddb3acdbc030f00e70
+    schemaVersion: 1
+  - label: plan
+    path: work/892-rendering-skills-v2-consumer/plan.md
+    digest: 80571801f1d4dd5097d87756afe8246842df37606703adca3d51286dc5924376
+    schemaVersion: 1
+  - label: spec
+    path: work/892-rendering-skills-v2-consumer/spec.md
+    digest: 3656d9c80a82b82b3eab46add8165cb1e1275a62f18bb6ce325f4c51c2f5a5a2
+    schemaVersion: 1
+  - label: tasks
+    path: work/892-rendering-skills-v2-consumer/tasks.yml
+    digest: 3509a9d7b9c68b506dc581ac795337fe586c4286a692e3d6ef01fc516fcb448a
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 31
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV002]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 31
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV003]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 31
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV004]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 31
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV005]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RenderingSkillsTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/892-rendering-skills-v2-consumer/test-results/892-rendering-v2.trx
+      digest: "sha256:60010f9a227d3fc8a138abe92066a5cd057b65a00c7e019301af01c1112f7e30"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 31
+      failed: 0
+      skipped: 0
+    notes: [Focused schema-v2 materialization and fail-closed mutations passed.]
+lifecycleNotes:
+  - "Next lifecycle action: verify."
