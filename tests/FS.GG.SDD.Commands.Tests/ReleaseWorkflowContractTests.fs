@@ -43,6 +43,8 @@ module ReleaseWorkflowContractTests =
 
         let job = workflow.Substring(start, finish - start)
         Assert.Contains("dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj", job)
+        Assert.DoesNotContain("-p:PackageVersion=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
+        Assert.DoesNotContain("-p:Version=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
         Assert.Contains("FS.GG.SDD.Artifacts.*.nupkg", job)
         Assert.Equal(2, count "dotnet nuget push" job)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg\"" job)
@@ -58,3 +60,4 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("three independently consumable packages", contract)
         Assert.Contains("| `publish-artifacts` |", contract)
         Assert.Contains("two exact Artifacts pushes", contract)
+        Assert.Contains("must not pass a global `Version` or `PackageVersion` override", contract)

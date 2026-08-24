@@ -1,0 +1,362 @@
+schemaVersion: 1
+workId: 912-typed-kernel-preview2
+stage: evidence
+status: evidenceReady
+sourceSpec: work/912-typed-kernel-preview2/spec.md
+sourceClarifications: work/912-typed-kernel-preview2/clarifications.md
+sourceChecklist: work/912-typed-kernel-preview2/checklist.md
+sourcePlan: work/912-typed-kernel-preview2/plan.md
+sourceTasks: work/912-typed-kernel-preview2/tasks.yml
+sourceAnalysis: readiness/912-typed-kernel-preview2/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/912-typed-kernel-preview2/analysis.json
+    digest: 8ea4b713ce321b5d3b28d48d4f56c506f0b80467d5b00c707875c35cc3cc08b3
+    schemaVersion: 1
+  - label: checklist
+    path: work/912-typed-kernel-preview2/checklist.md
+    digest: 1e23a072a4f38da724643b725ed11011c6733033e52ca7b00c0b0b62b962deed
+    schemaVersion: 1
+  - label: clarifications
+    path: work/912-typed-kernel-preview2/clarifications.md
+    digest: bfa963274a64b4db34b13057b2aef4af94aeaad7f461ac94035148e22f4e9006
+    schemaVersion: 1
+  - label: plan
+    path: work/912-typed-kernel-preview2/plan.md
+    digest: acd5eda5ded2134c8bc3371340119a612ae88bc22e1a2e84eb3149291c6a9b22
+    schemaVersion: 1
+  - label: spec
+    path: work/912-typed-kernel-preview2/spec.md
+    digest: 62c29bbb55140e309d55c2f11a148bd9837df3e587cb651451715c19be448da8
+    schemaVersion: 1
+  - label: tasks
+    path: work/912-typed-kernel-preview2/tasks.yml
+    digest: 126474d4e855a69b9bb3204bb668b6032d508f55326b5b4dcf81a9f2c0b3b42b
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002, PD-003]
+    obligationRefs: [EV001]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV002]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV003]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-002, FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV004]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002]
+    obligationRefs: [EV005]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV006]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV007]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002, PD-003]
+    obligationRefs: [EV008]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV009]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV010]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV011
+    kind: verification
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV011]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV012
+    kind: verification
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV012]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+lifecycleNotes:
+  - "Next lifecycle action: verify."
