@@ -24,6 +24,12 @@
     <None Include="../../assets/icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <ItemGroup Label="Typed SDD installed skills">
+    <None Include="../../skills/typed-sdd-author/SKILL.md" Pack="true" PackagePath="skills/typed-sdd-author/SKILL.md" />
+    <None Include="../../skills/typed-sdd-inspect/SKILL.md" Pack="true" PackagePath="skills/typed-sdd-inspect/SKILL.md" />
+    <None Include="../../skills/typed-sdd-migrate/SKILL.md" Pack="true" PackagePath="skills/typed-sdd-migrate/SKILL.md" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="Rendering.fsi" />
     <Compile Include="Rendering.fs" />
@@ -33,6 +39,8 @@
     <Compile Include="RegistryValidate.fs" />
     <Compile Include="RegistrySkillManifest.fsi" />
     <Compile Include="RegistrySkillManifest.fs" />
+    <Compile Include="TypedSdd.fsi" />
+    <Compile Include="TypedSdd.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

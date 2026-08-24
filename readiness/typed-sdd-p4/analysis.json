@@ -37,6 +37,16 @@
       "schemaStatus": "current"
     },
     {
+      "path": "readiness/typed-sdd-p4/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "9cc4713448ea69e6c4538acb0ae30e9b95287afb561480162df71f862006830e"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
       "path": "work/typed-sdd-p4/checklist.md",
       "kind": "checklist",
       "digest": {
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "6aba35c68fce2925ccca1d4d3f6049391fbba5b1fb5dc9cc8679bc9ee4a14304"
+        "value": "db68e8ad6fb4302416cc5591c4eb410488687674cc1e289ea78204950b0f57f5"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -736,7 +746,7 @@
     {
       "path": "readiness/typed-sdd-p4/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],

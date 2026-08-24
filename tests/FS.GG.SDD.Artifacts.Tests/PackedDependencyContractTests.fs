@@ -56,7 +56,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.3.0-preview.3.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0-preview.1.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -92,7 +92,7 @@ module PackedDependencyContractTests =
                 |> Option.map _.Value
                 |> Option.defaultWith (fun () -> failwith "the Contracts dependency has no version")
 
-            Assert.Equal("1.3.0-preview.3", packageVersion)
+            Assert.Equal("1.4.0-preview.1", packageVersion)
             Assert.Equal("7.5.2", dependencyVersion)
             Assert.DoesNotContain(packageVersion, dependency.ToString())
         finally
@@ -109,7 +109,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.3.0-preview.3.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0-preview.1.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package

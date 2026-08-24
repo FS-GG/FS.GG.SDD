@@ -27,6 +27,8 @@
     <Compile Include="TypedSpecifications/SpecificationKernel.fs" />
     <Compile Include="TypedSpecifications/RequirementsExtension.fsi" />
     <Compile Include="TypedSpecifications/RequirementsExtension.fs" />
+    <Compile Include="TypedSpecifications/TypedLifecycle.fsi" />
+    <Compile Include="TypedSpecifications/TypedLifecycle.fs" />
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />

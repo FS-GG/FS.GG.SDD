@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Artifacts
 
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.SchemaVersion
+open FS.GG.SDD.Artifacts.TypedSpecifications
 
 /// `.fsgg/scaffold-provenance.json` (schema v1): the byte-deterministic record of
 /// who produced runtime files during `fsgg-sdd scaffold` and that their ongoing
@@ -108,3 +109,7 @@ module ScaffoldProvenance =
     /// Parse provenance JSON. Malformed or unsupported-schema content yields `None`
     /// (fail-safe: readers treat it as absent and surface the diagnostic).
     val tryParse: text: string -> ScaffoldProvenanceRecord option
+
+    /// Resolve the representation backend from the recorded lifecycle parameter.
+    /// Absence deliberately remains Standard SDD until the P5 default flip.
+    val lifecycleLane: record: ScaffoldProvenanceRecord -> Result<LifecycleLane, TypedLifecycleDiagnostic>
