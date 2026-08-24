@@ -250,6 +250,8 @@ module TypedSpecificationKernelTests =
         let edited =
             projection.Markdown.Replace("Authors share one typed specification.", "Edited projection text.")
 
+        let appended = projection.Markdown + "\n\n"
+
         let editedJson =
             projection.Json
             |> replaceFirst "\"agent\": \"tern-91d9\"" "\"agent\": \"edited-agent\""
@@ -263,6 +265,11 @@ module TypedSpecificationKernelTests =
         Assert.Contains(
             SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content edited),
             fun item -> item.Code = "SPEC-PROJECTION-DIRECT-EDIT"
+        )
+
+        Assert.Contains(
+            SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content appended),
+            fun item -> item.Code = "SPEC-PROJECTION-DIRECT-EDIT" && item.Path = "/projection/markdown"
         )
 
         Assert.Contains(

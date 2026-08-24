@@ -789,7 +789,13 @@ module SpecificationProjection =
                               Kernel.diagnostic
                                   "SPEC-PROJECTION-DIRECT-EDIT"
                                   "/projection/markdown/generatedFingerprint"
-                                  "Markdown projection body differs from its generated source." ]
+                                  "Markdown projection body differs from its generated source."
+                      if text.Replace("\r\n", "\n") <> expected.Markdown then
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-DIRECT-EDIT"
+                                  "/projection/markdown"
+                                  "Markdown projection bytes differ from the deterministic generated projection." ]
                     |> Kernel.sortDiagnostics
                 | _ ->
                     [ Kernel.diagnostic

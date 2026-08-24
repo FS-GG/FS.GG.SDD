@@ -114,3 +114,25 @@ test/build outputs below; each mutation was reverted immediately after observati
 - Positive control: the unchanged workflow admits one job and proves the org-feed
   URL occurs before the public nuget.org URL.
 - Result: exit 1; the named test reported expected job count 1, actual 0.
+
+## Markdown projection byte integrity
+
+- Subject: `SpecificationProjection.validateMarkdown` over a deterministic generated projection.
+- Escaping mutation: append two newline bytes while retaining all embedded fingerprints. Before
+  repair, newline trimming made the edited projection indistinguishable from the generated body.
+- Repair control: the named projection test appends the same bytes and requires
+  `SPEC-PROJECTION-DIRECT-EDIT` at `/projection/markdown`; the unchanged projection remains valid.
+- Result: exact normalized-byte comparison rejects the edit while permitting CRLF transport
+  normalization.
+
+## Exact Artifacts release glob
+
+- Subject: both push steps within the distinct `publish-artifacts` workflow job.
+- Escaping mutation: replace the public-feed Artifacts glob with
+  `artifacts/packages/FS.GG.SDD.Cli.*.nupkg`. Before repair, the focused static contract test still
+  passed.
+- Repair control: the test now requires exactly two occurrences of the full Artifacts push command
+  and bans the CLI glob from that job. It also binds the workflow to the authoritative
+  three-package prose contract.
+- Result: the same wrong-glob mutation makes the focused test fail; the unmodified seven-job
+  workflow passes.

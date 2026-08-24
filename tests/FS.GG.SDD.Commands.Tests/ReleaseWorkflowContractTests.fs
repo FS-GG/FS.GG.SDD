@@ -9,6 +9,10 @@ module ReleaseWorkflowContractTests =
         Path.Combine(TestSupport.repoRoot, ".github", "workflows", "release.yml")
         |> File.ReadAllText
 
+    let private contract =
+        Path.Combine(TestSupport.repoRoot, "specs", "044-publish-cli-tool", "contracts", "release-workflow.md")
+        |> File.ReadAllText
+
     let private count (needle: string) (text: string) =
         let mutable found = 0
         let mutable offset = 0
@@ -41,6 +45,8 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj", job)
         Assert.Contains("FS.GG.SDD.Artifacts.*.nupkg", job)
         Assert.Equal(2, count "dotnet nuget push" job)
+        Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg\"" job)
+        Assert.DoesNotContain("dotnet nuget push \"artifacts/packages/FS.GG.SDD.Cli.*.nupkg\"", job)
 
         let orgFeed =
             job.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)
@@ -49,3 +55,6 @@ module ReleaseWorkflowContractTests =
             job.IndexOf("https://api.nuget.org/v3/index.json", StringComparison.Ordinal)
 
         Assert.True(orgFeed >= 0 && publicFeed > orgFeed, "the org feed must be pushed before nuget.org")
+        Assert.Contains("three independently consumable packages", contract)
+        Assert.Contains("| `publish-artifacts` |", contract)
+        Assert.Contains("two exact Artifacts pushes", contract)

@@ -1,7 +1,7 @@
 name: release
 
 # Producer of the cross-repo auto-update fabric. On a release of FS.GG.SDD (or a pushed
-# v* tag, or a manual dispatch), a single run publishes TWO packages to the org GitHub
+# v* tag, or a manual dispatch), a single run publishes THREE packages to the org GitHub
 # Packages feed (nuget.pkg.github.com/FS-GG): FS.GG.Contracts (the org-shared contracts
 # line), FS.GG.SDD.Artifacts (the independently consumable lifecycle/specification contracts),
 # and FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool). Versions come from each project's own
@@ -13,7 +13,7 @@ name: release
 # specs/044-publish-cli-tool/contracts/release-workflow.md (it supersedes feature 039's
 # single-package producer contract). This YAML is its implementation, not folklore. Each
 # package's published version is its EVALUATED fsproj <Version> (msbuild -getProperty); a
-# release tag is a coherence check that must match AT LEAST ONE of the two lines, never the
+# release tag is a coherence check that must match AT LEAST ONE of the three lines, never the
 # source (research Decisions 2-3; FR-014 reconciliation).
 
 on:
@@ -41,11 +41,11 @@ concurrency:
 
 jobs:
   # Shared version-resolution state machine — see the contract's version-resolution table.
-  # Evaluates BOTH fsproj <Version>s (msbuild -getProperty, not a grep) and applies the
+  # Evaluates all three fsproj <Version>s (msbuild -getProperty, not a grep) and applies the
   # at-least-one-line tag guard, then hands contracts_version / cli_version / push to the
-  # two publish jobs. Fork events never satisfy the repo guard ⇒ no publish path runs.
+  # three publish jobs. Fork events never satisfy the repo guard ⇒ no publish path runs.
   resolve-versions:
-    name: Resolve versions (both lines)
+    name: Resolve versions (three lines)
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD'
     outputs:
@@ -67,7 +67,7 @@ jobs:
           # gate's key (#92 / NU1403). Release runs rarely; a fresh restore is fine.
 
       # Source of truth is the EVALUATED fsproj <Version> for each line. The release/tag
-      # event's tag is a coherence check against BOTH lines, never the source. A
+      # event's tag is a coherence check against all three lines, never the source. A
       # version-bearing tag must match AT LEAST ONE evaluated version (research Decision 2).
       - name: Resolve versions
         id: ver
@@ -106,7 +106,7 @@ jobs:
               fi
               push="true"
             else
-              # Intentional dry run: pack both fsproj versions, push nothing (FR-004).
+              # Intentional dry run: pack all three fsproj versions, push nothing (FR-004).
               if [ -z "$contracts_version" ] || [ -z "$artifacts_version" ] || [ -z "$cli_version" ]; then
                 echo "::error::could not read <Version> from one of the fsprojs (build defect)."
                 exit 1
@@ -126,7 +126,7 @@ jobs:
             [ -z "$tag" ] && tag="$REF_NAME"
 
             # At-least-one-line guard: a version-bearing tag (v<semver>) must equal the
-            # Contracts OR the CLI evaluated version. A non-version-bearing tag is fine — the
+            # Contracts, Artifacts, OR CLI evaluated version. A non-version-bearing tag is fine — the
             # fsprojs are authoritative. Each package then publishes its own resolved version
             # regardless of which line the tag matched (FR-005; research Decision 2).
             if printf '%s' "$tag" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+'; then
