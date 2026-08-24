@@ -4,8 +4,8 @@
        - readiness/912-typed-kernel-preview2/agent-commands/claude/guidance.json  digest:02a00545dec5d1eda5d4363002240619b5f36b92da0766e26bffb5deb555ca72  schema:1(current)
        - readiness/912-typed-kernel-preview2/agent-commands/codex/guidance.json  digest:43b1fcbe344497bf866ddb61771c3143c4aa0109d4b29575e4b807c397ded334  schema:1(current)
        - readiness/912-typed-kernel-preview2/analysis.json  digest:f962b5d0268cf4dd1f817b1ade6a25a6ccfef6064286a80ba3058aa4671336f4  schema:1(current)
-       - readiness/912-typed-kernel-preview2/ship.json  digest:b4d45415c3b667f6e8b4ab1adcde38d4a4eb2e390f5b093c35977b7f7364bee2  schema:1(current)
-       - readiness/912-typed-kernel-preview2/verify.json  digest:dd7007eb5e788ed08a6bf9830108ce82b385077a0e5446e71ea5c34712c1f3e7  schema:1(current)
+       - readiness/912-typed-kernel-preview2/ship.json  digest:7b4ff511ec85872e176a5c5cb4f947c22f88898e131841967d170dad512fbb15  schema:1(current)
+       - readiness/912-typed-kernel-preview2/verify.json  digest:c4a0a48e4c99d47a7a7e98fe570e1468955e6ea65a0b584429e911eea93d8c8a  schema:1(current)
        - readiness/912-typed-kernel-preview2/work-model.json  digest:6b5581cfdc23e2f378f3b6287eafc186e8dc7cf2450e0fab16e736c2b193cdab  schema:1(current)
      outputDigest: 207e65bb26abb5ac13fddc48c5fe5f82467d3d110cfe0c5ac659fcfe31f42b67 -->
 

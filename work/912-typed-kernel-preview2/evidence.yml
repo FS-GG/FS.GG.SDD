@@ -11,7 +11,7 @@ sourceAnalysis: readiness/912-typed-kernel-preview2/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/912-typed-kernel-preview2/analysis.json
-    digest: 8ea4b713ce321b5d3b28d48d4f56c506f0b80467d5b00c707875c35cc3cc08b3
+    digest: f962b5d0268cf4dd1f817b1ade6a25a6ccfef6064286a80ba3058aa4671336f4
     schemaVersion: 1
   - label: checklist
     path: work/912-typed-kernel-preview2/checklist.md
