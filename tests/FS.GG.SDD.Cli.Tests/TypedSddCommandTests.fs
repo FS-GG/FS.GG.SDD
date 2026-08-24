@@ -264,7 +264,17 @@ module TypedSddCommandTests =
 
             for malformed in
                 [ [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo"; "--work"; "again" ]
-                  [ "typed-sdd"; "inspect"; "--root"; "--work"; "demo" ] ] do
+                  [ "typed-sdd"; "inspect"; "--root"; "--work"; "demo" ]
+                  [ "typed-sdd"
+                    "author"
+                    "--root"
+                    root
+                    "--work"
+                    "-h"
+                    "--agent"
+                    "a"
+                    "--session"
+                    "s" ] ] do
                 let malformedCode, malformedReport, _ = run root malformed
                 Assert.Equal(1, malformedCode)
                 Assert.Contains("typedSdd.unknownArgument", malformedReport))

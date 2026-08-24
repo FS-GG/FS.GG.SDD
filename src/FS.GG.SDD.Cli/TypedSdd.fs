@@ -815,7 +815,7 @@ module TypedSdd =
             | option :: value :: tail when
                 Set.contains option valued
                 && not (Set.contains option seen)
-                && not (value.StartsWith("--", StringComparison.Ordinal))
+                && not (value.StartsWith("-", StringComparison.Ordinal))
                 ->
                 loop (Set.add option seen) tail
             | flag :: tail when Set.contains flag flags && not (Set.contains flag seen) -> loop (Set.add flag seen) tail
