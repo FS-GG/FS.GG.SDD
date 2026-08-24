@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportVersion": "2.6.0",
-  "toolVersion": "1.2.5",
+  "toolVersion": "1.3.0-preview.1",
   "command": {
     "name": "init",
     "stage": "project"
@@ -38,7 +38,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "9842c3b5c5b709840760e96ec9c53bb43c30994833e9112726d521b4d4315930"
+        "value": "d2d9ee327c8e2ba340ae4263db0cf915f0374f49df56754a6b34de424e04c4eb"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -246,7 +246,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "9842c3b5c5b709840760e96ec9c53bb43c30994833e9112726d521b4d4315930"
+        "value": "d2d9ee327c8e2ba340ae4263db0cf915f0374f49df56754a6b34de424e04c4eb"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -516,7 +516,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "9b80368196411c824a93ce52e0fdb62c6924a57b97d027d61b25fb1ba0d897f9"
+        "value": "53140a7586a6c9e86c4e48382c086376e25ba673907a80db16db79b0ef469e40"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []

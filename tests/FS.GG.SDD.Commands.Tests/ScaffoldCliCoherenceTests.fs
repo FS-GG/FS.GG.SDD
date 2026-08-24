@@ -94,7 +94,7 @@ module ScaffoldCliCoherenceTests =
             Assert.Equal("info", severityValue diagnostic.Severity)
             Assert.Contains(declaredMinimumOf "min-behind.providers.yml", diagnostic.Message)
             Assert.Contains((currentGeneratorVersion ()).Version, diagnostic.Message)
-            Assert.Contains("behind by 1 minor version", diagnostic.Message)
+            Assert.Contains("behind by 1 patch version", diagnostic.Message)
         | other -> Assert.True(false, $"expected exactly one cliBehindMinimum, got {List.length other}")
 
     // US2 scenario 3 / SC-004: a behind run's outcome and exit code are IDENTICAL to an
@@ -183,7 +183,7 @@ module ScaffoldCliCoherenceTests =
             let declared = declaredMinimumOf fixture
 
             Assert.True(
-                Option.isSome (Fsgg.Version.tryParse declared),
+                Option.isSome (FS.GG.SDD.Commands.Internal.CommandVersion.tryParse declared),
                 $"{fixture} declares an unparseable minimum '{declared}'"
             )
 
@@ -193,9 +193,15 @@ module ScaffoldCliCoherenceTests =
         // are calibrated against the rule rather than against a literal this test happens to agree
         // with. `compare installed minimum` is the production argument order (HandlersScaffold), where
         // `Some -1` means installed < minimum.
-        Assert.Equal(Some 0, Fsgg.Version.compare installed (declaredMinimum "min-equal.providers.yml"))
+        Assert.Equal(
+            Some 0,
+            FS.GG.SDD.Commands.Internal.CommandVersion.compare installed (declaredMinimum "min-equal.providers.yml")
+        )
 
-        Assert.Equal(Some -1, Fsgg.Version.compare installed (declaredMinimum "min-behind.providers.yml"))
+        Assert.Equal(
+            Some -1,
+            FS.GG.SDD.Commands.Internal.CommandVersion.compare installed (declaredMinimum "min-behind.providers.yml")
+        )
 
     // US2 scenario 4 (SC-003): provider declares no minimum ⇒ nothing to compare, no advisory.
     [<Fact; Trait("tier", "slow")>]

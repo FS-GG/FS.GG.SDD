@@ -742,7 +742,18 @@ module Diagnostics =
         let unit (n: int) (name: string) =
             $"""behind by {n} {name} version{(if n = 1 then "" else "s")}"""
 
-        match Fsgg.Version.tryParse installed, Fsgg.Version.tryParse minimum with
+        let parseCore (value: string) =
+            let separator = value.IndexOfAny([| '-'; '+' |])
+
+            let core =
+                if separator < 0 then
+                    value
+                else
+                    value.Substring(0, separator)
+
+            Fsgg.Version.tryParse core
+
+        match parseCore installed, parseCore minimum with
         | Some i, Some m ->
             if m.Major <> i.Major then
                 unit (m.Major - i.Major) "major"

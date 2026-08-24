@@ -14,6 +14,7 @@
     <Compile Include="CommandReports/DiagnosticRouting.fs" />
     <Compile Include="CommandReports/DiagnosticConstructors.fs" />
     <Compile Include="CommandReports/NextActionRouting.fs" />
+    <Compile Include="CommandVersion.fs" />
     <Compile Include="CommandReports/ReportAssembly.fs" />
     <Compile Include="CommandReports.fsi" />
     <Compile Include="CommandReports.fs" />

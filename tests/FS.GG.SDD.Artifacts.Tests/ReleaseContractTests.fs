@@ -94,16 +94,17 @@ module ReleaseContractTests =
         Assert.Equal(release.Identity.Version, release.GeneratorVersion.Version)
 
     [<Fact>]
-    let ``T011 channel is derived from the version (major 0 implies preRelease)`` () =
-        Assert.Equal(StableRelease, release.Identity.Channel)
+    let ``T011 channel is derived from the version and preview suffix`` () =
+        Assert.Equal(PreRelease, release.Identity.Channel)
         Assert.Equal(PreRelease, channelOfVersion "0.2.0")
+        Assert.Equal(PreRelease, channelOfVersion "1.3.0-preview.1")
         Assert.Equal(StableRelease, channelOfVersion "1.0.0")
         Assert.Equal(StableRelease, channelOfVersion "2.3.4")
 
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("1.2.x", entry.SddVersionLine)
+        Assert.Equal("1.3.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE

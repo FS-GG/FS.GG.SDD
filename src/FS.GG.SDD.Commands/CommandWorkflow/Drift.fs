@@ -822,7 +822,7 @@ module internal Drift =
     // always has), and an unparseable `sdd.minToolVersion` is already warned by
     // `project.minToolVersionUnparseable` at report assembly — re-reporting would double-count.
     let private validVersion raw =
-        Fsgg.Version.tryParse raw |> Option.map (fun _ -> raw)
+        CommandVersion.tryParse raw |> Option.map (fun _ -> raw)
 
     // The strictest of the candidate minima, each paired with the source that declared it.
     // Candidates arrive in tie-break order and a later one replaces the incumbent only when it
@@ -835,7 +835,7 @@ module internal Drift =
                 match best with
                 | None -> Some(version, source)
                 | Some(incumbent, _) ->
-                    match Fsgg.Version.compare version incumbent with
+                    match CommandVersion.compare version incumbent with
                     | Some rank when rank > 0 -> Some(version, source)
                     | _ -> best)
             None
@@ -844,10 +844,10 @@ module internal Drift =
         match effectiveMinimum with
         | None -> "coherentByAbsence", None
         | Some(minimum, _) ->
-            match Fsgg.Version.tryParse installedVersion with
+            match CommandVersion.tryParse installedVersion with
             | None -> "undeterminable", None
             | Some _ ->
-                match Fsgg.Version.compare installedVersion minimum with
+                match CommandVersion.compare installedVersion minimum with
                 | Some -1 -> "behind", Some $"{installedVersion} → {minimum}"
                 | _ -> "atOrAbove", None
 

@@ -1,0 +1,3030 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.2.0",
+  "workId": "typed-specification-kernel-p2",
+  "project": {
+    "id": "fs.gg.sdd-833",
+    "defaultWorkRoot": "work",
+    "profile": null
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      }
+    },
+    {
+      "path": "work/typed-specification-kernel-p2/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "2ca19d14a82e73f3f8b27241da7644b940eae892e07990b559ded33357bb0771"
+      }
+    },
+    {
+      "path": "work/typed-specification-kernel-p2/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "a0ed95dfdeb5295b5e3ef77741d0ba8f71611417f4aa7ba2ffd412131882df9f"
+      }
+    },
+    {
+      "path": "work/typed-specification-kernel-p2/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c139deb58703ec8c735dfbeb1ebd930cd65a14d9e165953ff5b82509f2ac4124"
+      }
+    },
+    {
+      "path": "work/typed-specification-kernel-p2/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fb6bb978ea2073f7275cfdf476fd27c0e4a67bc3d6125c5f515418d4e6b4f834"
+      }
+    },
+    {
+      "path": "work/typed-specification-kernel-p2/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "e5661d8470b325bfc8861fff4e8d93afa1d3e4796b2451cb6571abf3880e0b2b"
+      }
+    },
+    {
+      "path": "work/typed-specification-kernel-p2/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "0bc6a1d44cf8561691dd36bdff70d7b62446934d19843b6693006b6305679e5f"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "typed-specification-kernel-p2",
+    "title": "Typed Specification Kernel P2",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "performanceIntent": null,
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "The package MUST expose a generic \u0060SpecificationModel\u0060 envelope with stable identity, schema version, provenance, intent, evidence obligations, and a typed extension value. (Stories: US-001; Acceptance: AC-001)",
+      "text": "The package MUST expose a generic \u0060SpecificationModel\u0060 envelope with stable identity, schema version, provenance, intent, evidence obligations, and a typed extension value. (Stories: US-001; Acceptance: AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 89,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": [
+        "EV001",
+        "EV022"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "title": "Extension registration and compilation MUST be statically typed and explicit, and MUST NOT use \u0060obj\u0060, reflection discovery, or one platform-wide closed union. (Stories: US-001; Acceptance: AC-001)",
+      "text": "Extension registration and compilation MUST be statically typed and explicit, and MUST NOT use \u0060obj\u0060, reflection discovery, or one platform-wide closed union. (Stories: US-001; Acceptance: AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 90,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002"
+      ],
+      "linkedEvidenceIds": [
+        "EV002",
+        "EV023"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "title": "Normalization MUST be deterministic, MUST canonicalize semantically unordered collections, and MUST produce a stable SHA-256 model fingerprint. (Stories: US-001, US-002; Acceptance: AC-002)",
+      "text": "Normalization MUST be deterministic, MUST canonicalize semantically unordered collections, and MUST produce a stable SHA-256 model fingerprint. (Stories: US-001, US-002; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 91,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003"
+      ],
+      "linkedEvidenceIds": [
+        "EV003",
+        "EV024"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "title": "The model codec MUST be explicitly versioned, deterministic, and round-trip losslessly for supported versions while refusing unsupported versions and following a documented unknown-field policy. (Stories: US-001, US-004; Acceptance: AC-002)",
+      "text": "The model codec MUST be explicitly versioned, deterministic, and round-trip losslessly for supported versions while refusing unsupported versions and following a documented unknown-field policy. (Stories: US-001, US-004; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 92,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004"
+      ],
+      "linkedEvidenceIds": [
+        "EV004"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "title": "Semantic diff MUST distinguish equivalent and changed models, ignore authoring-only noise, and report stable semantic paths plus before/after fingerprints. (Stories: US-002; Acceptance: AC-003)",
+      "text": "Semantic diff MUST distinguish equivalent and changed models, ignore authoring-only noise, and report stable semantic paths plus before/after fingerprints. (Stories: US-002; Acceptance: AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 93,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T005"
+      ],
+      "linkedEvidenceIds": [
+        "EV005"
+      ]
+    },
+    {
+      "id": "FR-006",
+      "title": "The requirements extension MUST represent user value, scope, requirements, acceptance criteria, ambiguity/decision state, and evidence obligations with stable typed identifiers and references. (Stories: US-001; Acceptance: AC-004)",
+      "text": "The requirements extension MUST represent user value, scope, requirements, acceptance criteria, ambiguity/decision state, and evidence obligations with stable typed identifiers and references. (Stories: US-001; Acceptance: AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 94,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T006"
+      ],
+      "linkedEvidenceIds": [
+        "EV006"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "title": "Compiler validation MUST report all detectable duplicate, missing, malformed, unresolved-reference, and extension errors in deterministic order with stable codes and paths. (Stories: US-001; Acceptance: AC-004)",
+      "text": "Compiler validation MUST report all detectable duplicate, missing, malformed, unresolved-reference, and extension errors in deterministic order with stable codes and paths. (Stories: US-001; Acceptance: AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 95,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T007"
+      ],
+      "linkedEvidenceIds": [
+        "EV007"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "title": "Legacy Markdown migration MUST return only \u0060Migrated\u0060, \u0060Ambiguous\u0060, or \u0060Unsupported\u0060; every non-migrated result MUST carry a typed reason and source location, and analysis MUST perform no canonical-source write. (Stories: US-003; Acceptance: AC-005)",
+      "text": "Legacy Markdown migration MUST return only \u0060Migrated\u0060, \u0060Ambiguous\u0060, or \u0060Unsupported\u0060; every non-migrated result MUST carry a typed reason and source location, and analysis MUST perform no canonical-source write. (Stories: US-003; Acceptance: AC-005)",
+      "acceptanceCriteria": [
+        "AC-005"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 96,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV008",
+        "EV025"
+      ]
+    },
+    {
+      "id": "FR-009",
+      "title": "Generated Markdown and JSON projections MUST derive solely from the normalized model and carry model identity plus source and generated fingerprints. (Stories: US-002; Acceptance: AC-006)",
+      "text": "Generated Markdown and JSON projections MUST derive solely from the normalized model and carry model identity plus source and generated fingerprints. (Stories: US-002; Acceptance: AC-006)",
+      "acceptanceCriteria": [
+        "AC-006"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 97,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T009"
+      ],
+      "linkedEvidenceIds": [
+        "EV009"
+      ]
+    },
+    {
+      "id": "FR-010",
+      "title": "Projection validation MUST distinguish missing, malformed, unreadable, stale-source, direct-edit/generated-fingerprint, and unsupported-version failures with actionable stable codes. (Stories: US-002; Acceptance: AC-006)",
+      "text": "Projection validation MUST distinguish missing, malformed, unreadable, stale-source, direct-edit/generated-fingerprint, and unsupported-version failures with actionable stable codes. (Stories: US-002; Acceptance: AC-006)",
+      "acceptanceCriteria": [
+        "AC-006"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 98,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T010"
+      ],
+      "linkedEvidenceIds": [
+        "EV010"
+      ]
+    },
+    {
+      "id": "FR-011",
+      "title": "Evidence validation MUST bind evidence to declared obligation IDs and distinguish satisfied, missing, duplicate, and mismatched evidence without a Governance runtime dependency. (Stories: US-001; Acceptance: AC-007)",
+      "text": "Evidence validation MUST bind evidence to declared obligation IDs and distinguish satisfied, missing, duplicate, and mismatched evidence without a Governance runtime dependency. (Stories: US-001; Acceptance: AC-007)",
+      "acceptanceCriteria": [
+        "AC-007"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 99,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T011"
+      ],
+      "linkedEvidenceIds": [
+        "EV011"
+      ]
+    },
+    {
+      "id": "FR-012",
+      "title": "\u0060FS.GG.SDD.Artifacts\u0060 MUST remain independently consumable and MUST NOT reference S.I.R, coordination, a source checkout, or a local-package shortcut. (Stories: US-004; Acceptance: AC-008)",
+      "text": "\u0060FS.GG.SDD.Artifacts\u0060 MUST remain independently consumable and MUST NOT reference S.I.R, coordination, a source checkout, or a local-package shortcut. (Stories: US-004; Acceptance: AC-008)",
+      "acceptanceCriteria": [
+        "AC-008"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 100,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T012"
+      ],
+      "linkedEvidenceIds": [
+        "EV012",
+        "EV026"
+      ]
+    },
+    {
+      "id": "FR-013",
+      "title": "Public contract tests MUST cover compiler, codec, normalization, semantic diff, projections, migration, evidence validation, extension isolation, deterministic ordering, and deliberate wrong-path mutations. (Stories: US-004; Acceptance: AC-008)",
+      "text": "Public contract tests MUST cover compiler, codec, normalization, semantic diff, projections, migration, evidence validation, extension isolation, deterministic ordering, and deliberate wrong-path mutations. (Stories: US-004; Acceptance: AC-008)",
+      "acceptanceCriteria": [
+        "AC-008"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 101,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T013"
+      ],
+      "linkedEvidenceIds": [
+        "EV013"
+      ]
+    },
+    {
+      "id": "FR-014",
+      "title": "The SDD authoring skill contract MUST teach one inspectable typed loop shared by agents and humans and MUST identify the normalized model\u2014not the builder or projection\u2014as authority. (Stories: US-001; Acceptance: AC-009)",
+      "text": "The SDD authoring skill contract MUST teach one inspectable typed loop shared by agents and humans and MUST identify the normalized model\u2014not the builder or projection\u2014as authority. (Stories: US-001; Acceptance: AC-009)",
+      "acceptanceCriteria": [
+        "AC-009"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 102,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T014"
+      ],
+      "linkedEvidenceIds": [
+        "EV014"
+      ]
+    },
+    {
+      "id": "FR-015",
+      "title": "The merged producer commit MUST yield a preview package that is published before registry and consumer flips, downloaded from every required feed, byte-compared where the release policy requires, and executed by a clean consumption fixture. (Stories: US-004; Acceptance: AC-010)",
+      "text": "The merged producer commit MUST yield a preview package that is published before registry and consumer flips, downloaded from every required feed, byte-compared where the release policy requires, and executed by a clean consumption fixture. (Stories: US-004; Acceptance: AC-010)",
+      "acceptanceCriteria": [
+        "AC-010"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 103,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T015"
+      ],
+      "linkedEvidenceIds": [
+        "EV015",
+        "EV027"
+      ]
+    },
+    {
+      "id": "FR-016",
+      "title": "The package MUST NOT expose S.I.R-owned gameplay, rule execution, or registered-algorithm semantics; those remain consumer extensions. (Stories: US-004; Acceptance: AC-010)",
+      "text": "The package MUST NOT expose S.I.R-owned gameplay, rule execution, or registered-algorithm semantics; those remain consumer extensions. (Stories: US-004; Acceptance: AC-010)",
+      "acceptanceCriteria": [
+        "AC-010"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 104,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T016"
+      ],
+      "linkedEvidenceIds": [
+        "EV016"
+      ]
+    },
+    {
+      "id": "FR-017",
+      "title": "The change MUST be additive for existing Standard SDD artifacts, command output, exit codes, and package consumers until a later explicitly versioned adoption. (Stories: US-003, US-004; Acceptance: AC-010)",
+      "text": "The change MUST be additive for existing Standard SDD artifacts, command output, exit codes, and package consumers until a later explicitly versioned adoption. (Stories: US-003, US-004; Acceptance: AC-010)",
+      "acceptanceCriteria": [
+        "AC-010"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/typed-specification-kernel-p2/spec.md",
+      "sourceLocation": {
+        "line": 105,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T017"
+      ],
+      "linkedEvidenceIds": [
+        "EV017"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "The typed kernel is an",
+      "decision": "The typed kernel is an",
+      "requirementRefs": [
+        "FR-012"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [
+        "AC-008"
+      ],
+      "source": "work/typed-specification-kernel-p2/clarifications.md",
+      "sourceLocation": {
+        "line": 44,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T018"
+      ]
+    },
+    {
+      "id": "DEC-002",
+      "title": "Normalization",
+      "decision": "Normalization",
+      "requirementRefs": [
+        "FR-003",
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [
+        "AC-002",
+        "AC-003"
+      ],
+      "source": "work/typed-specification-kernel-p2/clarifications.md",
+      "sourceLocation": {
+        "line": 46,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T019"
+      ]
+    },
+    {
+      "id": "DEC-003",
+      "title": "Migration supports the",
+      "decision": "Migration supports the",
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [
+        "AC-005"
+      ],
+      "source": "work/typed-specification-kernel-p2/clarifications.md",
+      "sourceLocation": {
+        "line": 49,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T020"
+      ]
+    },
+    {
+      "id": "DEC-004",
+      "title": "Publish the coherent",
+      "decision": "Publish the coherent",
+      "requirementRefs": [
+        "FR-015"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [
+        "AC-010"
+      ],
+      "source": "work/typed-specification-kernel-p2/clarifications.md",
+      "sourceLocation": {
+        "line": 53,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T021"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Implement requirement FR-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "FR-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Implement requirement FR-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-002"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "FR-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Implement requirement FR-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-003"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "FR-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Implement requirement FR-004",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-004"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "FR-004",
+        "PD-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Implement requirement FR-005",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-005"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "FR-005",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Implement requirement FR-006",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-006"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-004",
+        "FR-006",
+        "PD-006"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "T007",
+      "title": "Implement requirement FR-007",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-007"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-004",
+        "FR-007",
+        "PD-007"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV007"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "T008",
+      "title": "Implement requirement FR-008",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-008"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "FR-008"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV008"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "T009",
+      "title": "Implement requirement FR-009",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-009"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-006",
+        "FR-009",
+        "PD-009"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV009"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "T010",
+      "title": "Implement requirement FR-010",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-010"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-006",
+        "FR-010",
+        "PD-010"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV010"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "T011",
+      "title": "Implement requirement FR-011",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-011"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-007",
+        "FR-011",
+        "PD-011"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV011"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "T012",
+      "title": "Implement requirement FR-012",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-012"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-008",
+        "FR-012"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV012"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "T013",
+      "title": "Implement requirement FR-013",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-013"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-008",
+        "FR-013",
+        "PD-013"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV013"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "T014",
+      "title": "Implement requirement FR-014",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-014"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-009",
+        "FR-014",
+        "PD-014"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV014"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "T015",
+      "title": "Implement requirement FR-015",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-015"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-010",
+        "FR-015"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV015"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "T016",
+      "title": "Implement requirement FR-016",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-016"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-010",
+        "FR-016",
+        "PD-016"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV016"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    },
+    {
+      "id": "T017",
+      "title": "Implement requirement FR-017",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-017"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-010",
+        "FR-017",
+        "PD-017"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV017"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 17,
+        "column": 1
+      }
+    },
+    {
+      "id": "T018",
+      "title": "Implement clarification decision DEC-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-001"
+      ],
+      "sourceIds": [
+        "DEC-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV018"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 18,
+        "column": 1
+      }
+    },
+    {
+      "id": "T019",
+      "title": "Implement clarification decision DEC-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-002"
+      ],
+      "sourceIds": [
+        "DEC-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV019"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "id": "T020",
+      "title": "Implement clarification decision DEC-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-003"
+      ],
+      "sourceIds": [
+        "DEC-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV020"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 20,
+        "column": 1
+      }
+    },
+    {
+      "id": "T021",
+      "title": "Implement clarification decision DEC-004",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-004"
+      ],
+      "sourceIds": [
+        "DEC-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV021"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 21,
+        "column": 1
+      }
+    },
+    {
+      "id": "T022",
+      "title": "Implement plan decision PD-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "DEC-002",
+        "FR-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV022"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 22,
+        "column": 1
+      }
+    },
+    {
+      "id": "T023",
+      "title": "Implement plan decision PD-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "DEC-001",
+        "FR-002",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV023"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 23,
+        "column": 1
+      }
+    },
+    {
+      "id": "T024",
+      "title": "Implement plan decision PD-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "DEC-002",
+        "FR-003",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV024"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      }
+    },
+    {
+      "id": "T025",
+      "title": "Implement plan decision PD-008",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "DEC-003",
+        "FR-008",
+        "PD-008"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV025"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      }
+    },
+    {
+      "id": "T026",
+      "title": "Implement plan decision PD-012",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-008",
+        "DEC-001",
+        "FR-012",
+        "PD-012"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV026"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      }
+    },
+    {
+      "id": "T027",
+      "title": "Implement plan decision PD-015",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-010",
+        "DEC-004",
+        "FR-015",
+        "PD-015"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV027"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      }
+    },
+    {
+      "id": "T028",
+      "title": "Update contract surface PC-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV028"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      }
+    },
+    {
+      "id": "T029",
+      "title": "Update contract surface PC-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PD-004",
+        "PD-008"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV029"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      }
+    },
+    {
+      "id": "T030",
+      "title": "Update contract surface PC-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PD-015"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV030"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      }
+    },
+    {
+      "id": "T031",
+      "title": "Record verification evidence VO-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-002",
+        "VO-001"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV031"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 31,
+        "column": 1
+      }
+    },
+    {
+      "id": "T032",
+      "title": "Record verification evidence VO-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-003",
+        "PD-004",
+        "PD-005",
+        "VO-002"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV032"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 32,
+        "column": 1
+      }
+    },
+    {
+      "id": "T033",
+      "title": "Record verification evidence VO-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-006",
+        "PD-007",
+        "PD-011",
+        "VO-003"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV033"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 33,
+        "column": 1
+      }
+    },
+    {
+      "id": "T034",
+      "title": "Record verification evidence VO-004",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-008",
+        "PD-009",
+        "PD-010",
+        "VO-004"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV034"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 34,
+        "column": 1
+      }
+    },
+    {
+      "id": "T035",
+      "title": "Record verification evidence VO-005",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-012",
+        "PD-013",
+        "PD-016",
+        "VO-005"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV035"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 35,
+        "column": 1
+      }
+    },
+    {
+      "id": "T036",
+      "title": "Record verification evidence VO-006",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-014",
+        "PD-017",
+        "VO-006"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV036"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 36,
+        "column": 1
+      }
+    },
+    {
+      "id": "T037",
+      "title": "Record verification evidence VO-007",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PD-015",
+        "VO-007"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV037"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 37,
+        "column": 1
+      }
+    },
+    {
+      "id": "T038",
+      "title": "Handle migration posture PM-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV038"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 38,
+        "column": 1
+      }
+    },
+    {
+      "id": "T039",
+      "title": "Handle migration posture PM-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PM-002"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV039"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 39,
+        "column": 1
+      }
+    },
+    {
+      "id": "T040",
+      "title": "Handle migration posture PM-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PM-003"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV040"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 40,
+        "column": 1
+      }
+    },
+    {
+      "id": "T041",
+      "title": "Refresh generated view impact GV-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-001",
+        "PD-009"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV041"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 41,
+        "column": 1
+      }
+    },
+    {
+      "id": "T042",
+      "title": "Refresh generated view impact GV-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-002",
+        "PD-014"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV042"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 42,
+        "column": 1
+      }
+    },
+    {
+      "id": "T043",
+      "title": "Refresh generated view impact GV-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-003",
+        "PD-015"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV043"
+      ],
+      "source": "work/typed-specification-kernel-p2/tasks.yml",
+      "sourceLocation": {
+        "line": 43,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [
+        "FR-006"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV007",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T007",
+      "taskRefs": [
+        "T007"
+      ],
+      "requirementRefs": [
+        "FR-007"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV008",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T008",
+      "taskRefs": [
+        "T008"
+      ],
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV009",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T009",
+      "taskRefs": [
+        "T009"
+      ],
+      "requirementRefs": [
+        "FR-009"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV010",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T010",
+      "taskRefs": [
+        "T010"
+      ],
+      "requirementRefs": [
+        "FR-010"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV011",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T011",
+      "taskRefs": [
+        "T011"
+      ],
+      "requirementRefs": [
+        "FR-011"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV012",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T012",
+      "taskRefs": [
+        "T012"
+      ],
+      "requirementRefs": [
+        "FR-012"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV013",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T013",
+      "taskRefs": [
+        "T013"
+      ],
+      "requirementRefs": [
+        "FR-013"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV014",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T014",
+      "taskRefs": [
+        "T014"
+      ],
+      "requirementRefs": [
+        "FR-014"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV015",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T015",
+      "taskRefs": [
+        "T015"
+      ],
+      "requirementRefs": [
+        "FR-015"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV016",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T016",
+      "taskRefs": [
+        "T016"
+      ],
+      "requirementRefs": [
+        "FR-016"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV017",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T017",
+      "taskRefs": [
+        "T017"
+      ],
+      "requirementRefs": [
+        "FR-017"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 17,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV018",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T018",
+      "taskRefs": [
+        "T018"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 18,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV019",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T019",
+      "taskRefs": [
+        "T019"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV020",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T020",
+      "taskRefs": [
+        "T020"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 20,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV021",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T021",
+      "taskRefs": [
+        "T021"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 21,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV022",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T022",
+      "taskRefs": [
+        "T022"
+      ],
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 22,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV023",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T023",
+      "taskRefs": [
+        "T023"
+      ],
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 23,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV024",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T024",
+      "taskRefs": [
+        "T024"
+      ],
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV025",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T025",
+      "taskRefs": [
+        "T025"
+      ],
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV026",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T026",
+      "taskRefs": [
+        "T026"
+      ],
+      "requirementRefs": [
+        "FR-012"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV027",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T027",
+      "taskRefs": [
+        "T027"
+      ],
+      "requirementRefs": [
+        "FR-015"
+      ],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV028",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T028",
+      "taskRefs": [
+        "T028"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV029",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T029",
+      "taskRefs": [
+        "T029"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV030",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T030",
+      "taskRefs": [
+        "T030"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV031",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T031",
+      "taskRefs": [
+        "T031"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 31,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV032",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T032",
+      "taskRefs": [
+        "T032"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 32,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV033",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T033",
+      "taskRefs": [
+        "T033"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 33,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV034",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T034",
+      "taskRefs": [
+        "T034"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 34,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV035",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T035",
+      "taskRefs": [
+        "T035"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 35,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV036",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T036",
+      "taskRefs": [
+        "T036"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 36,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV037",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T037",
+      "taskRefs": [
+        "T037"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 37,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV038",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T038",
+      "taskRefs": [
+        "T038"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 38,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV039",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T039",
+      "taskRefs": [
+        "T039"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 39,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV040",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T040",
+      "taskRefs": [
+        "T040"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 40,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV041",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T041",
+      "taskRefs": [
+        "T041"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 41,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV042",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T042",
+      "taskRefs": [
+        "T042"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 42,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV043",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T043",
+      "taskRefs": [
+        "T043"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/typed-specification-kernel-p2/mutation-controls.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/TypedSpecificationKernelTests.fs",
+        "tests/fixtures/typed-specifications/run-clean-consumer.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/typed-specification-kernel-p2/evidence.yml",
+      "sourceLocation": {
+        "line": 43,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/typed-specification-kernel-p2/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "1.3.0-preview.1"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/typed-specification-kernel-p2/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "2ca19d14a82e73f3f8b27241da7644b940eae892e07990b559ded33357bb0771"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/typed-specification-kernel-p2/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "a0ed95dfdeb5295b5e3ef77741d0ba8f71611417f4aa7ba2ffd412131882df9f"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/typed-specification-kernel-p2/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c139deb58703ec8c735dfbeb1ebd930cd65a14d9e165953ff5b82509f2ac4124"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/typed-specification-kernel-p2/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fb6bb978ea2073f7275cfdf476fd27c0e4a67bc3d6125c5f515418d4e6b4f834"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/typed-specification-kernel-p2/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "e5661d8470b325bfc8861fff4e8d93afa1d3e4796b2451cb6571abf3880e0b2b"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/typed-specification-kernel-p2/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "0bc6a1d44cf8561691dd36bdff70d7b62446934d19843b6693006b6305679e5f"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "7a2913e28b53cedf2c06781367255215f92e7e502528657fb8a4f79f137b0aec"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}

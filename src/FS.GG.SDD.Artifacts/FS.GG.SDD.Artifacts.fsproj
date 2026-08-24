@@ -23,6 +23,10 @@
     <Compile Include="Diagnostics.fs" />
     <Compile Include="Json/JsonWriters.fsi" />
     <Compile Include="Json/JsonWriters.fs" />
+    <Compile Include="TypedSpecifications/SpecificationKernel.fsi" />
+    <Compile Include="TypedSpecifications/SpecificationKernel.fs" />
+    <Compile Include="TypedSpecifications/RequirementsExtension.fsi" />
+    <Compile Include="TypedSpecifications/RequirementsExtension.fs" />
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />

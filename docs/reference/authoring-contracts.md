@@ -816,3 +816,20 @@ Two facts make this work, and both are deliberate (FS.GG.SDD#869):
 You never hand-write a declaration to escape this, and you never delete `evidence.yml`. Both were
 previously the only ways out, neither was documented, and deleting the file discards every
 authored declaration in it.
+
+## Typed specification authoring loop (preview)
+
+The `FS.GG.SDD.Artifacts.TypedSpecifications` preview makes the normalized
+`SpecificationModel<'extension>` the semantic authority. Builders are authoring
+conveniences and projections are generated views. Agents and humans use the same
+loop: inspect the current model and diagnostics; state intent and resolve semantic
+questions; author a concrete typed proposal; validate its explicit extension
+contract; inspect semantic diff; bind evidence receipts; revise the model; and
+regenerate projections.
+
+Never edit a projection to change meaning. Legacy requirements migration is a
+read-only analysis returning `Migrated`, `Ambiguous`, or `Unsupported`; accepting
+and persisting a migrated value remains a separate caller decision. Domain
+extensions are concrete typed values passed explicitly—never `obj`, reflection
+discovery, or a platform-wide closed union. The full preview contract is in
+[`typed-specifications.md`](typed-specifications.md).

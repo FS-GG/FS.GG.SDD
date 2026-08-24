@@ -96,13 +96,13 @@ module internal ReportAssembly =
         | Some floor ->
             let installed = model.Request.GeneratorVersion.Version
 
-            match Fsgg.Version.tryParse floor with
+            match CommandVersion.tryParse floor with
             | None -> [ projectMinToolVersionUnparseable floor ]
             | Some _ ->
                 // `compare` returns None when either side is unparseable. The floor already parsed, so a
                 // None here means the *installed* version did — it comes from the assembly, not the
                 // workspace, and there is nothing an author could fix. Degrade to silence.
-                match Fsgg.Version.compare installed floor with
+                match CommandVersion.compare installed floor with
                 | Some rank when rank < 0 -> [ projectToolVersionBelowMinimum installed floor ]
                 | _ -> []
 

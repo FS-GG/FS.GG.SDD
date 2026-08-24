@@ -1,132 +1,63 @@
-# Contract: `release.yml` two-package publish workflow
+# Contract: `release.yml` three-package publish workflow
 
-The external interface this feature exposes is a **CI/release-engineering contract**, not an F#
-API or `.fsgg` schema. It extends the feature-039 single-package producer
-(`specs/039-publish-contracts-package/contracts/release-workflow.md`) to publish **two** packages
-in one run: `FS.GG.Contracts` (unchanged behavior) and `FS.GG.SDD.Cli` (the `fsgg-sdd` dotnet
-tool, new). This document is the authoritative description for the two-package producer; the YAML
-in `.github/workflows/release.yml` is its implementation.
+The external interface is a CI/release-engineering contract. It extends the feature-039
+single-package producer to publish three independently consumable packages in one run:
+`FS.GG.Contracts`, `FS.GG.SDD.Artifacts`, and the `FS.GG.SDD.Cli` (`fsgg-sdd`) tool. This document
+is authoritative; `.github/workflows/release.yml` is its implementation.
 
-File: `.github/workflows/release.yml` (edited; feature 039 created it).
+## Triggers and version resolution
 
-## Supersession (the one delta from feature 039)
+The workflow runs for published releases, pushed `v*` tags, and manual dispatch. Its optional
+`version` input remains Contracts-scoped. An empty manual input is a pack-only dry run; a non-empty
+input enables publishing and overrides only `contracts_version`.
 
-Feature 039's conformance check **C2** — "a mismatched version-bearing tag fails loudly" — is
-**generalized**: the tag is now checked against *both* version lines and must match **at least
-one** (see "Version-resolution contract"). This is the minimal change required for the repo to cut
-a product-line release (`v0.2.0`) while `FS.GG.Contracts` stays on its own `1.1.0` line. Every
-other feature-039 contract clause (triggers, gating, idempotency, least-privilege creds,
-canonical-repo guard, single-package-scope-per-pack, dry run) is preserved. See research Decision 2
-for the FR-014 reconciliation.
+`resolve-versions` evaluates all three project `<Version>` properties with MSBuild and outputs
+`contracts_version`, `artifacts_version`, `cli_version`, and `push`. Artifacts and CLI are one
+coherent product line and MUST have equal, non-empty versions. On a release or tag event, a
+version-bearing tag MUST match at least one of the three evaluated versions. Every package is then
+packed at its own resolved version.
 
-## Triggers (unchanged from 039)
+## Jobs and gates
 
-```yaml
-on:
-  release:
-    types: [published]
-  push:
-    tags: ['v*']
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Explicit FS.GG.Contracts version to publish. Omit for a pack-only dry run."
-        type: string
-        required: false
-```
+| Job | Gate and responsibility |
+|-----|-------------------------|
+| `resolve-versions` | Canonical-repository guard; resolve three versions and publish intent. |
+| `contracts-tests` | Locked restore and Release tests for `FS.GG.Contracts`. |
+| `artifacts-tests` | Locked restore, Release tests, and clean-package-consumer proof for `FS.GG.SDD.Artifacts`. |
+| `cli-tests` | Locked restore and Release tests for `FS.GG.SDD.Cli`. |
+| `publish-contracts` | Needs resolver + Contracts tests; pack and publish Contracts. |
+| `publish-artifacts` | Needs resolver + Artifacts tests; pack and publish Artifacts. |
+| `publish-cli` | Needs resolver + CLI tests; pack, self-containment smoke, and publish CLI. |
 
-The `version` input remains **Contracts-scoped** (research Decision 3). The CLI always tracks its
-evaluated `<Version>`. Dual-trigger + concurrency-serialization notes from 039 are unchanged.
+Every job is guarded to `FS-GG/FS.GG.SDD`; fork events cannot reach a publish path. Top-level
+permissions are `contents: read`. Each publish job alone adds `packages: write` and
+`id-token: write`.
 
-**Dispatch coupling note (A3)**: because the `push` flag is shared and the only explicit input is
-Contracts-scoped, there is no `workflow_dispatch` path that pushes *only* the CLI — a
-push-enabling dispatch always (re)asserts Contracts at `version` and publishes the CLI at its
-evaluated version in the same run. This is benign: a re-publish of an already-present Contracts
-version is an idempotent `--skip-duplicate` no-op (FR-008). A future `cli_version` input could
-decouple the two (deferred, research Decision 3); until then, to publish a new CLI version via
-dispatch, supply the current Contracts `version` and let the CLI publish its evaluated value.
+## Pack and dual-feed publish
 
-## Jobs and gating contract
+Each publish job performs a locked restore, packs one explicit project exactly once, and verifies
+that the expected package exists. When `push == true`, it pushes that exact `.nupkg` first to
+`https://nuget.pkg.github.com/FS-GG/index.json` with the run-scoped `GITHUB_TOKEN`, then pushes the
+same bytes to `https://api.nuget.org/v3/index.json` using a short-lived key minted by
+`NuGet/login@v1` through OIDC. Both pushes use `--skip-duplicate`; there is no repack between feeds.
+Any non-duplicate failure fails the run.
 
-| Job | Runs when | Contract |
-|-----|-----------|----------|
-| `resolve-versions` | `github.repository == 'FS-GG/FS.GG.SDD'` | evaluate both `<Version>`s; apply the at-least-one-line tag guard; output `contracts_version`, `cli_version`, `push`. |
-| `contracts-tests` | same repo guard | locked restore + `dotnet test tests/FS.GG.Contracts.Tests/...  -c Release`. Gate for `publish-contracts` (unchanged from 039). |
-| `cli-tests` | same repo guard | locked restore + `dotnet test tests/FS.GG.SDD.Cli.Tests/... -c Release`. Gate for `publish-cli` (new). |
-| `publish-contracts` | repo guard, `needs: [resolve-versions, contracts-tests]` | pack+push `FS.GG.Contracts` at `contracts_version`. |
-| `publish-cli` | repo guard, `needs: [resolve-versions, cli-tests]` | pack+push `FS.GG.SDD.Cli` at `cli_version`. |
+The Artifacts package glob in both push steps MUST be
+`artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg`. It may never target the CLI package. Before the
+Artifacts publish job can run, `artifacts-tests` MUST execute
+`tests/fixtures/typed-specifications/run-clean-consumer.sh`, proving that the package works without
+a source-tree project reference.
 
-- Top-level `permissions: { contents: read }`.
-- Each publish job adds `permissions: { contents: read, packages: write }` (least-privilege).
-- Fork events never satisfy the repo guard ⇒ no publish (FR-009).
-- If **either** publish job fails (other than a skipped duplicate), the run fails (FR-012).
+The CLI package MUST contain its full runtime closure. Its publish job installs the just-packed
+tool from the local package directory and runs the standalone validation smoke before either push.
 
-## Version-resolution contract (`resolve-versions`, outputs `contracts_version`, `cli_version`, `push`)
+## Conformance checks
 
-Both versions are the **evaluated fsproj `<Version>`** via `dotnet msbuild <proj> -getProperty:Version`:
-- Contracts: `src/FS.GG.Contracts/FS.GG.Contracts.fsproj` (→ `1.1.0`, fsproj override).
-- CLI: `src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj` (→ `0.2.0`, inherited product line).
-
-| Event | `contracts_version` | `cli_version` | `push` | Failure mode |
-|-------|---------------------|---------------|--------|--------------|
-| `workflow_dispatch`, `version` non-empty | `strip-v(inputs.version)` | evaluated CLI | `true` | — |
-| `workflow_dispatch`, `version` empty | evaluated Contracts | evaluated CLI | **`false`** | — (intentional dry run, FR-004) |
-| `release: published` | evaluated Contracts | evaluated CLI | `true` | version-bearing tag matching **neither** evaluated version ⇒ **fail** (FR-005); either evaluated version empty ⇒ **fail** (FR-006) |
-| `push: tags v*` | evaluated Contracts | evaluated CLI | `true` | same guards as `release` |
-
-`strip-v(x)` removes one leading `v`. **At-least-one-line guard**: on a real event with a
-version-bearing tag (`^v?[0-9]+\.[0-9]+\.[0-9]+`), the stripped tag MUST equal `contracts_version`
-**or** `cli_version`, else fail. A non-version-bearing tag is fine (the fsprojs are authoritative).
-Each package then publishes its own resolved version regardless of which line the tag matched.
-
-## Pack + push contract (per publish job)
-
-```
-restore (locked, once) ─► dotnet pack <project> -c Release -p:Version=$VER --no-restore -o artifacts/packages
-                       ─► assert artifacts/packages/*.nupkg non-empty            (FR-007)
-   if push == true     ─► dotnet nuget push "artifacts/packages/*.nupkg" \
-                            --source https://nuget.pkg.github.com/FS-GG/index.json \
-                            --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
-```
-
-- Single explicit project per pack ⇒ single-package scope (FR-001).
-- `--skip-duplicate` ⇒ idempotent re-publish (FR-008).
-- `${{ secrets.GITHUB_TOKEN }}` + `packages: write` ⇒ least-privilege, no PAT (FR-002).
-- Any push failure other than a skipped duplicate fails the run (FR-012).
-- `push == false` skips the push step entirely (dry run, FR-004).
-
-## CLI self-containment requirement (FR-010)
-
-The `FS.GG.SDD.Cli` tool package MUST bundle its full runtime closure — including the
-`RegistryDocument` YAML loader from `FS.GG.SDD.Artifacts` and `YamlDotNet` — so that, once
-installed, `fsgg-sdd registry validate <path>` runs with **no FS.GG.SDD source checkout**. This is
-a property of `dotnet pack` on a `PackAsTool` project and is verified by the offline
-pack→install→run smoke (conformance C6 below; runnable form in `quickstart.md`).
-
-## Feed visibility requirement (FR-011)
-
-The `FS.GG.SDD.Cli` org package MUST be **public** (as `FS.GG.Contracts` is) so consumer CI
-restores it with a run-scoped `GITHUB_TOKEN`. First publish defaults to private; visibility is set
-once via the package settings (operational step in `quickstart.md`).
-
-## Out of scope / unchanged (FR-014)
-
-The `FS.GG.Contracts` publish keeps its version source, gating, idempotency, least-privilege creds,
-canonical-repo guard, and single-package scope — only the cross-line tag failure is relaxed
-(Supersession). No `.fsgg` schema, contract surface, contract version, or CLI command behavior
-changes; the CLI fsproj is already `PackAsTool`/`ToolCommandName=fsgg-sdd` and needs no edit. The
-cross-repo registry record and the `.github` coherence-gate wiring are owned by FS-GG/.github#49.
-
-## Conformance checks (verification anchors)
-
-- **C1** — manual dry run (`workflow_dispatch`, no `version`) packs both, pushes nothing.
-- **C2** — a real event with a version-bearing tag matching neither line fails loudly; a tag
-  matching either line publishes both packages at their own evaluated versions.
-- **C3** — re-running a published version (either package) completes and pushes no duplicate.
-- **C4** — fork event / failing `contracts-tests` or `cli-tests` ⇒ the corresponding push never runs.
-- **C5** — feed query lists both `fs.gg.contracts` and `fs.gg.sdd.cli` at their published versions.
-- **C6** — offline pack→install→run smoke: the packed CLI tool, installed to a throwaway
-  `--tool-path` with no feed, runs `fsgg-sdd registry validate` to success on a well-formed fixture
-  and to a non-zero exit on a malformed one (self-containment, FR-010).
-
-See `quickstart.md` for the runnable form of each.
+- **C1** — Manual dispatch without `version` runs seven jobs, packs all three packages, and pushes none.
+- **C2** — A version-bearing event tag matching none of the three lines fails; a match publishes all three at their resolved versions.
+- **C3** — Re-running an already published version succeeds through `--skip-duplicate`.
+- **C4** — A failing package test gate prevents its corresponding publish job.
+- **C5** — Both feeds list `fs.gg.contracts`, `fs.gg.sdd.artifacts`, and `fs.gg.sdd.cli` at the published versions.
+- **C6** — The just-packed CLI passes its isolated install-and-run smoke.
+- **C7** — The just-packed Artifacts package passes the clean-consumer fixture.
+- **C8** — Static contract tests require two exact Artifacts pushes and reject a CLI glob inside `publish-artifacts`.

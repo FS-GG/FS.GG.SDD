@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "typed-specification-kernel-p2",
+  "stage": "ship",
+  "status": "shipReady",
+  "generator": "FS.GG.SDD.Artifacts/1.3.0-preview.1",
+  "sourcesDigest": {
+    "algorithm": "sha256",
+    "value": "716d915fb51e8c035f2a0ce56692a9abf7fd6b40d8d5b99bd12bc31def3ff818"
+  },
+  "verificationReadiness": {
+    "status": "verificationReady",
+    "evidenceSupportedCount": 43,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 43
+  },
+  "disposition": {
+    "state": "shipReady",
+    "blockingFindingIds": []
+  },
+  "readiness": "shipReady"
+}
