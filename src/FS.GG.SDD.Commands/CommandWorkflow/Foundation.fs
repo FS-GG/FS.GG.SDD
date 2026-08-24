@@ -640,6 +640,36 @@ nuget-cache/
           ReadFile($"readiness/{workId}/specification.normalized.json")
           ReadFile(specPath workId) ]
 
+    let typedCompilerEffect workId =
+        RunProcess("dotnet", [ "fsi"; "--exec"; $"work/{workId}/specification.fsx" ], "")
+
+    let typedLifecycleSelected model =
+        let provenance =
+            model.InterpretedEffects
+            |> List.tryPick (fun result ->
+                match result.Effect, result.Snapshot with
+                | ReadFile path, Some snapshot when
+                    normalizeRelativePath path = normalizeRelativePath ScaffoldProvenance.provenancePath
+                    ->
+                    ScaffoldProvenance.tryParse snapshot.Text
+                | _ -> None)
+
+        provenance
+        |> Option.bind (ScaffoldProvenance.lifecycleLane >> Result.toOption)
+        |> Option.contains TypedSdd
+
+    let typedCompilerCandidateEffects workId model =
+        let effect = typedCompilerEffect workId
+
+        let alreadyKnown =
+            model.PendingEffects |> List.contains effect
+            || model.InterpretedEffects |> List.exists (fun result -> result.Effect = effect)
+
+        if typedLifecycleSelected model && not alreadyKnown then
+            [ effect ]
+        else
+            []
+
     let typedLifecycleDiagnostics workId model =
         let findSnapshot path =
             model.InterpretedEffects
@@ -648,6 +678,14 @@ nuget-cache/
                 | ReadFile candidate when normalizeRelativePath candidate = normalizeRelativePath path ->
                     result.Snapshot
                 | _ -> None)
+
+        let compilerResult =
+            model.InterpretedEffects
+            |> List.tryPick (fun result ->
+                if result.Effect = typedCompilerEffect workId then
+                    result.Process
+                else
+                    None)
 
         let asDiagnostic (finding: TypedLifecycleDiagnostic) =
             Diagnostics.create finding.Id DiagnosticError None None finding.Message finding.Correction []
@@ -689,7 +727,8 @@ nuget-cache/
                             let baseFindings =
                                 TypedAuthorityManifest.validate
                                     expectedPackageIdentity
-                                    true
+                                    (compilerResult
+                                     |> Option.forall (fun result -> result.Started && result.ExitCode = 0))
                                     (bytes canonicalPath)
                                     (bytes normalizedPath)
                                     (bytes markdownPath)
@@ -712,7 +751,21 @@ nuget-cache/
                                     TypedAuthorityManifest.validateDerivation canonical normalized markdown
                                 | _ -> []
 
-                            baseFindings @ pathFindings @ derivationFindings |> List.map asDiagnostic
+                            let compilationFindings =
+                                match compilerResult with
+                                | Some result when result.Started && result.ExitCode <> 0 ->
+                                    [ { Id = "typedSdd.compilationFailed"
+                                        Message =
+                                          if String.IsNullOrWhiteSpace result.StandardError then
+                                              "Canonical F# execution failed."
+                                          else
+                                              result.StandardError
+                                        Correction =
+                                          "Correct canonical F# and restore the pinned compiler/package identity." } ]
+                                | _ -> []
+
+                            baseFindings @ pathFindings @ derivationFindings @ compilationFindings
+                            |> List.map asDiagnostic
                 | Ok _ -> []
                 | Error finding -> [ asDiagnostic finding ]
             | None -> []

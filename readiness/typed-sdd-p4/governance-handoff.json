@@ -6,12 +6,12 @@
   "sources": [
     {
       "path": "readiness/typed-sdd-p4/ship.json",
-      "digest": "sha256:c65b4eae86fd5d20b9fb5aed2364843d5fd442d92f686fd3f934777d33905643",
+      "digest": "sha256:095d9fa37c3dd8c0ef908dc7bff460e5a96d997cb6979584d465c5c0085bfc8d",
       "schemaVersion": 1
     },
     {
       "path": "readiness/typed-sdd-p4/verify.json",
-      "digest": "sha256:155894b8f1eb24ec996329b3e6286ea8fa07ef2ee8abcd9e439469ea3596731a",
+      "digest": "sha256:890b4d12e88e4b6fa89d35626b96883194762737c485658bdd86f8337a6d07fb",
       "schemaVersion": 1
     },
     {

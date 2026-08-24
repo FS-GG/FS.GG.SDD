@@ -11,7 +11,7 @@ sourceAnalysis: readiness/typed-sdd-p4/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/typed-sdd-p4/analysis.json
-    digest: 073f451e5d7898c102377f05c71b1ea1e53881bfe7d3ffb7a9e7cf6a73e462f2
+    digest: fa872e1ac0c2a5638f0008af55776b9cf0cb5faf9ce004a82ae2853f2e7748fd
     schemaVersion: 1
   - label: checklist
     path: work/typed-sdd-p4/checklist.md

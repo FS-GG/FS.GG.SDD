@@ -737,9 +737,10 @@ module TypedSdd =
             else
                 let rollbackBytes = File.ReadAllBytes rollbackPath
                 let typedPaths = [ canonicalPath; normalizedPath; manifestPath ]
+                let transactionPaths = markdownPath :: typedPaths
 
                 let prior =
-                    typedPaths
+                    transactionPaths
                     |> List.map (fun path ->
                         path,
                         (if File.Exists path then
@@ -773,6 +774,7 @@ module TypedSdd =
                             |> Option.iter (fun directory -> Directory.CreateDirectory directory |> ignore)
 
                             File.WriteAllBytes(path, value)
+                        | None when File.Exists path -> File.Delete path
                         | None -> ())
 
                     emit
@@ -807,14 +809,19 @@ module TypedSdd =
             | "rollback" -> set [ "--root"; "--work" ], set [ "--accept" ]
             | _ -> Set.empty, Set.empty
 
-        let rec loop remaining =
+        let rec loop seen remaining =
             match remaining with
             | [] -> None
-            | option :: _ :: tail when Set.contains option valued -> loop tail
-            | flag :: tail when Set.contains flag flags -> loop tail
+            | option :: value :: tail when
+                Set.contains option valued
+                && not (Set.contains option seen)
+                && not (value.StartsWith("--", StringComparison.Ordinal))
+                ->
+                loop (Set.add option seen) tail
+            | flag :: tail when Set.contains flag flags && not (Set.contains flag seen) -> loop (Set.add flag seen) tail
             | token :: _ -> Some token
 
-        loop args
+        loop Set.empty args
 
     let run args =
         match args with

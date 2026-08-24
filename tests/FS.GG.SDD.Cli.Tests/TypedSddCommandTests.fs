@@ -4,6 +4,7 @@ open System
 open System.Diagnostics
 open System.IO
 open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
 
 [<Collection("ProcessGlobalEnv")>]
@@ -207,13 +208,66 @@ module TypedSddCommandTests =
             Assert.False(File.Exists(Path.Combine(root, "readiness", "demo", "typed-authority.json"))))
 
     [<Fact>]
+    let ``failed rollback restores the prior typed markdown authority`` () =
+        if OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() then
+            inTemp (fun root ->
+                let target = Path.Combine(root, "work", "demo")
+                Directory.CreateDirectory target |> ignore
+                let source = Path.Combine(target, "spec.md")
+
+                File.Copy(
+                    Path.Combine(Commands.repoRoot, "tests", "fixtures", "typed-specifications", "supported-spec.md"),
+                    source
+                )
+
+                let code, _, _ =
+                    run
+                        root
+                        [ "typed-sdd"
+                          "migrate"
+                          "--root"
+                          root
+                          "--work"
+                          "demo"
+                          "--source"
+                          "work/demo/spec.md"
+                          "--accept" ]
+
+                Assert.Equal(0, code)
+                let typedMarkdown = File.ReadAllBytes source
+                let readiness = Path.Combine(root, "readiness", "demo")
+                let originalMode = File.GetUnixFileMode readiness
+
+                try
+                    File.SetUnixFileMode(readiness, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
+
+                    let rollbackCode, report, _ =
+                        run root [ "typed-sdd"; "rollback"; "--root"; root; "--work"; "demo"; "--accept" ]
+
+                    Assert.Equal(1, rollbackCode)
+                    Assert.Contains("typedSdd.rollbackFailed", report)
+                finally
+                    File.SetUnixFileMode(readiness, originalMode)
+
+                Assert.Equal<byte>(typedMarkdown, File.ReadAllBytes source)
+                Assert.True(File.Exists(Path.Combine(target, "specification.fsx")))
+                Assert.True(File.Exists(Path.Combine(readiness, "typed-authority.json"))))
+
+    [<Fact>]
     let ``unknown typed option fails closed`` () =
         inTemp (fun root ->
             let code, stdout, _ =
                 run root [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo"; "--typo" ]
 
             Assert.Equal(1, code)
-            Assert.Contains("typedSdd.unknownArgument", stdout))
+            Assert.Contains("typedSdd.unknownArgument", stdout)
+
+            for malformed in
+                [ [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo"; "--work"; "again" ]
+                  [ "typed-sdd"; "inspect"; "--root"; "--work"; "demo" ] ] do
+                let malformedCode, malformedReport, _ = run root malformed
+                Assert.Equal(1, malformedCode)
+                Assert.Contains("typedSdd.unknownArgument", malformedReport))
 
     [<Fact>]
     let ``shared lifecycle command blocks when typed authority projection is stale`` () =
@@ -260,3 +314,64 @@ module TypedSddCommandTests =
             Assert.NotEqual(0, commandCode)
             Assert.Contains("typedSdd.staleProjection", report)
             Assert.Equal<byte>(specificationBefore, File.ReadAllBytes specificationPath))
+
+    [<Fact>]
+    let ``doctor and upgrade execute canonical F sharp and block a runtime failure`` () =
+        inTemp (fun root ->
+            let initCode, _, _ = run root [ "init"; "--root"; root ]
+            Assert.Equal(0, initCode)
+
+            let provenancePath = Path.Combine(root, ScaffoldProvenance.provenancePath)
+
+            let provenance =
+                File.ReadAllText provenancePath
+                |> ScaffoldProvenance.tryParse
+                |> Option.defaultWith (fun () -> failwith "expected init provenance")
+
+            File.WriteAllText(
+                provenancePath,
+                ScaffoldProvenance.serialize
+                    { provenance with
+                        EffectiveParameters = [ "lifecycle", "typed-sdd" ] }
+            )
+
+            let authorCode, _, _ =
+                run
+                    root
+                    [ "typed-sdd"
+                      "author"
+                      "--root"
+                      root
+                      "--work"
+                      "demo"
+                      "--agent"
+                      "a"
+                      "--session"
+                      "s" ]
+
+            Assert.Equal(0, authorCode)
+            let canonicalPath = Path.Combine(root, "work", "demo", "specification.fsx")
+            File.AppendAllText(canonicalPath, "\nfailwith \"runtime mutation\"\n")
+            let canonicalBytes = File.ReadAllBytes canonicalPath
+            let manifestPath = Path.Combine(root, TypedAuthorityManifest.path "demo")
+
+            let manifest =
+                File.ReadAllText manifestPath
+                |> TypedAuthorityManifest.deserialize
+                |> Result.defaultWith (fun finding -> failwith finding.Message)
+
+            File.WriteAllText(
+                manifestPath,
+                TypedAuthorityManifest.serialize
+                    { manifest with
+                        CanonicalSha256 = TypedAuthorityManifest.sha256 canonicalBytes }
+            )
+
+            for command in [ "doctor"; "upgrade" ] do
+                let args =
+                    [ command; "--root"; root; "--work"; "demo" ]
+                    @ if command = "upgrade" then [ "--yes" ] else []
+
+                let code, report, _ = run root args
+                Assert.NotEqual(0, code)
+                Assert.Contains("typedSdd.compilationFailed", report))
