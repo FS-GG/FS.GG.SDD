@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "068-readiness-golden",
+  "workId": "typed-kernel-p2-fable",
   "stage": "ship",
   "status": "shipReady",
   "generator": "FS.GG.SDD.Artifacts/1.3.0-preview.3",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "336a2ac89ee46e4d98841ea2250b3887e74732009fa12c28d8dff1d4babe71a2"
+    "value": "43d3d30a0e35713bf7e7d6aec76613bce1b6d72dfdc3c5391dd7840d01007ef6"
   },
   "verificationReadiness": {
     "status": "verificationReady",
-    "evidenceSupportedCount": 5,
-    "evidenceSelfAttestedCount": 5,
-    "evidenceObservedCount": 0
+    "evidenceSupportedCount": 9,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 9
   },
   "disposition": {
     "state": "shipReady",

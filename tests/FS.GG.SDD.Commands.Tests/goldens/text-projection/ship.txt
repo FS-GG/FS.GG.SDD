@@ -1,5 +1,5 @@
 command: ship
-toolVersion: 1.3.0-preview.2
+toolVersion: 1.3.0-preview.3
 outcome: succeeded
 changedArtifacts: 6
 specificationRequirements: 1

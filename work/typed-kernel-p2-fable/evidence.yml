@@ -1,0 +1,281 @@
+schemaVersion: 1
+workId: typed-kernel-p2-fable
+stage: evidence
+status: evidenceReady
+sourceSpec: work/typed-kernel-p2-fable/spec.md
+sourceClarifications: work/typed-kernel-p2-fable/clarifications.md
+sourceChecklist: work/typed-kernel-p2-fable/checklist.md
+sourcePlan: work/typed-kernel-p2-fable/plan.md
+sourceTasks: work/typed-kernel-p2-fable/tasks.yml
+sourceAnalysis: readiness/typed-kernel-p2-fable/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/typed-kernel-p2-fable/analysis.json
+    digest: dc97ea69bb9beb2a3b0697da37bbd1dc89c17f7cdbc5e0f40dbcf62e5ec02388
+    schemaVersion: 1
+  - label: checklist
+    path: work/typed-kernel-p2-fable/checklist.md
+    digest: 34c31d987317ab6d80c5e90db685f78e03133591fa57fdca43c329e2ec3cd18b
+    schemaVersion: 1
+  - label: clarifications
+    path: work/typed-kernel-p2-fable/clarifications.md
+    digest: 61228784359c84673c87bf0c13a8c0774a5974194f9bd4cd42bd24a284f2db5a
+    schemaVersion: 1
+  - label: plan
+    path: work/typed-kernel-p2-fable/plan.md
+    digest: 1f1f850eb63d38fd7faa2f34bbfa6a4bcad88c08f3c9b6521d85fd95b4d2303a
+    schemaVersion: 1
+  - label: spec
+    path: work/typed-kernel-p2-fable/spec.md
+    digest: 793eb033c8a37abe954efb879140b546e3e378326e98b2a09a3e7d6d7fa1d0a9
+    schemaVersion: 1
+  - label: tasks
+    path: work/typed-kernel-p2-fable/tasks.yml
+    digest: bfc9bb26cc62f7185708e0a5878eab2125ecce7bd4007a5a7d84b6c20a151b20
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV002]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV003]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV004]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV005]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV006]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002, PD-003, PD-004, PD-005]
+    obligationRefs: [EV007]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV008]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV009]
+    artifacts: [readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/typed-kernel-p2-fable/typed-kernel-p2-fable.trx
+      digest: "sha256:73aed67a12c6aa9563a8b618ed000ee94b620d791c46a3a73f698d5fcf196c59"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 581
+      failed: 0
+      skipped: 0
+    notes: ["Producer package suite passed; cross-runtime S.I.R. consumer output matched byte-for-byte."]
+lifecycleNotes:
+  - "Next lifecycle action: verify."
