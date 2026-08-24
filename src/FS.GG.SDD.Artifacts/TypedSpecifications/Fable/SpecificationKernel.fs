@@ -468,12 +468,86 @@ module SpecificationCompiler =
 [<RequireQualifiedAccess>]
 module SpecificationEvidence =
     let validate obligations receipts =
+        let obligationsById = obligations |> List.groupBy _.Id |> Map.ofList
+        let receiptsById = receipts |> List.groupBy _.ObligationId |> Map.ofList
+
+        let diagnostics =
+            [ for id, rows in obligationsById |> Map.toList do
+                  if rows.Length > 1 then
+                      yield
+                          Portable.diagnostic
+                              "SPEC-EVIDENCE-OBLIGATION-DUPLICATE"
+                              "/evidenceObligations"
+                              $"Obligation '%s{SpecificationId.value id}' is declared more than once."
+
+              for id, rows in receiptsById |> Map.toList do
+                  match Map.tryFind id obligationsById with
+                  | None ->
+                      yield
+                          Portable.diagnostic
+                              "SPEC-EVIDENCE-UNKNOWN"
+                              "/evidenceReceipts"
+                              $"Receipt references unknown obligation '%s{SpecificationId.value id}'."
+                  | Some obligationsForId ->
+                      if rows.Length > 1 then
+                          yield
+                              Portable.diagnostic
+                                  "SPEC-EVIDENCE-DUPLICATE"
+                                  "/evidenceReceipts"
+                                  $"Obligation '%s{SpecificationId.value id}' has duplicate receipts."
+
+                      let expectedKind = obligationsForId.Head.Kind
+
+                      for row in rows do
+                          if row.Kind <> expectedKind then
+                              yield
+                                  Portable.diagnostic
+                                      "SPEC-EVIDENCE-KIND"
+                                      "/evidenceReceipts"
+                                      $"Receipt for '%s{SpecificationId.value id}' has kind '%s{row.Kind}', expected '%s{expectedKind}'."
+
+                          if String.IsNullOrWhiteSpace row.EvidenceRef then
+                              yield
+                                  Portable.diagnostic
+                                      "SPEC-EVIDENCE-REF-REQUIRED"
+                                      "/evidenceReceipts"
+                                      $"Receipt for '%s{SpecificationId.value id}' requires an evidence reference."
+
+              for id, rows in obligationsById |> Map.toList do
+                  let expectedKind = rows.Head.Kind
+
+                  let satisfied =
+                      receiptsById
+                      |> Map.tryFind id
+                      |> Option.defaultValue []
+                      |> List.exists (fun receipt ->
+                          receipt.Kind = expectedKind
+                          && not (String.IsNullOrWhiteSpace receipt.EvidenceRef))
+
+                  if not satisfied then
+                      yield
+                          Portable.diagnostic
+                              "SPEC-EVIDENCE-MISSING"
+                              "/evidenceObligations"
+                              $"Obligation '%s{SpecificationId.value id}' has no matching receipt." ]
+            |> Portable.sort
+
         let satisfied =
-            obligations
-            |> List.choose (fun obligation ->
-                receipts
-                |> List.tryFind (fun receipt -> receipt.ObligationId = obligation.Id && receipt.Kind = obligation.Kind)
-                |> Option.map (fun _ -> obligation.Id))
+            obligationsById
+            |> Map.toList
+            |> List.choose (fun (id, rows) ->
+                let expectedKind = rows.Head.Kind
+
+                let valid =
+                    receiptsById
+                    |> Map.tryFind id
+                    |> Option.defaultValue []
+                    |> List.exists (fun receipt ->
+                        receipt.Kind = expectedKind
+                        && not (String.IsNullOrWhiteSpace receipt.EvidenceRef))
+
+                if valid then Some id else None)
+            |> List.sortBy SpecificationId.value
 
         { Satisfied = satisfied
-          Diagnostics = [] }
+          Diagnostics = diagnostics }

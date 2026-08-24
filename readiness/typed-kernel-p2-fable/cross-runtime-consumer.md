@@ -12,3 +12,9 @@
 
 The consumer uses a package reference only. No producer project/file reference or S.I.R.
 source is present in the candidate package.
+
+The clean package fixture also compiles an invalid-evidence probe with Fable 5.13.0 and runs
+the same source on .NET and Node. Both report zero satisfied obligations and the exact ordered
+diagnostic set `SPEC-EVIDENCE-MISSING,SPEC-EVIDENCE-DUPLICATE,SPEC-EVIDENCE-KIND,`
+`SPEC-EVIDENCE-REF-REQUIRED`. The probe restores from a scratch package cache and imports the
+portable kernel from the nupkg's `fable/` tree.
