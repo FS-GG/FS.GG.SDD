@@ -163,6 +163,11 @@ module internal HandlersSurface =
         let private render (version: Version.Version) =
             $"{version.Major}.{version.Minor}.{version.Patch}"
 
+        let private parseCoreVersion (text: string) =
+            let separator = text.IndexOfAny([| '-'; '+' |])
+            let core = if separator < 0 then text else text.Substring(0, separator)
+            Version.tryParse core
+
         /// Fold the axis snapshot and the run verdict into the prompt. `RequiredBump` is a total
         /// function of the classification alone, so it lands in *every* axis state (FR-006, I1) —
         /// an unresolvable axis still tells the operator what the mutation costs.
@@ -181,11 +186,12 @@ module internal HandlersSurface =
                 match axisSnapshot |> Option.bind (readAxisText axisProperty) with
                 | None -> "undeterminable", None, None
                 | Some text ->
-                    match Version.tryParse text with
+                    match parseCoreVersion text with
                     | None -> "unparseable", None, None
                     | Some version ->
                         let suggested = applyBump version requiredBump
-                        "resolved", Some(render version), Some(render suggested)
+                        let suggestion = if requiredBump = "none" then text else render suggested
+                        "resolved", Some text, Some suggestion
 
             { AxisFile = axisFile
               AxisProperty = axisProperty

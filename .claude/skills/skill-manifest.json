@@ -17,13 +17,13 @@
     {
       "id": "fs-gg-sdd-authoring-contracts",
       "scope": "process",
-      "sha256": "9842c3b5c5b709840760e96ec9c53bb43c30994833e9112726d521b4d4315930",
+      "sha256": "d2d9ee327c8e2ba340ae4263db0cf915f0374f49df56754a6b34de424e04c4eb",
       "resolvablePath": ".agents/skills/fs-gg-sdd-authoring-contracts/SKILL.md",
       "materializes-when": "always",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "9842c3b5c5b709840760e96ec9c53bb43c30994833e9112726d521b4d4315930"
+          "sha256": "d2d9ee327c8e2ba340ae4263db0cf915f0374f49df56754a6b34de424e04c4eb"
         }
       ]
     },

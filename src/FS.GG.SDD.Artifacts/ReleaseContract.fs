@@ -171,7 +171,10 @@ module ReleaseContract =
                 | _ -> 0
             | None -> 0
 
-        if major = 0 then PreRelease else StableRelease
+        if major = 0 || value.Contains('-', StringComparison.Ordinal) then
+            PreRelease
+        else
+            StableRelease
 
     // Feature 094 / FR-015. Not to be unified with `HandlersSurface.SurfaceClassify.bumpFor`, which
     // maps the *surface-mutation* verdicts (breaking→major, additive→minor, cosmetic/none→**none**).
@@ -247,7 +250,7 @@ module ReleaseContract =
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "1.2.x"
+            [ { SddVersionLine = "1.3.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 

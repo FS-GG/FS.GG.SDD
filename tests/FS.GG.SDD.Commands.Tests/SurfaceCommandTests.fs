@@ -422,6 +422,28 @@ module SurfaceCommandTests =
         Assert.Contains("0.9.0", warning.Message)
         Assert.Contains("already applied", warning.Message)
 
+    [<Fact>]
+    let ``V1b — a SemVer preview axis resolves and retains its identity for no bump`` () =
+        let root = coherentFixture ()
+        writeAxis root "Version" "1.3.0-preview.1"
+        let bump = bumpOf (surfaceReport false root)
+
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal(Some "1.3.0-preview.1", bump.CurrentVersion)
+        Assert.Equal("none", bump.RequiredBump)
+        Assert.Equal(Some "1.3.0-preview.1", bump.SuggestedVersion)
+
+    [<Fact>]
+    let ``V1c — additive drift on a SemVer preview axis suggests the next minor core`` () =
+        let root = additiveFixture ()
+        writeAxis root "Version" "1.3.0-preview.1"
+        let bump = bumpOf (surfaceReport false root)
+
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal(Some "1.3.0-preview.1", bump.CurrentVersion)
+        Assert.Equal("minor", bump.RequiredBump)
+        Assert.Equal(Some "1.4.0", bump.SuggestedVersion)
+
     /// V2: breaking drift ⇒ `major`, `0.8.0` → `1.0.0` (minor and patch reset).
     [<Fact>]
     let ``V2 — breaking drift prompts a major bump and resets minor and patch`` () =
@@ -620,12 +642,15 @@ module SurfaceCommandTests =
         Assert.Equal("major", (bumpOf report).RequiredBump)
         Assert.Equal(1, exitCodeForReport report)
 
-    /// V13: a prerelease triple is not the `major.minor.patch` grammar ⇒ `unparseable`.
+    /// V13: a SemVer prerelease retains its current identity while bumping the numeric core.
     [<Fact>]
-    let ``V13 — a prerelease version is unparseable`` () =
+    let ``V13 — a prerelease version resolves against its numeric core`` () =
         let root = breakingFixture ()
         writeAxis root "Version" "1.2.3-beta"
-        Assert.Equal("unparseable", (bumpOf (surfaceReport false root)).AxisState)
+        let bump = bumpOf (surfaceReport false root)
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal(Some "1.2.3-beta", bump.CurrentVersion)
+        Assert.Equal(Some "2.0.0", bump.SuggestedVersion)
 
     /// V14: the `.Trim()` is load-bearing for the usual pretty-printed element, and `XElement.Value`
     /// ignores comment nodes.

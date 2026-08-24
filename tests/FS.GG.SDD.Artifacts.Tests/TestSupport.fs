@@ -34,13 +34,29 @@ module TestSupport =
     let normalizedSnapshots name =
         let root = normalizedFixtureDirectory name
 
-        Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-        |> Seq.map (fun path ->
-            ({ Path = relativePath root path
-               Text = File.ReadAllText path
-               RawBytes = None }
-            : FileSnapshot))
-        |> Seq.toList
+        let read () =
+            Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            |> Seq.map (fun path ->
+                ({ Path = relativePath root path
+                   Text = File.ReadAllText path
+                   RawBytes = None }
+                : FileSnapshot))
+            |> Seq.toList
+
+        if Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1" && name = "valid-work-item" then
+            let outputPath = "readiness/002-normalized-work-model/work-model.json"
+            let sources = read () |> List.filter (fun snapshot -> snapshot.Path <> outputPath)
+            let request =
+                ({ WorkId = "002-normalized-work-model"
+                   Snapshots = sources
+                   GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+                   ExpectedOutputPath = None }
+                : WorkModel.WorkModelGenerationRequest)
+
+            let generated = Serialization.generateWorkModel request
+            File.WriteAllText(Path.Combine(root, outputPath), generated.Json)
+
+        read ()
 
     let snapshot name path =
         snapshots name |> List.find (fun snapshot -> snapshot.Path = path)

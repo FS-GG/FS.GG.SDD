@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="../Shared/TestShared.fs" />
     <Compile Include="TestSupport.fs" />
+    <Compile Include="TypedSpecificationKernelTests.fs" />
     <Compile Include="IdentifierTests.fs" />
     <Compile Include="DriverManifestTests.fs" />
     <Compile Include="GameSkillManifestTests.fs" />

@@ -379,7 +379,7 @@ module internal HandlersScaffold =
     /// or declares a malformed minimum (never fabricated, malformed not persisted).
     let resolvedRequiredMinimumCliVersion (descriptor: ProviderDescriptor) : string option =
         descriptor.MinimumCliVersion
-        |> Option.bind (fun raw -> Fsgg.Version.tryParse raw |> Option.map (fun _ -> raw))
+        |> Option.bind (fun raw -> CommandVersion.tryParse raw |> Option.map (fun _ -> raw))
 
     /// Pure CLI-coherence advisories for a resolved provider (D11). Emits
     /// `scaffold.cliBehindMinimum` iff the installed CLI is strictly behind a valid
@@ -390,12 +390,12 @@ module internal HandlersScaffold =
         match descriptor.MinimumCliVersion with
         | None -> []
         | Some rawMinimum ->
-            match Fsgg.Version.tryParse rawMinimum with
+            match CommandVersion.tryParse rawMinimum with
             | None -> [ scaffoldProviderMinimumMalformed rawMinimum ]
             | Some _ ->
                 let installed = request.GeneratorVersion.Version
 
-                match Fsgg.Version.compare installed rawMinimum with
+                match CommandVersion.compare installed rawMinimum with
                 | Some -1 -> [ scaffoldCliBehindMinimum installed rawMinimum ]
                 | _ -> []
 

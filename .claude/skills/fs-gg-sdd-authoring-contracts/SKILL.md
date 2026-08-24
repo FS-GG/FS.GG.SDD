@@ -191,6 +191,28 @@ That is what a plain backtick citation cannot give you: a reference the tool res
 against the **real** package, defeating both a genuinely dangling reference and the
 inverse false alarm (a real API mis-read as absent from a stale local view).
 
+## 7. Typed specification authoring loop (preview)
+
+For `FS.GG.SDD.Artifacts.TypedSpecifications`, the normalized
+`SpecificationModel<'extension>` is the semantic authority. A builder is only an
+authoring convenience, and Markdown/JSON projections are generated views.
+
+Use one inspectable loop shared by agents and humans:
+
+1. inspect the current model and all diagnostics;
+2. state intent and ask unresolved semantic questions;
+3. create a concrete typed proposal directly or with `RequirementsDraft`;
+4. validate through the explicit `ExtensionContract<'extension>`;
+5. review `SpecificationCompiler.semanticDiff` before accepting the change;
+6. bind receipts to declared obligations with `SpecificationEvidence.validate`;
+7. revise the model, then regenerate projections.
+
+Never edit a projection to change meaning. `RequirementsMigration.analyzeMarkdown`
+is read-only and returns `Migrated`, `Ambiguous`, or `Unsupported`; accepting and
+persisting a migrated value is a separate caller decision. The extension contract is
+passed explicitly—do not add `obj`, reflection discovery, or a platform-wide closed
+union to register domain semantics. See `docs/reference/typed-specifications.md`.
+
 ## Why these are strict
 
 SDD's doctrine is that **structured artifacts are the machine contract** — the
