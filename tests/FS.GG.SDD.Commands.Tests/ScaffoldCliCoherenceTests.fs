@@ -193,9 +193,15 @@ module ScaffoldCliCoherenceTests =
         // are calibrated against the rule rather than against a literal this test happens to agree
         // with. `compare installed minimum` is the production argument order (HandlersScaffold), where
         // `Some -1` means installed < minimum.
-        Assert.Equal(Some 0, FS.GG.SDD.Commands.Internal.CommandVersion.compare installed (declaredMinimum "min-equal.providers.yml"))
+        Assert.Equal(
+            Some 0,
+            FS.GG.SDD.Commands.Internal.CommandVersion.compare installed (declaredMinimum "min-equal.providers.yml")
+        )
 
-        Assert.Equal(Some -1, FS.GG.SDD.Commands.Internal.CommandVersion.compare installed (declaredMinimum "min-behind.providers.yml"))
+        Assert.Equal(
+            Some -1,
+            FS.GG.SDD.Commands.Internal.CommandVersion.compare installed (declaredMinimum "min-behind.providers.yml")
+        )
 
     // US2 scenario 4 (SC-003): provider declares no minimum ⇒ nothing to compare, no advisory.
     [<Fact; Trait("tier", "slow")>]

@@ -744,7 +744,13 @@ module Diagnostics =
 
         let parseCore (value: string) =
             let separator = value.IndexOfAny([| '-'; '+' |])
-            let core = if separator < 0 then value else value.Substring(0, separator)
+
+            let core =
+                if separator < 0 then
+                    value
+                else
+                    value.Substring(0, separator)
+
             Fsgg.Version.tryParse core
 
         match parseCore installed, parseCore minimum with

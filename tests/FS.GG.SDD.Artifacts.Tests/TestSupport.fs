@@ -43,9 +43,13 @@ module TestSupport =
                 : FileSnapshot))
             |> Seq.toList
 
-        if Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1" && name = "valid-work-item" then
+        if
+            Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1"
+            && name = "valid-work-item"
+        then
             let outputPath = "readiness/002-normalized-work-model/work-model.json"
             let sources = read () |> List.filter (fun snapshot -> snapshot.Path <> outputPath)
+
             let request =
                 ({ WorkId = "002-normalized-work-model"
                    Snapshots = sources

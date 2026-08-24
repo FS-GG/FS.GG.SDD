@@ -91,7 +91,10 @@ module TypedSpecificationKernelTests =
 
     let private replaceFirst (oldValue: string) (newValue: string) (text: string) =
         let index = text.IndexOf(oldValue, StringComparison.Ordinal)
-        if index < 0 then failwithf "expected '%s' in test input" oldValue
+
+        if index < 0 then
+            failwithf "expected '%s' in test input" oldValue
+
         text.Remove(index, oldValue.Length).Insert(index, newValue)
 
     let private fixturePath name =
@@ -108,10 +111,14 @@ module TypedSpecificationKernelTests =
         let direct = model (directExtension ())
         let drafted = model (draftExtension ())
 
-        let directBytes = SpecificationCompiler.normalize RequirementsExtension.contract direct
-        let draftedBytes = SpecificationCompiler.normalize RequirementsExtension.contract drafted
+        let directBytes =
+            SpecificationCompiler.normalize RequirementsExtension.contract direct
+
+        let draftedBytes =
+            SpecificationCompiler.normalize RequirementsExtension.contract drafted
 
         Assert.Equal<byte array>(expectOk directBytes, expectOk draftedBytes)
+
         Assert.Equal(
             SpecificationCompiler.fingerprint RequirementsExtension.contract direct,
             SpecificationCompiler.fingerprint RequirementsExtension.contract drafted
@@ -124,12 +131,17 @@ module TypedSpecificationKernelTests =
                 UserValue = ""
                 Scope = [ scope "one"; scope "two" ]
                 Requirements = [ requirement [ id "AC-999" ] [ id "EV999" ] ] }
+
         let invalidModel =
             { model invalidExtension with
                 SchemaVersion = 2
-                Provenance = { (model invalidExtension).Provenance with SourcePath = "" } }
+                Provenance =
+                    { (model invalidExtension).Provenance with
+                        SourcePath = "" } }
 
-        let findings = SpecificationCompiler.validate RequirementsExtension.contract invalidModel
+        let findings =
+            SpecificationCompiler.validate RequirementsExtension.contract invalidModel
+
         let codes = findings |> List.map _.Code
 
         Assert.Contains("SPEC-SCHEMA-UNSUPPORTED", codes)
@@ -143,8 +155,12 @@ module TypedSpecificationKernelTests =
     [<Fact>]
     let ``schema-v1 codec is deterministic and round-trips every authored field`` () =
         let expected = model (directExtension ())
-        let json = SpecificationCodec.serialize RequirementsExtension.contract expected |> expectOk
-        let actual = SpecificationCodec.deserialize RequirementsExtension.contract json |> expectOk
+
+        let json =
+            SpecificationCodec.serialize RequirementsExtension.contract expected |> expectOk
+
+        let actual =
+            SpecificationCodec.deserialize RequirementsExtension.contract json |> expectOk
 
         Assert.Equal(expected, actual)
         Assert.Equal(json, SpecificationCodec.serialize RequirementsExtension.contract expected |> expectOk)
@@ -152,16 +168,27 @@ module TypedSpecificationKernelTests =
 
     [<Fact>]
     let ``codec refuses unknown envelope fields and unsupported versions distinctly`` () =
-        let json = SpecificationCodec.serialize RequirementsExtension.contract (model (directExtension ())) |> expectOk
+        let json =
+            SpecificationCodec.serialize RequirementsExtension.contract (model (directExtension ()))
+            |> expectOk
+
         let unknown = json.Replace("\"identity\":", "\"unknown\":true,\n  \"identity\":")
         let unsupported = json |> replaceFirst "\"schemaVersion\": 1" "\"schemaVersion\": 2"
 
-        Assert.Contains(diagnostics (SpecificationCodec.deserialize RequirementsExtension.contract unknown), fun item -> item.Code = "SPEC-CODEC-UNKNOWN-FIELD")
-        Assert.Contains(diagnostics (SpecificationCodec.deserialize RequirementsExtension.contract unsupported), fun item -> item.Code = "SPEC-SCHEMA-UNSUPPORTED")
+        Assert.Contains(
+            diagnostics (SpecificationCodec.deserialize RequirementsExtension.contract unknown),
+            fun item -> item.Code = "SPEC-CODEC-UNKNOWN-FIELD"
+        )
+
+        Assert.Contains(
+            diagnostics (SpecificationCodec.deserialize RequirementsExtension.contract unsupported),
+            fun item -> item.Code = "SPEC-SCHEMA-UNSUPPORTED"
+        )
 
     [<Fact>]
     let ``semantic diff ignores authoring metadata and reports extension changes`` () =
         let before = model (directExtension ())
+
         let authoringOnly =
             { before with
                 Intent = "A revised explanation."
@@ -170,9 +197,16 @@ module TypedSpecificationKernelTests =
                         Agent = "another-agent"
                         Session = "session-2"
                         AuthoredAtUtc = "2026-08-24T13:00:00Z" } }
-        let changed = model { directExtension () with Scope = [ scope "A changed semantic scope." ] }
 
-        Assert.Equal(Ok Equivalent, SpecificationCompiler.semanticDiff RequirementsExtension.contract before authoringOnly)
+        let changed =
+            model
+                { directExtension () with
+                    Scope = [ scope "A changed semantic scope." ] }
+
+        Assert.Equal(
+            Ok Equivalent,
+            SpecificationCompiler.semanticDiff RequirementsExtension.contract before authoringOnly
+        )
 
         match SpecificationCompiler.semanticDiff RequirementsExtension.contract before changed with
         | Ok(Changed changes) -> Assert.Contains(changes, fun change -> change.Path = "/extension")
@@ -181,18 +215,60 @@ module TypedSpecificationKernelTests =
     [<Fact>]
     let ``projections are deterministic current and detect stale direct edit missing and unreadable observations`` () =
         let source = model (directExtension ())
-        let projection = SpecificationProjection.generate RequirementsExtension.contract source |> expectOk
 
-        Assert.Equal(projection, SpecificationProjection.generate RequirementsExtension.contract source |> expectOk)
-        Assert.Empty(SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content projection.Markdown))
-        Assert.Empty(SpecificationProjection.validateJson RequirementsExtension.contract source (Content projection.Json))
-        Assert.Contains(SpecificationProjection.validateMarkdown RequirementsExtension.contract source Missing, fun item -> item.Code = "SPEC-PROJECTION-MISSING")
-        Assert.Contains(SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Unreadable "denied"), fun item -> item.Code = "SPEC-PROJECTION-UNREADABLE")
+        let projection =
+            SpecificationProjection.generate RequirementsExtension.contract source
+            |> expectOk
 
-        let stale = projection.Markdown.Replace(projection.SourceFingerprint, String.replicate 64 "0")
-        let edited = projection.Markdown.Replace("Authors share one typed specification.", "Edited projection text.")
-        Assert.Contains(SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content stale), fun item -> item.Code = "SPEC-PROJECTION-STALE")
-        Assert.Contains(SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content edited), fun item -> item.Code = "SPEC-PROJECTION-DIRECT-EDIT")
+        Assert.Equal(
+            projection,
+            SpecificationProjection.generate RequirementsExtension.contract source
+            |> expectOk
+        )
+
+        Assert.Empty(
+            SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content projection.Markdown)
+        )
+
+        Assert.Empty(
+            SpecificationProjection.validateJson RequirementsExtension.contract source (Content projection.Json)
+        )
+
+        Assert.Contains(
+            SpecificationProjection.validateMarkdown RequirementsExtension.contract source Missing,
+            fun item -> item.Code = "SPEC-PROJECTION-MISSING"
+        )
+
+        Assert.Contains(
+            SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Unreadable "denied"),
+            fun item -> item.Code = "SPEC-PROJECTION-UNREADABLE"
+        )
+
+        let stale =
+            projection.Markdown.Replace(projection.SourceFingerprint, String.replicate 64 "0")
+
+        let edited =
+            projection.Markdown.Replace("Authors share one typed specification.", "Edited projection text.")
+
+        let editedJson =
+            projection.Json
+            |> replaceFirst "\"agent\": \"tern-91d9\"" "\"agent\": \"edited-agent\""
+            |> replaceFirst "\"intent\": \"Prove the public contract.\"" "\"intent\": \"Edited intent.\""
+
+        Assert.Contains(
+            SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content stale),
+            fun item -> item.Code = "SPEC-PROJECTION-STALE"
+        )
+
+        Assert.Contains(
+            SpecificationProjection.validateMarkdown RequirementsExtension.contract source (Content edited),
+            fun item -> item.Code = "SPEC-PROJECTION-DIRECT-EDIT"
+        )
+
+        Assert.Contains(
+            SpecificationProjection.validateJson RequirementsExtension.contract source (Content editedJson),
+            fun item -> item.Code = "SPEC-PROJECTION-DIRECT-EDIT" && item.Path = "/projection/json"
+        )
 
     [<Fact>]
     let ``evidence validation distinguishes missing duplicate unknown and kind mismatch`` () =
@@ -200,11 +276,20 @@ module TypedSpecificationKernelTests =
             [ obligation "EV001" "test" "Semantic tests"
               obligation "EV002" "review" "Independent review"
               obligation "EV003" "package" "Package consumption" ]
+
         let receipts =
-            [ { ObligationId = id "EV001"; Kind = "test"; EvidenceRef = "run:1" }
-              { ObligationId = id "EV001"; Kind = "test"; EvidenceRef = "run:2" }
-              { ObligationId = id "EV002"; Kind = "test"; EvidenceRef = "run:3" }
-              { ObligationId = id "EV999"; Kind = "test"; EvidenceRef = "run:4" } ]
+            [ { ObligationId = id "EV001"
+                Kind = "test"
+                EvidenceRef = "run:1" }
+              { ObligationId = id "EV001"
+                Kind = "test"
+                EvidenceRef = "run:2" }
+              { ObligationId = id "EV002"
+                Kind = "test"
+                EvidenceRef = "run:3" }
+              { ObligationId = id "EV999"
+                Kind = "test"
+                EvidenceRef = "run:4" } ]
 
         let result = SpecificationEvidence.validate obligations receipts
         let codes = result.Diagnostics |> List.map _.Code
@@ -224,12 +309,47 @@ module TypedSpecificationKernelTests =
             Assert.Empty(RequirementsExtension.validate extension)
         | other -> Assert.Fail $"expected migration, got {other}"
 
+        let currentSpec =
+            Path.Combine(TestSupport.repoRoot, "work", "typed-specification-kernel-p2", "spec.md")
+            |> File.ReadAllText
+
+        match RequirementsMigration.analyzeMarkdown currentSpec with
+        | Migrated extension ->
+            Assert.Equal(6, extension.Scope.Length + extension.NonGoals.Length)
+            Assert.Equal(4, extension.Stories.Length)
+            Assert.Equal(17, extension.Requirements.Length)
+            Assert.Empty(RequirementsExtension.validate extension)
+        | other -> Assert.Fail $"expected wrapped current SDD specification to migrate, got {other}"
+
+    [<Fact>]
+    let ``migration preserves resolved decisions and never returns an invalid migrated model`` () =
+        let supported = fixturePath "supported-spec.md" |> File.ReadAllText
+
+        let resolved =
+            supported.Replace(
+                "No material ambiguities recorded.",
+                "- AMB-001 resolved: Which package owns the model? — FS.GG.SDD.Artifacts owns it."
+            )
+
+        match RequirementsMigration.analyzeMarkdown resolved with
+        | Migrated extension ->
+            let ambiguity = Assert.Single extension.Ambiguities
+            Assert.Equal(Resolved, ambiguity.State)
+            Assert.Equal(Some "FS.GG.SDD.Artifacts owns it.", ambiguity.Decision)
+            Assert.Empty(RequirementsExtension.validate extension)
+        | other -> Assert.Fail $"expected resolved decision migration, got {other}"
+
+        let missingDecision =
+            supported.Replace("No material ambiguities recorded.", "- AMB-001 resolved: Which package owns the model?")
+
+        match RequirementsMigration.analyzeMarkdown missingDecision with
+        | Unsupported findings -> Assert.Contains(findings, fun item -> item.Code = "REQ-MIGRATION-AMBIGUITY-DECISION")
+        | other -> Assert.Fail $"expected invalid resolved ambiguity to be unsupported, got {other}"
+
     [<Fact>]
     let ``migration keeps unresolved references ambiguous and unknown semantic headings unsupported`` () =
         let fixture name =
-            fixturePath name
-            |> File.ReadAllText
-            |> RequirementsMigration.analyzeMarkdown
+            fixturePath name |> File.ReadAllText |> RequirementsMigration.analyzeMarkdown
 
         match fixture "ambiguous-spec.md" with
         | Ambiguous findings ->

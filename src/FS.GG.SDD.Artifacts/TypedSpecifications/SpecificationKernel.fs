@@ -23,18 +23,18 @@ module SpecificationId =
             Error "Specification identifiers require at least five uppercase ASCII characters."
         elif value |> Seq.exists (valid >> not) then
             Error "Specification identifiers use uppercase ASCII letters, digits, and hyphens."
-        elif value.StartsWith("-", StringComparison.Ordinal)
-             || value.EndsWith("-", StringComparison.Ordinal)
-             || value.Contains("--", StringComparison.Ordinal) then
+        elif
+            value.StartsWith("-", StringComparison.Ordinal)
+            || value.EndsWith("-", StringComparison.Ordinal)
+            || value.Contains("--", StringComparison.Ordinal)
+        then
             Error "Specification identifiers cannot begin/end with or repeat a hyphen."
         else
             Ok(SpecificationId value)
 
     let value (SpecificationId value) = value
 
-type SourceLocation =
-    { Line: int
-      Column: int }
+type SourceLocation = { Line: int; Column: int }
 
 type SpecificationProvenance =
     { Agent: string
@@ -152,8 +152,7 @@ module private Kernel =
         && (value.Length = 40 || value.Length = 64)
         && value
            |> Seq.forall (fun character ->
-               (character >= '0' && character <= '9')
-               || (character >= 'a' && character <= 'f'))
+               (character >= '0' && character <= '9') || (character >= 'a' && character <= 'f'))
 
     let frameBytes (bytes: byte array) =
         let length = Array.zeroCreate<byte> 4
@@ -173,7 +172,8 @@ module private Kernel =
         |> Array.map (fun value -> value.ToString("x2", CultureInfo.InvariantCulture))
         |> String.concat ""
 
-    let sha256Text (text: string) = text |> Encoding.UTF8.GetBytes |> sha256Bytes
+    let sha256Text (text: string) =
+        text |> Encoding.UTF8.GetBytes |> sha256Bytes
 
     let evidenceBytes (obligations: EvidenceObligation list) =
         let rows =
@@ -203,34 +203,71 @@ module private Kernel =
         let evidence = model.EvidenceObligations
 
         [ if model.SchemaVersion <> 1 then
-              yield diagnostic "SPEC-SCHEMA-UNSUPPORTED" "/schemaVersion" "Only specification schema version 1 is supported."
+              yield
+                  diagnostic
+                      "SPEC-SCHEMA-UNSUPPORTED"
+                      "/schemaVersion"
+                      "Only specification schema version 1 is supported."
 
           yield! blank "SPEC-CONTRACT-KIND" "/extensionKind" "Extension kind" contract.Kind
 
           if contract.SchemaVersion <= 0 then
-              yield diagnostic "SPEC-CONTRACT-SCHEMA" "/extensionSchemaVersion" "Extension schema version must be positive."
+              yield
+                  diagnostic
+                      "SPEC-CONTRACT-SCHEMA"
+                      "/extensionSchemaVersion"
+                      "Extension schema version must be positive."
 
           yield! blank "SPEC-PROVENANCE-AGENT" "/provenance/agent" "Provenance agent" provenance.Agent
           yield! blank "SPEC-PROVENANCE-SESSION" "/provenance/session" "Provenance session" provenance.Session
           yield! blank "SPEC-PROVENANCE-SOURCE" "/provenance/sourcePath" "Provenance source path" provenance.SourcePath
 
           if not (lowercaseHex provenance.SourceRevision) then
-              yield diagnostic "SPEC-PROVENANCE-REVISION" "/provenance/sourceRevision" "Source revision must be a 40- or 64-character lowercase hexadecimal digest."
+              yield
+                  diagnostic
+                      "SPEC-PROVENANCE-REVISION"
+                      "/provenance/sourceRevision"
+                      "Source revision must be a 40- or 64-character lowercase hexadecimal digest."
 
-          match DateTimeOffset.TryParse(provenance.AuthoredAtUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind) with
+          match
+              DateTimeOffset.TryParse(
+                  provenance.AuthoredAtUtc,
+                  CultureInfo.InvariantCulture,
+                  DateTimeStyles.RoundtripKind
+              )
+          with
           | true, _ -> ()
           | _ ->
-              yield diagnostic "SPEC-PROVENANCE-TIME" "/provenance/authoredAtUtc" "Authored time must be an ISO-8601 instant."
+              yield
+                  diagnostic
+                      "SPEC-PROVENANCE-TIME"
+                      "/provenance/authoredAtUtc"
+                      "Authored time must be an ISO-8601 instant."
 
           yield! blank "SPEC-INTENT-REQUIRED" "/intent" "Authoring intent" model.Intent
 
           for index, obligation in evidence |> List.indexed do
-              yield! blank "SPEC-EVIDENCE-KIND-REQUIRED" $"/evidenceObligations/%d{index}/kind" "Evidence kind" obligation.Kind
-              yield! blank "SPEC-EVIDENCE-DESCRIPTION-REQUIRED" $"/evidenceObligations/%d{index}/description" "Evidence description" obligation.Description
+              yield!
+                  blank
+                      "SPEC-EVIDENCE-KIND-REQUIRED"
+                      $"/evidenceObligations/%d{index}/kind"
+                      "Evidence kind"
+                      obligation.Kind
+
+              yield!
+                  blank
+                      "SPEC-EVIDENCE-DESCRIPTION-REQUIRED"
+                      $"/evidenceObligations/%d{index}/description"
+                      "Evidence description"
+                      obligation.Description
 
           for duplicate, count in evidence |> List.countBy _.Id do
               if count > 1 then
-                  yield diagnostic "SPEC-EVIDENCE-ID-DUPLICATE" "/evidenceObligations" $"Evidence obligation '%s{SpecificationId.value duplicate}' is declared more than once."
+                  yield
+                      diagnostic
+                          "SPEC-EVIDENCE-ID-DUPLICATE"
+                          "/evidenceObligations"
+                          $"Evidence obligation '%s{SpecificationId.value duplicate}' is declared more than once."
 
           yield! contract.Validate evidence model.Extension ]
         |> sortDiagnostics
@@ -258,9 +295,11 @@ module private Kernel =
         writer.WriteEndObject()
         writer.WriteString("intent", model.Intent)
         writer.WriteStartArray("evidenceObligations")
+
         model.EvidenceObligations
         |> List.sortBy (fun item -> SpecificationId.value item.Id)
         |> List.iter (writeObligation writer)
+
         writer.WriteEndArray()
         writer.WriteString("extensionKind", contract.Kind)
         writer.WriteNumber("extensionSchemaVersion", contract.SchemaVersion)
@@ -272,7 +311,11 @@ module private Kernel =
 
     let tryProperty (name: string) (element: JsonElement) =
         let mutable value = Unchecked.defaultof<JsonElement>
-        if element.TryGetProperty(name, &value) then Some value else None
+
+        if element.TryGetProperty(name, &value) then
+            Some value
+        else
+            None
 
     let requiredString path (name: string) (element: JsonElement) =
         match tryProperty name element with
@@ -297,7 +340,9 @@ module private Kernel =
         | Ok av, Ok bv, Ok cv, Ok dv, Ok ev, Ok fv -> Ok(construct av bv cv dv ev fv)
         | _ ->
             [ a; b; c; d; e; f ]
-            |> List.collect (function Error errors -> errors | Ok _ -> [])
+            |> List.collect (function
+                | Error errors -> errors
+                | Ok _ -> [])
             |> Error
 
 [<RequireQualifiedAccess>]
@@ -320,7 +365,8 @@ module SpecificationCompiler =
               Fingerprint = Kernel.sha256Bytes bytes })
 
     let semanticDiff contract before after =
-        let diagnostics = validate contract before @ validate contract after |> Kernel.sortDiagnostics
+        let diagnostics =
+            validate contract before @ validate contract after |> Kernel.sortDiagnostics
 
         if not (List.isEmpty diagnostics) then
             Error diagnostics
@@ -328,8 +374,12 @@ module SpecificationCompiler =
             let digest = Kernel.sha256Bytes
             let text value = Kernel.frameText value |> digest
             let integer value = Kernel.int32 value |> digest
-            let evidence model = Kernel.evidenceBytes model.EvidenceObligations |> digest
-            let extension model = contract.EncodeCanonical model.Extension |> digest
+
+            let evidence model =
+                Kernel.evidenceBytes model.EvidenceObligations |> digest
+
+            let extension model =
+                contract.EncodeCanonical model.Extension |> digest
 
             let changes: SemanticChange list =
                 [ if before.Identity <> after.Identity then
@@ -393,14 +443,28 @@ module SpecificationCodec =
             else
                 let known =
                     set
-                        [ "schema"; "schemaVersion"; "identity"; "provenance"; "intent"
-                          "evidenceObligations"; "extensionKind"; "extensionSchemaVersion"; "extension" ]
+                        [ "schema"
+                          "schemaVersion"
+                          "identity"
+                          "provenance"
+                          "intent"
+                          "evidenceObligations"
+                          "extensionKind"
+                          "extensionSchemaVersion"
+                          "extension" ]
 
                 let unknown =
                     root.EnumerateObject()
                     |> Seq.choose (fun property ->
-                        if Set.contains property.Name known then None
-                        else Some(Kernel.diagnostic "SPEC-CODEC-UNKNOWN-FIELD" $"/%s{property.Name}" $"Unknown specification envelope field '%s{property.Name}'."))
+                        if Set.contains property.Name known then
+                            None
+                        else
+                            Some(
+                                Kernel.diagnostic
+                                    "SPEC-CODEC-UNKNOWN-FIELD"
+                                    $"/%s{property.Name}"
+                                    $"Unknown specification envelope field '%s{property.Name}'."
+                            ))
                     |> List.ofSeq
 
                 if not (List.isEmpty unknown) then
@@ -411,7 +475,9 @@ module SpecificationCodec =
                     let identityText = Kernel.requiredString "/identity" "identity" root
                     let intent = Kernel.requiredString "/intent" "intent" root
                     let extensionKind = Kernel.requiredString "/extensionKind" "extensionKind" root
-                    let extensionVersion = Kernel.requiredInt "/extensionSchemaVersion" "extensionSchemaVersion" root
+
+                    let extensionVersion =
+                        Kernel.requiredInt "/extensionSchemaVersion" "extensionSchemaVersion" root
 
                     let provenance =
                         match Kernel.tryProperty "provenance" root with
@@ -429,8 +495,10 @@ module SpecificationCodec =
                                       SourcePath = sourcePath
                                       SourceRevision = sourceRevision
                                       AuthoredAtUtc = authoredAtUtc })
-                        | Some _ -> Error [ Kernel.diagnostic "SPEC-CODEC-TYPE" "/provenance" "Provenance must be an object." ]
-                        | None -> Error [ Kernel.diagnostic "SPEC-CODEC-REQUIRED" "/provenance" "Provenance is required." ]
+                        | Some _ ->
+                            Error [ Kernel.diagnostic "SPEC-CODEC-TYPE" "/provenance" "Provenance must be an object." ]
+                        | None ->
+                            Error [ Kernel.diagnostic "SPEC-CODEC-REQUIRED" "/provenance" "Provenance is required." ]
 
                     let evidence =
                         match Kernel.tryProperty "evidenceObligations" root with
@@ -438,33 +506,74 @@ module SpecificationCodec =
                             value.EnumerateArray()
                             |> Seq.mapi (fun index item ->
                                 if item.ValueKind <> JsonValueKind.Object then
-                                    Error [ Kernel.diagnostic "SPEC-CODEC-TYPE" $"/evidenceObligations/%d{index}" "Evidence obligation must be an object." ]
+                                    Error
+                                        [ Kernel.diagnostic
+                                              "SPEC-CODEC-TYPE"
+                                              $"/evidenceObligations/%d{index}"
+                                              "Evidence obligation must be an object." ]
                                 else
                                     match
                                         Kernel.requiredString $"/evidenceObligations/%d{index}/id" "id" item,
                                         Kernel.requiredString $"/evidenceObligations/%d{index}/kind" "kind" item,
-                                        Kernel.requiredString $"/evidenceObligations/%d{index}/description" "description" item
+                                        Kernel.requiredString
+                                            $"/evidenceObligations/%d{index}/description"
+                                            "description"
+                                            item
                                     with
                                     | Ok idText, Ok kind, Ok description ->
                                         match SpecificationId.create idText with
-                                        | Ok identifier -> Ok { Id = identifier; Kind = kind; Description = description }
-                                        | Error message -> Error [ Kernel.diagnostic "SPEC-ID-MALFORMED" $"/evidenceObligations/%d{index}/id" message ]
+                                        | Ok identifier ->
+                                            Ok
+                                                { Id = identifier
+                                                  Kind = kind
+                                                  Description = description }
+                                        | Error message ->
+                                            Error
+                                                [ Kernel.diagnostic
+                                                      "SPEC-ID-MALFORMED"
+                                                      $"/evidenceObligations/%d{index}/id"
+                                                      message ]
                                     | a, b, c ->
                                         [ a; b; c ]
-                                        |> List.collect (function Error errors -> errors | Ok _ -> [])
+                                        |> List.collect (function
+                                            | Error errors -> errors
+                                            | Ok _ -> [])
                                         |> Error)
                             |> List.ofSeq
                             |> fun rows ->
-                                let errors = rows |> List.collect (function Error findings -> findings | Ok _ -> [])
-                                if List.isEmpty errors then Ok(rows |> List.choose (function Ok row -> Some row | _ -> None))
-                                else Error errors
-                        | Some _ -> Error [ Kernel.diagnostic "SPEC-CODEC-TYPE" "/evidenceObligations" "Evidence obligations must be an array." ]
-                        | None -> Error [ Kernel.diagnostic "SPEC-CODEC-REQUIRED" "/evidenceObligations" "Evidence obligations are required." ]
+                                let errors =
+                                    rows
+                                    |> List.collect (function
+                                        | Error findings -> findings
+                                        | Ok _ -> [])
+
+                                if List.isEmpty errors then
+                                    Ok(
+                                        rows
+                                        |> List.choose (function
+                                            | Ok row -> Some row
+                                            | _ -> None)
+                                    )
+                                else
+                                    Error errors
+                        | Some _ ->
+                            Error
+                                [ Kernel.diagnostic
+                                      "SPEC-CODEC-TYPE"
+                                      "/evidenceObligations"
+                                      "Evidence obligations must be an array." ]
+                        | None ->
+                            Error
+                                [ Kernel.diagnostic
+                                      "SPEC-CODEC-REQUIRED"
+                                      "/evidenceObligations"
+                                      "Evidence obligations are required." ]
 
                     let extension =
                         match Kernel.tryProperty "extension" root with
                         | Some value -> contract.DecodeJson(value.Clone())
-                        | None -> Error [ Kernel.diagnostic "SPEC-CODEC-REQUIRED" "/extension" "Extension is required." ]
+                        | None ->
+                            Error [ Kernel.diagnostic "SPEC-CODEC-REQUIRED" "/extension" "Extension is required." ]
 
                     let basicErrors =
                         [ schema |> Result.map ignore
@@ -476,7 +585,9 @@ module SpecificationCodec =
                           extensionKind |> Result.map ignore
                           extensionVersion |> Result.map ignore
                           extension |> Result.map ignore ]
-                        |> List.collect (function Error errors -> errors | Ok _ -> [])
+                        |> List.collect (function
+                            | Error errors -> errors
+                            | Ok _ -> [])
 
                     if not (List.isEmpty basicErrors) then
                         Error(Kernel.sortDiagnostics basicErrors)
@@ -485,19 +596,41 @@ module SpecificationCodec =
                         let versionValue = Result.defaultValue 0 schemaVersion
                         let kindValue = Result.defaultValue "" extensionKind
                         let extensionVersionValue = Result.defaultValue 0 extensionVersion
+
                         let contractErrors =
                             [ if schemaValue <> "fsgg.typed-specification/v1" then
-                                  yield Kernel.diagnostic "SPEC-CODEC-SCHEMA" "/schema" "Specification schema marker is unsupported."
+                                  yield
+                                      Kernel.diagnostic
+                                          "SPEC-CODEC-SCHEMA"
+                                          "/schema"
+                                          "Specification schema marker is unsupported."
                               if versionValue <> 1 then
-                                  yield Kernel.diagnostic "SPEC-SCHEMA-UNSUPPORTED" "/schemaVersion" "Only specification schema version 1 is supported."
+                                  yield
+                                      Kernel.diagnostic
+                                          "SPEC-SCHEMA-UNSUPPORTED"
+                                          "/schemaVersion"
+                                          "Only specification schema version 1 is supported."
                               if kindValue <> contract.Kind then
-                                  yield Kernel.diagnostic "SPEC-EXTENSION-KIND" "/extensionKind" $"Expected extension kind '%s{contract.Kind}'."
+                                  yield
+                                      Kernel.diagnostic
+                                          "SPEC-EXTENSION-KIND"
+                                          "/extensionKind"
+                                          $"Expected extension kind '%s{contract.Kind}'."
                               if extensionVersionValue <> contract.SchemaVersion then
-                                  yield Kernel.diagnostic "SPEC-EXTENSION-SCHEMA" "/extensionSchemaVersion" $"Expected extension schema version %d{contract.SchemaVersion}." ]
+                                  yield
+                                      Kernel.diagnostic
+                                          "SPEC-EXTENSION-SCHEMA"
+                                          "/extensionSchemaVersion"
+                                          $"Expected extension schema version %d{contract.SchemaVersion}." ]
 
                         match SpecificationId.create (Result.defaultValue "" identityText) with
-                        | Error message -> Error(Kernel.diagnostic "SPEC-ID-MALFORMED" "/identity" message :: contractErrors |> Kernel.sortDiagnostics)
-                        | Ok identity when not (List.isEmpty contractErrors) -> Error(Kernel.sortDiagnostics contractErrors)
+                        | Error message ->
+                            Error(
+                                Kernel.diagnostic "SPEC-ID-MALFORMED" "/identity" message :: contractErrors
+                                |> Kernel.sortDiagnostics
+                            )
+                        | Ok identity when not (List.isEmpty contractErrors) ->
+                            Error(Kernel.sortDiagnostics contractErrors)
                         | Ok identity ->
                             let model =
                                 { Identity = identity
@@ -510,8 +643,7 @@ module SpecificationCodec =
                             match SpecificationCompiler.validate contract model with
                             | [] -> Ok model
                             | diagnostics -> Error diagnostics
-        with
-        | :? JsonException as error ->
+        with :? JsonException as error ->
             Error
                 [ Kernel.located
                       "SPEC-CODEC-MALFORMED"
@@ -527,7 +659,10 @@ module SpecificationProjection =
     let private generatedPrefix = "<!-- generated-fingerprint: "
 
     let private markerValue prefix (line: string) =
-        if line.StartsWith(prefix, StringComparison.Ordinal) && line.EndsWith(" -->", StringComparison.Ordinal) then
+        if
+            line.StartsWith(prefix, StringComparison.Ordinal)
+            && line.EndsWith(" -->", StringComparison.Ordinal)
+        then
             Some(line.Substring(prefix.Length, line.Length - prefix.Length - 4))
         else
             None
@@ -538,8 +673,11 @@ module SpecificationProjection =
             let evidenceLines =
                 model.EvidenceObligations
                 |> List.sortBy (fun item -> SpecificationId.value item.Id)
-                |> List.map (fun item -> $"- `%s{SpecificationId.value item.Id}` (`%s{item.Kind}`): %s{item.Description}")
-                |> function [] -> [ "- None." ] | lines -> lines
+                |> List.map (fun item ->
+                    $"- `%s{SpecificationId.value item.Id}` (`%s{item.Kind}`): %s{item.Description}")
+                |> function
+                    | [] -> [ "- None." ]
+                    | lines -> lines
 
             let body =
                 [ $"# Specification %s{SpecificationId.value model.Identity}"
@@ -560,6 +698,7 @@ module SpecificationProjection =
                 |> String.concat "\n"
 
             let generatedFingerprint = Kernel.sha256Text body
+
             let markdown =
                 String.concat
                     "\n"
@@ -591,11 +730,17 @@ module SpecificationProjection =
         | Error diagnostics, _
         | _, Error diagnostics -> Error diagnostics
 
-    let private readObservation kind = function
+    let private readObservation kind =
+        function
         | Missing ->
-            Error [ Kernel.diagnostic "SPEC-PROJECTION-MISSING" $"/projection/%s{kind}" $"%s{kind} projection is missing." ]
+            Error
+                [ Kernel.diagnostic "SPEC-PROJECTION-MISSING" $"/projection/%s{kind}" $"%s{kind} projection is missing." ]
         | Unreadable detail ->
-            Error [ Kernel.diagnostic "SPEC-PROJECTION-UNREADABLE" $"/projection/%s{kind}" $"%s{kind} projection is unreadable: %s{detail}" ]
+            Error
+                [ Kernel.diagnostic
+                      "SPEC-PROJECTION-UNREADABLE"
+                      $"/projection/%s{kind}"
+                      $"%s{kind} projection is unreadable: %s{detail}" ]
         | Content text -> Ok text
 
     let validateMarkdown contract model observation =
@@ -606,25 +751,51 @@ module SpecificationProjection =
             let lines = text.Replace("\r\n", "\n").Split('\n')
 
             if lines.Length < 4 then
-                [ Kernel.diagnostic "SPEC-PROJECTION-MALFORMED" "/projection/markdown" "Markdown projection markers are incomplete." ]
+                [ Kernel.diagnostic
+                      "SPEC-PROJECTION-MALFORMED"
+                      "/projection/markdown"
+                      "Markdown projection markers are incomplete." ]
             elif lines[0] <> marker then
                 let code =
                     if lines[0].StartsWith("<!-- fsgg-typed-specification/", StringComparison.Ordinal) then
                         "SPEC-PROJECTION-VERSION"
                     else
                         "SPEC-PROJECTION-MALFORMED"
-                [ Kernel.diagnostic code "/projection/markdown/schema" "Markdown projection schema marker is missing or unsupported." ]
+
+                [ Kernel.diagnostic
+                      code
+                      "/projection/markdown/schema"
+                      "Markdown projection schema marker is missing or unsupported." ]
             else
                 match markerValue sourcePrefix lines[1], markerValue generatedPrefix lines[2] with
                 | Some source, Some generated ->
-                    let body = lines |> Array.skip 3 |> String.concat "\n" |> fun value -> value.TrimEnd('\n')
+                    let body =
+                        lines
+                        |> Array.skip 3
+                        |> String.concat "\n"
+                        |> fun value -> value.TrimEnd('\n')
+
                     [ if source <> expected.SourceFingerprint then
-                          yield Kernel.diagnostic "SPEC-PROJECTION-STALE" "/projection/markdown/sourceFingerprint" "Markdown projection was generated from a different specification fingerprint."
-                      if generated <> Kernel.sha256Text body || generated <> expected.GeneratedFingerprint then
-                          yield Kernel.diagnostic "SPEC-PROJECTION-DIRECT-EDIT" "/projection/markdown/generatedFingerprint" "Markdown projection body differs from its generated source." ]
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-STALE"
+                                  "/projection/markdown/sourceFingerprint"
+                                  "Markdown projection was generated from a different specification fingerprint."
+                      if
+                          generated <> Kernel.sha256Text body
+                          || generated <> expected.GeneratedFingerprint
+                      then
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-DIRECT-EDIT"
+                                  "/projection/markdown/generatedFingerprint"
+                                  "Markdown projection body differs from its generated source." ]
                     |> Kernel.sortDiagnostics
                 | _ ->
-                    [ Kernel.diagnostic "SPEC-PROJECTION-MALFORMED" "/projection/markdown" "Markdown projection fingerprint markers are malformed." ]
+                    [ Kernel.diagnostic
+                          "SPEC-PROJECTION-MALFORMED"
+                          "/projection/markdown"
+                          "Markdown projection fingerprint markers are malformed." ]
 
     let validateJson contract model observation =
         match readObservation "json" observation, generate contract model with
@@ -634,6 +805,7 @@ module SpecificationProjection =
             try
                 use document = JsonDocument.Parse text
                 let root = document.RootElement
+
                 match
                     Kernel.requiredString "/projection/json/schema" "schema" root,
                     Kernel.requiredString "/projection/json/sourceFingerprint" "sourceFingerprint" root,
@@ -642,24 +814,52 @@ module SpecificationProjection =
                 with
                 | Ok schema, Ok source, Ok generated, Some embedded ->
                     [ if schema <> "fsgg.typed-specification-projection/v1" then
-                          yield Kernel.diagnostic "SPEC-PROJECTION-VERSION" "/projection/json/schema" "JSON projection schema is unsupported."
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-VERSION"
+                                  "/projection/json/schema"
+                                  "JSON projection schema is unsupported."
                       if source <> expected.SourceFingerprint then
-                          yield Kernel.diagnostic "SPEC-PROJECTION-STALE" "/projection/json/sourceFingerprint" "JSON projection was generated from a different specification fingerprint."
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-STALE"
+                                  "/projection/json/sourceFingerprint"
+                                  "JSON projection was generated from a different specification fingerprint."
                       if generated <> expected.GeneratedFingerprint then
-                          yield Kernel.diagnostic "SPEC-PROJECTION-DIRECT-EDIT" "/projection/json/generatedFingerprint" "JSON projection fingerprint differs from the generated source."
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-DIRECT-EDIT"
+                                  "/projection/json/generatedFingerprint"
+                                  "JSON projection fingerprint differs from the generated source."
+                      if text.Replace("\r\n", "\n") <> expected.Json then
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-DIRECT-EDIT"
+                                  "/projection/json"
+                                  "JSON projection bytes differ from the deterministic generated projection."
                       match SpecificationCodec.deserialize contract (embedded.GetRawText()) with
                       | Error _ ->
-                          yield Kernel.diagnostic "SPEC-PROJECTION-DIRECT-EDIT" "/projection/json/model" "JSON projection embeds a malformed or edited model."
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-PROJECTION-DIRECT-EDIT"
+                                  "/projection/json/model"
+                                  "JSON projection embeds a malformed or edited model."
                       | Ok embeddedModel ->
                           match SpecificationCompiler.semanticDiff contract model embeddedModel with
                           | Ok Equivalent -> ()
                           | _ ->
-                              yield Kernel.diagnostic "SPEC-PROJECTION-DIRECT-EDIT" "/projection/json/model" "JSON projection embeds different model semantics." ]
+                              yield
+                                  Kernel.diagnostic
+                                      "SPEC-PROJECTION-DIRECT-EDIT"
+                                      "/projection/json/model"
+                                      "JSON projection embeds different model semantics." ]
                     |> Kernel.sortDiagnostics
                 | _ ->
-                    [ Kernel.diagnostic "SPEC-PROJECTION-MALFORMED" "/projection/json" "JSON projection is missing required fields." ]
-            with
-            | :? JsonException ->
+                    [ Kernel.diagnostic
+                          "SPEC-PROJECTION-MALFORMED"
+                          "/projection/json"
+                          "JSON projection is missing required fields." ]
+            with :? JsonException ->
                 [ Kernel.diagnostic "SPEC-PROJECTION-MALFORMED" "/projection/json" "JSON projection is malformed." ]
 
 [<RequireQualifiedAccess>]
@@ -671,32 +871,62 @@ module SpecificationEvidence =
         let diagnostics =
             [ for id, rows in obligationsById |> Map.toList do
                   if rows.Length > 1 then
-                      yield Kernel.diagnostic "SPEC-EVIDENCE-OBLIGATION-DUPLICATE" "/evidenceObligations" $"Obligation '%s{SpecificationId.value id}' is declared more than once."
+                      yield
+                          Kernel.diagnostic
+                              "SPEC-EVIDENCE-OBLIGATION-DUPLICATE"
+                              "/evidenceObligations"
+                              $"Obligation '%s{SpecificationId.value id}' is declared more than once."
 
               for id, rows in receiptsById |> Map.toList do
                   match Map.tryFind id obligationsById with
                   | None ->
-                      yield Kernel.diagnostic "SPEC-EVIDENCE-UNKNOWN" "/evidenceReceipts" $"Receipt references unknown obligation '%s{SpecificationId.value id}'."
+                      yield
+                          Kernel.diagnostic
+                              "SPEC-EVIDENCE-UNKNOWN"
+                              "/evidenceReceipts"
+                              $"Receipt references unknown obligation '%s{SpecificationId.value id}'."
                   | Some obligationsForId ->
                       if rows.Length > 1 then
-                          yield Kernel.diagnostic "SPEC-EVIDENCE-DUPLICATE" "/evidenceReceipts" $"Obligation '%s{SpecificationId.value id}' has duplicate receipts."
+                          yield
+                              Kernel.diagnostic
+                                  "SPEC-EVIDENCE-DUPLICATE"
+                                  "/evidenceReceipts"
+                                  $"Obligation '%s{SpecificationId.value id}' has duplicate receipts."
 
                       let expectedKind = obligationsForId.Head.Kind
+
                       for row in rows do
                           if row.Kind <> expectedKind then
-                              yield Kernel.diagnostic "SPEC-EVIDENCE-KIND" "/evidenceReceipts" $"Receipt for '%s{SpecificationId.value id}' has kind '%s{row.Kind}', expected '%s{expectedKind}'."
+                              yield
+                                  Kernel.diagnostic
+                                      "SPEC-EVIDENCE-KIND"
+                                      "/evidenceReceipts"
+                                      $"Receipt for '%s{SpecificationId.value id}' has kind '%s{row.Kind}', expected '%s{expectedKind}'."
+
                           if String.IsNullOrWhiteSpace row.EvidenceRef then
-                              yield Kernel.diagnostic "SPEC-EVIDENCE-REF-REQUIRED" "/evidenceReceipts" $"Receipt for '%s{SpecificationId.value id}' requires an evidence reference."
+                              yield
+                                  Kernel.diagnostic
+                                      "SPEC-EVIDENCE-REF-REQUIRED"
+                                      "/evidenceReceipts"
+                                      $"Receipt for '%s{SpecificationId.value id}' requires an evidence reference."
 
               for id, rows in obligationsById |> Map.toList do
                   let expectedKind = rows.Head.Kind
+
                   let satisfied =
                       receiptsById
                       |> Map.tryFind id
                       |> Option.defaultValue []
-                      |> List.exists (fun receipt -> receipt.Kind = expectedKind && not (String.IsNullOrWhiteSpace receipt.EvidenceRef))
+                      |> List.exists (fun receipt ->
+                          receipt.Kind = expectedKind
+                          && not (String.IsNullOrWhiteSpace receipt.EvidenceRef))
+
                   if not satisfied then
-                      yield Kernel.diagnostic "SPEC-EVIDENCE-MISSING" "/evidenceObligations" $"Obligation '%s{SpecificationId.value id}' has no matching receipt." ]
+                      yield
+                          Kernel.diagnostic
+                              "SPEC-EVIDENCE-MISSING"
+                              "/evidenceObligations"
+                              $"Obligation '%s{SpecificationId.value id}' has no matching receipt." ]
             |> Kernel.sortDiagnostics
 
         let satisfied =
@@ -704,11 +934,15 @@ module SpecificationEvidence =
             |> Map.toList
             |> List.choose (fun (id, rows) ->
                 let expectedKind = rows.Head.Kind
+
                 let valid =
                     receiptsById
                     |> Map.tryFind id
                     |> Option.defaultValue []
-                    |> List.exists (fun receipt -> receipt.Kind = expectedKind && not (String.IsNullOrWhiteSpace receipt.EvidenceRef))
+                    |> List.exists (fun receipt ->
+                        receipt.Kind = expectedKind
+                        && not (String.IsNullOrWhiteSpace receipt.EvidenceRef))
+
                 if valid then Some id else None)
             |> List.sortBy SpecificationId.value
 

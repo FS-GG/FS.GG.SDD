@@ -74,12 +74,14 @@ module CommandEffects =
 
     let private atomicBytesMarker = "\uDC00fsgg-sdd-atomic-bytes:"
 
-    let encodeAtomicBytes (bytes: byte array) = atomicBytesMarker + Convert.ToBase64String bytes
+    let encodeAtomicBytes (bytes: byte array) =
+        atomicBytesMarker + Convert.ToBase64String bytes
 
     let private tryDecodeAtomicBytes (text: string) =
         if text.StartsWith(atomicBytesMarker, StringComparison.Ordinal) then
             Some(Convert.FromBase64String(text.Substring atomicBytesMarker.Length))
-        else None
+        else
+            None
 
     /// Why a file read did not yield a body — the file edge's states, before they are projected
     /// onto `ReadResult`. Local to this module, and deliberately NOT a fifth `ReadResult` case.
@@ -874,7 +876,8 @@ module CommandEffects =
 
                     let unchanged =
                         match existing, rawBytes with
-                        | Some snapshot, Some bytes -> snapshot.RawBytes |> Option.exists (fun current -> current = bytes)
+                        | Some snapshot, Some bytes ->
+                            snapshot.RawBytes |> Option.exists (fun current -> current = bytes)
                         | Some snapshot, None -> snapshot.Text = text
                         | None, _ -> false
 
@@ -882,6 +885,7 @@ module CommandEffects =
                         if not dryRun && not unchanged then
                             let absolute = fullPath projectRoot path
                             Directory.CreateDirectory(parentDirectory absolute) |> ignore
+
                             match rawBytes with
                             | Some bytes -> writeBytesAtomic absolute bytes
                             | None -> writeFileAtomic absolute text

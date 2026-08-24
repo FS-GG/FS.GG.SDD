@@ -44,19 +44,35 @@ let model =
 match SpecificationCompiler.compile RequirementsExtension.contract model with
 | Error findings -> failwithf "compile failed: %A" findings
 | Ok compiled ->
-    let json = SpecificationCodec.serialize RequirementsExtension.contract model |> Result.defaultWith (failwithf "%A")
-    let decoded = SpecificationCodec.deserialize RequirementsExtension.contract json |> Result.defaultWith (failwithf "%A")
-    let projection = SpecificationProjection.generate RequirementsExtension.contract decoded |> Result.defaultWith (failwithf "%A")
-    if compiled.Fingerprint.Length <> 64 || String.IsNullOrWhiteSpace projection.Markdown then
+    let json =
+        SpecificationCodec.serialize RequirementsExtension.contract model
+        |> Result.defaultWith (failwithf "%A")
+
+    let decoded =
+        SpecificationCodec.deserialize RequirementsExtension.contract json
+        |> Result.defaultWith (failwithf "%A")
+
+    let projection =
+        SpecificationProjection.generate RequirementsExtension.contract decoded
+        |> Result.defaultWith (failwithf "%A")
+
+    if
+        compiled.Fingerprint.Length <> 64
+        || String.IsNullOrWhiteSpace projection.Markdown
+    then
         failwith "public kernel output is incomplete"
 
 let forbidden = [ "FS.GG.SIR"; "FS.GG.Coord" ]
+
 let references =
     typeof<SpecificationModel<RequirementsExtension>>.Assembly.GetReferencedAssemblies()
     |> Array.choose (fun assembly -> assembly.Name |> Option.ofObj)
 
 for prefix in forbidden do
-    if references |> Array.exists (fun name -> name.StartsWith(prefix, StringComparison.Ordinal)) then
+    if
+        references
+        |> Array.exists (fun name -> name.StartsWith(prefix, StringComparison.Ordinal))
+    then
         failwithf "forbidden dependency: %s" prefix
 
 printfn "typed-specification-consumer: ok"

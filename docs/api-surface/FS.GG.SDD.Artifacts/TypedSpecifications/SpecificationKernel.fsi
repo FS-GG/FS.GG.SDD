@@ -15,9 +15,7 @@ module SpecificationId =
     val value: id: SpecificationId -> string
 
 /// One source location retained by migration and validation diagnostics.
-type SourceLocation =
-    { Line: int
-      Column: int }
+type SourceLocation = { Line: int; Column: int }
 
 /// Authorship and authoritative-source provenance. Author/session/time are not semantic model bytes.
 type SpecificationProvenance =
@@ -125,34 +123,32 @@ type MigrationOutcome<'model> =
 module SpecificationCompiler =
     /// Validate envelope and extension, returning every stable diagnostic in deterministic order.
     val validate:
-        contract: ExtensionContract<'extension> ->
-        model: SpecificationModel<'extension> ->
-        SpecificationDiagnostic list
+        contract: ExtensionContract<'extension> -> model: SpecificationModel<'extension> -> SpecificationDiagnostic list
 
     /// Return deterministic semantic bytes for a valid model.
     val normalize:
         contract: ExtensionContract<'extension> ->
         model: SpecificationModel<'extension> ->
-        Result<byte array, SpecificationDiagnostic list>
+            Result<byte array, SpecificationDiagnostic list>
 
     /// Return lowercase SHA-256 over normalized semantic bytes.
     val fingerprint:
         contract: ExtensionContract<'extension> ->
         model: SpecificationModel<'extension> ->
-        Result<string, SpecificationDiagnostic list>
+            Result<string, SpecificationDiagnostic list>
 
     /// Validate and compile one model.
     val compile:
         contract: ExtensionContract<'extension> ->
         model: SpecificationModel<'extension> ->
-        Result<CompiledSpecification<'extension>, SpecificationDiagnostic list>
+            Result<CompiledSpecification<'extension>, SpecificationDiagnostic list>
 
     /// Compare two models by semantic components and stable fingerprints.
     val semanticDiff:
         contract: ExtensionContract<'extension> ->
         before: SpecificationModel<'extension> ->
         after: SpecificationModel<'extension> ->
-        Result<SemanticDiff, SpecificationDiagnostic list>
+            Result<SemanticDiff, SpecificationDiagnostic list>
 
 [<RequireQualifiedAccess>]
 module SpecificationCodec =
@@ -160,13 +156,13 @@ module SpecificationCodec =
     val serialize:
         contract: ExtensionContract<'extension> ->
         model: SpecificationModel<'extension> ->
-        Result<string, SpecificationDiagnostic list>
+            Result<string, SpecificationDiagnostic list>
 
     /// Decode schema-v1 JSON through the concrete extension contract; unknown fields fail closed.
     val deserialize:
         contract: ExtensionContract<'extension> ->
         text: string ->
-        Result<SpecificationModel<'extension>, SpecificationDiagnostic list>
+            Result<SpecificationModel<'extension>, SpecificationDiagnostic list>
 
 [<RequireQualifiedAccess>]
 module SpecificationProjection =
@@ -174,26 +170,23 @@ module SpecificationProjection =
     val generate:
         contract: ExtensionContract<'extension> ->
         model: SpecificationModel<'extension> ->
-        Result<SpecificationProjection, SpecificationDiagnostic list>
+            Result<SpecificationProjection, SpecificationDiagnostic list>
 
     /// Validate Markdown observation, freshness, and generated-body integrity.
     val validateMarkdown:
         contract: ExtensionContract<'extension> ->
         model: SpecificationModel<'extension> ->
         observation: ProjectionObservation ->
-        SpecificationDiagnostic list
+            SpecificationDiagnostic list
 
     /// Validate JSON observation, freshness, and generated-model integrity.
     val validateJson:
         contract: ExtensionContract<'extension> ->
         model: SpecificationModel<'extension> ->
         observation: ProjectionObservation ->
-        SpecificationDiagnostic list
+            SpecificationDiagnostic list
 
 [<RequireQualifiedAccess>]
 module SpecificationEvidence =
     /// Bind receipts to declared obligation ids and kinds without a Governance runtime.
-    val validate:
-        obligations: EvidenceObligation list ->
-        receipts: EvidenceReceipt list ->
-        EvidenceValidation
+    val validate: obligations: EvidenceObligation list -> receipts: EvidenceReceipt list -> EvidenceValidation

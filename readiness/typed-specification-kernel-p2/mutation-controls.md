@@ -9,7 +9,7 @@ test/build outputs below; each mutation was reverted immediately after observati
 - Subject: `Requirements.validateWithEvidence` and
   `TypedSpecificationKernelTests.validation accumulates duplicate…`.
 - Mutation: remove `yield! duplicates "/extension" allIds`.
-- Census: the full 11-test typed-kernel class ran; 10 passed and 1 failed.
+- Census: the then-current 11-test typed-kernel class ran; 10 passed and 1 failed.
 - Positive control: the unchanged test also observed the known-present unresolved
   acceptance, unresolved evidence, user-value, provenance, and schema diagnostics.
 - Result: exit 1; `REQ-ID-DUPLICATE` was absent from the observed code collection.
@@ -68,3 +68,36 @@ test/build outputs below; each mutation was reverted immediately after observati
 - Positive control: ordinary stable triples continued to resolve in the same run.
 - Result: exit 1; V1b, V1c, and V13 each observed `unparseable` where `resolved`
   was required.
+
+## JSON projection direct-edit rejection
+
+- Subject: `SpecificationProjection.validateJson` over the deterministic generated
+  JSON projection, including authoring/provenance fields intentionally excluded from
+  semantic diff.
+- Escaping mutation: edit the embedded `provenance.agent` and `intent` values while
+  retaining the projection fingerprints. The pre-repair built-artifact harness
+  observed `diagnostics=[]`, proving the semantic-diff-only check was bypassable.
+- Repair control: the named projection test applies those same two edits; exact
+  deterministic projection comparison now emits `SPEC-PROJECTION-DIRECT-EDIT` at
+  `/projection/json`.
+- Census: the repaired 12-test typed-kernel class passed, including the known-good
+  unchanged JSON projection and the negative direct-edit control.
+- Result: the original escape is caught; the unchanged projection remains admitted.
+
+## Migration validity and production-shaped wrapping
+
+- Subject: `RequirementsMigration.analyzeMarkdown` over resolved decisions and the
+  repository's real wrapped Standard SDD specification.
+- Escaping mutations: before repair, a resolved ambiguity without a retained decision
+  returned `Migrated` even though extension validation emitted
+  `REQ-AMBIGUITY-DECISION-REQUIRED`; the real P2 specification returned `Unsupported`
+  with 46 malformed continuation-row findings.
+- Repair controls: the test migrates an explicit resolved decision and asserts the
+  decision bytes plus an empty validation result; its missing-decision counterpart
+  must return `Unsupported`. It also migrates
+  `work/typed-specification-kernel-p2/spec.md` and asserts 6 boundaries, 4 stories,
+  17 requirements, and zero extension diagnostics.
+- Census: all 12 typed-kernel tests pass after logical continuation folding and the
+  fail-closed validation classification.
+- Result: neither original escape survives, and the production-shaped positive
+  control is admitted losslessly.
