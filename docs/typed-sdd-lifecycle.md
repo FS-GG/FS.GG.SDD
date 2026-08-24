@@ -46,8 +46,11 @@ fsgg-sdd typed-sdd author --work demo --title "Demo" --agent tern-001 --session 
 fsgg-sdd typed-sdd inspect --work demo
 ```
 
-The package carries `typed-sdd-author`, `typed-sdd-inspect`, and `typed-sdd-migrate` skills so agents
-use the same operations and do not copy lifecycle-stage instructions.
+After editing an existing `specification.fsx`, repeat `author` with `--accept` and a fresh agent/session
+receipt. The command compiles the edited authority before atomically replacing its projections and
+manifest. The seeded `fs-gg-sdd-typed-author`, `fs-gg-sdd-typed-inspect`, and
+`fs-gg-sdd-typed-migrate` skills are embedded in the Commands assembly and materialized into every
+configured agent-skill root by init, scaffold, refresh, and upgrade.
 
 ## Standard SDD migration
 
@@ -61,7 +64,12 @@ The classification is `Migrated` for losslessly representable content, `Ambiguou
 reference requires a decision, or `Unsupported` for constructs outside the published extension. The
 report includes locations or a semantic diff and the rollback source digest. Only after reviewing a
 `Migrated` report should the command be repeated with `--accept`. Acceptance preserves the original
-bytes at `work/<id>/spec.standard-sdd.rollback.md`.
+bytes at `work/<id>/spec.standard-sdd.rollback.md` in the same recoverable write transaction. Restore
+them explicitly with:
+
+```console
+fsgg-sdd typed-sdd rollback --work demo --accept
+```
 
 ## Failure identities
 
@@ -69,6 +77,9 @@ Automation should branch on diagnostic IDs, not message text. Wrong lifecycle, u
 package identity mismatch, unsupported extension, direct canonical edit, stale projection, and an
 unavailable authoring agent have separate IDs and corrections. Doctor, readiness, and ship consumers
 must retain these identities rather than converting them to a generic lifecycle failure.
+
+Work ids are single path segments, and migration sources must be project-relative paths contained by
+the selected root. Unknown or incomplete options fail closed.
 
 ## Refresh and upgrade
 

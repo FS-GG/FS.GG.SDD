@@ -88,6 +88,9 @@
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-authoring-contracts/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-authoring-contracts" />
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-refresh-agents/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-refresh-agents" />
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-validate/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-validate" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-typed-author/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-typed-author" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-typed-inspect/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-typed-inspect" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-typed-migrate/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-typed-migrate" />
   </ItemGroup>
 
   <!-- 108 / ADR-0054 §Byte-transport: the delivered `FS.GG.Drivers` bytes — the

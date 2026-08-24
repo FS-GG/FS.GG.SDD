@@ -60,7 +60,10 @@ module ScaffoldProvenance =
     let lifecycleLane (record: ScaffoldProvenanceRecord) =
         record.EffectiveParameters
         |> List.tryPick (fun (key, value) ->
-            if String.Equals(key, "lifecycle", StringComparison.OrdinalIgnoreCase) then Some value else None)
+            if String.Equals(key, "lifecycle", StringComparison.OrdinalIgnoreCase) then
+                Some value
+            else
+                None)
         |> LifecycleLane.resolve
 
     let devRepoRecord

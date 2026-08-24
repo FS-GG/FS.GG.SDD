@@ -21,7 +21,7 @@ module internal SeededSkills =
     type private Path = System.IO.Path
     type private StreamReader = System.IO.StreamReader
 
-    // The 16 in-scope skills (10 stage + 6 cross-cutting), sorted, excluding the
+    // The in-scope stage, cross-cutting, and Typed SDD skills, sorted, excluding the
     // product-internal `fs-gg-sdd-project`. This list is the single in-code source of
     // the set; iterating it sorted keeps the emitted effect order deterministic (FR-006).
     let skillNames =
@@ -39,6 +39,9 @@ module internal SeededSkills =
           "fs-gg-sdd-specify"
           "fs-gg-sdd-tasks"
           "fs-gg-sdd-troubleshooting"
+          "fs-gg-sdd-typed-author"
+          "fs-gg-sdd-typed-inspect"
+          "fs-gg-sdd-typed-migrate"
           "fs-gg-sdd-validate"
           "fs-gg-sdd-verify" ]
         |> List.sort

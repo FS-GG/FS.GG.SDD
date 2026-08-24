@@ -37,9 +37,19 @@ module TypedLifecycleTests =
     [<Fact>]
     let ``scaffold provenance selects the representation backend without fallback`` () =
         let provenance =
-            ScaffoldProvenance.devRepoRecord { Id = "FS.GG.SDD"; Version = "1.4.0-preview.1" } []
+            ScaffoldProvenance.devRepoRecord
+                { Id = "FS.GG.SDD"
+                  Version = "1.4.0-preview.1" }
+                []
+
         Assert.Equal(Ok StandardSdd, ScaffoldProvenance.lifecycleLane provenance)
-        Assert.Equal(Ok TypedSdd, ScaffoldProvenance.lifecycleLane { provenance with EffectiveParameters = [ "lifecycle", "typed-sdd" ] })
+
+        Assert.Equal(
+            Ok TypedSdd,
+            ScaffoldProvenance.lifecycleLane
+                { provenance with
+                    EffectiveParameters = [ "lifecycle", "typed-sdd" ] }
+        )
 
     [<Fact>]
     let ``authority manifest round trips deterministically`` () =
@@ -52,10 +62,12 @@ module TypedLifecycleTests =
     [<Fact>]
     let ``negative controls have distinct stable diagnostic identities`` () =
         let source, normalized, markdown = bytes "source", bytes "{}", bytes "# projection"
+
         let authority =
             { manifest source normalized markdown with
                 Lifecycle = "sdd"
                 PackageIdentity = "wrong" }
+
         let findings =
             TypedAuthorityManifest.validate
                 "FS.GG.SDD.Artifacts/1.4.0-preview.1"
@@ -64,6 +76,7 @@ module TypedLifecycleTests =
                 (Some(bytes "stale"))
                 (Some markdown)
                 authority
+
         let ids = findings |> List.map _.Id |> Set.ofList
         Assert.Contains("typedSdd.wrongLifecycle", ids)
         Assert.Contains("typedSdd.compilerUnavailable", ids)
@@ -71,3 +84,28 @@ module TypedLifecycleTests =
         Assert.Contains("typedSdd.directCanonicalEdit", ids)
         Assert.Contains("typedSdd.staleProjection", ids)
         Assert.Equal(findings.Length, ids.Count)
+
+    [<Fact>]
+    let ``compiler extension and authoring receipt identities fail closed`` () =
+        let source, normalized, markdown = bytes "source", bytes "{}", bytes "# projection"
+
+        let authority =
+            { manifest source normalized markdown with
+                CompilerIdentity = "unknown"
+                ExtensionIdentity = "unknown"
+                AuthoringAgent = ""
+                AuthoringSession = "" }
+
+        let ids =
+            TypedAuthorityManifest.validate
+                "FS.GG.SDD.Artifacts/1.4.0-preview.1"
+                true
+                (Some source)
+                (Some normalized)
+                (Some markdown)
+                authority
+            |> List.map _.Id
+
+        Assert.Contains("typedSdd.compilerIdentityMismatch", ids)
+        Assert.Contains("typedSdd.extensionIdentityMismatch", ids)
+        Assert.Contains("typedSdd.authoringReceiptMissing", ids)

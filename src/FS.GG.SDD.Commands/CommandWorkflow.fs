@@ -99,6 +99,12 @@ module CommandWorkflow =
                 if not (allPlannedReadsInterpreted model) then
                     model, []
                 else
+                    let model =
+                        { model with
+                            Diagnostics =
+                                (model.Diagnostics @ typedLifecycleDiagnostics workId model)
+                                |> List.distinctBy (fun item -> item.Id, item.Message) }
+
                     let candidateReads =
                         duplicateCandidateReadEffects workId model
                         // FS.GG.SDD#349: probe every artifact a satisfying evidence declaration cites.
@@ -321,6 +327,24 @@ module CommandWorkflow =
                                 { emptyStagePlan with
                                     Diagnostics = model.Diagnostics }
 
+                        let typedDiagnostics = typedLifecycleDiagnostics workId model
+
+                        let stageDiagnostics =
+                            (stagePlan.Diagnostics @ typedDiagnostics)
+                            |> Diagnostics.sort
+                            |> List.distinctBy (fun item -> item.Id, item.Message)
+
+                        let stagePlan =
+                            { stagePlan with
+                                Diagnostics = stageDiagnostics
+                                PlannedEffects =
+                                    if
+                                        typedDiagnostics |> List.exists (fun item -> item.Severity = DiagnosticError)
+                                    then
+                                        []
+                                    else
+                                        stagePlan.PlannedEffects }
+
                         let effects = appendNewEffects stagePlan.PlannedEffects model
 
                         let plannedModel =
@@ -343,6 +367,12 @@ module CommandWorkflow =
                 if not (allPlannedReadsInterpreted model) then
                     model, []
                 else
+                    let model =
+                        { model with
+                            Diagnostics =
+                                (model.Diagnostics @ typedLifecycleDiagnostics workId model)
+                                |> List.distinctBy (fun item -> item.Id, item.Message) }
+
                     let candidateReads =
                         appendNewEffects
                             ((duplicateCandidateReadEffects workId model)
@@ -358,6 +388,18 @@ module CommandWorkflow =
                         let diagnostics, agentGuidance, generatedViews, plannedEffects =
                             computeAgentsPlan model
 
+                        let typedDiagnostics = typedLifecycleDiagnostics workId model
+
+                        let diagnostics =
+                            (diagnostics @ typedDiagnostics)
+                            |> Diagnostics.sort
+                            |> List.distinctBy (fun item -> item.Id, item.Message)
+
+                        let hasBlocking =
+                            typedDiagnostics |> List.exists (fun item -> item.Severity = DiagnosticError)
+
+                        let plannedEffects = if hasBlocking then [] else plannedEffects
+
                         let effects = appendNewEffects plannedEffects model
 
                         let plannedModel =
@@ -372,6 +414,12 @@ module CommandWorkflow =
                 if not (allPlannedReadsInterpreted model) then
                     model, []
                 else
+                    let model =
+                        { model with
+                            Diagnostics =
+                                (model.Diagnostics @ typedLifecycleDiagnostics workId model)
+                                |> List.distinctBy (fun item -> item.Id, item.Message) }
+
                     let candidateReads =
                         appendNewEffects
                             ((duplicateCandidateReadEffects workId model)
@@ -388,10 +436,25 @@ module CommandWorkflow =
                         candidateReads
                     | [] ->
                         let diagnostics, refresh, generatedViews, plannedEffects = computeRefreshPlan model
+
+                        let typedDiagnostics = typedLifecycleDiagnostics workId model
+
+                        let diagnostics =
+                            (diagnostics @ typedDiagnostics)
+                            |> Diagnostics.sort
+                            |> List.distinctBy (fun item -> item.Id, item.Message)
+
+                        let hasBlocking =
+                            typedDiagnostics |> List.exists (fun item -> item.Severity = DiagnosticError)
+
+                        let plannedEffects = if hasBlocking then [] else plannedEffects
                         // 056: re-mirror the union (re-seed all three roots + fan provider skills
                         // into .claude/.codex) to currency on every refresh, no-clobber (FR-009).
                         let effects =
-                            appendNewEffects (plannedEffects @ skillFanoutRefreshEffects model) model
+                            if hasBlocking then
+                                []
+                            else
+                                appendNewEffects (plannedEffects @ skillFanoutRefreshEffects model) model
 
                         let plannedModel =
                             { model with
@@ -414,6 +477,16 @@ module CommandWorkflow =
                 if not (allPlannedReadsInterpreted model) then
                     model, []
                 else
+                    let model =
+                        match model.Request.WorkId with
+                        | Some workId ->
+                            { model with
+                                Diagnostics =
+                                    (model.Diagnostics @ typedLifecycleDiagnostics workId model)
+                                    |> Diagnostics.sort
+                                    |> List.distinctBy (fun item -> item.Id, item.Message) }
+                        | None -> model
+
                     computeDoctorNext model
             | Upgrade, _ ->
                 // The reconciliation verb (feature 053, US2–US4): its own staged driver
@@ -421,7 +494,25 @@ module CommandWorkflow =
                 if not (allPlannedReadsInterpreted model) then
                     model, []
                 else
-                    computeUpgradeNext model
+                    let typedDiagnostics =
+                        model.Request.WorkId
+                        |> Option.map (fun workId -> typedLifecycleDiagnostics workId model)
+                        |> Option.defaultValue []
+
+                    let model =
+                        match model.Request.WorkId with
+                        | Some _ ->
+                            { model with
+                                Diagnostics =
+                                    (model.Diagnostics @ typedDiagnostics)
+                                    |> Diagnostics.sort
+                                    |> List.distinctBy (fun item -> item.Id, item.Message) }
+                        | None -> model
+
+                    if typedDiagnostics |> List.exists (fun item -> item.Severity = DiagnosticError) then
+                        model, []
+                    else
+                        computeUpgradeNext model
             | Lint, _ ->
                 // Read-only pre-flight (feature 076, US1): once the single artifact read is in,
                 // run the pure LintEngine and record the summary; emit no mutating effect.

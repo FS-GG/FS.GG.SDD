@@ -41,6 +41,13 @@ module TypedAuthorityManifest =
     val sha256: bytes: byte array -> string
     val serialize: manifest: TypedAuthorityManifest -> string
     val deserialize: text: string -> Result<TypedAuthorityManifest, TypedLifecycleDiagnostic>
+
+    /// Projects a typed requirements model into the shared Standard SDD stage grammar.
+    val markdownProjection:
+        workId: string ->
+        model: SpecificationModel<RequirementsExtension> ->
+            Result<string, SpecificationDiagnostic list>
+
     val validate:
         expectedPackageIdentity: string ->
         compilerAvailable: bool ->
@@ -48,4 +55,11 @@ module TypedAuthorityManifest =
         normalizedBytes: byte array option ->
         markdownBytes: byte array option ->
         manifest: TypedAuthorityManifest ->
+            TypedLifecycleDiagnostic list
+
+    /// Proves both projections are the deterministic outputs of the model embedded in canonical F#.
+    val validateDerivation:
+        canonicalBytes: byte array ->
+        normalizedBytes: byte array ->
+        markdownBytes: byte array ->
             TypedLifecycleDiagnostic list

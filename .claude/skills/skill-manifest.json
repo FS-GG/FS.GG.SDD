@@ -184,6 +184,45 @@
       ]
     },
     {
+      "id": "fs-gg-sdd-typed-author",
+      "scope": "process",
+      "sha256": "152afd040ec8887c48a41c614054a258caa166b94696ae6240e8642592804b4c",
+      "resolvablePath": ".agents/skills/fs-gg-sdd-typed-author/SKILL.md",
+      "materializes-when": "always",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "152afd040ec8887c48a41c614054a258caa166b94696ae6240e8642592804b4c"
+        }
+      ]
+    },
+    {
+      "id": "fs-gg-sdd-typed-inspect",
+      "scope": "process",
+      "sha256": "ede462a67d187254ca2158f64cea545af27fbeffee78a4a59c0e1fc93f95c3fb",
+      "resolvablePath": ".agents/skills/fs-gg-sdd-typed-inspect/SKILL.md",
+      "materializes-when": "always",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "ede462a67d187254ca2158f64cea545af27fbeffee78a4a59c0e1fc93f95c3fb"
+        }
+      ]
+    },
+    {
+      "id": "fs-gg-sdd-typed-migrate",
+      "scope": "process",
+      "sha256": "02b40f013b0c836cfd058b6ba42de3ddc73a77c0ae432cd09c040ffa44e9ed68",
+      "resolvablePath": ".agents/skills/fs-gg-sdd-typed-migrate/SKILL.md",
+      "materializes-when": "always",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "02b40f013b0c836cfd058b6ba42de3ddc73a77c0ae432cd09c040ffa44e9ed68"
+        }
+      ]
+    },
+    {
       "id": "fs-gg-sdd-validate",
       "scope": "process",
       "sha256": "87ed462650a26b7deafad23c46fa313928740ea9554385465fe74b5ecc23ec2a",

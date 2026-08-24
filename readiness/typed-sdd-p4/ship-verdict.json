@@ -4,10 +4,10 @@
   "workId": "typed-sdd-p4",
   "stage": "ship",
   "status": "shipReady",
-  "generator": "FS.GG.SDD.Artifacts/1.1.0",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0-preview.1",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "86d588ab03096aee6531da0f950fd21529cd53a024ac4342bc0ad1d68372293e"
+    "value": "9668802c0968febd09f156c029a3e1a9cbd3c81727b3440ce2371dc5b6784d28"
   },
   "verificationReadiness": {
     "status": "verificationReady",

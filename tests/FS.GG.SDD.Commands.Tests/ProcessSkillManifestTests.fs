@@ -80,7 +80,7 @@ module ProcessSkillManifestTests =
         let ids = skills () |> List.map (prop "id") |> Set.ofList
         Assert.Contains("fs-gg-sdd-troubleshooting", ids)
         Assert.DoesNotContain("fs-gg-sdd-project", ids)
-        Assert.Equal(16, ids.Count)
+        Assert.Equal(19, ids.Count)
 
     // ---------- FR-002 / AC-002: each sha256 == canonical digest of the authored SKILL.md ----------
 

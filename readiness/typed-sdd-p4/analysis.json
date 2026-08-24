@@ -4,7 +4,7 @@
   "workId": "typed-sdd-p4",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.1.0",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0-preview.1",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -41,7 +41,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "9cc4713448ea69e6c4538acb0ae30e9b95287afb561480162df71f862006830e"
+        "value": "b1a8689a0cd3430917a3f598b542088b9f3bab26c551720213e57af977272d01"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
