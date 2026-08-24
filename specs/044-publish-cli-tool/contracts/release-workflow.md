@@ -42,6 +42,14 @@ same bytes to `https://api.nuget.org/v3/index.json` using a short-lived key mint
 `NuGet/login@v1` through OIDC. Both pushes use `--skip-duplicate`; there is no repack between feeds.
 Any non-duplicate failure fails the run.
 
+The Artifacts job must not pass a global `Version` or `PackageVersion` override. The resolver has
+already proved that the source-evaluated Artifacts and CLI versions are equal, so pack consumes that
+source identity directly. Both command-line properties propagate into NuGet's separate
+project-reference version evaluation and would incorrectly replace the independently versioned
+`FS.GG.Contracts` dependency. With no override, the Artifacts nuspec retains both the source package
+version and the producer-declared Contracts dependency (`7.5.2` for this release). A real-pack
+metadata test and the static workflow contract guard this boundary.
+
 The Artifacts package glob in both push steps MUST be
 `artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg`. It may never target the CLI package. Before the
 Artifacts publish job can run, `artifacts-tests` MUST execute
@@ -61,3 +69,4 @@ tool from the local package directory and runs the standalone validation smoke b
 - **C6** — The just-packed CLI passes its isolated install-and-run smoke.
 - **C7** — The just-packed Artifacts package passes the clean-consumer fixture.
 - **C8** — Static contract tests require two exact Artifacts pushes and reject a CLI glob inside `publish-artifacts`.
+- **C9** — Packing Artifacts from the source-resolved coherent line writes package version preview.2 while retaining an exact `FS.GG.Contracts` dependency of `7.5.2`; adding either a `Version` or `PackageVersion` override fails tests.

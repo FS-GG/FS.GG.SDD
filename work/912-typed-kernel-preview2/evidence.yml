@@ -1,0 +1,354 @@
+schemaVersion: 1
+workId: 912-typed-kernel-preview2
+stage: evidence
+status: evidenceReady
+sourceSpec: work/912-typed-kernel-preview2/spec.md
+sourceClarifications: work/912-typed-kernel-preview2/clarifications.md
+sourceChecklist: work/912-typed-kernel-preview2/checklist.md
+sourcePlan: work/912-typed-kernel-preview2/plan.md
+sourceTasks: work/912-typed-kernel-preview2/tasks.yml
+sourceAnalysis: readiness/912-typed-kernel-preview2/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/912-typed-kernel-preview2/analysis.json
+    digest: f962b5d0268cf4dd1f817b1ade6a25a6ccfef6064286a80ba3058aa4671336f4
+    schemaVersion: 1
+  - label: checklist
+    path: work/912-typed-kernel-preview2/checklist.md
+    digest: 1e23a072a4f38da724643b725ed11011c6733033e52ca7b00c0b0b62b962deed
+    schemaVersion: 1
+  - label: clarifications
+    path: work/912-typed-kernel-preview2/clarifications.md
+    digest: bfa963274a64b4db34b13057b2aef4af94aeaad7f461ac94035148e22f4e9006
+    schemaVersion: 1
+  - label: plan
+    path: work/912-typed-kernel-preview2/plan.md
+    digest: acd5eda5ded2134c8bc3371340119a612ae88bc22e1a2e84eb3149291c6a9b22
+    schemaVersion: 1
+  - label: spec
+    path: work/912-typed-kernel-preview2/spec.md
+    digest: 62c29bbb55140e309d55c2f11a148bd9837df3e587cb651451715c19be448da8
+    schemaVersion: 1
+  - label: tasks
+    path: work/912-typed-kernel-preview2/tasks.yml
+    digest: 126474d4e855a69b9bb3204bb668b6032d508f55326b5b4dcf81a9f2c0b3b42b
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002, PD-003]
+    obligationRefs: [EV001]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV002
+    kind: deferral
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV002]
+    artifacts: [".github/workflows/release.yml", tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: ".github/workflows/release.yml"
+    result: deferred
+    synthetic: false
+    rationale: Dual-feed publication cannot be observed until the accepted feature head is merged and the bound package-release obligation runs.
+    owner: tern-91d9
+    scope: Publish FS.GG.SDD.Artifacts 1.3.0-preview.2 to both configured feeds and verify package-entry equivalence.
+    laterLifecycleVisibility: Discharge post-merge through delivery obligation publish-1.3.0-preview.2 before the issue receives a done stamp.
+    notes: ["Pre-merge release-equivalent package metadata is covered by EV001; external publication remains deliberately unclaimed."]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV003]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-002, FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV004]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002]
+    obligationRefs: [EV005]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV006]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV007]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002, PD-003]
+    obligationRefs: [EV008]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV009]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV010
+    kind: deferral
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV010]
+    artifacts: [".github/workflows/release.yml", tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/fixtures/typed-specifications/run-clean-consumer.sh
+    result: deferred
+    synthetic: false
+    rationale: A public-feed-only consumer cannot restore the corrected preview until the accepted feature head is merged and published.
+    owner: tern-91d9
+    scope: Restore and run the typed-specification clean consumer against nuget.org with no NU1603 dependency warning.
+    laterLifecycleVisibility: Discharge post-merge through delivery obligation publish-1.3.0-preview.2 before the issue receives a done stamp.
+    notes: ["The same clean consumer passed pre-merge against the local release-equivalent package; public-feed proof remains deliberately unclaimed."]
+  - id: EV011
+    kind: verification
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV011]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+  - id: EV012
+    kind: verification
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV012]
+    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/912-typed-kernel-preview2/package-contract.trx
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 2
+      failed: 0
+      skipped: 0
+    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+lifecycleNotes:
+  - "Next lifecycle action: verify."

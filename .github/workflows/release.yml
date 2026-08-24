@@ -338,7 +338,7 @@ jobs:
         run: |
           set -euo pipefail
           dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release \
-            -p:Version=${{ needs.resolve-versions.outputs.artifacts_version }} --no-restore -o artifacts/packages
+            --no-restore -o artifacts/packages
 
       - name: Assert the artifacts package was produced
         run: |

@@ -8,7 +8,7 @@ description: The preview typed specification kernel, requirements extension, can
 
 # Typed Specifications Preview
 
-`FS.GG.SDD.Artifacts` 1.3.0-preview.1 adds the namespace
+`FS.GG.SDD.Artifacts` 1.3.0-preview.2 provides the namespace
 `FS.GG.SDD.Artifacts.TypedSpecifications`. It is an additive package API; existing
 Standard SDD Markdown, commands, schemas, defaults, and exit codes are unchanged.
 
@@ -73,3 +73,9 @@ S.I.R dependency flips. Consumers can adopt the namespace without Governance,
 S.I.R, coordination, a source checkout, or local project references. Later
 roadmap milestones own producer re-adoption and the optional `typed-sdd` lifecycle;
 this preview does not imply either is available.
+
+Preview.1 is retained as immutable release history but is not eligible for
+adoption: its package metadata points at a nonexistent Contracts preview and can
+restore only by falling forward with `NU1603`. Preview.2 preserves the package's
+independent `FS.GG.Contracts` 7.5.2 dependency and is the first downstream-eligible
+typed-kernel preview.
