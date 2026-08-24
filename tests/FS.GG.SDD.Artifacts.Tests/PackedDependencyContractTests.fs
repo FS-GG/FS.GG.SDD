@@ -121,6 +121,7 @@ module PackedDependencyContractTests =
                 archive.GetEntry("fable/SpecificationKernel.fs")
                 |> Option.ofObj
                 |> Option.defaultWith (fun () -> failwith "packed Fable kernel source is missing")
+
             use reader = new StreamReader(sourceEntry.Open())
             let source = reader.ReadToEnd()
             Assert.Contains("fsgg-typed-specification/v1", source)
