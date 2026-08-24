@@ -54,7 +54,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -62,7 +62,7 @@ evidence:
       skipped: 0
     notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
   - id: EV002
-    kind: verification
+    kind: deferral
     subject:
       type: task
       id: T002
@@ -73,21 +73,17 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-004]
     obligationRefs: [EV002]
-    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    artifacts: [".github/workflows/release.yml", tests/fixtures/typed-specifications/run-clean-consumer.sh]
     sourceRefs:
       - kind: verification
-        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
-    result: pass
+        path: ".github/workflows/release.yml"
+    result: deferred
     synthetic: false
-    observedRun:
-      source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
-      digestContract: exact-bytes-v1
-      outcome: passed
-      passed: 2
-      failed: 0
-      skipped: 0
-    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+    rationale: Dual-feed publication cannot be observed until the accepted feature head is merged and the bound package-release obligation runs.
+    owner: tern-91d9
+    scope: Publish FS.GG.SDD.Artifacts 1.3.0-preview.2 to both configured feeds and verify package-entry equivalence.
+    laterLifecycleVisibility: Discharge post-merge through delivery obligation publish-1.3.0-preview.2 before the issue receives a done stamp.
+    notes: ["Pre-merge release-equivalent package metadata is covered by EV001; external publication remains deliberately unclaimed."]
   - id: EV003
     kind: verification
     subject:
@@ -108,7 +104,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -135,7 +131,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -162,7 +158,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -189,7 +185,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -216,7 +212,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -243,7 +239,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -270,7 +266,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -278,7 +274,7 @@ evidence:
       skipped: 0
     notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
   - id: EV010
-    kind: verification
+    kind: deferral
     subject:
       type: task
       id: T010
@@ -289,21 +285,17 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-005]
     obligationRefs: [EV010]
-    artifacts: [readiness/912-typed-kernel-preview2/package-contract.trx, tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs, tests/fixtures/typed-specifications/run-clean-consumer.sh]
+    artifacts: [".github/workflows/release.yml", tests/fixtures/typed-specifications/run-clean-consumer.sh]
     sourceRefs:
       - kind: verification
-        path: tests/FS.GG.SDD.Artifacts.Tests/PackedDependencyContractTests.fs
-    result: pass
+        path: tests/fixtures/typed-specifications/run-clean-consumer.sh
+    result: deferred
     synthetic: false
-    observedRun:
-      source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
-      digestContract: exact-bytes-v1
-      outcome: passed
-      passed: 2
-      failed: 0
-      skipped: 0
-    notes: ["Release-equivalent package metadata and mutation controls passed; clean package consumer passed."]
+    rationale: A public-feed-only consumer cannot restore the corrected preview until the accepted feature head is merged and published.
+    owner: tern-91d9
+    scope: Restore and run the typed-specification clean consumer against nuget.org with no NU1603 dependency warning.
+    laterLifecycleVisibility: Discharge post-merge through delivery obligation publish-1.3.0-preview.2 before the issue receives a done stamp.
+    notes: ["The same clean consumer passed pre-merge against the local release-equivalent package; public-feed proof remains deliberately unclaimed."]
   - id: EV011
     kind: verification
     subject:
@@ -324,7 +316,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2
@@ -351,7 +343,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/912-typed-kernel-preview2/package-contract.trx
-      digest: "sha256:ba43fe25382b1aa78391ce8e165d40a33440f3713c31d859f717890d7227cbd6"
+      digest: "sha256:46990a9e4b7fbc1b041ccec42b9d3201263c01145e364358760f0334ed2c4f0d"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 2

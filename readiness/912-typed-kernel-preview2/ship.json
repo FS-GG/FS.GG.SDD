@@ -4,7 +4,7 @@
   "workId": "912-typed-kernel-preview2",
   "stage": "ship",
   "status": "shipReady",
-  "generator": "FS.GG.SDD.Artifacts/1.3.0-preview.2",
+  "generator": "FS.GG.SDD.Artifacts/1.1.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -41,7 +41,7 @@
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "8ea4b713ce321b5d3b28d48d4f56c506f0b80467d5b00c707875c35cc3cc08b3"
+        "value": "f962b5d0268cf4dd1f817b1ade6a25a6ccfef6064286a80ba3058aa4671336f4"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -51,7 +51,7 @@
       "kind": "source",
       "digest": {
         "algorithm": "sha256",
-        "value": "18def52eb1d35bfd5464856ea3566a0063f55847da214432988aabf39d3d6024"
+        "value": "dd7007eb5e788ed08a6bf9830108ce82b385077a0e5446e71ea5c34712c1f3e7"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -61,7 +61,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "ba83e4a2146169c40b49d192f71e8929276e72db133aceec77a1fe807d91b4e7"
+        "value": "6b5581cfdc23e2f378f3b6287eafc186e8dc7cf2450e0fab16e736c2b193cdab"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -91,7 +91,7 @@
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "a77810b0621c4268bc480a082ade32090cfe42565e9280b678979340426455b5"
+        "value": "6c4918ccd22d808da6c53e761aa434ca5ea10d49d202a1d733f07209ca48a2a7"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -167,10 +167,10 @@
   "verificationReadiness": {
     "status": "verificationReady",
     "blockingFindingIds": [],
-    "evidenceSupportedCount": 12,
+    "evidenceSupportedCount": 10,
     "evidenceSelfAttestedCount": 0,
-    "evidenceObservedCount": 12,
-    "evidenceDeferredCount": 0,
+    "evidenceObservedCount": 10,
+    "evidenceDeferredCount": 2,
     "evidenceMissingCount": 0,
     "evidenceStaleCount": 0,
     "evidenceSyntheticCount": 0,
@@ -188,9 +188,9 @@
     {
       "id": "ED-EV002",
       "obligationId": "EV002",
-      "state": "supported",
-      "observed": true,
-      "severity": "ready",
+      "state": "deferred",
+      "observed": false,
+      "severity": "advisory",
       "diagnosticIds": []
     },
     {
@@ -252,9 +252,9 @@
     {
       "id": "ED-EV010",
       "obligationId": "EV010",
-      "state": "supported",
-      "observed": true,
-      "severity": "ready",
+      "state": "deferred",
+      "observed": false,
+      "severity": "advisory",
       "diagnosticIds": []
     },
     {

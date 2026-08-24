@@ -4,16 +4,16 @@
   "workId": "912-typed-kernel-preview2",
   "stage": "ship",
   "status": "shipReady",
-  "generator": "FS.GG.SDD.Artifacts/1.3.0-preview.2",
+  "generator": "FS.GG.SDD.Artifacts/1.1.0",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "4170a07f3076cd8a6e4885c6b55089853fffd3fd765044d96925156e137e1f65"
+    "value": "28b149ce7ceca66a4f9b35d486321154bfd1c7d09931c8f2d5cab92863bec230"
   },
   "verificationReadiness": {
     "status": "verificationReady",
-    "evidenceSupportedCount": 12,
+    "evidenceSupportedCount": 10,
     "evidenceSelfAttestedCount": 0,
-    "evidenceObservedCount": 12
+    "evidenceObservedCount": 10
   },
   "disposition": {
     "state": "shipReady",

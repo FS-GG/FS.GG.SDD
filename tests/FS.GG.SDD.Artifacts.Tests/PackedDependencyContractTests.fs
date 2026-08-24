@@ -20,12 +20,7 @@ module PackedDependencyContractTests =
 
     let private packProject outputDirectory =
         let project =
-            Path.Combine(
-                TestSupport.repoRoot,
-                "src",
-                "FS.GG.SDD.Artifacts",
-                "FS.GG.SDD.Artifacts.fsproj"
-            )
+            Path.Combine(TestSupport.repoRoot, "src", "FS.GG.SDD.Artifacts", "FS.GG.SDD.Artifacts.fsproj")
 
         let startInfo = ProcessStartInfo("dotnet")
         startInfo.WorkingDirectory <- TestSupport.repoRoot
@@ -33,19 +28,14 @@ module PackedDependencyContractTests =
         startInfo.RedirectStandardError <- true
         startInfo.UseShellExecute <- false
 
-        [ "pack"
-          project
-          "-c"
-          "Release"
-          "--no-restore"
-          "-o"
-          outputDirectory ]
+        [ "pack"; project; "-c"; "Release"; "--no-restore"; "-o"; outputDirectory ]
         |> List.iter startInfo.ArgumentList.Add
 
         use child =
             Process.Start startInfo
             |> Option.ofObj
             |> Option.defaultWith (fun () -> failwith "dotnet pack did not start")
+
         let output = child.StandardOutput.ReadToEnd()
         let error = child.StandardError.ReadToEnd()
         child.WaitForExit()
@@ -78,6 +68,7 @@ module PackedDependencyContractTests =
 
             use stream = nuspecEntry.Open()
             let document = XDocument.Load stream
+
             let root =
                 document.Root
                 |> Option.ofObj
@@ -93,10 +84,7 @@ module PackedDependencyContractTests =
                     |> Option.exists (fun attribute -> attribute.Value = "FS.GG.Contracts"))
                 |> Seq.exactlyOne
 
-            let packageVersion =
-                document.Descendants(ns + "version")
-                |> Seq.head
-                |> _.Value
+            let packageVersion = document.Descendants(ns + "version") |> Seq.head |> _.Value
 
             let dependencyVersion =
                 dependency.Attribute(XName.Get "version")
