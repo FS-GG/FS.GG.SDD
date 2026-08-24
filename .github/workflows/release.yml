@@ -3,12 +3,13 @@ name: release
 # Producer of the cross-repo auto-update fabric. On a release of FS.GG.SDD (or a pushed
 # v* tag, or a manual dispatch), a single run publishes TWO packages to the org GitHub
 # Packages feed (nuget.pkg.github.com/FS-GG): FS.GG.Contracts (the org-shared contracts
-# line) and FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool, the SDD product line). Versions come
-# from each project's own version properties — this header pins none, to avoid staleness.
-# Both push with --skip-duplicate using the run-scoped GITHUB_TOKEN (packages: write, no
+# line), FS.GG.SDD.Artifacts (the independently consumable lifecycle/specification contracts),
+# and FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool). Versions come from each project's own
+# version properties — this header pins none, to avoid staleness. All three push with
+# --skip-duplicate using the run-scoped GITHUB_TOKEN (packages: write, no
 # PAT), only from the canonical repo.
 #
-# THE CONTRACT for triggers + version-resolution + gating + the two-package scope is
+# THE CONTRACT for triggers + version-resolution + gating + the three-package scope is
 # specs/044-publish-cli-tool/contracts/release-workflow.md (it supersedes feature 039's
 # single-package producer contract). This YAML is its implementation, not folklore. Each
 # package's published version is its EVALUATED fsproj <Version> (msbuild -getProperty); a
@@ -49,6 +50,7 @@ jobs:
     if: github.repository == 'FS-GG/FS.GG.SDD'
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
+      artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
       cli_version: ${{ steps.ver.outputs.cli_version }}
       push: ${{ steps.ver.outputs.push }}
     steps:
@@ -81,8 +83,15 @@ jobs:
 
           contracts_version="$(dotnet msbuild src/FS.GG.Contracts/FS.GG.Contracts.fsproj -getProperty:Version)"
           contracts_version="$(printf '%s' "$contracts_version" | tr -d '[:space:]')"
+          artifacts_version="$(dotnet msbuild src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -getProperty:Version)"
+          artifacts_version="$(printf '%s' "$artifacts_version" | tr -d '[:space:]')"
           cli_version="$(dotnet msbuild src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -getProperty:Version)"
           cli_version="$(printf '%s' "$cli_version" | tr -d '[:space:]')"
+
+          if [ -z "$artifacts_version" ] || [ "$artifacts_version" != "$cli_version" ]; then
+            echo "::error::FS.GG.SDD.Artifacts ($artifacts_version) and FS.GG.SDD.Cli ($cli_version) must share one coherent-set version."
+            exit 1
+          fi
 
           push=""
 
@@ -98,7 +107,7 @@ jobs:
               push="true"
             else
               # Intentional dry run: pack both fsproj versions, push nothing (FR-004).
-              if [ -z "$contracts_version" ] || [ -z "$cli_version" ]; then
+              if [ -z "$contracts_version" ] || [ -z "$artifacts_version" ] || [ -z "$cli_version" ]; then
                 echo "::error::could not read <Version> from one of the fsprojs (build defect)."
                 exit 1
               fi
@@ -108,7 +117,7 @@ jobs:
           else
             # release: published  OR  push: tags v*  — a real publish from the fsproj versions.
             # Unreadable version is a defect: fail, never silently degrade to a dry run (FR-006).
-            if [ -z "$contracts_version" ] || [ -z "$cli_version" ]; then
+            if [ -z "$contracts_version" ] || [ -z "$artifacts_version" ] || [ -z "$cli_version" ]; then
               echo "::error::could not read <Version> from one of the fsprojs on a $EVENT_NAME event (build defect); refusing to silently skip the publish."
               exit 1
             fi
@@ -122,8 +131,8 @@ jobs:
             # regardless of which line the tag matched (FR-005; research Decision 2).
             if printf '%s' "$tag" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+'; then
               tag_version="$(strip_v "$tag")"
-              if [ "$tag_version" != "$contracts_version" ] && [ "$tag_version" != "$cli_version" ]; then
-                echo "::error::release tag '$tag' (version $tag_version) matches NEITHER the FS.GG.Contracts fsproj <Version> ($contracts_version) NOR the FS.GG.SDD.Cli fsproj <Version> ($cli_version). The fsprojs are the source of truth; reconcile the tag or a fsproj before releasing."
+              if [ "$tag_version" != "$contracts_version" ] && [ "$tag_version" != "$artifacts_version" ] && [ "$tag_version" != "$cli_version" ]; then
+                echo "::error::release tag '$tag' (version $tag_version) matches none of the evaluated package versions: Contracts=$contracts_version Artifacts=$artifacts_version CLI=$cli_version. The fsprojs are the source of truth; reconcile the tag or a fsproj before releasing."
                 exit 1
               fi
             fi
@@ -132,9 +141,10 @@ jobs:
           fi
 
           echo "contracts_version=$contracts_version" >> "$GITHUB_OUTPUT"
+          echo "artifacts_version=$artifacts_version" >> "$GITHUB_OUTPUT"
           echo "cli_version=$cli_version" >> "$GITHUB_OUTPUT"
           echo "push=$push" >> "$GITHUB_OUTPUT"
-          echo "Resolved: contracts_version=$contracts_version cli_version=$cli_version push=$push (event=$EVENT_NAME)"
+          echo "Resolved: contracts_version=$contracts_version artifacts_version=$artifacts_version cli_version=$cli_version push=$push (event=$EVENT_NAME)"
 
   contracts-tests:
     name: Contracts tests (publish gate)
@@ -164,6 +174,30 @@ jobs:
       # The gate (FR-003): publish-contracts `needs` this job, so a red run never reaches the push.
       - name: Test (FS.GG.Contracts)
         run: dotnet test tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj -c Release --no-restore
+
+  artifacts-tests:
+    name: Artifacts tests (publish gate)
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore (locked)
+        uses: ./.github/actions/locked-restore
+        with:
+          target: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
+
+      - name: Test (FS.GG.SDD.Artifacts)
+        run: dotnet test tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj -c Release --no-restore
+
+      - name: Verify clean package consumption
+        run: tests/fixtures/typed-specifications/run-clean-consumer.sh
 
   cli-tests:
     name: CLI tests (publish gate)
@@ -275,6 +309,71 @@ jobs:
           dotnet nuget push "artifacts/packages/*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
             --api-key ${{ steps.nuget-login-contracts.outputs.NUGET_API_KEY }} \
+            --skip-duplicate
+
+  publish-artifacts:
+    name: Pack + publish FS.GG.SDD.Artifacts
+    needs: [resolve-versions, artifacts-tests]
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore (locked)
+        uses: ./.github/actions/locked-restore
+        with:
+          target: src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj
+
+      - name: Pack
+        run: |
+          set -euo pipefail
+          dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release \
+            -p:Version=${{ needs.resolve-versions.outputs.artifacts_version }} --no-restore -o artifacts/packages
+
+      - name: Assert the artifacts package was produced
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg)
+          if [ ${#packages[@]} -ne 1 ]; then
+            echo "::error::pack must produce exactly one FS.GG.SDD.Artifacts .nupkg."
+            exit 1
+          fi
+          printf 'Packed: %s\n' "${packages[@]}"
+
+      - name: Push to the org feed
+        if: needs.resolve-versions.outputs.push == 'true'
+        run: |
+          set -euo pipefail
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg" \
+            --source https://nuget.pkg.github.com/FS-GG/index.json \
+            --api-key ${{ secrets.GITHUB_TOKEN }} \
+            --skip-duplicate
+
+      - name: NuGet login (OIDC → short-lived nuget.org key)
+        if: needs.resolve-versions.outputs.push == 'true'
+        id: nuget-login-artifacts
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER || 'Paradigma11' }}
+
+      - name: Push to nuget.org (public)
+        if: needs.resolve-versions.outputs.push == 'true'
+        run: |
+          set -euo pipefail
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key ${{ steps.nuget-login-artifacts.outputs.NUGET_API_KEY }} \
             --skip-duplicate
 
   publish-cli:

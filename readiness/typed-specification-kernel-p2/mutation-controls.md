@@ -101,3 +101,16 @@ test/build outputs below; each mutation was reverted immediately after observati
   fail-closed validation classification.
 - Result: neither original escape survives, and the production-shaped positive
   control is admitted losslessly.
+
+## Dual-feed Artifacts release route
+
+- Subject: `.github/workflows/release.yml` and
+  `ReleaseWorkflowContractTests.release publishes the independently consumable artifacts package to both feeds`.
+- Mutation: rename the `publish-artifacts` job so the release contract no longer
+  exposes the required package lane.
+- Census: the focused release-workflow contract test reads the production workflow,
+  requires exactly one job, its locked tests and clean-consumer gate, explicit
+  coherent version, exact package glob, and two ordered feed pushes.
+- Positive control: the unchanged workflow admits one job and proves the org-feed
+  URL occurs before the public nuget.org URL.
+- Result: exit 1; the named test reported expected job count 1, actual 0.
