@@ -21,3 +21,4 @@ FS.GG.SDD.Cli.Rendering.resolveValidation
 FS.GG.SDD.Cli.Rendering.selectFormat
 FS.GG.SDD.Cli.Rendering.selectValidationFormat
 FS.GG.SDD.Cli.Rendering.stageStateStyle
+FS.GG.SDD.Cli.TypedSdd.run

@@ -363,6 +363,7 @@ let run args =
     // producer manifest; peer of `registry validate`, also before `parseCommand`.
     | "registry" :: "skill-manifest" :: rest -> FS.GG.SDD.Cli.RegistrySkillManifest.run rest
     | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
+    | "typed-sdd" :: rest -> FS.GG.SDD.Cli.TypedSdd.run rest
     | commandValue :: rest ->
         match parseCommand commandValue with
         // Unknown command resolves to `unknownCommand` even with `--help` (FR-011): a

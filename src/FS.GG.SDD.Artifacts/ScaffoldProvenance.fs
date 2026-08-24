@@ -6,6 +6,7 @@ open System.Text
 open System.Text.Json
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.SchemaVersion
+open FS.GG.SDD.Artifacts.TypedSpecifications
 
 module ScaffoldProvenance =
     type ScaffoldProducedPath =
@@ -55,6 +56,15 @@ module ScaffoldProvenance =
     let devRepoOutcome = "devRepoInit"
 
     let isDevRepo (record: ScaffoldProvenanceRecord) = record.Outcome = devRepoOutcome
+
+    let lifecycleLane (record: ScaffoldProvenanceRecord) =
+        record.EffectiveParameters
+        |> List.tryPick (fun (key, value) ->
+            if String.Equals(key, "lifecycle", StringComparison.OrdinalIgnoreCase) then
+                Some value
+            else
+                None)
+        |> LifecycleLane.resolve
 
     let devRepoRecord
         (generator: GeneratorVersion)

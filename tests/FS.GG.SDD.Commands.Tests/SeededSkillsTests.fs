@@ -233,7 +233,7 @@ module SeededSkillsTests =
         // Every one of the 32 seeded-skill WriteFile effects (16 skills × 2 roots) flows
         // through scaffold via the reused initEffects seam. Fails if scaffold stops reusing
         // initEffects. The two-root contract is intentionally driven by Schemas.agentSkillRoots.
-        Assert.Equal(32, List.length (SeededSkills.skillEffects ()))
+        Assert.Equal(38, List.length (SeededSkills.skillEffects ()))
 
         for effect in SeededSkills.skillEffects () do
             Assert.Contains(effect, planned)

@@ -241,6 +241,7 @@ FS.GG.SDD.Artifacts.RequirementModel.parseRequirements
 FS.GG.SDD.Artifacts.RequirementModel.requirementClassification
 FS.GG.SDD.Artifacts.ScaffoldProvenance.devRepoRecord
 FS.GG.SDD.Artifacts.ScaffoldProvenance.isDevRepo
+FS.GG.SDD.Artifacts.ScaffoldProvenance.lifecycleLane
 FS.GG.SDD.Artifacts.ScaffoldProvenance.serialize
 FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse
 FS.GG.SDD.Artifacts.SchemaVersion.classifyRaw

@@ -31,9 +31,9 @@ module Options =
 
     let commandOptions (command: SddCommand) =
         match command with
-        // `init` and `doctor` take the global flags only.
-        | Init
-        | Doctor -> []
+        // `init` takes the global flags only.
+        | Init -> []
+        | Doctor -> [ work ]
         | Charter -> [ work; title ]
         | Specify
         | Clarify -> [ work; title; valued "--input" ]
@@ -59,7 +59,7 @@ module Options =
         | Agents
         | Refresh -> [ work; title ]
         | Scaffold -> [ valued "--provider"; valued "--param"; flag "--force"; flag "--no-update" ]
-        | Upgrade -> [ flag "--yes" ]
+        | Upgrade -> [ work; flag "--yes" ]
         // `lint` takes its artifact as a positional; `--explain` is global.
         | Lint -> []
         | Surface -> [ flag "--check"; flag "--update"; valued "--param" ]

@@ -12,6 +12,7 @@ open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.SchemaVersion
 open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
+open FS.GG.SDD.Artifacts.TypedSpecifications
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 
@@ -632,6 +633,144 @@ nuget-cache/
 
     let readinessDirectory workId = $"readiness/{workId}"
 
+    let typedAuthorityReadEffects workId =
+        [ ReadFile ScaffoldProvenance.provenancePath
+          ReadFile(TypedAuthorityManifest.path workId)
+          ReadFile($"work/{workId}/specification.fsx")
+          ReadFile($"readiness/{workId}/specification.normalized.json")
+          ReadFile(specPath workId) ]
+
+    let typedCompilerEffect workId =
+        RunProcess("dotnet", [ "fsi"; "--exec"; $"work/{workId}/specification.fsx" ], "")
+
+    let typedLifecycleSelected model =
+        let provenance =
+            model.InterpretedEffects
+            |> List.tryPick (fun result ->
+                match result.Effect, result.Snapshot with
+                | ReadFile path, Some snapshot when
+                    normalizeRelativePath path = normalizeRelativePath ScaffoldProvenance.provenancePath
+                    ->
+                    ScaffoldProvenance.tryParse snapshot.Text
+                | _ -> None)
+
+        provenance
+        |> Option.bind (ScaffoldProvenance.lifecycleLane >> Result.toOption)
+        |> Option.contains TypedSdd
+
+    let typedCompilerCandidateEffects workId model =
+        let effect = typedCompilerEffect workId
+
+        let alreadyKnown =
+            model.PendingEffects |> List.contains effect
+            || model.InterpretedEffects |> List.exists (fun result -> result.Effect = effect)
+
+        if typedLifecycleSelected model && not alreadyKnown then
+            [ effect ]
+        else
+            []
+
+    let typedLifecycleDiagnostics workId model =
+        let findSnapshot path =
+            model.InterpretedEffects
+            |> List.tryPick (fun result ->
+                match result.Effect with
+                | ReadFile candidate when normalizeRelativePath candidate = normalizeRelativePath path ->
+                    result.Snapshot
+                | _ -> None)
+
+        let compilerResult =
+            model.InterpretedEffects
+            |> List.tryPick (fun result ->
+                if result.Effect = typedCompilerEffect workId then
+                    result.Process
+                else
+                    None)
+
+        let asDiagnostic (finding: TypedLifecycleDiagnostic) =
+            Diagnostics.create finding.Id DiagnosticError None None finding.Message finding.Correction []
+
+        match findSnapshot ScaffoldProvenance.provenancePath with
+        | Some provenanceSnapshot ->
+            match ScaffoldProvenance.tryParse provenanceSnapshot.Text with
+            | Some provenance ->
+                match ScaffoldProvenance.lifecycleLane provenance with
+                | Ok TypedSdd ->
+                    let manifestPath = TypedAuthorityManifest.path workId
+
+                    match findSnapshot manifestPath with
+                    | None ->
+                        [ Diagnostics.create
+                              "typedSdd.authorityMissing"
+                              DiagnosticError
+                              None
+                              None
+                              "The Typed SDD authority manifest is missing."
+                              "Run fsgg-sdd typed-sdd author or accept a migration."
+                              [] ]
+                    | Some manifestSnapshot ->
+                        match TypedAuthorityManifest.deserialize manifestSnapshot.Text with
+                        | Error finding -> [ asDiagnostic finding ]
+                        | Ok authority ->
+                            let canonicalPath = $"work/{workId}/specification.fsx"
+                            let normalizedPath = $"readiness/{workId}/specification.normalized.json"
+                            let markdownPath = specPath workId
+
+                            let bytes path =
+                                findSnapshot path
+                                |> Option.map (fun value ->
+                                    value.RawBytes |> Option.defaultValue (Encoding.UTF8.GetBytes value.Text))
+
+                            let expectedPackageIdentity =
+                                $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
+
+                            let baseFindings =
+                                TypedAuthorityManifest.validate
+                                    expectedPackageIdentity
+                                    (compilerResult
+                                     |> Option.forall (fun result -> result.Started && result.ExitCode = 0))
+                                    (bytes canonicalPath)
+                                    (bytes normalizedPath)
+                                    (bytes markdownPath)
+                                    authority
+
+                            let pathFindings =
+                                [ if
+                                      authority.CanonicalPath <> canonicalPath
+                                      || authority.NormalizedPath <> normalizedPath
+                                      || authority.MarkdownPath <> markdownPath
+                                  then
+                                      yield
+                                          { Id = "typedSdd.authorityPathMismatch"
+                                            Message = "Authority paths do not match the selected work id."
+                                            Correction = "Regenerate the authority manifest for this work id." } ]
+
+                            let derivationFindings =
+                                match bytes canonicalPath, bytes normalizedPath, bytes markdownPath with
+                                | Some canonical, Some normalized, Some markdown ->
+                                    TypedAuthorityManifest.validateDerivation canonical normalized markdown
+                                | _ -> []
+
+                            let compilationFindings =
+                                match compilerResult with
+                                | Some result when result.Started && result.ExitCode <> 0 ->
+                                    [ { Id = "typedSdd.compilationFailed"
+                                        Message =
+                                          if String.IsNullOrWhiteSpace result.StandardError then
+                                              "Canonical F# execution failed."
+                                          else
+                                              result.StandardError
+                                        Correction =
+                                          "Correct canonical F# and restore the pinned compiler/package identity." } ]
+                                | _ -> []
+
+                            baseFindings @ pathFindings @ derivationFindings @ compilationFindings
+                            |> List.map asDiagnostic
+                | Ok _ -> []
+                | Error finding -> [ asDiagnostic finding ]
+            | None -> []
+        | None -> []
+
     /// The read-effect frame the pre-work-model stages (charter → tasks) share: the three
     /// `.fsgg` config reads, charter + spec, the stage's growing set of `authored` artifact
     /// reads, then the common tasks/evidence/work-model reads and the `work` enumeration
@@ -969,8 +1108,10 @@ nuget-cache/
                 | Agents, Some workId -> [], agentsReadEffects workId
                 | Refresh, Some workId -> [], refreshReadEffects workId
                 | Scaffold, _ -> [], scaffoldReadEffects
-                | Doctor, _
-                | Upgrade, _ -> [], remediationReadEffects
+                | Doctor, Some workId
+                | Upgrade, Some workId -> [], remediationReadEffects @ typedAuthorityReadEffects workId
+                | Doctor, None
+                | Upgrade, None -> [], remediationReadEffects
                 // Feature 086: enumerate the source + baseline roots; the handler gates the
                 // per-file body reads and computes the surface drift.
                 // FS-GG/FS.GG.SDD#185: an escaping root is a plan-time user error (same shape as
@@ -1000,6 +1141,39 @@ nuget-cache/
                     | Some path -> [], [ ReadFile path ]
                     | None -> [ lintMissingArtifact () ], []
                 | command, _ -> [ unsupportedCommand command ], []
+
+            let planned =
+                match request.WorkId, planned with
+                | Some workId, (plannedDiagnostics, effects) when
+                    List.isEmpty plannedDiagnostics
+                    && (match request.Command with
+                        | Charter
+                        | Specify
+                        | Clarify
+                        | Checklist
+                        | Plan
+                        | Tasks
+                        | Analyze
+                        | Evidence
+                        | Verify
+                        | Ship
+                        | Agents
+                        | Refresh -> true
+                        | _ -> false)
+                    ->
+                    let readPath effect =
+                        match effect with
+                        | ReadFile path -> Some(normalizeRelativePath path)
+                        | _ -> None
+
+                    let existing = effects |> List.choose readPath |> Set.ofList
+
+                    plannedDiagnostics,
+                    effects
+                    @ (typedAuthorityReadEffects workId
+                       |> List.filter (fun effect ->
+                           readPath effect |> Option.forall (fun path -> not (Set.contains path existing))))
+                | _ -> planned
 
             // Feature 084: append lifecycle-status sensing reads (deduped) so the report footer
             // reflects every stage's on-disk state, when a work id resolves and the plan is clean.

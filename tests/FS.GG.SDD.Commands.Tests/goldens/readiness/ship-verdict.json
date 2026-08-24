@@ -4,10 +4,10 @@
   "workId": "068-readiness-golden",
   "stage": "ship",
   "status": "shipReady",
-  "generator": "FS.GG.SDD.Artifacts/1.3.0-preview.3",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0-preview.1",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "336a2ac89ee46e4d98841ea2250b3887e74732009fa12c28d8dff1d4babe71a2"
+    "value": "eeca117d843e4b78adbf7eb850f7b675de7a77e44c436428b498306cb5f24205"
   },
   "verificationReadiness": {
     "status": "verificationReady",

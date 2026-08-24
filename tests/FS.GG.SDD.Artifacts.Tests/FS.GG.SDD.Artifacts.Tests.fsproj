@@ -7,6 +7,7 @@
     <Compile Include="../Shared/TestShared.fs" />
     <Compile Include="TestSupport.fs" />
     <Compile Include="TypedSpecificationKernelTests.fs" />
+    <Compile Include="TypedLifecycleTests.fs" />
     <Compile Include="PackedDependencyContractTests.fs" />
     <Compile Include="IdentifierTests.fs" />
     <Compile Include="DriverManifestTests.fs" />

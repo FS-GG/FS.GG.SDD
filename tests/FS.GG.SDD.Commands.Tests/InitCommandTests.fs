@@ -339,7 +339,7 @@ module InitCommandTests =
         let report = runInit root
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
-        Assert.Equal(16, List.length FS.GG.SDD.Commands.Internal.SeededSkills.skillNames)
+        Assert.Equal(19, List.length FS.GG.SDD.Commands.Internal.SeededSkills.skillNames)
 
         for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
             for surface in [ ".claude"; ".agents" ] do
