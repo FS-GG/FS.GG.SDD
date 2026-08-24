@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "068-readiness-golden",
+  "workId": "typed-kernel-p2-fable",
   "stage": "ship",
   "status": "shipReady",
   "generator": "FS.GG.SDD.Artifacts/1.3.0-preview.3",
@@ -21,7 +21,7 @@
       "kind": "projectConfig",
       "digest": {
         "algorithm": "sha256",
-        "value": "42f9a714e54b6a148cecdd5d4b3f702c53faad65ee8ac62125845c851e0d2f02"
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -37,91 +37,91 @@
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/typed-kernel-p2-fable/analysis.json",
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "a74b6c2da31eff2badc1ac009fd4925b42a7ad4ef0a2372685558f6f61ec1d64"
+        "value": "dc97ea69bb9beb2a3b0697da37bbd1dc89c17f7cdbc5e0f40dbcf62e5ec02388"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/verify.json",
+      "path": "readiness/typed-kernel-p2-fable/verify.json",
       "kind": "source",
       "digest": {
         "algorithm": "sha256",
-        "value": "3081c38d835b1d3c7dda3b26daa154c6116b3a46a91e9ee1a5723b7c9722cd9e"
+        "value": "fd7bfe1359a22ab2e806142f5e7b28b8b3096aba729b644f54c3eacf74972562"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/typed-kernel-p2-fable/work-model.json",
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "a6d59c00ce279ea19ebcc832ec32510c5d32acf90acde293926998f3814c5230"
+        "value": "414f745e448795f7fbcbfbac5dc9d48d7f6a927414cdac4272aeccb5cb24771a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/checklist.md",
+      "path": "work/typed-kernel-p2-fable/checklist.md",
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "3c5b5f41feed6d37bf164f11c60ae912ef0dd1b06cf910ba09c80caca3eeac79"
+        "value": "34c31d987317ab6d80c5e90db685f78e03133591fa57fdca43c329e2ec3cd18b"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/clarifications.md",
+      "path": "work/typed-kernel-p2-fable/clarifications.md",
       "kind": "clarification",
       "digest": {
         "algorithm": "sha256",
-        "value": "3ff8766f120ff472917b7904492ab4e80e2b4b0d17067c5667a8cad78d799e9f"
+        "value": "61228784359c84673c87bf0c13a8c0774a5974194f9bd4cd42bd24a284f2db5a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/evidence.yml",
+      "path": "work/typed-kernel-p2-fable/evidence.yml",
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "35205b37732dfcf9ebc4e7249ed47eb81279b872444011a2fcfac2f9f3a4480b"
+        "value": "da57f86df54675601b0068ae7742492eed34eafbc443bde88046991f04cd20ef"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/plan.md",
+      "path": "work/typed-kernel-p2-fable/plan.md",
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "1cf7d0eb4afbbde8b5218d18e4a08b49dbf0b6b53081268a1c447df724582ca1"
+        "value": "1f1f850eb63d38fd7faa2f34bbfa6a4bcad88c08f3c9b6521d85fd95b4d2303a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/spec.md",
+      "path": "work/typed-kernel-p2-fable/spec.md",
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "9181f6ded8f26df9d848187d53b36272d59bbb1928145601663371f5c03963a7"
+        "value": "793eb033c8a37abe954efb879140b546e3e378326e98b2a09a3e7d6d7fa1d0a9"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/tasks.yml",
+      "path": "work/typed-kernel-p2-fable/tasks.yml",
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "98a46330c2dd89d7812499b56ab88c181c37a572c40ded08b817574fdda390a4"
+        "value": "bfc9bb26cc62f7185708e0a5878eab2125ecce7bd4007a5a7d84b6c20a151b20"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -167,9 +167,9 @@
   "verificationReadiness": {
     "status": "verificationReady",
     "blockingFindingIds": [],
-    "evidenceSupportedCount": 5,
-    "evidenceSelfAttestedCount": 5,
-    "evidenceObservedCount": 0,
+    "evidenceSupportedCount": 9,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 9,
     "evidenceDeferredCount": 0,
     "evidenceMissingCount": 0,
     "evidenceStaleCount": 0,
@@ -181,7 +181,7 @@
       "id": "ED-EV001",
       "obligationId": "EV001",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -189,7 +189,7 @@
       "id": "ED-EV002",
       "obligationId": "EV002",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -197,7 +197,7 @@
       "id": "ED-EV003",
       "obligationId": "EV003",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -205,7 +205,7 @@
       "id": "ED-EV004",
       "obligationId": "EV004",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -213,26 +213,58 @@
       "id": "ED-EV005",
       "obligationId": "EV005",
       "state": "supported",
-      "observed": false,
+      "observed": true,
+      "severity": "ready",
+      "diagnosticIds": []
+    },
+    {
+      "id": "ED-EV006",
+      "obligationId": "EV006",
+      "state": "supported",
+      "observed": true,
+      "severity": "ready",
+      "diagnosticIds": []
+    },
+    {
+      "id": "ED-EV007",
+      "obligationId": "EV007",
+      "state": "supported",
+      "observed": true,
+      "severity": "ready",
+      "diagnosticIds": []
+    },
+    {
+      "id": "ED-EV008",
+      "obligationId": "EV008",
+      "state": "supported",
+      "observed": true,
+      "severity": "ready",
+      "diagnosticIds": []
+    },
+    {
+      "id": "ED-EV009",
+      "obligationId": "EV009",
+      "state": "supported",
+      "observed": true,
       "severity": "ready",
       "diagnosticIds": []
     }
   ],
   "generatedViews": [
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/typed-kernel-p2-fable/analysis.json",
       "kind": "analysis",
       "currency": "current",
       "diagnosticIds": []
     },
     {
-      "path": "readiness/068-readiness-golden/verify.json",
+      "path": "readiness/typed-kernel-p2-fable/verify.json",
       "kind": "verification",
       "currency": "current",
       "diagnosticIds": []
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/typed-kernel-p2-fable/work-model.json",
       "kind": "workModel",
       "currency": "current",
       "diagnosticIds": []

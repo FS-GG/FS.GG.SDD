@@ -98,6 +98,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="TypedSpecifications/Fable/FS.GG.SDD.Artifacts.fsproj" Pack="true" PackagePath="fable/FS.GG.SDD.Artifacts.fsproj" />
+    <None Include="TypedSpecifications/Fable/SpecificationKernel.fs" Pack="true" PackagePath="fable/SpecificationKernel.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Canonical Fsgg.Provider types (Feature 036). Clean leaf dependency — Contracts
          is BCL-only, so this adds a project edge and no new package (Feature 038). -->
     <ProjectReference Include="..\FS.GG.Contracts\FS.GG.Contracts.fsproj" />

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "068-readiness-golden",
+  "workId": "typed-kernel-p2-fable",
   "stage": "verify",
   "status": "verificationReady",
   "generator": "FS.GG.SDD.Artifacts/1.3.0-preview.3",
@@ -21,7 +21,7 @@
       "kind": "projectConfig",
       "digest": {
         "algorithm": "sha256",
-        "value": "42f9a714e54b6a148cecdd5d4b3f702c53faad65ee8ac62125845c851e0d2f02"
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -37,81 +37,81 @@
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/typed-kernel-p2-fable/analysis.json",
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "a74b6c2da31eff2badc1ac009fd4925b42a7ad4ef0a2372685558f6f61ec1d64"
+        "value": "dc97ea69bb9beb2a3b0697da37bbd1dc89c17f7cdbc5e0f40dbcf62e5ec02388"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/typed-kernel-p2-fable/work-model.json",
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "a6d59c00ce279ea19ebcc832ec32510c5d32acf90acde293926998f3814c5230"
+        "value": "414f745e448795f7fbcbfbac5dc9d48d7f6a927414cdac4272aeccb5cb24771a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/checklist.md",
+      "path": "work/typed-kernel-p2-fable/checklist.md",
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "3c5b5f41feed6d37bf164f11c60ae912ef0dd1b06cf910ba09c80caca3eeac79"
+        "value": "34c31d987317ab6d80c5e90db685f78e03133591fa57fdca43c329e2ec3cd18b"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/clarifications.md",
+      "path": "work/typed-kernel-p2-fable/clarifications.md",
       "kind": "clarification",
       "digest": {
         "algorithm": "sha256",
-        "value": "3ff8766f120ff472917b7904492ab4e80e2b4b0d17067c5667a8cad78d799e9f"
+        "value": "61228784359c84673c87bf0c13a8c0774a5974194f9bd4cd42bd24a284f2db5a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/evidence.yml",
+      "path": "work/typed-kernel-p2-fable/evidence.yml",
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "35205b37732dfcf9ebc4e7249ed47eb81279b872444011a2fcfac2f9f3a4480b"
+        "value": "da57f86df54675601b0068ae7742492eed34eafbc443bde88046991f04cd20ef"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/plan.md",
+      "path": "work/typed-kernel-p2-fable/plan.md",
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "1cf7d0eb4afbbde8b5218d18e4a08b49dbf0b6b53081268a1c447df724582ca1"
+        "value": "1f1f850eb63d38fd7faa2f34bbfa6a4bcad88c08f3c9b6521d85fd95b4d2303a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/spec.md",
+      "path": "work/typed-kernel-p2-fable/spec.md",
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "9181f6ded8f26df9d848187d53b36272d59bbb1928145601663371f5c03963a7"
+        "value": "793eb033c8a37abe954efb879140b546e3e378326e98b2a09a3e7d6d7fa1d0a9"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/068-readiness-golden/tasks.yml",
+      "path": "work/typed-kernel-p2-fable/tasks.yml",
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "98a46330c2dd89d7812499b56ab88c181c37a572c40ded08b817574fdda390a4"
+        "value": "bfc9bb26cc62f7185708e0a5878eab2125ecce7bd4007a5a7d84b6c20a151b20"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -151,7 +151,7 @@
     ]
   },
   "taskGraph": {
-    "taskCount": 5,
+    "taskCount": 9,
     "dependencyCount": 4,
     "dependenciesValid": true,
     "statusesValid": true,
@@ -162,7 +162,7 @@
       "id": "ED-EV001",
       "obligationId": "EV001",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -185,7 +185,7 @@
       "id": "ED-EV002",
       "obligationId": "EV002",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -196,8 +196,9 @@
         "T002"
       ],
       "affectedSourceIds": [
-        "PC-001",
-        "PD-001"
+        "AC-001",
+        "FR-002",
+        "PD-002"
       ],
       "severity": "ready",
       "diagnosticIds": [],
@@ -207,7 +208,7 @@
       "id": "ED-EV003",
       "obligationId": "EV003",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -218,9 +219,9 @@
         "T003"
       ],
       "affectedSourceIds": [
-        "PC-001",
-        "PD-001",
-        "VO-001"
+        "AC-001",
+        "FR-003",
+        "PD-003"
       ],
       "severity": "ready",
       "diagnosticIds": [],
@@ -230,7 +231,7 @@
       "id": "ED-EV004",
       "obligationId": "EV004",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -241,8 +242,9 @@
         "T004"
       ],
       "affectedSourceIds": [
-        "PC-001",
-        "PM-001"
+        "AC-001",
+        "FR-004",
+        "PD-004"
       ],
       "severity": "ready",
       "diagnosticIds": [],
@@ -252,7 +254,7 @@
       "id": "ED-EV005",
       "obligationId": "EV005",
       "state": "supported",
-      "observed": false,
+      "observed": true,
       "classifiedRequirement": false,
       "journeyRequirement": false,
       "recordRequirement": false,
@@ -261,6 +263,100 @@
       ],
       "affectedTaskIds": [
         "T005"
+      ],
+      "affectedSourceIds": [
+        "AC-001",
+        "FR-005",
+        "PD-005"
+      ],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "ED-EV006",
+      "obligationId": "EV006",
+      "state": "supported",
+      "observed": true,
+      "classifiedRequirement": false,
+      "journeyRequirement": false,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV006"
+      ],
+      "affectedTaskIds": [
+        "T006"
+      ],
+      "affectedSourceIds": [
+        "PC-001",
+        "PD-001"
+      ],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "ED-EV007",
+      "obligationId": "EV007",
+      "state": "supported",
+      "observed": true,
+      "classifiedRequirement": false,
+      "journeyRequirement": false,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV007"
+      ],
+      "affectedTaskIds": [
+        "T007"
+      ],
+      "affectedSourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-002",
+        "PD-003",
+        "PD-004",
+        "PD-005",
+        "VO-001"
+      ],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "ED-EV008",
+      "obligationId": "EV008",
+      "state": "supported",
+      "observed": true,
+      "classifiedRequirement": false,
+      "journeyRequirement": false,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV008"
+      ],
+      "affectedTaskIds": [
+        "T008"
+      ],
+      "affectedSourceIds": [
+        "PC-001",
+        "PM-001"
+      ],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "ED-EV009",
+      "obligationId": "EV009",
+      "state": "supported",
+      "observed": true,
+      "classifiedRequirement": false,
+      "journeyRequirement": false,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV009"
+      ],
+      "affectedTaskIds": [
+        "T009"
       ],
       "affectedSourceIds": [
         "GV-001",
@@ -276,7 +372,7 @@
       "id": "TD-EV001",
       "obligationId": "EV001",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV001"
@@ -295,7 +391,7 @@
       "id": "TD-EV002",
       "obligationId": "EV002",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV002"
@@ -303,7 +399,9 @@
       "affectedTaskIds": [
         "T002"
       ],
-      "affectedRequirementIds": [],
+      "affectedRequirementIds": [
+        "FR-002"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -312,7 +410,7 @@
       "id": "TD-EV003",
       "obligationId": "EV003",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV003"
@@ -320,7 +418,9 @@
       "affectedTaskIds": [
         "T003"
       ],
-      "affectedRequirementIds": [],
+      "affectedRequirementIds": [
+        "FR-003"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -329,7 +429,7 @@
       "id": "TD-EV004",
       "obligationId": "EV004",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV004"
@@ -337,7 +437,9 @@
       "affectedTaskIds": [
         "T004"
       ],
-      "affectedRequirementIds": [],
+      "affectedRequirementIds": [
+        "FR-004"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -346,13 +448,83 @@
       "id": "TD-EV005",
       "obligationId": "EV005",
       "state": "satisfied",
-      "observed": false,
+      "observed": true,
       "recordRequirement": false,
       "evidenceIds": [
         "EV005"
       ],
       "affectedTaskIds": [
         "T005"
+      ],
+      "affectedRequirementIds": [
+        "FR-005"
+      ],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "TD-EV006",
+      "obligationId": "EV006",
+      "state": "satisfied",
+      "observed": true,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV006"
+      ],
+      "affectedTaskIds": [
+        "T006"
+      ],
+      "affectedRequirementIds": [],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "TD-EV007",
+      "obligationId": "EV007",
+      "state": "satisfied",
+      "observed": true,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV007"
+      ],
+      "affectedTaskIds": [
+        "T007"
+      ],
+      "affectedRequirementIds": [],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "TD-EV008",
+      "obligationId": "EV008",
+      "state": "satisfied",
+      "observed": true,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV008"
+      ],
+      "affectedTaskIds": [
+        "T008"
+      ],
+      "affectedRequirementIds": [],
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "id": "TD-EV009",
+      "obligationId": "EV009",
+      "state": "satisfied",
+      "observed": true,
+      "recordRequirement": false,
+      "evidenceIds": [
+        "EV009"
+      ],
+      "affectedTaskIds": [
+        "T009"
       ],
       "affectedRequirementIds": [],
       "severity": "ready",
@@ -364,10 +536,10 @@
     {
       "skill": "automated-tests",
       "requiringTaskIds": [
-        "T003"
+        "T007"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/typed-kernel-p2-fable/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -375,10 +547,10 @@
     {
       "skill": "deterministic-json",
       "requiringTaskIds": [
-        "T005"
+        "T009"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/typed-kernel-p2-fable/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -387,10 +559,14 @@
       "skill": "fsharp",
       "requiringTaskIds": [
         "T001",
-        "T002"
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/typed-kernel-p2-fable/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -398,10 +574,14 @@
     {
       "skill": "implementation",
       "requiringTaskIds": [
-        "T001"
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/typed-kernel-p2-fable/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -409,10 +589,10 @@
     {
       "skill": "readiness-evidence",
       "requiringTaskIds": [
-        "T003"
+        "T007"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/typed-kernel-p2-fable/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -420,10 +600,10 @@
     {
       "skill": "schema-versioning",
       "requiringTaskIds": [
-        "T004"
+        "T008"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "sourceArtifactPath": "work/typed-kernel-p2-fable/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -431,19 +611,33 @@
   ],
   "generatedViews": [
     {
-      "path": "readiness/068-readiness-golden/analysis.json",
+      "path": "readiness/typed-kernel-p2-fable/analysis.json",
       "kind": "verification",
       "currency": "current",
       "diagnosticIds": []
     },
     {
-      "path": "readiness/068-readiness-golden/work-model.json",
+      "path": "readiness/typed-kernel-p2-fable/work-model.json",
       "kind": "workModel",
       "currency": "current",
-      "diagnosticIds": []
+      "diagnosticIds": [
+        "staleGeneratedView"
+      ]
     }
   ],
-  "findings": [],
+  "findings": [
+    {
+      "id": "VF001",
+      "severity": "warning",
+      "category": "warning",
+      "path": "readiness/typed-kernel-p2-fable/work-model.json",
+      "relatedIds": [
+        "readiness/typed-kernel-p2-fable/work-model.json"
+      ],
+      "message": "Generated view \u0027readiness/typed-kernel-p2-fable/work-model.json\u0027 is stale.",
+      "correction": "Regenerate readiness/\u003Cid\u003E/work-model.json from current lifecycle sources."
+    }
+  ],
   "governanceCompatibility": [
     {
       "path": ".fsgg/policy.yml",
@@ -467,7 +661,18 @@
       "diagnosticIds": []
     }
   ],
-  "diagnostics": [],
+  "diagnostics": [
+    {
+      "id": "staleGeneratedView",
+      "severity": "warning",
+      "artifact": "readiness/typed-kernel-p2-fable/work-model.json",
+      "message": "Generated view \u0027readiness/typed-kernel-p2-fable/work-model.json\u0027 is stale.",
+      "correction": "Regenerate readiness/\u003Cid\u003E/work-model.json from current lifecycle sources.",
+      "relatedIds": [
+        "readiness/typed-kernel-p2-fable/work-model.json"
+      ]
+    }
+  ],
   "readiness": "verificationReady",
   "nextAction": {
     "actionId": "verify.next.ship",

@@ -8,7 +8,7 @@ description: The preview typed specification kernel, requirements extension, can
 
 # Typed Specifications Preview
 
-`FS.GG.SDD.Artifacts` 1.3.0-preview.2 provides the namespace
+`FS.GG.SDD.Artifacts` 1.3.0-preview.3 provides the namespace
 `FS.GG.SDD.Artifacts.TypedSpecifications`. It is an additive package API; existing
 Standard SDD Markdown, commands, schemas, defaults, and exit codes are unchanged.
 

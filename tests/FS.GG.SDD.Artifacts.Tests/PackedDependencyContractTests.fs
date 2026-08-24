@@ -56,7 +56,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.3.0-preview.2.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.3.0-preview.3.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -92,9 +92,43 @@ module PackedDependencyContractTests =
                 |> Option.map _.Value
                 |> Option.defaultWith (fun () -> failwith "the Contracts dependency has no version")
 
-            Assert.Equal("1.3.0-preview.2", packageVersion)
+            Assert.Equal("1.3.0-preview.3", packageVersion)
             Assert.Equal("7.5.2", dependencyVersion)
-            Assert.DoesNotContain("1.3.0-preview.2", dependency.ToString())
+            Assert.DoesNotContain(packageVersion, dependency.ToString())
+        finally
+            Directory.Delete(outputDirectory, true)
+
+    [<Fact>]
+    let ``artifacts package carries a producer-owned portable Fable kernel`` () =
+        let outputDirectory =
+            Path.Combine(Path.GetTempPath(), "fsgg-sdd-artifacts-fable-pack-" + Guid.NewGuid().ToString("N"))
+
+        Directory.CreateDirectory outputDirectory |> ignore
+
+        try
+            packProject outputDirectory
+
+            let package =
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.3.0-preview.3.nupkg")
+                |> Array.exactlyOne
+
+            use archive = ZipFile.OpenRead package
+            let names = archive.Entries |> Seq.map _.FullName |> Set.ofSeq
+            Assert.Contains("fable/FS.GG.SDD.Artifacts.fsproj", names)
+            Assert.Contains("fable/SpecificationKernel.fs", names)
+
+            let sourceEntry =
+                archive.GetEntry("fable/SpecificationKernel.fs")
+                |> Option.ofObj
+                |> Option.defaultWith (fun () -> failwith "packed Fable kernel source is missing")
+
+            use reader = new StreamReader(sourceEntry.Open())
+            let source = reader.ReadToEnd()
+            Assert.Contains("fsgg-typed-specification/v1", source)
+            Assert.Contains("module SpecificationCompiler", source)
+            Assert.DoesNotContain("System.Text.Json", source)
+            Assert.DoesNotContain("SIR.Domain", source)
+            Assert.DoesNotContain("RuleDefinition", source)
         finally
             Directory.Delete(outputDirectory, true)
 
