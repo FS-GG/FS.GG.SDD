@@ -16,6 +16,7 @@ type QuintCatalogueKind =
     | Action
     | Invariant
     | TemporalProperty
+    | ReachabilityProperty
     | Evidence
     | Implementation
     | ExternalSubject
@@ -48,6 +49,23 @@ type QuintProfileDiagnostic =
       Correction: string
       Source: QuintSourceRange option }
 
+/// A deterministic literate-source binding supplied by QuintSource for one explicit catalogue row.
+/// Quint 0.32.0 typecheck output contains compiler node ids but no source coordinates, so the adapter
+/// requires this separate boundary instead of manufacturing locations from unstable IR identities.
+type QuintCatalogueSourceBinding =
+    { ModuleName: string
+      CatalogueName: string
+      Id: string
+      Kind: QuintCatalogueKind
+      Source: QuintSourceRange }
+
+/// One exact Quint typecheck observation plus the out-of-band bindings absent from its JSON output.
+type QuintTypedEffectObservation =
+    { Profile: string
+      QuintVersion: string
+      TypedEffectJson: string
+      SourceBindings: QuintCatalogueSourceBinding list }
+
 [<RequireQualifiedAccess>]
 module QuintProfile =
     /// The only profile identity accepted by this Q2 implementation.
@@ -59,6 +77,8 @@ module QuintProfile =
     /// Validate stable public catalogue facts and return every finding in deterministic order.
     val validate: catalogue: QuintProfileCatalogue -> QuintProfileDiagnostic list
 
-    /// Adapt exact Quint 0.32 typed/effect JSON into stable facts without exposing raw IR.
+    /// Adapt exact Quint 0.32.0 `typecheck --out` JSON into stable facts without exposing raw IR.
+    /// Profile/version identity and QuintSource row bindings are required out of band because the
+    /// compiler payload contains none of those facts. Missing or mismatched bindings fail closed.
     val adaptTypedEffectJson:
-        canonicalSourcePath: string -> typedEffectJson: string -> Result<QuintProfileCatalogue, QuintProfileDiagnostic list>
+        observation: QuintTypedEffectObservation -> Result<QuintProfileCatalogue, QuintProfileDiagnostic list>

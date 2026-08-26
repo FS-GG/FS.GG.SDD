@@ -72,35 +72,21 @@ module QuintProfileContractTests =
         | Error values -> values
 
     [<Fact>]
-    let ``exact Quint adapter projects only closed stable catalogue facts`` () =
-        let typedEffectJson =
-            """{"quintVersion":"0.32.0","profile":"fsgg-quint-profile/1","declarations":[{"id":"STATE-Value","kind":"stateVariable","source":{"startLine":8,"startColumn":1,"endLine":8,"endColumn":10}},{"id":"ACT-Apply","kind":"action","source":{"startLine":12,"startColumn":1,"endLine":14,"endColumn":2},"reads":["STATE-Value"],"writes":["STATE-Value"],"subjects":[]}]}"""
-
-        let adapted =
-            QuintProfile.adaptTypedEffectJson "docs/specifications/example.md" typedEffectJson
-            |> expectOk
-
-        Assert.Equal(QuintProfile.identity, adapted.Profile)
-        Assert.Equal(QuintProfile.quintVersion, adapted.QuintVersion)
-        Assert.Equal<string list>([ "ACT-Apply"; "STATE-Value" ], adapted.Entries |> List.map _.Id)
-        Assert.Equal<string list>([ "STATE-Value" ], adapted.ActionEffects.Head.Writes)
-
-    [<Fact>]
-    let ``adapter refuses expression escape hatches and wrong exact versions distinctly`` () =
-        let expression =
-            """{"quintVersion":"0.32.0","profile":"fsgg-quint-profile/1","declarations":[{"id":"ACT-Apply","kind":"action","source":{"startLine":1,"startColumn":1,"endLine":1,"endColumn":2},"reads":[],"writes":[],"subjects":[],"expression":{"opcode":"assign"}}]}"""
-
-        let wrongVersion =
-            """{"quintVersion":"0.33.0","profile":"fsgg-quint-profile/1","declarations":[]}"""
+    let ``adapter refuses absent exact-output facts and wrong out-of-band version distinctly`` () =
+        let observation version =
+            { Profile = QuintProfile.identity
+              QuintVersion = version
+              TypedEffectJson = "{}"
+              SourceBindings = [] }
 
         Assert.Contains(
-            findings (QuintProfile.adaptTypedEffectJson "docs/spec.md" expression),
-            fun finding -> finding.Code = "QUINT-IR-UNSUPPORTED-FIELD" && finding.Path.EndsWith("/expression")
+            findings (QuintProfile.adaptTypedEffectJson (observation QuintProfile.quintVersion)),
+            fun (finding: QuintProfileDiagnostic) -> finding.Code = "QUINT-IR-REQUIRED"
         )
 
         Assert.Contains(
-            findings (QuintProfile.adaptTypedEffectJson "docs/spec.md" wrongVersion),
-            fun finding -> finding.Code = "QUINT-PROFILE-VERSION"
+            findings (QuintProfile.adaptTypedEffectJson (observation "0.33.0")),
+            fun (finding: QuintProfileDiagnostic) -> finding.Code = "QUINT-PROFILE-VERSION"
         )
 
     [<Fact>]

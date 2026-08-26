@@ -57,12 +57,12 @@ module private ContractCore =
         { Code = code; Path = path; Message = message; Correction = correction }
 
     let sorted (findings: QuintContractDiagnostic list) = findings |> List.distinct |> List.sortBy (fun item -> item.Path, item.Code, item.Message)
-    let kindText = function Requirement -> "requirement" | StateVariable -> "stateVariable" | Action -> "action" | Invariant -> "invariant" | TemporalProperty -> "temporalProperty" | Evidence -> "evidence" | Implementation -> "implementation" | ExternalSubject -> "externalSubject"
+    let kindText = function Requirement -> "requirement" | StateVariable -> "stateVariable" | Action -> "action" | Invariant -> "invariant" | TemporalProperty -> "temporalProperty" | ReachabilityProperty -> "reachabilityProperty" | Evidence -> "evidence" | Implementation -> "implementation" | ExternalSubject -> "externalSubject"
     let relationText = function Requires -> "requires" | VerifiedBy -> "verifiedBy" | ImplementedBy -> "implementedBy" | Reads -> "reads" | Writes -> "writes"
 
     let parseKind path = function
         | "requirement" -> Requirement | "stateVariable" -> StateVariable | "action" -> QuintCatalogueKind.Action
-        | "invariant" -> Invariant | "temporalProperty" -> TemporalProperty | "evidence" -> Evidence
+        | "invariant" -> Invariant | "temporalProperty" -> TemporalProperty | "reachabilityProperty" -> ReachabilityProperty | "evidence" -> Evidence
         | "implementation" -> Implementation | "externalSubject" -> ExternalSubject
         | value -> raise (JsonException($"%s{path}: unsupported catalogue kind '%s{value}'."))
 

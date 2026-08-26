@@ -97,6 +97,7 @@ module private BindingInternal =
         | QuintCatalogueKind.Action -> "action"
         | QuintCatalogueKind.Invariant -> "invariant"
         | QuintCatalogueKind.TemporalProperty -> "temporal-property"
+        | QuintCatalogueKind.ReachabilityProperty -> "reachability-property"
         | QuintCatalogueKind.Evidence -> "evidence"
         | QuintCatalogueKind.Implementation -> "implementation"
         | QuintCatalogueKind.ExternalSubject -> "external-subject"
