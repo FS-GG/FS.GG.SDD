@@ -272,7 +272,11 @@ jobs:
             "$RUNNER_TEMP/quint-q2-tools/quint" | sha256sum --check --strict
           (
             cd src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/lmt
+            # Go's action/build IDs include the source invocation path even under -trimpath.
+            # Q1 qualified this exact command-line-arguments build ID and its ELF note;
+            # pin both so the reviewed bytes reproduce in a Git checkout and on a clean host.
             GO111MODULE=off go build -trimpath \
+              -ldflags '-buildid=IvXAt1kJ-3iINki1alCT/Ut12KGabgkWIkwVpw-xO/c4zkZMLAubfWHvjZOY8o/8-oR_8tNNndNgfMVoD8F -B 0x03d1703027f57ed4dd2ba90b7cdfc8cdea2815da' \
               -o "$RUNNER_TEMP/quint-q2-tools/lmt" main.go
           )
           printf '%s  %s\n' \

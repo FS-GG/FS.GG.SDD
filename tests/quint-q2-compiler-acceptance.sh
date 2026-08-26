@@ -141,6 +141,26 @@ for row in "${rows[@]}"; do
     "$logical" "$scratch/a/$markdown" "$scratch/a/$module" "$scratch/a/$module.typed.json" "$witness" "$out_a"
   dotnet run --project "$consumer/Consumer.fsproj" -c Release --no-restore -- \
     "$logical" "$scratch/b/$markdown" "$scratch/b/$module" "$scratch/b/$module.typed.json" "$witness" "$out_b"
+
+  if [[ "$label" == 'sir' ]]; then
+    for replay in "$out_a/replay.txt" "$out_b/replay.txt"; do
+      [[ -s "$replay" ]] || fail 'installed-package S.I.R. replay output is absent'
+      grep -Fx 'positive=equivalent' "$replay" >/dev/null \
+        || fail 'installed-package S.I.R. positive replay did not run'
+      grep -E '^trace=[0-9a-f]{64}$' "$replay" >/dev/null \
+        || fail 'installed-package S.I.R. trace identity is absent'
+      grep -F 'divergence=2|ApplyDamage|docs/experiments/quint-q1/slices/sir-damage-rule.md:17:1|state' \
+        "$replay" >/dev/null \
+        || fail 'installed-package S.I.R. first-divergence control did not run'
+      grep -E '^expected=[0-9a-f]{64}$' "$replay" >/dev/null \
+        || fail 'installed-package S.I.R. expected-state identity is absent'
+      grep -E '^actual=[0-9a-f]{64}$' "$replay" >/dev/null \
+        || fail 'installed-package S.I.R. divergent-state identity is absent'
+    done
+  elif [[ -e "$out_a/replay.txt" || -e "$out_b/replay.txt" ]]; then
+    fail "non-S.I.R. package compilation emitted replay output: $label"
+  fi
+
   diff -ru "$out_a" "$out_b" >/dev/null || fail "package compiler output drifted across isolated runs: $label"
 
   cp "$out_a/bindings.fable.fs" "$fable_probe/Bindings.fs"
