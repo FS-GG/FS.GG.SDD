@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "9aa773f80df10f848fd02d0dee2108ff809d4e880972adbf0a17adf1d65f642c"
+        "value": "0c03fda59f1facdb4a63e5d524b6c6f831f87f4fba929859424949d7e6ee6f12"
       }
     },
     {
@@ -1434,6 +1434,7 @@
       ],
       "artifactRefs": [
         "docs/experiments/quint-q1/qualification-report.md",
+        "docs/experiments/quint-q1/sir-consumer-response-receipt.json",
         "tests/quint-q1/qualify.sh"
       ],
       "result": "pass",
@@ -2225,7 +2226,7 @@
           "path": "work/922-quint-first-q1/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "9aa773f80df10f848fd02d0dee2108ff809d4e880972adbf0a17adf1d65f642c"
+            "value": "0c03fda59f1facdb4a63e5d524b6c6f831f87f4fba929859424949d7e6ee6f12"
           },
           "schemaVersion": 1
         },
@@ -2256,7 +2257,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "bee2f218d8d5e44b1cccd06cf635587fc8df237b76c4d74b9e490bf321dd12b3"
+        "value": "b4c506b211e696a5e60020941ad1fcbabd6560a158d1e8ced35158f8c1bc7c08"
       },
       "currency": "current"
     }

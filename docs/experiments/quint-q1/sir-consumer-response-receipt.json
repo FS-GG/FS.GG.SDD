@@ -1,0 +1,37 @@
+{
+  "schema": "fsgg.quint.sir-consumer-response-receipt/q1",
+  "subject": "FS-GG/FS.GG.SDD#922",
+  "producerCandidateCommit": "3a0eced13305b146df2febd96698e38335cae99c",
+  "producerReceiptHead": "6cf3f1f0746c817e1171cd3a7b63865c25c1e346",
+  "producerManifestSha256": "0bb0a34f6e93c933b441fd34ebc0bbd521ac792b95955d49ed528cab3c014ddd",
+  "consumer": {
+    "issue": "EHotwagner/S.I.R.#353",
+    "pullRequest": "EHotwagner/S.I.R.#354",
+    "reviewedHead": "da6cbb45dd252e420f7991673e5781bdeb0aa52f",
+    "mergeCommit": "77e56d11867a5e2e7ad99f4d61b0f0c9fff61a5f",
+    "responsePath": "readiness/353-quint-q1-sir-replay/sir-response.json",
+    "responseGitBlob": "0ab38f216176d39cd150ca89f573ac83063c035c",
+    "responseSha256": "46c117744b867def807a6b5540effd23efd916e87fbd2c42530866bf66902e4c",
+    "bindingReceiptPath": "readiness/353-quint-q1-sir-replay/sir-response-final-commit-receipt.json",
+    "bindingReceiptGitBlob": "e87a5afef9cb1fe4485924d32acec5ebb348f98a",
+    "bindingReceiptSha256": "c06834705dd646de5f93f59b6dea1464e65a5809a72e57315cbebd7522e8a96d",
+    "routeDecisionDigest": "b6a034d241596c9d69834f12c89344450b73474506e0ee535e54c829a11ed23f"
+  },
+  "review": {
+    "initialChangesRequired": "https://github.com/EHotwagner/S.I.R./pull/354#issuecomment-5421056214",
+    "initialDigest": "bb8bdc8cfbe3a597d9974bc1984eaeae5057c82457e4004bcb75fa9dceef44b9",
+    "successorCritic": "osprey-7f5d",
+    "confirmation": "https://github.com/EHotwagner/S.I.R./pull/354#issuecomment-5421315601",
+    "confirmationDigest": "998229a8d0ecf513a21f09470302a9fb701ee7de986443d3c44f17c5bd18aac1",
+    "hostAcceptance": "https://github.com/EHotwagner/S.I.R./pull/354#issuecomment-5421332668",
+    "hostAcceptanceDigest": "a6b1e0f286d99d6f21c33aa301c2c9dd172eb0e51560702dff25d93ab02d2558"
+  },
+  "qualification": {
+    "pullRequestRun": 32936448627,
+    "pullRequestConclusion": "success",
+    "postMergeRun": 32937137259,
+    "postMergeConclusion": "success"
+  },
+  "authority": "consumer-owned test-only runtime correspondence",
+  "verdict": "accept-exact-and-sampled-runtime-correspondence"
+}

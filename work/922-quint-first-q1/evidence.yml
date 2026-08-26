@@ -122,12 +122,12 @@ evidence:
       id: T004
     taskRefs: [T004]
     requirementRefs: [FR-004]
-    acceptanceScenarioRefs: []
+    acceptanceScenarioRefs: [AC-001, AC-004]
     clarificationDecisionRefs: []
-    checklistResultRefs: []
-    planDecisionRefs: []
+    checklistResultRefs: [CR-004]
+    planDecisionRefs: [PD-004]
     obligationRefs: [EV004]
-    artifacts: [docs/experiments/quint-q1/qualification-report.md, tests/quint-q1/qualify.sh]
+    artifacts: [docs/experiments/quint-q1/qualification-report.md, docs/experiments/quint-q1/sir-consumer-response-receipt.json, tests/quint-q1/qualify.sh]
     sourceRefs:
       - kind: verification
         path: tests/quint-q1/qualify.sh
@@ -141,7 +141,7 @@ evidence:
       passed: 42
       failed: 0
       skipped: 0
-    notes: ["The exact pinned Q1 harness passed all positive checks and rejected all required mutations; the qualification report maps this obligation to the reviewed candidate."]
+    notes: ["The exact pinned Q1 harness passed all positive checks and rejected all required mutations; the merged S.I.R. response receipt binds producer candidate 3a0eced, consumer merge 77e56d1, exact response and binding-receipt blobs, independent successor and host acceptances, and green PR plus default-branch protected qualifications."]
   - id: EV005
     kind: verification
     subject:
