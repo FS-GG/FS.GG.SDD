@@ -26,10 +26,21 @@ consumer="$scratch/consumer"
 mkdir -p "$feed"
 cp -R "$repo_root/tests/fixtures/quint-compiler-consumer" "$consumer"
 
-# Provision the complete package closure into a local feed. The proof below starts from a
-# different, empty global-packages folder and has no network source available.
-dotnet pack "$repo_root/src/FS.GG.Contracts/FS.GG.Contracts.fsproj" -c Release -o "$feed" >/dev/null
-dotnet pack "$repo_root/src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" -c Release -o "$feed" >/dev/null
+# Provision the complete package closure into a local feed. Release verification may select a
+# public source; normal source-tree verification packs the candidate. The proof below always starts
+# from a different, empty global-packages folder after network access is removed.
+if [[ -z "${Q2_PACKAGE_SOURCE:-}" ]]; then
+  dotnet pack "$repo_root/src/FS.GG.Contracts/FS.GG.Contracts.fsproj" -c Release -o "$feed" >/dev/null
+  dotnet pack "$repo_root/src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" -c Release -o "$feed" >/dev/null
+  provisioning_config="$consumer/Provisioning.NuGet.Config"
+else
+  provisioning_config="$scratch/Public.NuGet.Config"
+  printf '%s\n' \
+    '<?xml version="1.0" encoding="utf-8"?>' \
+    '<configuration><packageSources><clear /><add key="public" value="'"$Q2_PACKAGE_SOURCE"'" /></packageSources>' \
+    '<packageSourceMapping><clear /><packageSource key="public"><package pattern="*" /></packageSource></packageSourceMapping></configuration>' \
+    >"$provisioning_config"
+fi
 
 fable_probe="$scratch/fable-probe"
 mkdir -p "$fable_probe"
@@ -43,9 +54,9 @@ printf '%s\n' 'open Placeholder' 'printfn "%s" Value' >"$fable_probe/Program.fs"
 
 provisioning_packages="$scratch/provisioning-packages"
 NUGET_PACKAGES="$provisioning_packages" dotnet restore "$consumer/Consumer.fsproj" \
-  --configfile "$consumer/Provisioning.NuGet.Config" --no-http-cache >/dev/null
+  --configfile "$provisioning_config" --no-http-cache >/dev/null
 NUGET_PACKAGES="$provisioning_packages" dotnet restore "$fable_probe/FableProbe.fsproj" \
-  --configfile "$consumer/Provisioning.NuGet.Config" --no-http-cache >/dev/null
+  --configfile "$provisioning_config" --no-http-cache >/dev/null
 find "$provisioning_packages" -type f -name '*.nupkg' -exec cp -f '{}' "$feed/" \;
 
 export HTTP_PROXY='http://127.0.0.1:1'

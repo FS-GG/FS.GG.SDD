@@ -186,39 +186,39 @@
     {
       "id": "fs-gg-sdd-typed-author",
       "scope": "process",
-      "sha256": "152afd040ec8887c48a41c614054a258caa166b94696ae6240e8642592804b4c",
+      "sha256": "d90ea8872c6ae871b1acf007da42c98c70c95e548a47a5f368d4d5490f1beac1",
       "resolvablePath": ".agents/skills/fs-gg-sdd-typed-author/SKILL.md",
       "materializes-when": "always",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "152afd040ec8887c48a41c614054a258caa166b94696ae6240e8642592804b4c"
+          "sha256": "d90ea8872c6ae871b1acf007da42c98c70c95e548a47a5f368d4d5490f1beac1"
         }
       ]
     },
     {
       "id": "fs-gg-sdd-typed-inspect",
       "scope": "process",
-      "sha256": "ede462a67d187254ca2158f64cea545af27fbeffee78a4a59c0e1fc93f95c3fb",
+      "sha256": "acf98b050f401ad583b2c4e651f8b090921c0df3b350f16a1ae4d9d0543bd266",
       "resolvablePath": ".agents/skills/fs-gg-sdd-typed-inspect/SKILL.md",
       "materializes-when": "always",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "ede462a67d187254ca2158f64cea545af27fbeffee78a4a59c0e1fc93f95c3fb"
+          "sha256": "acf98b050f401ad583b2c4e651f8b090921c0df3b350f16a1ae4d9d0543bd266"
         }
       ]
     },
     {
       "id": "fs-gg-sdd-typed-migrate",
       "scope": "process",
-      "sha256": "02b40f013b0c836cfd058b6ba42de3ddc73a77c0ae432cd09c040ffa44e9ed68",
+      "sha256": "94ecee820b476651a1eb5a1e6b9d6483a14568a6b257eb8e10ffba5b40f7d2d4",
       "resolvablePath": ".agents/skills/fs-gg-sdd-typed-migrate/SKILL.md",
       "materializes-when": "always",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "02b40f013b0c836cfd058b6ba42de3ddc73a77c0ae432cd09c040ffa44e9ed68"
+          "sha256": "94ecee820b476651a1eb5a1e6b9d6483a14568a6b257eb8e10ffba5b40f7d2d4"
         }
       ]
     },

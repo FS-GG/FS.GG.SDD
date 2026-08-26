@@ -1,11 +1,11 @@
 ---
 name: fs-gg-sdd-typed-inspect
-description: Inspect Typed SDD compiler identity, authority, and derived projection freshness.
+description: Inspect versioned F# or Quint Typed SDD authority and semantic closure.
 ---
 
 # Typed SDD inspect
 
-Run `fsgg-sdd typed-sdd inspect --work <id>`. A clean result compiles the canonical F# authority,
-checks its recorded compiler/package/extension identities and authoring receipt, and proves the
-normalized JSON and Markdown bytes are derived from it. Resolve reported diagnostic IDs; never
-bypass or hand-edit `readiness/<id>/typed-authority.json`.
+Run `fsgg-sdd typed-sdd inspect --work <id>`. Dispatch comes only from manifest version/backend.
+V1 retains exact F# checks. V2 verifies the exact profile/toolchain/package and the semantic closure
+of Markdown, fences, generated Quint, typed effect, source map, contract, bindings, receipt, and any
+rollback inventory. Resolve diagnostic IDs exactly; never infer from files or bypass the manifest.

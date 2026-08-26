@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Cli.Tests
 open System
 open System.Diagnostics
 open System.IO
+open System.Globalization
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
@@ -93,6 +94,200 @@ module TypedSddCommandTests =
 
             Assert.Equal(1, editCode)
             Assert.Contains("typedSdd.directCanonicalEdit", edited))
+
+    [<Fact>]
+    let ``inspect dispatches explicit manifest v2 and rejects edited Quint artifacts`` () =
+        inTemp (fun root ->
+            let expectOk result =
+                match result with
+                | Ok value -> value
+                | Error findings -> failwithf "expected success, got %A" findings
+
+            let markdown =
+                Text.Encoding.UTF8.GetBytes "# specification\n```quint demo.qnt +=\nmodule Demo {}\n```\n"
+
+            let source =
+                QuintSource.createMarkdown "work/demo/specification.md" markdown |> expectOk
+
+            let typedEffectBytes = Text.Encoding.UTF8.GetBytes "{\"typed\":true}\n"
+            let typedEffectDigest = TypedAuthorityManifest.sha256 typedEffectBytes
+
+            let sourceRange =
+                { Path = source.Path
+                  Start = { Line = 3; Column = 1 }
+                  End = { Line = 3; Column = 14 } }
+
+            let fenceRange =
+                { Path = source.Path
+                  Start = { Line = 2; Column = 1 }
+                  End = { Line = 4; Column = 3 } }
+
+            let contract =
+                { Schema = QuintContract.schema
+                  Profile = QuintProfile.identity
+                  Specification = "DemoSpec"
+                  Catalogue =
+                    [ { Id = "STATE"
+                        Kind = QuintCatalogueKind.StateVariable
+                        Source = sourceRange }
+                      { Id = "ADVANCE"
+                        Kind = QuintCatalogueKind.Action
+                        Source = sourceRange } ]
+                  ActionEffects =
+                    [ { ActionId = "ADVANCE"
+                        Reads = [ "STATE" ]
+                        Writes = [ "STATE" ]
+                        Subjects = [ "STATE" ] } ]
+                  Relationships = []
+                  VerificationProfiles = []
+                  Bounds = []
+                  Impacts = []
+                  Compatibility = []
+                  Digests =
+                    [ { Name = "sandbox-contract"
+                        Sha256 = TypedAuthorityManifest.sha256 QuintSandbox.contractBytes }
+                      { Name = "typed-effect"
+                        Sha256 = typedEffectDigest } ] }
+
+            let contractBytes =
+                QuintContract.serializeCanonical contract
+                |> expectOk
+                |> Text.Encoding.UTF8.GetBytes
+
+            let moduleBytes = Text.Encoding.UTF8.GetBytes "module Demo {}\n"
+
+            let fenceBytes =
+                QuintSource.encodeFenceManifest
+                    { Schema = QuintSource.fenceManifestSchema
+                      SourcePath = source.Path
+                      SourceSha256 = source.Sha256
+                      Fences =
+                        [ { Ordinal = 0
+                            Target = "demo.qnt"
+                            ModuleName = "Demo"
+                            SourceRange = fenceRange
+                            ContentSha256 = TypedAuthorityManifest.sha256 moduleBytes } ] }
+
+            let sourceMapBytes =
+                QuintSource.encodeSourceMap
+                    { Schema = QuintSource.sourceMapSchema
+                      SourceSha256 = source.Sha256
+                      Entries =
+                        [ { Target = "demo.qnt"
+                            GeneratedRange =
+                              { Path = "demo.qnt"
+                                Start = { Line = 1; Column = 1 }
+                                End = { Line = 1; Column = 14 } }
+                            Source =
+                              { FenceOrdinal = 0
+                                Range = sourceRange } } ] }
+
+            let frame (value: string) =
+                let valueBytes = Text.Encoding.UTF8.GetBytes value
+
+                Array.concat
+                    [ Text.Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
+                      valueBytes ]
+
+            let modulesDigest =
+                [ "demo.qnt"
+                  TypedAuthorityManifest.sha256 moduleBytes
+                  moduleBytes.LongLength.ToString(CultureInfo.InvariantCulture) ]
+                |> List.collect (frame >> Array.toList)
+                |> List.toArray
+                |> TypedAuthorityManifest.sha256
+
+            let toolchain = QuintToolchain.fingerprint QuintToolchain.q1
+
+            let fingerprint =
+                QuintContract.fingerprint
+                    { SourceSha256 = source.Sha256
+                      FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
+                      GeneratedModulesSha256 = modulesDigest
+                      ToolchainSha256 = toolchain
+                      Contract = contract }
+                |> expectOk
+
+            let receiptBytes =
+                QuintCompiler.encodeReceipt
+                    { Schema = QuintCompiler.receiptSchema
+                      SourceSha256 = source.Sha256
+                      FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
+                      GeneratedModulesSha256 = modulesDigest
+                      ToolchainSha256 = toolchain
+                      TypedEffectSha256 = typedEffectDigest
+                      ContractSha256 = TypedAuthorityManifest.sha256 contractBytes
+                      CompilationFingerprint = fingerprint
+                      ProcessSteps = [ "extract"; "typecheck" ] }
+                |> Text.Encoding.UTF8.GetBytes
+
+            let bindingsBytes =
+                (QuintBindings.generate "RequirementsBindings" contract |> expectOk).FSharpSource
+                |> Text.Encoding.UTF8.GetBytes
+
+            let content: (string * string * byte array) list =
+                [ "markdown", "work/demo/specification.md", markdown
+                  "fence-manifest", "readiness/demo/quint/fences.json", fenceBytes
+                  "generated-modules", "readiness/demo/quint/demo.qnt", moduleBytes
+                  "source-map", "readiness/demo/quint/source-map.json", sourceMapBytes
+                  "typed-effect", "readiness/demo/quint/typed-effect.json", typedEffectBytes
+                  "sandbox-contract", "readiness/demo/quint/sandbox-contract.json", QuintSandbox.contractBytes
+                  "compiled-contract", "readiness/demo/quint/contract.json", contractBytes
+                  "bindings", "readiness/demo/quint/bindings.fs", bindingsBytes
+                  "compilation-receipt", "readiness/demo/quint/receipt.json", receiptBytes ]
+
+            let artifacts =
+                content
+                |> List.map (fun (id, path, value) ->
+                    let full = Path.Combine(root, path)
+
+                    Path.GetDirectoryName full
+                    |> Option.ofObj
+                    |> Option.iter (fun directory -> Directory.CreateDirectory directory |> ignore)
+
+                    File.WriteAllBytes(full, value)
+
+                    { Id = id
+                      Path = path
+                      Sha256 = TypedAuthorityManifest.sha256 value })
+
+            let authority =
+                { SchemaVersion = 2
+                  Lifecycle = "typed-sdd"
+                  Backend = "quint-specification-v1"
+                  ProfileIdentity = QuintProfile.identity
+                  ToolchainIdentity = toolchain
+                  PackageIdentity = $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
+                  Artifacts = artifacts
+                  AuthoringAgent = "tern"
+                  AuthoringSession = "v2"
+                  RollbackManifestPath = None
+                  RollbackManifestSha256 = None }
+
+            let manifestPath = Path.Combine(root, TypedAuthorityManifest.path "demo")
+
+            Path.GetDirectoryName manifestPath
+            |> Option.ofObj
+            |> Option.iter (fun directory -> Directory.CreateDirectory directory |> ignore)
+
+            File.WriteAllText(manifestPath, TypedAuthority.serializeQuintV2 authority)
+
+            let code, report, _ =
+                run root [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo" ]
+
+            // The synthetic fixture closes hashes and paths but is not an admitted Q1 typed/effect
+            // observation; dispatch must reach the v2 validator and fail at that semantic boundary.
+            Assert.Equal(1, code)
+            Assert.Contains("quint-specification-v1", report)
+            Assert.Contains("typedSdd.v2.typedEffectClosure", report)
+
+            File.WriteAllText(Path.Combine(root, "readiness/demo/quint/contract.json"), "edited")
+
+            let editCode, edited, _ =
+                run root [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo" ]
+
+            Assert.Equal(1, editCode)
+            Assert.Contains("typedSdd.v2.artifactMismatch", edited))
 
     [<Fact>]
     let ``migration analysis classifies supported input and performs no preaccept write`` () =
@@ -252,6 +447,76 @@ module TypedSddCommandTests =
                 Assert.Equal<byte>(typedMarkdown, File.ReadAllBytes source)
                 Assert.True(File.Exists(Path.Combine(target, "specification.fsx")))
                 Assert.True(File.Exists(Path.Combine(readiness, "typed-authority.json"))))
+
+    [<Fact>]
+    let ``Quint author cannot bypass v1 migration or accept multiline source skew`` () =
+        inTemp (fun root ->
+            let cache = Path.Combine(root, "cache")
+            Directory.CreateDirectory cache |> ignore
+
+            let v1Code, _, _ =
+                run
+                    root
+                    [ "typed-sdd"
+                      "author"
+                      "--root"
+                      root
+                      "--work"
+                      "demo"
+                      "--agent"
+                      "tern"
+                      "--session"
+                      "v1" ]
+
+            Assert.Equal(0, v1Code)
+
+            let replaceCode, replaceReport, _ =
+                run
+                    root
+                    [ "typed-sdd"
+                      "author"
+                      "--root"
+                      root
+                      "--work"
+                      "demo"
+                      "--agent"
+                      "tern"
+                      "--session"
+                      "v2"
+                      "--backend"
+                      "quint"
+                      "--cache"
+                      cache
+                      "--accept" ]
+
+            Assert.Equal(1, replaceCode)
+            Assert.Contains("typedSdd.v2.migrationRequired", replaceReport)
+
+            let titleRoot = Path.Combine(root, "title")
+            Directory.CreateDirectory titleRoot |> ignore
+
+            let titleCode, titleReport, _ =
+                run
+                    titleRoot
+                    [ "typed-sdd"
+                      "author"
+                      "--root"
+                      titleRoot
+                      "--work"
+                      "demo"
+                      "--title"
+                      "bad\nline"
+                      "--agent"
+                      "tern"
+                      "--session"
+                      "title"
+                      "--backend"
+                      "quint"
+                      "--cache"
+                      cache ]
+
+            Assert.Equal(1, titleCode)
+            Assert.Contains("typedSdd.v2.titleInvalid", titleReport))
 
     [<Fact>]
     let ``unknown typed option fails closed`` () =

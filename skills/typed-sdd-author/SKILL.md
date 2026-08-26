@@ -1,11 +1,15 @@
 ---
 name: typed-sdd-author
-description: Author canonical Typed SDD F# specifications through the installed FS.GG.SDD tool.
+description: Author explicit F# or exact-cache Quint Typed SDD authority through the installed FS.GG.SDD tool.
 ---
 
 # Typed SDD author
 
-Use `fsgg-sdd typed-sdd author --work <id> --title <title> --agent <agent-id> --session <session-id>`.
-Treat `work/<id>/specification.fsx` as authority. Edit it only within an authoring session, then
-regenerate its normalized JSON, Markdown projection, and authority receipt. Never ingest Markdown
-as Typed SDD authority and never hand-edit generated projections.
+For manifest-v2 Quint authority, run `fsgg-sdd typed-sdd author --work <id> --title <title>
+--agent <agent-id> --session <session-id> --backend quint-specification-v1 --cache <cache-root>`.
+The cache must contain `objects/<sha256>` for the Q1-qualified Quint 0.32.0 and `lmt` objects; the
+command never downloads tools. It runs both tools twice in isolated roots and atomically records
+Markdown, fences, generated Quint, typed-effect evidence, source map, contract, bindings, receipt,
+and manifest. Never use `author --accept` to replace v1; use migration so rollback remains exact.
+
+Omitting `--backend` preserves manifest-v1 F# authoring. Never hand-edit generated authority files.

@@ -1,14 +1,14 @@
 ---
-title: Typed Specifications Preview
+title: Typed Specifications
 category: SDD
 categoryindex: 6
 index: 21
-description: The preview typed specification kernel, requirements extension, canonical model rules, projections, evidence binding, and migration boundary.
+description: The typed specification kernel, requirements extension, canonical model rules, projections, evidence binding, and migration boundary.
 ---
 
-# Typed Specifications Preview
+# Typed Specifications
 
-`FS.GG.SDD.Artifacts` 1.4.0-preview.1 provides the namespace
+`FS.GG.SDD.Artifacts` 1.4.0 provides the namespace
 `FS.GG.SDD.Artifacts.TypedSpecifications`. It is an additive package API; existing
 Standard SDD Markdown, commands, schemas, defaults, and exit codes are unchanged.
 
@@ -135,7 +135,18 @@ The qualified `lmt` source/license identity and optional Apache-2.0 guidance
 identity remain separately content-addressed package assets. Guidance is not a
 runtime dependency or compiler authority.
 
-Q2 produces an implementation-ready package boundary only. The
-`quint-specification-v1` author/inspect/migrate/rollback commands, manifest
-authority, registry/provider floors, publication, consumer pins, and workspace
-default belong to Q3 and later roadmap gates.
+Q3 hosts that pure boundary through manifest v2 and explicit `quint-specification-v1` dispatch.
+Installed authoring retains the exact cache bytes, executes the declared plan twice under deterministic
+offline process state, and records typed-effect evidence beside the contract and receipt. Inspection
+recomputes fence content from Markdown, validates the generated module/source map, authenticates the
+typed-effect bytes, regenerates bindings, and closes the compiler fingerprint. Migration is read-only
+until accepted, snapshots the complete v1 inventory, and offers exact rollback. Migration
+deterministically lowers every legacy semantic identity into the compiled catalogue, every authored
+reference into relationships and acceptance action effects, and every semantic text field into bounded
+compatibility metadata. The qualified raw Q1 Quint program remains the fixed executable slice; the
+lowered contract does not mislabel arbitrary legacy prose as raw Quint code. The complete canonical v1
+model is also retained as a base64 payload bound by the literate Markdown, a
+`requirements-extension-v1` compiled-contract digest, and the authenticated rollback inventory.
+Inspection reconstructs the lowering and proves that correspondence. Direct v1
+replacement is forbidden. Shared lifecycle commands dispatch v1/v2 explicitly; no provider, registry,
+consumer, workspace, or omitted-lifecycle default is changed by this release.

@@ -9,6 +9,10 @@ module ReleaseWorkflowContractTests =
         Path.Combine(TestSupport.repoRoot, ".github", "workflows", "release.yml")
         |> File.ReadAllText
 
+    let private gateWorkflow =
+        Path.Combine(TestSupport.repoRoot, ".github", "workflows", "gate.yml")
+        |> File.ReadAllText
+
     let private contract =
         Path.Combine(TestSupport.repoRoot, "specs", "044-publish-cli-tool", "contracts", "release-workflow.md")
         |> File.ReadAllText
@@ -31,7 +35,7 @@ module ReleaseWorkflowContractTests =
     [<Fact>]
     let ``release publishes the independently consumable artifacts package to both feeds`` () =
         Assert.Equal(1, count "\n  publish-artifacts:\n" workflow)
-        Assert.Contains("needs: [resolve-versions, artifacts-tests]", workflow)
+        Assert.Contains("needs: [resolve-versions, artifacts-tests, cli-tests]", workflow)
         Assert.Contains("target: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj", workflow)
         Assert.Contains("run: tests/fixtures/typed-specifications/run-clean-consumer.sh", workflow)
         Assert.Contains("artifacts_version: ${{ steps.ver.outputs.artifacts_version }}", workflow)
@@ -43,21 +47,37 @@ module ReleaseWorkflowContractTests =
 
         let job = workflow.Substring(start, finish - start)
         Assert.Contains("dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj", job)
-        Assert.DoesNotContain("-p:PackageVersion=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
-        Assert.DoesNotContain("-p:Version=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
+        Assert.Contains("dotnet pack src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj", job)
+        Assert.DoesNotContain("-p:Version=", job)
+        Assert.DoesNotContain("-p:PackageVersion=", job)
+        Assert.Contains("-p:RepositoryCommit=\"$GITHUB_SHA\"", job)
         Assert.Contains("FS.GG.SDD.Artifacts.*.nupkg", job)
-        Assert.Equal(2, count "dotnet nuget push" job)
-        Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg\"" job)
-        Assert.DoesNotContain("dotnet nuget push \"artifacts/packages/FS.GG.SDD.Cli.*.nupkg\"", job)
+        Assert.Contains("coherent-sdd-packages-${{ github.sha }}", job)
+        Assert.DoesNotContain("dotnet nuget push", job)
+
+        let publish = workflow.Substring(finish)
+        Assert.Equal(4, count "dotnet nuget push" publish)
+        Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg\"" publish)
+        Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Cli.*.nupkg\"" publish)
+        Assert.Contains("Read back both feeds and compare every non-signature entry", publish)
+        Assert.Contains("grep -v '^\\.signature\\.p7s$'", publish)
+        Assert.Contains("diff -u \"$local_package.payloads\"", publish)
+        Assert.Contains("Verify clean public installs", publish)
+        Assert.Contains("Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
+        Assert.Contains("Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
+        Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", publish)
+        Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", publish)
+        Assert.Contains("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
+        Assert.Contains("quint-q3-public.junit.xml", publish)
+        Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", gateWorkflow)
+        Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", gateWorkflow)
 
         let orgFeed =
-            job.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)
+            publish.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)
 
         let publicFeed =
-            job.IndexOf("https://api.nuget.org/v3/index.json", StringComparison.Ordinal)
+            publish.IndexOf("https://api.nuget.org/v3/index.json", StringComparison.Ordinal)
 
         Assert.True(orgFeed >= 0 && publicFeed > orgFeed, "the org feed must be pushed before nuget.org")
         Assert.Contains("three independently consumable packages", contract)
         Assert.Contains("| `publish-artifacts` |", contract)
-        Assert.Contains("two exact Artifacts pushes", contract)
-        Assert.Contains("must not pass a global `Version` or `PackageVersion` override", contract)

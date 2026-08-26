@@ -43,6 +43,8 @@
     <Compile Include="TypedSpecifications/QuintReplay.fs" />
     <Compile Include="TypedSpecifications/QuintCompiler.fsi" />
     <Compile Include="TypedSpecifications/QuintCompiler.fs" />
+    <Compile Include="TypedSpecifications/TypedLifecycleV2.fsi" />
+    <Compile Include="TypedSpecifications/TypedLifecycleV2.fs" />
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />

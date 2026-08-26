@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "1.4.0-preview.1"
+    "version": "1.4.0"
   },
   "identity": {
-    "version": "1.4.0-preview.1",
-    "channel": "preRelease",
+    "version": "1.4.0",
+    "channel": "stable",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
       "FS.GG.SDD.Commands",

@@ -95,7 +95,7 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T011 channel is derived from the version and preview suffix`` () =
-        Assert.Equal(PreRelease, release.Identity.Channel)
+        Assert.Equal(StableRelease, release.Identity.Channel)
         Assert.Equal(PreRelease, channelOfVersion "0.2.0")
         Assert.Equal(PreRelease, channelOfVersion "1.3.0-preview.1")
         Assert.Equal(StableRelease, channelOfVersion "1.0.0")
@@ -187,8 +187,11 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T017 serialized release matches the locked golden baseline`` () =
-        let baseline = File.ReadAllText(baselinePath).Replace("\r\n", "\n")
-        let actual = (serialize release).Replace("\r\n", "\n")
+        let normalizeProjection (text: string) =
+            text.Replace("\r\n", "\n").TrimEnd('\n')
+
+        let baseline = File.ReadAllText(baselinePath) |> normalizeProjection
+        let actual = serialize release |> normalizeProjection
 
         if
             Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1"
@@ -196,7 +199,7 @@ module ReleaseContractTests =
         then
             File.WriteAllText(baselinePath, actual)
 
-        let baseline = File.ReadAllText(baselinePath).Replace("\r\n", "\n")
+        let baseline = File.ReadAllText(baselinePath) |> normalizeProjection
 
         if baseline <> actual then
             failwith
@@ -207,8 +210,11 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T017 the published docs artifact matches the contract (projection cannot drift)`` () =
-        let actual = (serialize release).Replace("\r\n", "\n")
-        let published = File.ReadAllText(publishedPath).Replace("\r\n", "\n")
+        let normalizeProjection (text: string) =
+            text.Replace("\r\n", "\n").TrimEnd('\n')
+
+        let actual = serialize release |> normalizeProjection
+        let published = File.ReadAllText(publishedPath) |> normalizeProjection
 
         if
             Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1"
@@ -216,7 +222,7 @@ module ReleaseContractTests =
         then
             File.WriteAllText(publishedPath, actual)
 
-        Assert.Equal(actual, File.ReadAllText(publishedPath).Replace("\r\n", "\n"))
+        Assert.Equal(actual, File.ReadAllText(publishedPath) |> normalizeProjection)
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 

@@ -312,10 +312,69 @@ jobs:
             --skip-duplicate
 
   publish-artifacts:
-    name: Pack + publish FS.GG.SDD.Artifacts
-    needs: [resolve-versions, artifacts-tests]
+    name: Build coherent FS.GG.SDD 1.x packages once
+    needs: [resolve-versions, artifacts-tests, cli-tests]
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore (locked)
+        uses: ./.github/actions/locked-restore
+        with:
+          target: src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj
+
+      - name: Pack the reviewed coherent set once
+        run: |
+          set -euo pipefail
+          dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release \
+            -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
+            --no-restore -o artifacts/packages
+          dotnet pack src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -c Release \
+            -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
+            --no-restore -o artifacts/packages
+
+      - name: Assert package inventory, source binding, and pre-push hashes
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg artifacts/packages/FS.GG.SDD.Cli.*.nupkg)
+          if [ ${#packages[@]} -ne 2 ]; then
+            echo "::error::coherent pack must produce exactly Artifacts and CLI."
+            exit 1
+          fi
+          for package in "${packages[@]}"; do
+            unzip -p "$package" '*.nuspec' | grep -F "commit=\"$GITHUB_SHA\"" >/dev/null \
+              || { echo "::error::$package does not bind repository commit $GITHUB_SHA"; exit 1; }
+          done
+          sha256sum "${packages[@]}" | sort -k2 > artifacts/packages/pre-push.sha256
+
+      - name: Verify the just-packed CLI is self-contained
+        env:
+          FSGG_SDD_PACKAGE_DIR: artifacts/packages
+        run: bash scripts/verify-cli-tool.sh
+
+      - name: Upload the only publishable package bytes
+        uses: actions/upload-artifact@v4
+        with:
+          name: coherent-sdd-packages-${{ github.sha }}
+          path: artifacts/packages/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-cli:
+    name: Publish and read back the coherent FS.GG.SDD set
+    needs: [resolve-versions, publish-artifacts]
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD' && needs.resolve-versions.outputs.push == 'true'
     permissions:
       contents: read
       packages: write
@@ -329,140 +388,149 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Restore (locked)
-        uses: ./.github/actions/locked-restore
+      - name: Download the reviewed package bytes
+        uses: actions/download-artifact@v4
         with:
-          target: src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj
+          name: coherent-sdd-packages-${{ github.sha }}
+          path: artifacts/packages
 
-      - name: Pack
-        run: |
-          set -euo pipefail
-          dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release \
-            --no-restore -o artifacts/packages
-
-      - name: Assert the artifacts package was produced
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          packages=(artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg)
-          if [ ${#packages[@]} -ne 1 ]; then
-            echo "::error::pack must produce exactly one FS.GG.SDD.Artifacts .nupkg."
-            exit 1
-          fi
-          printf 'Packed: %s\n' "${packages[@]}"
-
-      - name: Push to the org feed
-        if: needs.resolve-versions.outputs.push == 'true'
+      - name: Publish both packages to GitHub Packages first
         run: |
           set -euo pipefail
           dotnet nuget push "artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg" \
             --source https://nuget.pkg.github.com/FS-GG/index.json \
-            --api-key ${{ secrets.GITHUB_TOKEN }} \
-            --skip-duplicate
+            --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Cli.*.nupkg" \
+            --source https://nuget.pkg.github.com/FS-GG/index.json \
+            --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
       - name: NuGet login (OIDC → short-lived nuget.org key)
-        if: needs.resolve-versions.outputs.push == 'true'
-        id: nuget-login-artifacts
+        id: nuget-login-sdd
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER || 'Paradigma11' }}
 
-      - name: Push to nuget.org (public)
-        if: needs.resolve-versions.outputs.push == 'true'
+      - name: Publish the same bytes to nuget.org
         run: |
           set -euo pipefail
           dotnet nuget push "artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
-            --api-key ${{ steps.nuget-login-artifacts.outputs.NUGET_API_KEY }} \
-            --skip-duplicate
+            --api-key ${{ steps.nuget-login-sdd.outputs.NUGET_API_KEY }} --skip-duplicate
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Cli.*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key ${{ steps.nuget-login-sdd.outputs.NUGET_API_KEY }} --skip-duplicate
 
-  publish-cli:
-    name: Pack + publish FS.GG.SDD.Cli (fsgg-sdd tool)
-    needs: [resolve-versions, cli-tests]
-    runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD'
-    # Least-privilege: only this job gains packages: write; the push uses the run-scoped
-    # GITHUB_TOKEN, never a PAT (FR-002).
-    permissions:
-      contents: read
-      packages: write
-      id-token: write   # ADR-0013: mint the GitHub OIDC token for nuget.org Trusted Publishing
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "10.0.x"
-          # No restore cache: this job restores a single project (narrow footprint) and
-          # setup-dotnet keys the cache only on hashFiles(packages.lock.json)+OS+runtime with
-          # no per-job component, so caching here would share and poison the deterministic
-          # gate's key (#92 / NU1403). Release runs rarely; a fresh restore is fine.
-
-      - name: Restore (locked)
-        uses: ./.github/actions/locked-restore
-        with:
-          target: src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj
-
-      # The CLI is already PackAsTool/ToolCommandName=fsgg-sdd; `dotnet pack` bundles its full
-      # runtime closure (the RegistryDocument YAML loader + YamlDotNet) so the installed tool
-      # runs `registry validate` standalone (FR-010, self-containment). Single explicit project
-      # ⇒ single-package scope (FR-001). Version from the shared resolve-versions job.
-      - name: Pack
-        run: |
-          set -euo pipefail
-          dotnet pack src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -c Release \
-            -p:Version=${{ needs.resolve-versions.outputs.cli_version }} --no-restore -o artifacts/packages
-
-      # A green test plus an empty pack MUST NOT report success (FR-007): fail loudly if the
-      # expected tool package was not produced.
-      - name: Assert the tool package was produced
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          packages=(artifacts/packages/FS.GG.SDD.Cli.*.nupkg)
-          if [ ${#packages[@]} -eq 0 ]; then
-            echo "::error::pack produced no FS.GG.SDD.Cli.*.nupkg — the tests passed but there is no tool package to publish."
-            exit 1
-          fi
-          printf 'Packed: %s\n' "${packages[@]}"
-
-      # Self-containment smoke BEFORE any push (feature 064 / FR-012): install the
-      # JUST-PACKED artifact (FSGG_SDD_PACKAGE_DIR points at the exact artifacts/packages
-      # dir about to be pushed — no re-pack) from a local source with NO org feed, then run
-      # `fsgg-sdd registry validate`. Proves the pushed .nupkg bundles its full runtime
-      # closure; a non-self-contained pack fails here and blocks the publish.
-      - name: Verify the packed tool is self-contained
+      - name: Read back both feeds and compare every non-signature entry
         env:
-          FSGG_SDD_PACKAGE_DIR: artifacts/packages
-        run: bash scripts/verify-cli-tool.sh
-
-      # Push only when push==true (a dry run skips this entirely, FR-004). --skip-duplicate
-      # makes a re-publish of an existing version an idempotent no-op success (FR-008); any
-      # other push failure fails the run (FR-012).
-      - name: Push to the org feed
-        if: needs.resolve-versions.outputs.push == 'true'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
         run: |
           set -euo pipefail
-          dotnet nuget push "artifacts/packages/FS.GG.SDD.Cli.*.nupkg" \
-            --source https://nuget.pkg.github.com/FS-GG/index.json \
-            --api-key ${{ secrets.GITHUB_TOKEN }} \
-            --skip-duplicate
+          mkdir -p artifacts/feed-readback
+          for id in fs.gg.sdd.artifacts fs.gg.sdd.cli; do
+            case "$id" in
+              fs.gg.sdd.artifacts) local_package="artifacts/packages/FS.GG.SDD.Artifacts.$VERSION.nupkg" ;;
+              fs.gg.sdd.cli) local_package="artifacts/packages/FS.GG.SDD.Cli.$VERSION.nupkg" ;;
+            esac
+            [ -f "$local_package" ] || { echo "::error::reviewed package is missing for $id $VERSION"; exit 1; }
+            gh_url="https://nuget.pkg.github.com/FS-GG/download/$id/$VERSION/$id.$VERSION.nupkg"
+            nuget_url="https://api.nuget.org/v3-flatcontainer/$id/$VERSION/$id.$VERSION.nupkg"
+            for attempt in $(seq 1 30); do
+              curl --fail --location --silent --show-error -u "$GITHUB_ACTOR:$GH_TOKEN" \
+                "$gh_url" -o "artifacts/feed-readback/$id.github.nupkg" && \
+              curl --fail --location --silent --show-error \
+                "$nuget_url" -o "artifacts/feed-readback/$id.nuget.nupkg" && break
+              [ "$attempt" -lt 30 ] || { echo "::error::feed readback timed out for $id $VERSION"; exit 1; }
+              sleep 10
+            done
+            for feed in local github nuget; do
+              if [ "$feed" = local ]; then
+                package="$local_package"
+              else
+                package="artifacts/feed-readback/$id.$feed.nupkg"
+              fi
+              unzip -Z1 "$package" | grep -v '^\.signature\.p7s$' | LC_ALL=C sort >"$package.entries"
+              while IFS= read -r entry; do
+                printf '%s  %s\n' "$(unzip -p "$package" "$entry" | sha256sum | cut -d' ' -f1)" "$entry"
+              done <"$package.entries" >"$package.payloads"
+            done
+            diff -u "$local_package.payloads" \
+              "artifacts/feed-readback/$id.github.nupkg.payloads"
+            diff -u "$local_package.payloads" \
+              "artifacts/feed-readback/$id.nuget.nupkg.payloads"
+          done
 
-      # Dual-publish the byte-identical tool package to public nuget.org via Trusted Publishing (OIDC)
-      # — see the contracts job for the ordering/policy rationale (ADR-0012 §4 / ADR-0013).
-      - name: NuGet login (OIDC → short-lived nuget.org key)
-        if: needs.resolve-versions.outputs.push == 'true'
-        id: nuget-login-cli
-        uses: NuGet/login@v1
+      - name: Verify clean public installs
+        env:
+          VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          export NUGET_PACKAGES="$scratch/packages"
+          export NUGET_HTTP_CACHE_PATH="$scratch/http"
+          dotnet tool install FS.GG.SDD.Cli --version "$VERSION" --tool-path "$scratch/tool" \
+            --add-source https://api.nuget.org/v3/index.json --no-cache
+          "$scratch/tool/fsgg-sdd" --version | grep -F "$VERSION"
+          dotnet new classlib -o "$scratch/consumer" --no-restore
+          dotnet add "$scratch/consumer" package FS.GG.SDD.Artifacts --version "$VERSION" \
+            --source https://api.nuget.org/v3/index.json --no-restore
+          dotnet restore "$scratch/consumer" --source https://api.nuget.org/v3/index.json --no-http-cache
+
+      - name: Set up exact Go toolchain for public Quint acceptance
+        uses: actions/setup-go@v5
         with:
-          user: ${{ secrets.NUGET_USER || 'Paradigma11' }}
-      - name: Push to nuget.org (public)
-        if: needs.resolve-versions.outputs.push == 'true'
+          go-version: "1.24.1"
+          cache: false
+
+      - name: Provision content-addressed Quint acceptance tools
         run: |
           set -euo pipefail
-          dotnet nuget push "artifacts/packages/FS.GG.SDD.Cli.*.nupkg" \
-            --source https://api.nuget.org/v3/index.json \
-            --api-key ${{ steps.nuget-login-cli.outputs.NUGET_API_KEY }} \
-            --skip-duplicate
+          mkdir -p "$RUNNER_TEMP/quint-release-tools"
+          curl --fail --location --silent --show-error \
+            https://github.com/quint-co/quint/releases/download/v0.32.0/quint-linux-amd64 \
+            --output "$RUNNER_TEMP/quint-release-tools/quint"
+          chmod +x "$RUNNER_TEMP/quint-release-tools/quint"
+          printf '%s  %s\n' \
+            '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' \
+            "$RUNNER_TEMP/quint-release-tools/quint" | sha256sum --check --strict
+          (
+            cd src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/lmt
+            GO111MODULE=off go build -trimpath \
+              -ldflags '-buildid=IvXAt1kJ-3iINki1alCT/Ut12KGabgkWIkwVpw-xO/c4zkZMLAubfWHvjZOY8o/8-oR_8tNNndNgfMVoD8F -B 0x03d1703027f57ed4dd2ba90b7cdfc8cdea2815da' \
+              -o "$RUNNER_TEMP/quint-release-tools/lmt" main.go
+          )
+          printf '%s  %s\n' \
+            '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' \
+            "$RUNNER_TEMP/quint-release-tools/lmt" | sha256sum --check --strict
+          dotnet tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-release-tools/fable"
+
+      - name: Rerun Q2 proof and Q3 lifecycle from the public CLI package
+        env:
+          QUINT_BIN: ${{ runner.temp }}/quint-release-tools/quint
+          LMT_BIN: ${{ runner.temp }}/quint-release-tools/lmt
+          FABLE_BIN: ${{ runner.temp }}/quint-release-tools/fable/fable
+          Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
+          Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
+          Q2_JUNIT_OUT: artifacts/feed-readback/quint-q2-public.junit.xml
+          Q3_JUNIT_OUT: artifacts/feed-readback/quint-q3-public.junit.xml
+        run: |
+          set -euo pipefail
+          if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
+          bash tests/quint-q3-typed-sdd-acceptance.sh
+
+      - name: Upload durable dual-feed receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdd-1.4.0-dual-feed-receipt-${{ github.sha }}
+          path: |
+            artifacts/packages/pre-push.sha256
+            artifacts/packages/*.nupkg.entries
+            artifacts/packages/*.nupkg.payloads
+            artifacts/feed-readback/*.payloads
+            artifacts/feed-readback/*.entries
+            artifacts/feed-readback/quint-q*-public.junit.xml
+          if-no-files-found: error
+          retention-days: 90
