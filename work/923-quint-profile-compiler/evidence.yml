@@ -46,21 +46,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001]
     obligationRefs: [EV001]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV002
     kind: verification
     subject:
@@ -73,7 +73,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001, PD-002, PD-003]
     obligationRefs: [EV002]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -81,13 +81,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV003
     kind: verification
     subject:
@@ -100,21 +100,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001, PD-002, PD-003]
     obligationRefs: [EV003]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
+      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 18
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
   - id: EV004
     kind: verification
     subject:
@@ -127,7 +127,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV004]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -135,13 +135,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV005
     kind: verification
     subject:
@@ -154,7 +154,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001, PD-012]
     obligationRefs: [EV005]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -162,13 +162,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV006
     kind: verification
     subject:
@@ -181,21 +181,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV006]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV007
     kind: verification
     subject:
@@ -208,7 +208,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV007]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -216,13 +216,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV008
     kind: verification
     subject:
@@ -235,21 +235,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV008]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
+      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 18
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
   - id: EV009
     kind: verification
     subject:
@@ -262,7 +262,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV009]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -270,13 +270,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV010
     kind: verification
     subject:
@@ -289,21 +289,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV010]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV011
     kind: verification
     subject:
@@ -316,7 +316,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-006]
     obligationRefs: [EV011]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -324,13 +324,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV012
     kind: verification
     subject:
@@ -343,7 +343,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-007]
     obligationRefs: [EV012]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -351,13 +351,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV013
     kind: verification
     subject:
@@ -370,7 +370,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV013]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -378,13 +378,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV014
     kind: verification
     subject:
@@ -397,21 +397,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV014]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV015
     kind: verification
     subject:
@@ -424,21 +424,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-009]
     obligationRefs: [EV015]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
+      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 18
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
   - id: EV016
     kind: verification
     subject:
@@ -451,7 +451,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV016]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -459,13 +459,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV017
     kind: verification
     subject:
@@ -478,21 +478,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-011]
     obligationRefs: [EV017]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV018
     kind: verification
     subject:
@@ -505,7 +505,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV018]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -513,13 +513,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV019
     kind: verification
     subject:
@@ -532,7 +532,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV019]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -540,13 +540,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV020
     kind: verification
     subject:
@@ -559,7 +559,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV020]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -567,13 +567,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV021
     kind: verification
     subject:
@@ -586,7 +586,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV021]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -594,13 +594,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV022
     kind: verification
     subject:
@@ -613,7 +613,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV022]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -621,13 +621,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV023
     kind: verification
     subject:
@@ -640,21 +640,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001]
     obligationRefs: [EV023]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV024
     kind: verification
     subject:
@@ -667,21 +667,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-002]
     obligationRefs: [EV024]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV025
     kind: verification
     subject:
@@ -694,21 +694,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-003]
     obligationRefs: [EV025]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
+      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 18
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
   - id: EV026
     kind: verification
     subject:
@@ -721,7 +721,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-004]
     obligationRefs: [EV026]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -729,13 +729,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV027
     kind: verification
     subject:
@@ -748,21 +748,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-005]
     obligationRefs: [EV027]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV028
     kind: verification
     subject:
@@ -775,21 +775,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-008]
     obligationRefs: [EV028]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV029
     kind: verification
     subject:
@@ -802,7 +802,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-010]
     obligationRefs: [EV029]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -810,13 +810,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV030
     kind: verification
     subject:
@@ -829,7 +829,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-012]
     obligationRefs: [EV030]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -837,13 +837,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV031
     kind: verification
     subject:
@@ -856,7 +856,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-004, PD-006]
     obligationRefs: [EV031]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -864,13 +864,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV032
     kind: verification
     subject:
@@ -883,21 +883,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-005]
     obligationRefs: [EV032]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV033
     kind: verification
     subject:
@@ -910,7 +910,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-007]
     obligationRefs: [EV033]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -918,13 +918,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV034
     kind: verification
     subject:
@@ -937,21 +937,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001, PD-008]
     obligationRefs: [EV034]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV035
     kind: verification
     subject:
@@ -964,7 +964,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-010]
     obligationRefs: [EV035]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -972,13 +972,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV036
     kind: verification
     subject:
@@ -991,7 +991,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-004, PD-006]
     obligationRefs: [EV036]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -999,13 +999,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV037
     kind: verification
     subject:
@@ -1018,21 +1018,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-005, PD-011]
     obligationRefs: [EV037]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV038
     kind: verification
     subject:
@@ -1045,7 +1045,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-007]
     obligationRefs: [EV038]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -1053,13 +1053,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV039
     kind: verification
     subject:
@@ -1072,21 +1072,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-008]
     obligationRefs: [EV039]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV040
     kind: verification
     subject:
@@ -1099,21 +1099,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-009]
     obligationRefs: [EV040]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
+      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 18
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
   - id: EV041
     kind: verification
     subject:
@@ -1126,21 +1126,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-010]
     obligationRefs: [EV041]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
     result: pass
     synthetic: false
     observedRun:
-      source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
+      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 8
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
   - id: EV042
     kind: verification
     subject:
@@ -1153,7 +1153,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-012]
     obligationRefs: [EV042]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj, tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -1161,13 +1161,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV043
     kind: verification
     subject:
@@ -1180,7 +1180,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV043]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -1188,13 +1188,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
   - id: EV044
     kind: verification
     subject:
@@ -1207,7 +1207,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV044]
-    artifacts: [docs/reference/typed-specifications.md, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs, tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi, tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -1215,12 +1215,12 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:e2fcabbc8118c119bfdd270eaf6d0d7079d9beb549eb89f6391ff1db19dae7ca"
+      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 606
+      passed: 609
       failed: 0
       skipped: 0
-    notes: ["The Q2 Artifacts suite exercises the implementation contract and its fail-closed controls; exact compiler-corpus and repository-wide receipts are recorded in the work handoff."]
+    notes: ["The 609-test Artifacts suite exercises the cited native contract, codec, replay, source-map, toolchain, binding, or fail-closed controls."]
 lifecycleNotes:
   - "Next lifecycle action: verify."

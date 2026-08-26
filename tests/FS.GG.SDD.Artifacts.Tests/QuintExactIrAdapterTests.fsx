@@ -116,7 +116,7 @@ expectCode
         observation requirementsBindings (mutate (fun root -> root["warnings"].AsArray().Add("warning")))
     ))
 
-let catalogueExpression name (root: JsonObject) =
+let declarationNamed name (root: JsonObject) =
     let modules = root["modules"].AsArray()
     let firstModule = modules[0].AsObject()
     let declarations = firstModule["declarations"].AsArray()
@@ -124,7 +124,9 @@ let catalogueExpression name (root: JsonObject) =
     declarations
     |> Seq.map _.AsObject()
     |> Seq.find (fun declaration -> declaration["name"] <> null && declaration["name"].GetValue<string>() = name)
-    |> fun declaration -> declaration["expr"].AsObject()
+
+let catalogueExpression name (root: JsonObject) =
+    ((declarationNamed name root)["expr"]).AsObject()
 
 expectCode
     "QUINT-IR-UNSUPPORTED-OPCODE"
@@ -152,6 +154,47 @@ let propertyKind (root: JsonObject) =
 expectCode
     "QUINT-IR-PROPERTY-KIND"
     (QuintProfile.adaptTypedEffectJson (observation requirementsBindings (mutate propertyKind)))
+
+expectCode
+    "QUINT-IR-UNSUPPORTED-FIELD"
+    (QuintProfile.adaptTypedEffectJson (
+        observation
+            requirementsBindings
+            (mutate (fun root -> (declarationNamed "EvidenceEntry" root)["unsupportedFutureSemantic"] <- true))
+    ))
+
+expectCode
+    "QUINT-IR-UNSUPPORTED-OPCODE"
+    (QuintProfile.adaptTypedEffectJson (
+        observation requirementsBindings (mutate (fun root -> (catalogueExpression "init" root)["opcode"] <- "Choreo"))
+    ))
+
+expectCode
+    "QUINT-IR-TABLE-EMPTY"
+    (QuintProfile.adaptTypedEffectJson (
+        observation
+            requirementsBindings
+            (mutate (fun root ->
+                root["table"] <- JsonObject()
+                root["types"] <- JsonObject()
+                root["effects"] <- JsonObject()))
+    ))
+
+expectCode
+    "QUINT-IR-EFFECT-TYPE-COVERAGE"
+    (QuintProfile.adaptTypedEffectJson (
+        observation requirementsBindings (mutate (fun root -> root["effects"].AsObject().Remove("40") |> ignore))
+    ))
+
+expectCode
+    "QUINT-IR-CATALOGUE-EVIDENCE"
+    (QuintProfile.adaptTypedEffectJson (
+        observation
+            requirementsBindings
+            (mutate (fun root ->
+                root["types"].AsObject().Remove("40") |> ignore
+                root["effects"].AsObject().Remove("40") |> ignore))
+    ))
 
 if fsi.CommandLineArgs.Length = 4 then
     let sirPath = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
@@ -199,4 +242,4 @@ if fsi.CommandLineArgs.Length = 4 then
     assertCorpus "S.I.R." 5 sirBindings fsi.CommandLineArgs[2]
     assertCorpus "coordination" 15 coordinationBindings fsi.CommandLineArgs[3]
 
-printfn "Exact Quint 0.32.0 Q1 IR corpus and 9 fail-closed mutations passed."
+printfn "Exact Quint 0.32.0 Q1 IR corpus and 15 fail-closed mutations passed."

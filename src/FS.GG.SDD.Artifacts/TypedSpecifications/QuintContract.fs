@@ -714,16 +714,53 @@ module QuintContract =
                 let beforeHash = ContractCore.serializeUnchecked before |> ContractCore.sha256Text
                 let afterHash = ContractCore.serializeUnchecked after |> ContractCore.sha256Text
 
+                let normalizeStrings values = values |> List.distinct |> List.sort
+
+                let normalizeEffects (values: QuintActionEffect list) =
+                    values
+                    |> List.map (fun row ->
+                        { row with
+                            Reads = normalizeStrings row.Reads
+                            Writes = normalizeStrings row.Writes
+                            Subjects = normalizeStrings row.Subjects })
+                    |> List.sortBy _.ActionId
+
+                let normalizeProfiles (values: QuintVerificationProfile list) =
+                    values
+                    |> List.map (fun row ->
+                        { row with
+                            SubjectIds = normalizeStrings row.SubjectIds
+                            BoundIds = normalizeStrings row.BoundIds })
+                    |> List.sortBy _.Id
+
                 let components =
-                    [ "/specification", before.Specification <> after.Specification
-                      "/catalogue", before.Catalogue <> after.Catalogue
-                      "/actionEffects", before.ActionEffects <> after.ActionEffects
-                      "/relationships", before.Relationships <> after.Relationships
-                      "/verificationProfiles", before.VerificationProfiles <> after.VerificationProfiles
-                      "/bounds", before.Bounds <> after.Bounds
-                      "/impacts", before.Impacts <> after.Impacts
-                      "/compatibility", before.Compatibility <> after.Compatibility
-                      "/digests", before.Digests <> after.Digests ]
+                    [ ("/specification", before.Specification <> after.Specification)
+                      ("/catalogue",
+                       List.sortBy
+                           (fun (row: QuintCatalogueEntry) -> ContractCore.kindText row.Kind, row.Id)
+                           before.Catalogue
+                       <> List.sortBy
+                           (fun (row: QuintCatalogueEntry) -> ContractCore.kindText row.Kind, row.Id)
+                           after.Catalogue)
+                      ("/actionEffects", normalizeEffects before.ActionEffects <> normalizeEffects after.ActionEffects)
+                      ("/relationships",
+                       List.sortBy
+                           (fun row -> row.FromId, ContractCore.relationText row.Kind, row.ToId)
+                           before.Relationships
+                       <> List.sortBy
+                           (fun row -> row.FromId, ContractCore.relationText row.Kind, row.ToId)
+                           after.Relationships)
+                      ("/verificationProfiles",
+                       normalizeProfiles before.VerificationProfiles
+                       <> normalizeProfiles after.VerificationProfiles)
+                      ("/bounds", List.sortBy _.Id before.Bounds <> List.sortBy _.Id after.Bounds)
+                      ("/impacts",
+                       List.sortBy (fun row -> row.SubjectId, row.Category, row.Detail) before.Impacts
+                       <> List.sortBy (fun row -> row.SubjectId, row.Category, row.Detail) after.Impacts)
+                      ("/compatibility",
+                       List.sortBy (fun row -> row.Surface, row.Requirement, row.Detail) before.Compatibility
+                       <> List.sortBy (fun row -> row.Surface, row.Requirement, row.Detail) after.Compatibility)
+                      ("/digests", List.sortBy _.Name before.Digests <> List.sortBy _.Name after.Digests) ]
 
                 let changes =
                     components

@@ -164,6 +164,21 @@ module QuintToolchainSourceTests =
         expectCode "QUINT-PLAN-NETWORK-ENVIRONMENT-REFUSED" findings
 
     [<Fact>]
+    let ``compilation plan validates only the exact objects its requests execute`` () =
+        let lmtOnly =
+            exactCache () |> List.filter (fun observation -> observation.Id = "lmt-binary")
+
+        let plan =
+            QuintToolchain.plan QuintToolchain.q1 lmtOnly [ processRequest [ "specs/main.md" ] [] ]
+            |> expectOk
+
+        Assert.Equal<string list>([ "lmt-binary" ], plan.RequiredObjects |> List.map _.Id)
+
+        QuintToolchain.plan QuintToolchain.q1 [] [ processRequest [ "specs/main.md" ] [] ]
+        |> expectError
+        |> expectCode "QUINT-CACHE-OBJECT-ABSENT"
+
+    [<Fact>]
     let ``execution reports occupied endpoint and failed process independently`` () =
         let plan =
             QuintToolchain.plan QuintToolchain.q1 (exactCache ()) [ processRequest [ "specs/main.md" ] [] ]

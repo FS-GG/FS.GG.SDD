@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
+open System.IO
 open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
 
@@ -73,15 +74,19 @@ module QuintReplayBindingsTests =
           ImplementationFingerprint = digest }
 
     let private trace contractFingerprint : QuintReplayTrace =
-        { SchemaVersion = 1
-          TraceIdentity = digest
-          Environment = environment contractFingerprint
-          Initial = initialState
-          Steps =
-            [ { Index = 1
-                Action = "ADVANCE"
-                Source = replaySource
-                Expected = expectedState } ] }
+        let draft =
+            { SchemaVersion = 1
+              TraceIdentity = digest
+              Environment = environment contractFingerprint
+              Initial = initialState
+              Steps =
+                [ { Index = 1
+                    Action = "ADVANCE"
+                    Source = replaySource
+                    Expected = expectedState } ] }
+
+        { draft with
+            TraceIdentity = QuintReplay.traceFingerprint draft |> expectOk }
 
     let private observation actual : QuintReplayObservation =
         { Index = 1
@@ -124,6 +129,70 @@ module QuintReplayBindingsTests =
         | result -> failwithf "expected a state divergence, got %A" result
 
     [<Fact>]
+    let ``exact reviewed SIR ITF witness binds trace identity and first divergence`` () =
+        let bindings = QuintBindings.generate "LoginContract" contract |> expectOk
+
+        let fixture =
+            Path.Combine(System.AppContext.BaseDirectory, "Fixtures", "QuintQ2", "q1-sir-reviewed-witness.itf.json")
+            |> File.ReadAllText
+
+        let source =
+            { Path = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
+              Line = 17
+              Column = 1 }
+
+        let context =
+            { Environment =
+                { environment bindings.ContractFingerprint with
+                    Seed = "92220"
+                    Bounds = [ "maxSamples", 1L; "transitions", 2L ] }
+              Steps =
+                [ { Index = 1
+                    Action = "ApplyDamage"
+                    Source = source }
+                  { Index = 2
+                    Action = "ApplyDamage"
+                    Source = source } ] }
+
+        let exact = QuintReplay.decodeItf context fixture |> expectOk
+        Assert.Empty(QuintReplay.validateTrace exact)
+        Assert.Equal(exact.TraceIdentity, QuintReplay.traceFingerprint exact |> expectOk)
+        Assert.Equal<string list>([ "hitPoints"; "lastAction"; "lastAmount" ], exact.Initial.Bindings |> List.map fst)
+
+        let observations =
+            exact.Steps
+            |> List.map (fun step ->
+                { Index = step.Index
+                  Action = step.Action
+                  Source = step.Source
+                  Actual = step.Expected })
+
+        Assert.Equal(Ok QuintReplayResult.Equivalent, QuintReplay.compare exact observations)
+
+        let wrongDraft =
+            { observations[1].Actual with
+                Identity = ""
+                Bindings =
+                    observations[1].Actual.Bindings
+                    |> List.map (fun (name, value) ->
+                        if name = "hitPoints" then
+                            name, QuintReplayValue.Integer "1"
+                        else
+                            name, value) }
+
+        let wrong =
+            { wrongDraft with
+                Identity = QuintReplay.stateFingerprint wrongDraft |> expectOk }
+
+        match QuintReplay.compare exact [ observations[0]; { observations[1] with Actual = wrong } ] with
+        | Ok(QuintReplayResult.Diverged divergence) ->
+            Assert.Equal(2, divergence.Step)
+            Assert.Equal("ApplyDamage", divergence.Action)
+            Assert.Equal(source, divergence.Source)
+            Assert.Equal("state", divergence.Reason)
+        | result -> Assert.Fail($"expected exact S.I.R. divergence, got %A{result}")
+
+    [<Fact>]
     let ``replay refuses malformed environment order state and source bindings`` () =
         let bindings = QuintBindings.generate "LoginContract" contract |> expectOk
         let valid = trace bindings.ContractFingerprint
@@ -133,6 +202,8 @@ module QuintReplayBindingsTests =
                 Environment =
                     { valid.Environment with
                         ToolFingerprint = "not-a-sha256" } }
+
+        let malformedTraceIdentity = { valid with TraceIdentity = digest }
 
         let malformedOrder =
             { valid with
@@ -155,6 +226,11 @@ module QuintReplayBindingsTests =
         Assert.Contains(
             "QRP-ENV-FINGERPRINT",
             malformedEnvironment |> QuintReplay.validateTrace |> replayDiagnosticCodes
+        )
+
+        Assert.Contains(
+            "QRP-TRACE-FINGERPRINT",
+            malformedTraceIdentity |> QuintReplay.validateTrace |> replayDiagnosticCodes
         )
 
         Assert.Contains("QRP-STEP-ORDER", malformedOrder |> QuintReplay.validateTrace |> replayDiagnosticCodes)

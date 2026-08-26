@@ -56,6 +56,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Fixtures/QuintQ2/q1-sir-reviewed-witness.itf.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

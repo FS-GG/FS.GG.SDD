@@ -44,6 +44,17 @@ type QuintReplayTrace =
       Initial: QuintReplayState
       Steps: QuintReplayStep list }
 
+/// Consumer-owned action/source binding for one transition in an ITF state sequence.
+type QuintItfStepBinding =
+    { Index: int
+      Action: string
+      Source: QuintReplaySourceBinding }
+
+/// Stable environment and product-owned bindings supplied while decoding generic ITF.
+type QuintItfDecodeContext =
+    { Environment: QuintReplayEnvironment
+      Steps: QuintItfStepBinding list }
+
 /// One implementation observation aligned to an expected trace step.
 type QuintReplayObservation =
     { Index: int
@@ -85,6 +96,13 @@ module QuintReplay =
 
     /// Validate all trace identities, ordered steps, bounds, states, and source bindings.
     val validateTrace: trace: QuintReplayTrace -> QuintReplayDiagnostic list
+
+    /// Return the lowercase SHA-256 identity of canonical trace content, excluding its derived identity field.
+    val traceFingerprint: trace: QuintReplayTrace -> Result<string, QuintReplayDiagnostic list>
+
+    /// Strictly decode an ITF state sequence and bind consumer-owned action/source identities.
+    val decodeItf:
+        context: QuintItfDecodeContext -> text: string -> Result<QuintReplayTrace, QuintReplayDiagnostic list>
 
     /// Compare ordered observations and return the exact first action/source/state divergence.
     val compare:

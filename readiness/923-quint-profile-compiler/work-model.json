@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "8c16d3675eb9612b70f82a63519fb44ff9cb0becea3687e2a6377157d8bb7534"
+        "value": "0700535a0492ca837e276183ef3035db87d0864786c85aa65037b95afe5b781e"
       }
     },
     {
@@ -1762,9 +1762,10 @@
         "FR-001"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1788,9 +1789,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1814,9 +1816,9 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1840,9 +1842,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1866,9 +1869,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1894,9 +1898,9 @@
         "FR-002"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1922,9 +1926,9 @@
         "FR-003"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1950,9 +1954,9 @@
         "FR-004"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1978,8 +1982,8 @@
         "FR-005"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
         "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
       ],
       "result": "pass",
@@ -2006,9 +2010,9 @@
         "FR-006"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2034,8 +2038,8 @@
         "FR-007"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
         "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
       ],
       "result": "pass",
@@ -2062,9 +2066,9 @@
         "FR-008"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2090,9 +2094,10 @@
         "FR-009"
       ],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2118,9 +2123,10 @@
         "FR-010"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2146,9 +2152,9 @@
         "FR-011"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2174,9 +2180,10 @@
         "FR-012"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2202,9 +2209,10 @@
         "FR-013"
       ],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2230,9 +2238,10 @@
         "FR-014"
       ],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2256,9 +2265,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2282,9 +2292,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2308,9 +2319,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2334,9 +2346,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2363,9 +2376,10 @@
         "FR-009"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2392,9 +2406,9 @@
         "FR-003"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2420,9 +2434,9 @@
         "FR-004"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2448,8 +2462,8 @@
         "FR-005"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
         "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
       ],
       "result": "pass",
@@ -2476,9 +2490,9 @@
         "FR-006"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2504,9 +2518,10 @@
         "FR-010"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2532,9 +2547,10 @@
         "FR-012"
       ],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2560,9 +2576,10 @@
         "FR-014"
       ],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2586,8 +2603,8 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
         "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
       ],
       "result": "pass",
@@ -2612,9 +2629,9 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2638,9 +2655,9 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2664,9 +2681,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2690,9 +2708,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2716,8 +2735,8 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
         "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
       ],
       "result": "pass",
@@ -2742,9 +2761,9 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2768,9 +2787,9 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2794,9 +2813,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2820,9 +2840,9 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2846,9 +2866,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2872,9 +2893,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
         "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2898,9 +2920,10 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2924,9 +2947,9 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
-        "docs/reference/typed-specifications.md",
-        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
-        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
       ],
       "result": "pass",
       "synthetic": false,
@@ -2995,7 +3018,7 @@
           "path": "work/923-quint-profile-compiler/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "8c16d3675eb9612b70f82a63519fb44ff9cb0becea3687e2a6377157d8bb7534"
+            "value": "0700535a0492ca837e276183ef3035db87d0864786c85aa65037b95afe5b781e"
           },
           "schemaVersion": 1
         },
@@ -3026,7 +3049,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "cd4817fbd237da6864a6857f74b5200d1899259dee4bc9cc4f65e84d16e8828e"
+        "value": "9825b2f76b1e86c1fa59f4c74cb609820ae2beeda024a9b757356b77c447781b"
       },
       "currency": "current"
     }

@@ -475,12 +475,102 @@ module QuintToolchain =
                       $"Cache observation '%s{observation.Id}' is not declared by the toolchain manifest." ]
         |> QuintToolchainInternal.sortDiagnostics
 
+    let private validateRequiredCache
+        (manifest: QuintToolchainManifest)
+        (requirements: QuintCacheRequirement list)
+        (observations: QuintCacheObservation list)
+        =
+        let declaredIds =
+            manifest.Components
+            |> List.collect (fun toolComponent -> toolComponent.Objects)
+            |> List.map _.Id
+            |> Set.ofList
+
+        [ yield! validateManifest manifest
+
+          for id, _ in observations |> List.countBy _.Id |> List.filter (fun (_, count) -> count > 1) do
+              yield
+                  QuintToolchainInternal.diagnostic
+                      "QUINT-CACHE-OBSERVATION-DUPLICATE"
+                      "/cache"
+                      $"Cache object '%s{id}' has more than one observation."
+
+          for requirement in requirements |> List.sortBy _.Id do
+              let path = $"/cache/%s{requirement.Id}"
+
+              match observations |> List.tryFind (fun item -> item.Id = requirement.Id) with
+              | None
+              | Some { State = Absent } ->
+                  yield
+                      QuintToolchainInternal.diagnostic
+                          "QUINT-CACHE-OBJECT-ABSENT"
+                          path
+                          $"Required cache object '%s{requirement.Id}' is absent; preseed the exact content-addressed object."
+              | Some { State = Unreadable detail } ->
+                  yield
+                      QuintToolchainInternal.diagnostic
+                          "QUINT-CACHE-OBJECT-UNREADABLE"
+                          path
+                          $"Required cache object '%s{requirement.Id}' could not be read: %s{detail}"
+              | Some observation when observation.Kind <> requirement.Kind ->
+                  yield
+                      QuintToolchainInternal.diagnostic
+                          "QUINT-CACHE-OBJECT-KIND-MISMATCH"
+                          path
+                          $"Cache object '%s{requirement.Id}' has the wrong object kind."
+              | Some { State = Present(_, _, false) } ->
+                  yield
+                      QuintToolchainInternal.diagnostic
+                          "QUINT-CACHE-OBJECT-INCOMPLETE"
+                          path
+                          $"Cache object '%s{requirement.Id}' is incomplete."
+              | Some { State = Present(sha, bytes, true) } ->
+                  if not (QuintToolchainInternal.isSha256 sha) || sha <> requirement.Sha256 then
+                      yield
+                          QuintToolchainInternal.diagnostic
+                              "QUINT-CACHE-OBJECT-DIGEST-MISMATCH"
+                              path
+                              $"Cache object '%s{requirement.Id}' expected SHA-256 '%s{requirement.Sha256}' but found '%s{sha}'."
+
+                  match requirement.Bytes, bytes with
+                  | Some expectedBytes, Some actualBytes when expectedBytes <> actualBytes ->
+                      yield
+                          QuintToolchainInternal.diagnostic
+                              "QUINT-CACHE-OBJECT-SIZE-MISMATCH"
+                              path
+                              $"Cache object '%s{requirement.Id}' expected %d{expectedBytes} bytes but found %d{actualBytes}."
+                  | Some _, None ->
+                      yield
+                          QuintToolchainInternal.diagnostic
+                              "QUINT-CACHE-OBJECT-SIZE-UNOBSERVED"
+                              path
+                              $"Cache object '%s{requirement.Id}' requires an observed byte count."
+                  | _ -> ()
+
+          for observation in observations |> List.filter (fun item -> not (Set.contains item.Id declaredIds)) do
+              yield
+                  QuintToolchainInternal.diagnostic
+                      "QUINT-CACHE-OBJECT-UNDECLARED"
+                      $"/cache/%s{observation.Id}"
+                      $"Cache observation '%s{observation.Id}' is not declared by the toolchain manifest." ]
+        |> QuintToolchainInternal.sortDiagnostics
+
     let plan
         (manifest: QuintToolchainManifest)
         (observations: QuintCacheObservation list)
         (requests: QuintProcessRequest list)
         =
-        let cacheDiagnostics = validateCache manifest observations
+        let declaredObjects =
+            manifest.Components |> List.collect (fun toolComponent -> toolComponent.Objects)
+
+        let requestedObjectIds = requests |> List.map _.ExecutableObjectId |> Set.ofList
+
+        let requiredObjects =
+            declaredObjects
+            |> List.filter (fun requirement -> Set.contains requirement.Id requestedObjectIds)
+            |> List.sortBy _.Id
+
+        let cacheDiagnostics = validateRequiredCache manifest requiredObjects observations
 
         let requestDiagnostics =
             [ for id, _ in
@@ -493,11 +583,7 @@ module QuintToolchain =
                           "/requests"
                           $"Process step id '%s{id}' is duplicated."
 
-              let objectIds =
-                  manifest.Components
-                  |> List.collect (fun toolComponent -> toolComponent.Objects)
-                  |> List.map (fun item -> item.Id)
-                  |> Set.ofList
+              let objectIds = declaredObjects |> List.map _.Id |> Set.ofList
 
               for index, request in requests |> List.indexed do
                   let path = $"/requests/%d{index}"
@@ -584,10 +670,7 @@ module QuintToolchain =
         | [] ->
             Ok
                 { ManifestSha256 = fingerprint manifest
-                  RequiredObjects =
-                    manifest.Components
-                    |> List.collect (fun toolComponent -> toolComponent.Objects)
-                    |> List.sortBy (fun item -> item.Id)
+                  RequiredObjects = requiredObjects
                   Requests = requests }
         | diagnostics -> Error diagnostics
 

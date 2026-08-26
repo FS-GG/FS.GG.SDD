@@ -186,3 +186,36 @@ module QuintProfileContractTests =
             ),
             fun finding -> finding.Code = "QUINT-FINGERPRINT-DIGEST"
         )
+
+    [<Fact>]
+    let ``semantic diff ignores order already normalized by canonical contract bytes`` () =
+        let original = contract ()
+
+        let reordered =
+            { original with
+                Catalogue = List.rev original.Catalogue
+                ActionEffects =
+                    original.ActionEffects
+                    |> List.map (fun effect ->
+                        { effect with
+                            Reads = List.rev effect.Reads
+                            Writes = List.rev effect.Writes
+                            Subjects = List.rev effect.Subjects })
+                Relationships = List.rev original.Relationships
+                VerificationProfiles =
+                    original.VerificationProfiles
+                    |> List.map (fun profile ->
+                        { profile with
+                            SubjectIds = List.rev profile.SubjectIds
+                            BoundIds = List.rev profile.BoundIds })
+                Bounds = List.rev original.Bounds
+                Impacts = List.rev original.Impacts
+                Compatibility = List.rev original.Compatibility
+                Digests = List.rev original.Digests }
+
+        Assert.Equal(
+            QuintContract.serializeCanonical original |> expectOk,
+            QuintContract.serializeCanonical reordered |> expectOk
+        )
+
+        Assert.Equal(QuintContractDiff.Equivalent, QuintContract.semanticDiff original reordered |> expectOk)

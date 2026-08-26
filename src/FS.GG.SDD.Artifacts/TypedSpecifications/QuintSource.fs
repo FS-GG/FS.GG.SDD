@@ -351,25 +351,15 @@ module QuintSource =
                       "/sourceSha256"
                       $"Fence manifest does not bind canonical source SHA-256 '%s{source.Sha256}'."
 
-          for target, _ in
+          for moduleName, fences in
               manifest.Fences
-              |> List.countBy (fun item -> item.Target)
-              |> List.filter (fun (_, count) -> count > 1) do
-              yield
-                  QuintSourceInternal.diagnostic
-                      "QUINT-FENCE-TARGET-DUPLICATE"
-                      "/fences"
-                      $"Fence target '%s{target}' is duplicated."
-
-          for moduleName, _ in
-              manifest.Fences
-              |> List.countBy (fun item -> item.ModuleName)
-              |> List.filter (fun (_, count) -> count > 1) do
+              |> List.groupBy (fun item -> item.ModuleName)
+              |> List.filter (fun (_, fences) -> fences |> List.map _.Target |> List.distinct |> List.length > 1) do
               yield
                   QuintSourceInternal.diagnostic
                       "QUINT-FENCE-MODULE-DUPLICATE"
                       "/fences"
-                      $"Quint module '%s{moduleName}' is declared by more than one fence."
+                      $"Quint module '%s{moduleName}' is declared for more than one generated target."
 
           for index, fence in manifest.Fences |> List.indexed do
               let path = $"/fences/%d{index}"
@@ -446,7 +436,8 @@ module QuintSource =
         |> QuintSourceInternal.sortDiagnostics
 
     let validateExtraction source manifest observation =
-        let expectedTargets = manifest.Fences |> List.map (fun item -> item.Target)
+        let expectedTargets =
+            manifest.Fences |> List.map (fun item -> item.Target) |> List.distinct
 
         let validatePass (passName: string) (modules: QuintGeneratedModule list) =
             [ for target, _ in

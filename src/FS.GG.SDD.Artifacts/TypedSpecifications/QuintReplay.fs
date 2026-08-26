@@ -4,6 +4,7 @@ open System
 open System.Globalization
 open System.Security.Cryptography
 open System.Text
+open System.Text.Json
 
 type QuintReplaySourceBinding =
     { Path: string; Line: int; Column: int }
@@ -42,6 +43,15 @@ type QuintReplayTrace =
       Environment: QuintReplayEnvironment
       Initial: QuintReplayState
       Steps: QuintReplayStep list }
+
+type QuintItfStepBinding =
+    { Index: int
+      Action: string
+      Source: QuintReplaySourceBinding }
+
+type QuintItfDecodeContext =
+    { Environment: QuintReplayEnvironment
+      Steps: QuintItfStepBinding list }
 
 type QuintReplayObservation =
     { Index: int
@@ -261,6 +271,125 @@ module private ReplayInternal =
         |> Convert.ToHexString
         |> fun value -> value.ToLowerInvariant()
 
+    let encodeSource (source: QuintReplaySourceBinding) =
+        $"{{\"path\":%s{escapeJson source.Path},\"line\":%d{source.Line},\"column\":%d{source.Column}}}"
+
+    let encodeEnvironment (environment: QuintReplayEnvironment) =
+        let bounds =
+            environment.Bounds
+            |> List.sortWith (fun (left, _) (right, _) -> StringComparer.Ordinal.Compare(left, right))
+            |> List.map (fun (name, value) -> $"%s{escapeJson name}:%d{value}")
+            |> String.concat ","
+
+        $"{{\"seed\":%s{escapeJson environment.Seed},\"bounds\":{{%s{bounds}}},\"toolFingerprint\":%s{escapeJson environment.ToolFingerprint},\"profileFingerprint\":%s{escapeJson environment.ProfileFingerprint},\"contractFingerprint\":%s{escapeJson environment.ContractFingerprint},\"adapterFingerprint\":%s{escapeJson environment.AdapterFingerprint},\"implementationFingerprint\":%s{escapeJson environment.ImplementationFingerprint}}}"
+
+    let encodeTraceUnchecked (trace: QuintReplayTrace) =
+        let steps =
+            trace.Steps
+            |> List.map (fun (step: QuintReplayStep) ->
+                $"{{\"index\":%d{step.Index},\"action\":%s{escapeJson step.Action},\"source\":%s{encodeSource step.Source},\"expected\":%s{encodeStateUnchecked step.Expected}}}")
+            |> String.concat ","
+
+        $"{{\"schemaVersion\":%d{trace.SchemaVersion},\"environment\":%s{encodeEnvironment trace.Environment},\"initial\":%s{encodeStateUnchecked trace.Initial},\"steps\":[%s{steps}]}}"
+
+    let traceFingerprint (trace: QuintReplayTrace) =
+        encodeTraceUnchecked trace
+        |> Encoding.UTF8.GetBytes
+        |> SHA256.HashData
+        |> Convert.ToHexString
+        |> fun value -> value.ToLowerInvariant()
+
+    let checkFields path required allowed (element: JsonElement) =
+        if element.ValueKind <> JsonValueKind.Object then
+            [ diagnostic "QRP-ITF-TYPE" path "Expected an object." ]
+        else
+            let names = element.EnumerateObject() |> Seq.map _.Name |> Seq.toList
+
+            [ for name, count in names |> List.countBy id do
+                  if count > 1 then
+                      diagnostic "QRP-ITF-DUPLICATE-FIELD" (path + "/" + name) "Duplicate ITF field."
+
+              for name in names |> List.distinct do
+                  if not (Set.contains name allowed) then
+                      diagnostic "QRP-ITF-UNSUPPORTED-FIELD" (path + "/" + name) "Unknown ITF field."
+
+              for name in required do
+                  if not (List.contains name names) then
+                      diagnostic "QRP-ITF-REQUIRED" (path + "/" + name) "Required ITF field is absent." ]
+
+    let property (name: string) (element: JsonElement) =
+        match element.TryGetProperty name with
+        | true, value -> Some value
+        | _ -> None
+
+    let collectDecoded (results: Result<'value, QuintReplayDiagnostic list> list) =
+        let values =
+            results
+            |> List.choose (function
+                | Ok value -> Some value
+                | Error _ -> None)
+
+        let diagnostics =
+            results
+            |> List.collect (function
+                | Ok _ -> []
+                | Error findings -> findings)
+
+        if diagnostics.IsEmpty then
+            Ok values
+        else
+            Error(sortDiagnostics diagnostics)
+
+    let rec decodeItfValue (path: string) (element: JsonElement) =
+        match element.ValueKind with
+        | JsonValueKind.Null -> Ok Null
+        | JsonValueKind.True -> Ok(Boolean true)
+        | JsonValueKind.False -> Ok(Boolean false)
+        | JsonValueKind.String ->
+            match element.GetString() with
+            | null -> Error [ diagnostic "QRP-ITF-TYPE" path "ITF strings cannot be null." ]
+            | value -> Ok(Text value)
+        | JsonValueKind.Number ->
+            match element.TryGetInt64() with
+            | true, value -> Ok(Integer(value.ToString(CultureInfo.InvariantCulture)))
+            | _ -> Error [ diagnostic "QRP-ITF-INTEGER" path "ITF numbers must be integers." ]
+        | JsonValueKind.Array ->
+            element.EnumerateArray()
+            |> Seq.indexed
+            |> Seq.map (fun (index, item) -> decodeItfValue $"%s{path}/%d{index}" item)
+            |> Seq.toList
+            |> collectDecoded
+            |> Result.map Sequence
+        | JsonValueKind.Object ->
+            match property "#bigint" element, property "#set" element with
+            | Some bigint, None when
+                element.EnumerateObject() |> Seq.length = 1
+                && bigint.ValueKind = JsonValueKind.String
+                ->
+                match bigint.GetString() |> Option.ofObj |> Option.bind canonicalInteger with
+                | Some value -> Ok(Integer value)
+                | None -> Error [ diagnostic "QRP-ITF-INTEGER" (path + "/#bigint") "Invalid ITF bigint." ]
+            | None, Some set when
+                element.EnumerateObject() |> Seq.length = 1
+                && set.ValueKind = JsonValueKind.Array
+                ->
+                set.EnumerateArray()
+                |> Seq.indexed
+                |> Seq.map (fun (index, item) -> decodeItfValue $"%s{path}/#set/%d{index}" item)
+                |> Seq.toList
+                |> collectDecoded
+                |> Result.map Set
+            | None, None ->
+                element.EnumerateObject()
+                |> Seq.map (fun item ->
+                    decodeItfValue (path + "/" + item.Name) item.Value
+                    |> Result.map (fun value -> item.Name, value))
+                |> Seq.toList
+                |> collectDecoded
+                |> Result.map Record
+            | _ -> Error [ diagnostic "QRP-ITF-SHAPE" path "Unsupported or ambiguous ITF tagged value." ]
+        | _ -> Error [ diagnostic "QRP-ITF-TYPE" path "Unsupported ITF value kind." ]
+
     let validateState path (state: QuintReplayState) =
         let contentDiagnostics = validateStateContent path state
 
@@ -298,7 +427,7 @@ module QuintReplay =
         | [] -> Ok(ReplayInternal.stateFingerprint state)
         | diagnostics -> Error diagnostics
 
-    let validateTrace trace =
+    let validateTrace (trace: QuintReplayTrace) =
         let environment = trace.Environment
 
         let boundsDiagnostics =
@@ -338,31 +467,230 @@ module QuintReplay =
                   yield! ReplayInternal.validateSource $"$.steps[%d{ordinal}].source" step.Source
                   yield! ReplayInternal.validateState $"$.steps[%d{ordinal}].expected" step.Expected ]
 
-        [ if trace.SchemaVersion <> 1 then
-              ReplayInternal.diagnostic
-                  "QRP-SCHEMA-VERSION"
-                  "$.schemaVersion"
-                  "Only quint-replay-v1 schema version 1 is supported."
-          if not (ReplayInternal.isLowerSha256 trace.TraceIdentity) then
-              ReplayInternal.diagnostic
-                  "QRP-TRACE-IDENTITY"
-                  "$.traceIdentity"
-                  "Trace identity must be a lowercase SHA-256 digest."
-          if String.IsNullOrWhiteSpace environment.Seed then
-              ReplayInternal.diagnostic "QRP-SEED" "$.environment.seed" "Replay seed is required."
+        let structural =
+            [ if trace.SchemaVersion <> 1 then
+                  ReplayInternal.diagnostic
+                      "QRP-SCHEMA-VERSION"
+                      "$.schemaVersion"
+                      "Only quint-replay-v1 schema version 1 is supported."
+              if not (ReplayInternal.isLowerSha256 trace.TraceIdentity) then
+                  ReplayInternal.diagnostic
+                      "QRP-TRACE-IDENTITY"
+                      "$.traceIdentity"
+                      "Trace identity must be a lowercase SHA-256 digest."
+              if String.IsNullOrWhiteSpace environment.Seed then
+                  ReplayInternal.diagnostic "QRP-SEED" "$.environment.seed" "Replay seed is required."
 
-          yield! ReplayInternal.validateFingerprint "$.environment.toolFingerprint" environment.ToolFingerprint
-          yield! ReplayInternal.validateFingerprint "$.environment.profileFingerprint" environment.ProfileFingerprint
-          yield! ReplayInternal.validateFingerprint "$.environment.contractFingerprint" environment.ContractFingerprint
-          yield! ReplayInternal.validateFingerprint "$.environment.adapterFingerprint" environment.AdapterFingerprint
-          yield!
-              ReplayInternal.validateFingerprint
-                  "$.environment.implementationFingerprint"
-                  environment.ImplementationFingerprint
-          yield! boundsDiagnostics
-          yield! ReplayInternal.validateState "$.initial" trace.Initial
-          yield! stepDiagnostics ]
-        |> ReplayInternal.sortDiagnostics
+              yield! ReplayInternal.validateFingerprint "$.environment.toolFingerprint" environment.ToolFingerprint
+              yield!
+                  ReplayInternal.validateFingerprint "$.environment.profileFingerprint" environment.ProfileFingerprint
+              yield!
+                  ReplayInternal.validateFingerprint "$.environment.contractFingerprint" environment.ContractFingerprint
+              yield!
+                  ReplayInternal.validateFingerprint "$.environment.adapterFingerprint" environment.AdapterFingerprint
+              yield!
+                  ReplayInternal.validateFingerprint
+                      "$.environment.implementationFingerprint"
+                      environment.ImplementationFingerprint
+              yield! boundsDiagnostics
+              yield! ReplayInternal.validateState "$.initial" trace.Initial
+              yield! stepDiagnostics ]
+            |> ReplayInternal.sortDiagnostics
+
+        if structural.IsEmpty then
+            let expected = ReplayInternal.traceFingerprint trace
+
+            if String.Equals(trace.TraceIdentity, expected, StringComparison.Ordinal) then
+                []
+            else
+                [ ReplayInternal.diagnostic
+                      "QRP-TRACE-FINGERPRINT"
+                      "$.traceIdentity"
+                      $"Trace identity does not match canonical trace fingerprint '%s{expected}'." ]
+        else
+            structural
+
+    let traceFingerprint (trace: QuintReplayTrace) =
+        let placeholder =
+            { trace with
+                TraceIdentity = String.replicate 64 "0" }
+
+        let diagnostics =
+            validateTrace placeholder
+            |> List.filter (fun finding -> finding.Code <> "QRP-TRACE-FINGERPRINT")
+
+        if diagnostics.IsEmpty then
+            Ok(ReplayInternal.traceFingerprint placeholder)
+        else
+            Error diagnostics
+
+    let decodeItf (context: QuintItfDecodeContext) (text: string) =
+        try
+            use document = JsonDocument.Parse text
+            let root = document.RootElement
+            let rootFields = Set.ofList [ "#meta"; "vars"; "states" ]
+            let mutable diagnostics = ReplayInternal.checkFields "$" rootFields rootFields root
+
+            let metaFields = Set.ofList [ "format"; "format-description"; "source"; "status" ]
+
+            match ReplayInternal.property "#meta" root with
+            | Some meta ->
+                diagnostics <- ReplayInternal.checkFields "$/#meta" metaFields metaFields meta @ diagnostics
+
+                for name, expected in [ "format", "ITF"; "status", "ok" ] do
+                    match ReplayInternal.property name meta with
+                    | Some value when value.ValueKind = JsonValueKind.String && value.GetString() = expected -> ()
+                    | _ ->
+                        diagnostics <-
+                            ReplayInternal.diagnostic
+                                "QRP-ITF-META"
+                                ($"$/#meta/%s{name}")
+                                $"Expected ITF metadata '%s{name}' to be '%s{expected}'."
+                            :: diagnostics
+            | None -> ()
+
+            let variables =
+                match ReplayInternal.property "vars" root with
+                | Some values when values.ValueKind = JsonValueKind.Array ->
+                    values.EnumerateArray()
+                    |> Seq.indexed
+                    |> Seq.choose (fun (index, value) ->
+                        if value.ValueKind = JsonValueKind.String then
+                            value.GetString() |> Option.ofObj
+                        else
+                            diagnostics <-
+                                ReplayInternal.diagnostic
+                                    "QRP-ITF-VAR"
+                                    ($"$/vars/%d{index}")
+                                    "ITF variable names must be strings."
+                                :: diagnostics
+
+                            None)
+                    |> Seq.toList
+                | Some _ ->
+                    diagnostics <-
+                        ReplayInternal.diagnostic "QRP-ITF-TYPE" "$/vars" "ITF vars must be an array."
+                        :: diagnostics
+
+                    []
+                | None -> []
+
+            if variables.IsEmpty || List.distinct variables |> List.length <> variables.Length then
+                diagnostics <-
+                    ReplayInternal.diagnostic "QRP-ITF-VARS" "$/vars" "ITF variables must be non-empty and unique."
+                    :: diagnostics
+
+            let states =
+                match ReplayInternal.property "states" root with
+                | Some values when values.ValueKind = JsonValueKind.Array -> values.EnumerateArray() |> Seq.toList
+                | Some _ ->
+                    diagnostics <-
+                        ReplayInternal.diagnostic "QRP-ITF-TYPE" "$/states" "ITF states must be an array."
+                        :: diagnostics
+
+                    []
+                | None -> []
+
+            if states.IsEmpty then
+                diagnostics <-
+                    ReplayInternal.diagnostic "QRP-ITF-STATES" "$/states" "ITF needs an initial state."
+                    :: diagnostics
+
+            let decodedStates =
+                states
+                |> List.mapi (fun index state ->
+                    let path = $"$/states/%d{index}"
+                    let fields = Set.add "#meta" (Set.ofList variables)
+                    diagnostics <- ReplayInternal.checkFields path fields fields state @ diagnostics
+
+                    match ReplayInternal.property "#meta" state with
+                    | Some meta ->
+                        let required = Set.ofList [ "index" ]
+
+                        diagnostics <-
+                            ReplayInternal.checkFields (path + "/#meta") required required meta
+                            @ diagnostics
+
+                        match ReplayInternal.property "index" meta with
+                        | Some value when value.ValueKind = JsonValueKind.Number ->
+                            match value.TryGetInt32() with
+                            | true, actual when actual = index -> ()
+                            | _ ->
+                                diagnostics <-
+                                    ReplayInternal.diagnostic
+                                        "QRP-ITF-STATE-INDEX"
+                                        (path + "/#meta/index")
+                                        $"Expected ITF state index %d{index}."
+                                    :: diagnostics
+                        | _ ->
+                            diagnostics <-
+                                ReplayInternal.diagnostic
+                                    "QRP-ITF-STATE-INDEX"
+                                    (path + "/#meta/index")
+                                    "ITF state index must be an integer."
+                                :: diagnostics
+                    | None -> ()
+
+                    let bindings =
+                        variables
+                        |> List.choose (fun name ->
+                            match ReplayInternal.property name state with
+                            | Some value ->
+                                match ReplayInternal.decodeItfValue (path + "/" + name) value with
+                                | Ok decoded -> Some(name, decoded)
+                                | Error findings ->
+                                    diagnostics <- findings @ diagnostics
+                                    None
+                            | None -> None)
+
+                    let draft = { Identity = ""; Bindings = bindings }
+
+                    { draft with
+                        Identity = ReplayInternal.stateFingerprint draft })
+
+            if context.Steps.Length <> max 0 (decodedStates.Length - 1) then
+                diagnostics <-
+                    ReplayInternal.diagnostic
+                        "QRP-ITF-STEP-BINDINGS"
+                        "$.context.steps"
+                        "One consumer action/source binding is required per ITF transition."
+                    :: diagnostics
+
+            let steps =
+                let transitionStates = decodedStates |> List.skip (min 1 decodedStates.Length)
+
+                if transitionStates.Length = context.Steps.Length then
+                    List.zip transitionStates context.Steps
+                    |> List.map (fun (state, binding) ->
+                        { Index = binding.Index
+                          Action = binding.Action
+                          Source = binding.Source
+                          Expected = state })
+                else
+                    []
+
+            let initial =
+                decodedStates
+                |> List.tryHead
+                |> Option.defaultValue
+                    { Identity = String.replicate 64 "0"
+                      Bindings = [] }
+
+            let draft =
+                { SchemaVersion = 1
+                  TraceIdentity = String.replicate 64 "0"
+                  Environment = context.Environment
+                  Initial = initial
+                  Steps = steps }
+
+            let trace =
+                { draft with
+                    TraceIdentity = ReplayInternal.traceFingerprint draft }
+
+            let all = ReplayInternal.sortDiagnostics (diagnostics @ validateTrace trace)
+            if all.IsEmpty then Ok trace else Error all
+        with :? JsonException as ex ->
+            Error [ ReplayInternal.diagnostic "QRP-ITF-MALFORMED" "$" ex.Message ]
 
     let compare trace observations =
         let traceDiagnostics = validateTrace trace

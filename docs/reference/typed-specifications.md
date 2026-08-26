@@ -111,6 +111,20 @@ deliberately split into a pure plan and a caller-owned local execution edge:
 6. `QuintReplay` carries generic fingerprinted ITF traces and implementation
    observations. It reports the first divergent step, action, binding, expected
    state, and observed state without embedding a product transition function.
+7. `QuintCompiler.compileObserved` is the public pure composition point. It
+   accepts already-observed tool execution, source/extraction/source-map facts,
+   exact typed/effect JSON, and integration metadata; it returns the validated
+   plan, canonical contract, generated bindings, semantic fingerprint, and a
+   content-addressed compilation receipt, or one deterministically ordered
+   diagnostic set. It performs no I/O.
+
+The required acceptance packs `FS.GG.SDD.Artifacts`, restores a clean consumer
+with no project reference, and compiles all three exact Q1 slices in two isolated
+directories using only pre-provisioned exact tools. It compares generated Quint,
+typed/effect IR, contracts, bindings, and receipts byte-for-byte, then compiles
+and runs the generated bindings under Fable/Node and compares their contract
+fingerprint, catalogue identities, and canonical JSON with native .NET. A
+separate invalid Fable consumer must fail compilation.
 
 The qualified `lmt` source/license identity and optional Apache-2.0 guidance
 identity remain separately content-addressed package assets. Guidance is not a

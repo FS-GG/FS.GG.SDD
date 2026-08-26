@@ -545,7 +545,18 @@ module private ProfileCore =
         if element.ValueKind <> JsonValueKind.Object then
             [ diagnostic "QUINT-IR-TYPE" path "Expected an id-indexed object." "Use unmodified output." None ]
         else
-            [ for item in element.EnumerateObject() do
+            [ if not (element.EnumerateObject() |> Seq.isEmpty) then
+                  ()
+              else
+                  yield
+                      diagnostic
+                          "QUINT-IR-TABLE-EMPTY"
+                          path
+                          "Compiler-owned type/effect evidence is empty."
+                          "Use complete Quint 0.32.0 typecheck output."
+                          None
+
+              for item in element.EnumerateObject() do
                   match Int64.TryParse(item.Name, NumberStyles.None, CultureInfo.InvariantCulture) with
                   | true, _ when item.Value.ValueKind = JsonValueKind.Object -> ()
                   | true, _ ->
@@ -564,6 +575,184 @@ module private ProfileCore =
                               "Table key must be a decimal node id."
                               "Use unmodified output."
                               None ]
+
+    let private intrinsicOpcodes =
+        Set.ofList
+            [ "Rec"
+              "Set"
+              "Tup"
+              "actionAll"
+              "actionAny"
+              "and"
+              "assign"
+              "contains"
+              "eq"
+              "eventually"
+              "exists"
+              "expect"
+              "field"
+              "iadd"
+              "igte"
+              "ilt"
+              "ilte"
+              "implies"
+              "isub"
+              "ite"
+              "neq"
+              "not"
+              "oneOf"
+              "then"
+              "to"
+              "union"
+              "variant"
+              "weakFair" ]
+
+    let private kindShape kind =
+        match kind with
+        | "app" -> Some(Set.ofList [ "id"; "kind"; "opcode"; "args" ], Set.ofList [ "id"; "kind"; "opcode"; "args" ])
+        | "arrow" -> Some(Set.ofList [ "kind"; "params"; "result" ], Set.ofList [ "kind"; "params"; "result" ])
+        | "bool"
+        | "int"
+        | "str" -> Some(Set.ofList [ "kind" ], Set.ofList [ "id"; "kind"; "value" ])
+        | "concrete" -> Some(Set.ofList [ "kind" ], Set.ofList [ "kind"; "components"; "stateVariables" ])
+        | "const" -> Some(Set.ofList [ "id"; "kind"; "name" ], Set.ofList [ "id"; "kind"; "name" ])
+        | "def" ->
+            Some(
+                Set.ofList [ "id"; "kind"; "name"; "qualifier"; "expr" ],
+                Set.ofList
+                    [ "id"
+                      "kind"
+                      "name"
+                      "qualifier"
+                      "expr"
+                      "depth"
+                      "hidden"
+                      "importedFrom"
+                      "shadowing"
+                      "typeAnnotation" ]
+            )
+        | "empty" -> Some(Set.ofList [ "kind" ], Set.ofList [ "kind" ])
+        | "import" ->
+            Some(
+                Set.ofList [ "id"; "kind"; "defName"; "protoName" ],
+                Set.ofList [ "id"; "kind"; "defName"; "protoName" ]
+            )
+        | "lambda" ->
+            Some(
+                Set.ofList [ "id"; "kind"; "params"; "qualifier"; "expr" ],
+                Set.ofList [ "id"; "kind"; "params"; "qualifier"; "expr" ]
+            )
+        | "let" -> Some(Set.ofList [ "id"; "kind"; "opdef"; "expr" ], Set.ofList [ "id"; "kind"; "opdef"; "expr" ])
+        | "name" -> Some(Set.ofList [ "id"; "kind"; "name" ], Set.ofList [ "id"; "kind"; "name" ])
+        | "oper" -> Some(Set.ofList [ "kind"; "args"; "res" ], Set.ofList [ "kind"; "args"; "res" ])
+        | "param" ->
+            Some(Set.ofList [ "id"; "kind"; "name" ], Set.ofList [ "id"; "kind"; "name"; "depth"; "typeAnnotation" ])
+        | "read"
+        | "temporal"
+        | "update" -> Some(Set.ofList [ "kind"; "entity" ], Set.ofList [ "kind"; "entity" ])
+        | "rec"
+        | "sum"
+        | "tup" -> Some(Set.ofList [ "kind"; "fields" ], Set.ofList [ "id"; "kind"; "fields" ])
+        | "row" -> Some(Set.ofList [ "kind"; "fields"; "other" ], Set.ofList [ "kind"; "fields"; "other" ])
+        | "set" -> Some(Set.ofList [ "id"; "kind"; "elem" ], Set.ofList [ "id"; "kind"; "elem" ])
+        | "typedef" ->
+            Some(
+                Set.ofList [ "id"; "kind"; "name"; "type"; "depth" ],
+                Set.ofList [ "id"; "kind"; "name"; "type"; "depth" ]
+            )
+        | "union" -> Some(Set.ofList [ "kind"; "entities" ], Set.ofList [ "kind"; "entities" ])
+        | "var" ->
+            Some(
+                Set.ofList [ "id"; "kind"; "name"; "depth"; "typeAnnotation" ],
+                Set.ofList [ "id"; "kind"; "name"; "depth"; "typeAnnotation"; "hidden"; "importedFrom" ]
+            )
+        | "variable" -> Some(Set.ofList [ "kind"; "name" ], Set.ofList [ "kind"; "name" ])
+        | _ -> None
+
+    let private untaggedShapes =
+        Set.ofList
+            [ Set.ofList [ "id"; "name"; "declarations" ]
+              Set.ofList [ "fieldName"; "fieldType" ]
+              Set.ofList [ "id"; "name" ]
+              Set.ofList [ "id"; "name"; "typeAnnotation" ]
+              Set.ofList [ "name"; "reference" ]
+              Set.ofList [ "rowVariables"; "type"; "typeVariables" ]
+              Set.ofList [ "effect"; "effectVariables"; "entityVariables" ] ]
+
+    let rec validateClosedNode definitions path (element: JsonElement) =
+        match element.ValueKind with
+        | JsonValueKind.Array ->
+            element.EnumerateArray()
+            |> Seq.indexed
+            |> Seq.collect (fun (index, item) -> validateClosedNode definitions $"%s{path}/%d{index}" item)
+            |> Seq.toList
+        | JsonValueKind.Object ->
+            let properties = element.EnumerateObject() |> Seq.toList
+            let names = properties |> List.map _.Name |> Set.ofList
+
+            let shapeFindings =
+                match tryProperty "kind" element with
+                | Some value when value.ValueKind = JsonValueKind.String ->
+                    let kind = value.GetString() |> Option.ofObj |> Option.defaultValue ""
+
+                    match kindShape kind with
+                    | Some(required, allowed) -> fields path required allowed element
+                    | None ->
+                        [ diagnostic
+                              "QUINT-IR-UNSUPPORTED-KIND"
+                              (path + "/kind")
+                              $"IR kind '%s{kind}' is outside fsgg-quint-profile/1."
+                              "Use only the Q1-qualified Quint 0.32.0 subset."
+                              None ]
+                | Some _ ->
+                    [ diagnostic
+                          "QUINT-IR-TYPE"
+                          (path + "/kind")
+                          "IR kind must be a string."
+                          "Use unmodified compiler output."
+                          None ]
+                | None when properties |> List.forall (fun item -> Int64.TryParse(item.Name) |> fst) -> []
+                | None when Set.contains names untaggedShapes -> []
+                | None ->
+                    [ diagnostic
+                          "QUINT-IR-UNSUPPORTED-SHAPE"
+                          path
+                          "Object shape is outside the exact Quint 0.32.0 profile boundary."
+                          "Use only the Q1-qualified IR shape."
+                          None ]
+
+            let opcodeFindings =
+                match tryProperty "kind" element, tryProperty "opcode" element with
+                | Some kind, Some opcode when
+                    kind.ValueKind = JsonValueKind.String
+                    && kind.GetString() = "app"
+                    && opcode.ValueKind = JsonValueKind.String
+                    ->
+                    let value = opcode.GetString() |> Option.ofObj |> Option.defaultValue ""
+
+                    if Set.contains value intrinsicOpcodes || Set.contains value definitions then
+                        []
+                    else
+                        [ diagnostic
+                              "QUINT-IR-UNSUPPORTED-OPCODE"
+                              (path + "/opcode")
+                              $"Opcode '%s{value}' is neither a qualified intrinsic nor a resolved local definition."
+                              "Use only the Q1-qualified Quint subset."
+                              None ]
+                | _ -> []
+
+            let nested =
+                properties
+                |> List.collect (fun item -> validateClosedNode definitions (path + "/" + item.Name) item.Value)
+
+            shapeFindings @ opcodeFindings @ nested
+        | _ -> []
+
+    let numericKeys (element: JsonElement) =
+        if element.ValueKind = JsonValueKind.Object then
+            element.EnumerateObject() |> Seq.map _.Name |> Set.ofSeq
+        else
+            Set.empty
 
     let rowKey (row: RawRow) =
         row.ModuleName, row.CatalogueName, row.Kind, row.Id
@@ -672,10 +861,47 @@ module QuintProfile =
                                 :: findings
                         | None -> ()
 
+                    let definitions =
+                        match ProfileCore.tryProperty "modules" root with
+                        | Some modules when modules.ValueKind = JsonValueKind.Array ->
+                            modules.EnumerateArray()
+                            |> Seq.collect (fun item ->
+                                match ProfileCore.tryProperty "declarations" item with
+                                | Some declarations when declarations.ValueKind = JsonValueKind.Array ->
+                                    declarations.EnumerateArray()
+                                    |> Seq.choose (fun declaration ->
+                                        match
+                                            ProfileCore.stringAt "" "kind" declaration,
+                                            ProfileCore.stringAt "" "name" declaration
+                                        with
+                                        | Ok "def", Ok name -> Some name
+                                        | _ -> None)
+                                | _ -> Seq.empty)
+                            |> Set.ofSeq
+                        | _ -> Set.empty
+
+                    for name in [ "modules"; "table"; "types"; "effects" ] do
+                        match ProfileCore.tryProperty name root with
+                        | Some value ->
+                            findings <- ProfileCore.validateClosedNode definitions ("/" + name) value @ findings
+                        | None -> ()
+
                     for name in [ "table"; "types"; "effects" ] do
                         match ProfileCore.tryProperty name root with
                         | Some value -> findings <- ProfileCore.numericTable ("/" + name) value @ findings
                         | None -> ()
+
+                    match ProfileCore.tryProperty "types" root, ProfileCore.tryProperty "effects" root with
+                    | Some types, Some effects when ProfileCore.numericKeys types <> ProfileCore.numericKeys effects ->
+                        findings <-
+                            ProfileCore.diagnostic
+                                "QUINT-IR-EFFECT-TYPE-COVERAGE"
+                                "/effects"
+                                "Compiler type and effect evidence do not cover the same node identities."
+                                "Use one complete Quint 0.32.0 typecheck observation."
+                                None
+                            :: findings
+                    | _ -> ()
 
                     let mutable rows: ProfileCore.RawRow list = []
 
@@ -732,6 +958,25 @@ module QuintProfile =
                                                     exactDeclarationFields
                                                     declaration
                                                 @ findings
+
+                                            match ProfileCore.intAt (path + "/expr") "id" expression with
+                                            | Ok expressionId ->
+                                                let key = expressionId.ToString(CultureInfo.InvariantCulture)
+
+                                                for tableName in [ "types"; "effects" ] do
+                                                    match ProfileCore.tryProperty tableName root with
+                                                    | Some table when Set.contains key (ProfileCore.numericKeys table) ->
+                                                        ()
+                                                    | _ ->
+                                                        findings <-
+                                                            ProfileCore.diagnostic
+                                                                "QUINT-IR-CATALOGUE-EVIDENCE"
+                                                                ($"/%s{tableName}/%s{key}")
+                                                                $"Catalogue '%s{catalogueName}' has no compiler %s{tableName} evidence."
+                                                                "Use complete typecheck output from the same module."
+                                                                None
+                                                            :: findings
+                                            | Error errors -> findings <- errors @ findings
 
                                         let parseRows parser =
                                             match ProfileCore.app (path + "/expr") "Set" expression with
