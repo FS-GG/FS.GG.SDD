@@ -336,11 +336,9 @@ jobs:
         run: |
           set -euo pipefail
           dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release \
-            -p:Version=${{ needs.resolve-versions.outputs.artifacts_version }} \
             -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
             --no-restore -o artifacts/packages
           dotnet pack src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -c Release \
-            -p:Version=${{ needs.resolve-versions.outputs.cli_version }} \
             -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
             --no-restore -o artifacts/packages
 
@@ -511,6 +509,7 @@ jobs:
           QUINT_BIN: ${{ runner.temp }}/quint-release-tools/quint
           LMT_BIN: ${{ runner.temp }}/quint-release-tools/lmt
           FABLE_BIN: ${{ runner.temp }}/quint-release-tools/fable/fable
+          Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
           Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
           Q2_JUNIT_OUT: artifacts/feed-readback/quint-q2-public.junit.xml
           Q3_JUNIT_OUT: artifacts/feed-readback/quint-q3-public.junit.xml

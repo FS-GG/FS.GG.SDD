@@ -134,10 +134,11 @@ module PackedDependencyContractTests =
             Directory.Delete(outputDirectory, true)
 
     [<Fact>]
-    let ``Artifacts release pack pins the resolved coherent identity`` () =
+    let ``Artifacts release pack does not globally override dependency identities`` () =
         let job = artifactsJob ()
         Assert.Contains("dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj", job)
-        Assert.Contains("-p:Version=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
+        Assert.DoesNotContain("-p:Version=", job)
+        Assert.DoesNotContain("-p:PackageVersion=", job)
         Assert.Contains("-p:RepositoryCommit=\"$GITHUB_SHA\"", job)
 
     [<Fact>]
