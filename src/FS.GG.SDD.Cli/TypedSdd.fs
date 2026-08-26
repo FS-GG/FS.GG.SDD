@@ -237,30 +237,48 @@ module TypedSdd =
             if File.Exists temporary then
                 File.Delete temporary
 
-    let private atomicWrite (writes: (string * byte array) list) =
+    let private atomicWrite rootPath (writes: (string * byte array) list) =
+        let coordination = Path.Combine(rootPath, ".fsgg", "typed-sdd-transactions")
+        Directory.CreateDirectory coordination |> ignore
+        let lockPath = Path.Combine(coordination, "authority.lock")
+        use transactionLock = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)
+        let transaction = Path.Combine(coordination, Guid.NewGuid().ToString("N"))
+        Directory.CreateDirectory transaction |> ignore
         let prior =
             writes
-            |> List.map (fun (path, _) ->
+            |> List.mapi (fun index (path, _) ->
+                let backup = Path.Combine(transaction, $"prior-{index:D4}.bin")
+                let previous =
+                    if File.Exists path then
+                        let bytes = File.ReadAllBytes path
+                        File.WriteAllBytes(backup, bytes)
+                        Some bytes
+                    else None
                 path,
-                (if File.Exists path then
-                     Some(File.ReadAllBytes path)
-                 else
-                     None))
+                previous)
 
-        let staged =
-            writes
-            |> List.map (fun (path, bytes) ->
-                Path.GetDirectoryName path
-                |> Option.ofObj
-                |> Option.iter (fun directory -> Directory.CreateDirectory directory |> ignore)
-
-                let temporary = path + ".typed-sdd-" + Guid.NewGuid().ToString("N") + ".tmp"
-                File.WriteAllBytes(temporary, bytes)
-                path, temporary)
+        File.WriteAllText(Path.Combine(transaction, "journal.state"), "prepared\n")
+        let staged = ResizeArray<string * string * byte array>()
 
         try
-            staged |> List.iter (fun (path, temporary) -> File.Move(temporary, path, true))
-        with _ ->
+            writes
+            |> List.iteri (fun index (path, bytes) ->
+                Path.GetDirectoryName path |> Option.ofObj |> Option.iter (Directory.CreateDirectory >> ignore)
+                let temporary = Path.Combine(transaction, $"stage-{index:D4}.bin")
+                File.WriteAllBytes(temporary, bytes)
+                staged.Add(path, temporary, bytes))
+
+            staged
+            |> Seq.sortBy (fun (path, _, _) -> if path.EndsWith("typed-authority.json", StringComparison.Ordinal) then 1 else 0)
+            |> Seq.iter (fun (path, temporary, _) -> File.Move(temporary, path, true))
+
+            for path, _, expected in staged do
+                if not (File.Exists path) || File.ReadAllBytes path <> expected then
+                    invalidOp $"transaction post-state mismatch for '{path}'"
+
+            File.WriteAllText(Path.Combine(transaction, "journal.state"), "committed\n")
+            Directory.Delete(transaction, true)
+        with ex ->
             for path, bytes in prior do
                 match bytes with
                 | Some value -> File.WriteAllBytes(path, value)
@@ -268,11 +286,11 @@ module TypedSdd =
                 | None -> ()
 
             staged
-            |> List.iter (fun (_, temporary) ->
+            |> Seq.iter (fun (_, temporary, _) ->
                 if File.Exists temporary then
                     File.Delete temporary)
-
-            reraise ()
+            if Directory.Exists transaction then Directory.Delete(transaction, true)
+            raise ex
 
     let private paths root workId =
         let relativeCanonical = $"work/{workId}/specification.fsx"
@@ -326,7 +344,7 @@ module TypedSdd =
 
                 let authorityPath = Path.Combine(root, TypedAuthorityManifest.path workId)
 
-                atomicWrite (
+                atomicWrite root (
                     extraWrites
                     @ [ canonicalPath, canonicalBytes
                         normalizedPath, normalizedBytes
@@ -363,34 +381,75 @@ module TypedSdd =
                       "typedSdd.v2.cacheMissing"
                       "The selected local Quint cache does not exist."
                       "Preseed the exact Q1/Q2 cache and pass its path." ]
-        | Some _ when File.Exists manifestPath && not (has "--accept" args) ->
-            Error
-                [ diagnostic
-                      "typedSdd.acceptRequired"
-                      "Typed SDD authority already exists."
-                      "Review the replacement, then pass --accept with a fresh authoring receipt." ]
         | Some cache ->
-            let title = optionValue "--title" args |> Option.defaultValue workId
+            let existing =
+                if File.Exists manifestPath then
+                    try File.ReadAllText manifestPath |> TypedAuthority.deserialize |> Some
+                    with ex -> Some(Error(diagnostic "typedSdd.authorityUnreadable" ex.Message "Correct the existing authority before authoring."))
+                else None
 
-            match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) None with
+            match existing with
+            | Some(Ok(FsharpSpecificationV1 _)) ->
+                Error [ diagnostic "typedSdd.v2.migrationRequired" "A manifest-v1 authority cannot be replaced by author --accept." "Use typed-sdd migrate so the exact v1 rollback inventory is retained." ]
+            | Some(Error finding) -> Error [ finding ]
+            | Some(Ok(QuintSpecificationV1 _)) when not (has "--accept" args) ->
+                Error [ diagnostic "typedSdd.acceptRequired" "Typed SDD authority already exists." "Review the replacement, then pass --accept with a fresh authoring receipt." ]
+            | _ ->
+                let title = optionValue "--title" args |> Option.defaultValue workId
+                if title.Contains('\r') || title.Contains('\n') || title |> Seq.exists Char.IsControl then
+                    Error [ diagnostic "typedSdd.v2.titleInvalid" "Quint authority titles must be one printable line." "Remove line breaks and control characters from --title." ]
+                else
+                  match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) None with
+                  | Error findings -> Error findings
+                  | Ok output ->
+                    try
+                        let writes =
+                            output.Writes
+                            |> List.map (fun (relative, bytes) ->
+                                match containedPath rootPath relative with
+                                | Some path -> path, bytes
+                                | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
+
+                        atomicWrite rootPath writes
+                        Ok(output.Writes |> List.map fst)
+                    with ex ->
+                        Error
+                            [ diagnostic
+                                  "typedSdd.v2.transactionFailed"
+                                  ex.Message
+                                  "Correct filesystem access and retry; the prior authority was restored." ]
+
+    let private migrateQuint args workId sourceRelative =
+        let rootPath = root args
+        let agent = optionValue "--agent" args |> Option.defaultValue ""
+        let session = optionValue "--session" args |> Option.defaultValue ""
+
+        match optionValue "--cache" args with
+        | None ->
+            Error [ diagnostic "typedSdd.v2.cacheRequired" "Quint migration requires a caller-selected local cache." "Pass --cache <path> containing the exact qualified objects." ]
+        | Some _ when String.IsNullOrWhiteSpace agent || String.IsNullOrWhiteSpace session ->
+            Error [ diagnostic "typedSdd.authoringAgentUnavailable" "Migration requires an explicit authoring agent and session receipt." "Pass --agent <id> --session <id>." ]
+        | Some cache when not (Directory.Exists cache) ->
+            Error [ diagnostic "typedSdd.v2.cacheMissing" "The selected local Quint cache does not exist." "Preseed the exact Q1/Q2 cache and pass its path." ]
+        | Some cache ->
+            match QuintTypedSddRollback.snapshot rootPath workId sourceRelative with
             | Error findings -> Error findings
-            | Ok output ->
-                try
-                    let writes =
-                        output.Writes
-                        |> List.map (fun (relative, bytes) ->
-                            match containedPath rootPath relative with
-                            | Some path -> path, bytes
-                            | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
-
-                    atomicWrite writes
-                    Ok(output.Writes |> List.map fst)
-                with ex ->
-                    Error
-                        [ diagnostic
-                              "typedSdd.v2.transactionFailed"
-                              ex.Message
-                              "Correct filesystem access and retry; the prior authority was restored." ]
+            | Ok rollback ->
+                let title = optionValue "--title" args |> Option.defaultValue workId
+                match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) (Some rollback) with
+                | Error findings -> Error findings
+                | Ok output ->
+                    try
+                        let writes =
+                            output.Writes
+                            |> List.map (fun (relative, bytes) ->
+                                match containedPath rootPath relative with
+                                | Some path -> path, bytes
+                                | None -> invalidOp $"Quint migration emitted an unsafe path: {relative}")
+                        atomicWrite rootPath writes
+                        Ok(output.Writes |> List.map fst)
+                    with ex ->
+                        Error [ diagnostic "typedSdd.v2.transactionFailed" ex.Message "Correct filesystem access and retry; the exact v1 authority was restored." ]
 
     let private author args =
         match work args with
@@ -592,7 +651,25 @@ module TypedSdd =
                 let sourceBytes = File.ReadAllBytes sourcePath.Value
                 let rollback = TypedAuthorityManifest.sha256 sourceBytes
 
-                match RequirementsMigration.analyzeMarkdown (Encoding.UTF8.GetString sourceBytes) with
+                let migrationAnalysis =
+                    let authorityPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
+                    if File.Exists authorityPath then
+                        try
+                            match File.ReadAllText authorityPath |> TypedAuthority.deserialize with
+                            | Ok(FsharpSpecificationV1 authority) ->
+                                match containedPath rootPath authority.NormalizedPath with
+                                | Some normalizedPath when File.Exists normalizedPath ->
+                                    let normalized = File.ReadAllText normalizedPath
+                                    match SpecificationCodec.deserialize RequirementsExtension.contract normalized with
+                                    | Ok model -> Migrated model.Extension
+                                    | Error _ -> RequirementsMigration.analyzeMarkdown (Encoding.UTF8.GetString sourceBytes)
+                                | _ -> RequirementsMigration.analyzeMarkdown (Encoding.UTF8.GetString sourceBytes)
+                            | _ -> RequirementsMigration.analyzeMarkdown (Encoding.UTF8.GetString sourceBytes)
+                        with _ -> RequirementsMigration.analyzeMarkdown (Encoding.UTF8.GetString sourceBytes)
+                    else
+                        RequirementsMigration.analyzeMarkdown (Encoding.UTF8.GetString sourceBytes)
+
+                match migrationAnalysis with
                 | Ambiguous findings ->
                     emit
                         { Operation = "migrate"
@@ -609,6 +686,18 @@ module TypedSdd =
                           Classification = Some "Unsupported"
                           ChangedPaths = []
                           SemanticDiff = findings |> List.map _.Message
+                          RollbackSourceSha256 = Some rollback
+                          Diagnostics = [] }
+                | Migrated _ when
+                    (optionValue "--backend" args |> Option.exists (fun value -> value = "quint" || value = "quint-specification-v1"))
+                    && (let text = Encoding.UTF8.GetString sourceBytes
+                        not (text.Contains("REQ-AUDIT-001", StringComparison.Ordinal) && text.Contains("EV-VERIFY-001", StringComparison.Ordinal))) ->
+                    emit
+                        { Operation = "migrate"
+                          Outcome = "noChange"
+                          Classification = Some "Unsupported"
+                          ChangedPaths = []
+                          SemanticDiff = [ "The qualified v1-to-v2 migrator accepts only the closed Q1 requirements/evidence profile." ]
                           RollbackSourceSha256 = Some rollback
                           Diagnostics = [] }
                 | Migrated extension when not (has "--accept" args) ->
@@ -635,25 +724,48 @@ module TypedSdd =
                           $"acceptance criteria: {extension.Acceptance.Length}"
                           $"lifecycle notes: {extension.LifecycleNotes.Length}" ]
 
-                    let seed =
+                    let backend = optionValue "--backend" args |> Option.defaultValue "fsharp-specification-v1"
+
+                    if backend = "quint" || backend = "quint-specification-v1" then
+                        match migrateQuint args workId source with
+                        | Ok changed ->
+                            emit
+                                { Operation = "migrate"
+                                  Outcome = "succeeded"
+                                  Classification = Some "Migrated"
+                                  ChangedPaths = changed
+                                  SemanticDiff = summary
+                                  RollbackSourceSha256 = Some rollback
+                                  Diagnostics = [] }
+                        | Error findings ->
+                            emit
+                                { Operation = "migrate"
+                                  Outcome = "blocked"
+                                  Classification = Some "Unsupported"
+                                  ChangedPaths = []
+                                  SemanticDiff = []
+                                  RollbackSourceSha256 = Some rollback
+                                  Diagnostics = findings }
+                    else
+                      let seed =
                         newModel
                             workId
                             (optionValue "--title" args |> Option.defaultValue workId)
                             (optionValue "--agent" args |> Option.defaultValue "migration")
                             (optionValue "--session" args |> Option.defaultValue "migration")
 
-                    let rollbackRelative = $"work/{workId}/spec.standard-sdd.rollback.md"
-                    let rollbackPath = Path.Combine(rootPath, rollbackRelative)
+                      let rollbackRelative = $"work/{workId}/spec.standard-sdd.rollback.md"
+                      let rollbackPath = Path.Combine(rootPath, rollbackRelative)
 
-                    match
+                      match
                         writeAuthority
                             rootPath
                             workId
                             { seed with Extension = extension }
                             (Some rollback)
                             [ rollbackPath, sourceBytes ]
-                    with
-                    | Ok changed ->
+                      with
+                      | Ok changed ->
                         emit
                             { Operation = "migrate"
                               Outcome = "succeeded"
@@ -662,7 +774,7 @@ module TypedSdd =
                               SemanticDiff = summary
                               RollbackSourceSha256 = Some rollback
                               Diagnostics = [] }
-                    | Error findings ->
+                      | Error findings ->
                         emit
                             { Operation = "migrate"
                               Outcome = "blocked"
@@ -840,6 +952,14 @@ module TypedSdd =
             let rollbackRelative = $"work/{workId}/spec.standard-sdd.rollback.md"
             let rollbackPath = Path.Combine(rootPath, rollbackRelative)
             let manifestPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
+            let quintAuthority =
+                if File.Exists manifestPath then
+                    try
+                        match File.ReadAllText manifestPath |> TypedAuthority.deserialize with
+                        | Ok(QuintSpecificationV1 authority) -> Some authority
+                        | _ -> None
+                    with _ -> None
+                else None
 
             if not (has "--accept" args) then
                 emit
@@ -850,6 +970,44 @@ module TypedSdd =
                       SemanticDiff = [ "restore Standard SDD Markdown authority" ]
                       RollbackSourceSha256 = None
                       Diagnostics = [] }
+            elif Option.isSome quintAuthority then
+                let authority = quintAuthority.Value
+                let observations =
+                    [ for artifact in authority.Artifacts do
+                          yield observeAuthorityArtifact rootPath artifact.Path
+                      match authority.RollbackManifestPath with
+                      | Some path -> yield observeAuthorityArtifact rootPath path
+                      | None -> () ]
+                let findings = TypedAuthority.validateQuintV2 (packageIdentity ()) observations authority
+                if not (List.isEmpty findings) then
+                    emit
+                        { Operation = "rollback"
+                          Outcome = "blocked"
+                          Classification = Some "quint-specification-v1"
+                          ChangedPaths = []
+                          SemanticDiff = []
+                          RollbackSourceSha256 = authority.RollbackManifestSha256
+                          Diagnostics = findings }
+                else
+                    match QuintTypedSddRollback.restore rootPath workId authority with
+                    | Ok changed ->
+                        emit
+                            { Operation = "rollback"
+                              Outcome = "succeeded"
+                              Classification = Some "fsharp-specification-v1"
+                              ChangedPaths = changed
+                              SemanticDiff = [ "restored exact pre-migration v1 authority inventory" ]
+                              RollbackSourceSha256 = authority.RollbackManifestSha256
+                              Diagnostics = [] }
+                    | Error findings ->
+                        emit
+                            { Operation = "rollback"
+                              Outcome = "blocked"
+                              Classification = Some "quint-specification-v1"
+                              ChangedPaths = []
+                              SemanticDiff = []
+                              RollbackSourceSha256 = authority.RollbackManifestSha256
+                              Diagnostics = findings }
             elif not (File.Exists rollbackPath) then
                 emit
                     { Operation = "rollback"
@@ -878,7 +1036,7 @@ module TypedSdd =
                              None))
 
                 try
-                    atomicWrite [ markdownPath, rollbackBytes ]
+                    atomicWrite rootPath [ markdownPath, rollbackBytes ]
 
                     typedPaths
                     |> List.iter (fun path ->
@@ -934,7 +1092,7 @@ module TypedSdd =
             match operation with
             | "author" -> set [ "--root"; "--work"; "--title"; "--agent"; "--session"; "--backend"; "--cache" ], set [ "--accept" ]
             | "inspect" -> set [ "--root"; "--work" ], Set.empty
-            | "migrate" -> set [ "--root"; "--work"; "--source"; "--title"; "--agent"; "--session" ], set [ "--accept" ]
+            | "migrate" -> set [ "--root"; "--work"; "--source"; "--title"; "--agent"; "--session"; "--backend"; "--cache" ], set [ "--accept" ]
             | "rollback" -> set [ "--root"; "--work" ], set [ "--accept" ]
             | _ -> Set.empty, Set.empty
 

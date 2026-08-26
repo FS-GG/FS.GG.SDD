@@ -12,6 +12,11 @@ module internal QuintTypedSddHost =
         { Manifest: QuintAuthorityManifest
           Writes: (string * byte array) list }
 
+    type Rollback =
+        { ManifestPath: string
+          ManifestBytes: byte array
+          Writes: (string * byte array) list }
+
     let private diagnostic id message correction : TypedLifecycleDiagnostic =
         { Id = id; Message = message; Correction = correction }
 
@@ -196,30 +201,37 @@ example are all explicit in the embedded Quint source.
         let path = cacheObjectPath cacheRoot id
         try
             if not (File.Exists path) then
-                { Id = id; Kind = item.Kind; State = QuintCacheObjectState.Absent }
+                { Id = id; Kind = item.Kind; State = QuintCacheObjectState.Absent }, None
             else
                 let bytes = File.ReadAllBytes path
                 { Id = id
                   Kind = item.Kind
-                  State = QuintCacheObjectState.Present(sha256 bytes, Some(int64 bytes.Length), true) }
+                  State = QuintCacheObjectState.Present(sha256 bytes, Some(int64 bytes.Length), true) }, Some bytes
         with ex ->
-            { Id = id; Kind = item.Kind; State = QuintCacheObjectState.Unreadable ex.Message }
+            { Id = id; Kind = item.Kind; State = QuintCacheObjectState.Unreadable ex.Message }, None
 
-    let private request step objectId arguments =
+    let private request step objectId arguments : QuintProcessRequest =
         { StepId = step
           ExecutableObjectId = objectId
           Arguments = arguments
           Environment = []
           WorkingDirectory = "isolated-run" }
 
-    let private execute executable arguments workingDirectory =
+    let private execute executable (request: QuintProcessRequest) workingDirectory =
         try
             let start = ProcessStartInfo(executable)
             start.WorkingDirectory <- workingDirectory
             start.RedirectStandardOutput <- true
             start.RedirectStandardError <- true
             start.UseShellExecute <- false
-            arguments |> List.iter start.ArgumentList.Add
+            start.Environment.Clear()
+            start.Environment["LANG"] <- "C.UTF-8"
+            start.Environment["TZ"] <- "UTC"
+            start.Environment["HTTP_PROXY"] <- "http://127.0.0.1:1"
+            start.Environment["HTTPS_PROXY"] <- "http://127.0.0.1:1"
+            start.Environment["ALL_PROXY"] <- "http://127.0.0.1:1"
+            start.Environment["NO_PROXY"] <- "*"
+            request.Arguments |> List.iter start.ArgumentList.Add
             use child = Process.Start start |> Option.ofObj |> Option.defaultWith (fun () -> invalidOp "process did not start")
             let stdout = child.StandardOutput.ReadToEndAsync()
             let stderr = child.StandardError.ReadToEndAsync()
@@ -233,41 +245,56 @@ example are all explicit in the embedded Quint source.
                 Ok warnings
         with ex -> Error(-1, ex.Message)
 
-    let private runOnce cacheRoot (markdownBytes: byte array) runRoot =
+    let private runOnce (lmtBytes: byte array) (quintBytes: byte array) logicalPath target (requests: QuintProcessRequest list) (markdownBytes: byte array) runRoot =
         Directory.CreateDirectory runRoot |> ignore
-        let markdownPath = Path.Combine(runRoot, "specification.md")
+        let markdownPath = Path.Combine(runRoot, logicalPath)
+        Path.GetDirectoryName markdownPath |> Option.ofObj |> Option.iter (Directory.CreateDirectory >> ignore)
         File.WriteAllBytes(markdownPath, markdownBytes)
-        let lmt = cacheObjectPath cacheRoot "lmt-binary"
-        let quint = cacheObjectPath cacheRoot "quint-binary"
-        match execute lmt [ "specification.md" ] runRoot with
+        let tools = Path.Combine(runRoot, ".tools")
+        Directory.CreateDirectory tools |> ignore
+        let lmt = Path.Combine(tools, "lmt")
+        let quint = Path.Combine(tools, "quint")
+        File.WriteAllBytes(lmt, lmtBytes)
+        File.WriteAllBytes(quint, quintBytes)
+        File.SetUnixFileMode(lmt, UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute)
+        File.SetUnixFileMode(quint, UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute)
+        let extractRequest = requests |> List.find (fun item -> item.StepId = "extract")
+        let typecheckRequest = requests |> List.find (fun item -> item.StepId = "typecheck")
+        match execute lmt extractRequest runRoot with
         | Error(code, detail) -> Error("extract", code, detail)
         | Ok extractionOutput ->
-            let generatedPath = Path.Combine(runRoot, "requirements.qnt")
-            if not (File.Exists generatedPath) then Error("extract", -1, "lmt did not emit requirements.qnt")
+            let generatedPath = Path.Combine(runRoot, target)
+            if not (File.Exists generatedPath) then Error("extract", -1, $"lmt did not emit {target}")
             else
-                match execute quint [ "typecheck"; "requirements.qnt"; "--out=typed.json" ] runRoot with
+                match execute quint typecheckRequest runRoot with
                 | Error(code, detail) -> Error("typecheck", code, detail)
                 | Ok quintOutput ->
                     let typedPath = Path.Combine(runRoot, "typed.json")
                     if not (File.Exists typedPath) then Error("typecheck", -1, "Quint did not emit typed.json")
                     else Ok(File.ReadAllBytes generatedPath, File.ReadAllBytes typedPath, extractionOutput @ quintOutput)
 
-    let author packageIdentity workId title agent session cacheRoot rollback =
-        let cache = [ observeCache cacheRoot "lmt-binary"; observeCache cacheRoot "quint-binary" ]
-        match QuintToolchain.plan QuintToolchain.q1 cache [ request "extract" "lmt-binary" [ "specification.md" ]; request "typecheck" "quint-binary" [ "typecheck"; "requirements.qnt"; "--out=typed.json" ] ] with
-        | Error findings ->
+    let author packageIdentity workId title agent session cacheRoot (rollback: Rollback option) =
+        let lmtObservation, lmtBytes = observeCache cacheRoot "lmt-binary"
+        let quintObservation, quintBytes = observeCache cacheRoot "quint-binary"
+        let cache = [ lmtObservation; quintObservation ]
+        let logicalPath = $"work/{workId}/specification.md"
+        let requests: QuintProcessRequest list =
+            [ request "extract" "lmt-binary" [ logicalPath ]
+              request "typecheck" "quint-binary" [ "typecheck"; "requirements.qnt"; "--out=typed.json" ] ]
+        match QuintToolchain.plan QuintToolchain.q1 cache requests, lmtBytes, quintBytes with
+        | Error findings, _, _ ->
             Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.cacheInvalid" finding.Message "Preseed --cache/objects with the exact Q1 lmt and Quint objects."))
-        | Ok _ ->
+        | Ok _, Some lmtObject, Some quintObject ->
             let markdownText = template.Replace("# Requirements and evidence vertical slice", $"# {title}", StringComparison.Ordinal)
             let markdownBytes = Encoding.UTF8.GetBytes markdownText
-            let logicalPath = $"work/{workId}/specification.md"
             match QuintSource.createMarkdown logicalPath markdownBytes with
             | Error findings ->
                 Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.sourceInvalid" finding.Message "Use canonical LF UTF-8 Markdown."))
             | Ok source ->
+                let fences, sourceMaps = parseFences source
                 let temporary = Path.Combine(Path.GetTempPath(), "fsgg-quint-author-" + Guid.NewGuid().ToString("N"))
                 try
-                    match runOnce cacheRoot markdownBytes (Path.Combine(temporary, "first")), runOnce cacheRoot markdownBytes (Path.Combine(temporary, "second")) with
+                    match runOnce lmtObject quintObject logicalPath fences.Head.Target requests markdownBytes (Path.Combine(temporary, "first")), runOnce lmtObject quintObject logicalPath fences.Head.Target requests markdownBytes (Path.Combine(temporary, "second")) with
                     | Error(step, code, detail), _
                     | _, Error(step, code, detail) ->
                         Error [ diagnostic $"typedSdd.v2.{step}Failed" $"Exact tool step '{step}' failed ({code}): {detail}" "Correct the exact cache object or authored Quint input; no acquisition is attempted." ]
@@ -276,7 +303,6 @@ example are all explicit in the embedded Quint source.
                     | Ok(firstGenerated, firstTyped, firstWarnings), Ok(_, _, secondWarnings) when firstWarnings @ secondWarnings <> [] ->
                         Error [ diagnostic "typedSdd.v2.toolWarning" "The exact tool emitted unexpected output or warnings." "Resolve all extractor and Quint output before authoring." ]
                     | Ok(generated, typed, _), Ok(_, _, _) ->
-                        let fences, sourceMaps = parseFences source
                         let generatedObservation =
                             [ { Target = fences.Head.Target
                                 Sha256 = sha256 generated
@@ -285,7 +311,7 @@ example are all explicit in the embedded Quint source.
                             { ModuleName = "RequirementsBindings"
                               Toolchain = QuintToolchain.q1
                               Cache = cache
-                              ProcessRequests = [ request "extract" "lmt-binary" [ logicalPath ]; request "typecheck" "quint-binary" [ "typecheck"; fences.Head.Target; "--out=typed.json" ] ]
+                              ProcessRequests = requests
                               Endpoint = QuintEndpointState.Available
                               ProcessObservations = [ { StepId = "extract"; Outcome = QuintProcessOutcome.Succeeded }; { StepId = "typecheck"; Outcome = QuintProcessOutcome.Succeeded } ]
                               Source = source
@@ -312,6 +338,7 @@ example are all explicit in the embedded Quint source.
                                   "fence-manifest", $"readiness/{workId}/quint/fences.json", fenceBytes
                                   "generated-modules", $"readiness/{workId}/quint/{fences.Head.Target}", generated
                                   "source-map", $"readiness/{workId}/quint/source-map.json", sourceMapBytes
+                                  "typed-effect", $"readiness/{workId}/quint/typed-effect.json", typed
                                   "compiled-contract", $"readiness/{workId}/quint/contract.json", Encoding.UTF8.GetBytes output.CanonicalContract
                                   "bindings", $"readiness/{workId}/quint/bindings.fs", Encoding.UTF8.GetBytes output.Bindings.FSharpSource
                                   "compilation-receipt", $"readiness/{workId}/quint/receipt.json", Encoding.UTF8.GetBytes output.CanonicalReceipt ]
@@ -326,13 +353,20 @@ example are all explicit in the embedded Quint source.
                                   Artifacts = artifacts
                                   AuthoringAgent = agent
                                   AuthoringSession = session
-                                  RollbackManifestPath = rollback |> Option.map fst
-                                  RollbackManifestSha256 = rollback |> Option.map snd }
-                            let observations = relative |> List.map (fun (_, path, bytes) -> { Path = path; State = QuintAuthorityArtifactState.Present bytes })
+                                  RollbackManifestPath = rollback |> Option.map _.ManifestPath
+                                  RollbackManifestSha256 = rollback |> Option.map (_.ManifestBytes >> sha256) }
+                            let observations =
+                                [ yield! relative |> List.map (fun (_, path, bytes) -> { Path = path; State = QuintAuthorityArtifactState.Present bytes })
+                                  match rollback with
+                                  | Some value -> yield { Path = value.ManifestPath; State = QuintAuthorityArtifactState.Present value.ManifestBytes }
+                                  | None -> () ]
                             match TypedAuthority.validateQuintV2 packageIdentity observations manifest with
                             | [] ->
                                 let manifestPath = $"readiness/{workId}/typed-authority.json"
-                                Ok { Manifest = manifest; Writes = (relative |> List.map (fun (_, path, bytes) -> path, bytes)) @ [ manifestPath, Encoding.UTF8.GetBytes(TypedAuthority.serializeQuintV2 manifest) ] }
+                                let rollbackWrites = rollback |> Option.map _.Writes |> Option.defaultValue []
+                                Ok { Manifest = manifest; Writes = rollbackWrites @ (relative |> List.map (fun (_, path, bytes) -> path, bytes)) @ [ manifestPath, Encoding.UTF8.GetBytes(TypedAuthority.serializeQuintV2 manifest) ] }
                             | findings -> Error findings
                 finally
                     if Directory.Exists temporary then Directory.Delete(temporary, true)
+        | _ ->
+            Error [ diagnostic "typedSdd.v2.cacheInvalid" "The exact cache objects could not be retained for isolated execution." "Restore the complete readable content-addressed cache." ]

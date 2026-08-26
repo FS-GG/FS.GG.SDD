@@ -293,11 +293,20 @@ jobs:
           Q2_EXACT_IR_JUNIT_OUT: artifacts/test-results/quint-q2-exact-ir.junit.xml
         run: bash tests/quint-q2-compiler-acceptance.sh
 
-      - name: Upload exact Q2 compiler acceptance report (JUnit)
+      - name: Exact package-only Quint Typed SDD v2 acceptance
+        env:
+          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
+          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
+          FABLE_BIN: ${{ runner.temp }}/quint-q2-tools/fable/fable
+          Q3_SKIP_Q2: "1"
+          Q3_JUNIT_OUT: artifacts/test-results/quint-q3-typed-sdd-acceptance.junit.xml
+        run: bash tests/quint-q3-typed-sdd-acceptance.sh
+
+      - name: Upload exact Q2/Q3 Quint acceptance reports (JUnit)
         uses: actions/upload-artifact@v4
         with:
-          name: quint-q2-compiler-acceptance-junit
-          path: artifacts/test-results/quint-q2-*.junit.xml
+          name: quint-q2-q3-acceptance-junit
+          path: artifacts/test-results/quint-q*.junit.xml
           if-no-files-found: error
 
       # Publish the TRX bundle so it outlives the run and a work item's `verify` can cite it.

@@ -133,6 +133,8 @@ module TypedLifecycleTests =
     let private quintFixture () =
         let markdown = bytes "# specification\n```quint demo.qnt +=\nmodule Demo {}\n```\n"
         let source = QuintSource.createMarkdown "work/demo/specification.md" markdown |> expectOk
+        let typedEffectBytes = bytes "{\"typed\":true}\n"
+        let typedEffectDigest = TypedAuthorityManifest.sha256 typedEffectBytes
         let range =
             { Path = source.Path
               Start = { Line = 3; Column = 1 }
@@ -162,7 +164,7 @@ module TypedLifecycleTests =
               Bounds = []
               Impacts = []
               Compatibility = []
-              Digests = [ { Name = "typed-effect"; Sha256 = String.replicate 64 "c" } ] }
+              Digests = [ { Name = "typed-effect"; Sha256 = typedEffectDigest } ] }
         let contractText = QuintContract.serializeCanonical contract |> expectOk
         let contractBytes = bytes contractText
         let moduleBytes = bytes "module Demo {}\n"
@@ -204,7 +206,7 @@ module TypedLifecycleTests =
               FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
               GeneratedModulesSha256 = generatedModulesDigest
               ToolchainSha256 = toolchain
-              TypedEffectSha256 = String.replicate 64 "c"
+              TypedEffectSha256 = typedEffectDigest
               ContractSha256 = TypedAuthorityManifest.sha256 contractBytes
               CompilationFingerprint = compilationFingerprint
               ProcessSteps = [ "extract"; "typecheck" ] }
@@ -214,6 +216,7 @@ module TypedLifecycleTests =
                   "fence-manifest", fenceBytes
                   "generated-modules", moduleBytes
                   "source-map", sourceMapBytes
+                  "typed-effect", typedEffectBytes
                   "compiled-contract", contractBytes
                   "bindings", bytes bindings.FSharpSource
                   "compilation-receipt", bytes (QuintCompiler.encodeReceipt receipt) ]
@@ -222,6 +225,7 @@ module TypedLifecycleTests =
               quintArtifact "fence-manifest" "readiness/demo/quint/fences.json" contents["fence-manifest"]
               quintArtifact "generated-modules" "readiness/demo/quint/modules.digest" contents["generated-modules"]
               quintArtifact "source-map" "readiness/demo/quint/source-map.json" contents["source-map"]
+              quintArtifact "typed-effect" "readiness/demo/quint/typed-effect.json" contents["typed-effect"]
               quintArtifact "compiled-contract" "readiness/demo/quint/contract.json" contents["compiled-contract"]
               quintArtifact "bindings" "readiness/demo/quint/bindings.fs" contents["bindings"]
               quintArtifact "compilation-receipt" "readiness/demo/quint/receipt.json" contents["compilation-receipt"] ]
@@ -351,7 +355,7 @@ module TypedLifecycleTests =
             |> List.map _.Id
 
         let receipt = Encoding.UTF8.GetString contents["compilation-receipt"]
-        let typedEffectC = String.replicate 64 "c"
+        let typedEffectC = TypedAuthorityManifest.sha256 contents["typed-effect"]
         let typedEffectD = String.replicate 64 "d"
         let wrongTypedEffect =
             receipt.Replace(

@@ -61,6 +61,7 @@ module TypedAuthority =
               "fence-manifest"
               "generated-modules"
               "source-map"
+              "typed-effect"
               "compiled-contract"
               "bindings"
               "compilation-receipt" ]
@@ -132,8 +133,8 @@ module TypedAuthority =
                       yield closure "typedSdd.v2.contractNonCanonical" "The compiled-contract bytes are not the canonical serialization of their meaning." "Regenerate the contract with the qualified compiler."
           | None -> ()
 
-          match text "compilation-receipt", text "compiled-contract", bytes "fence-manifest", text "generated-modules", bytes "source-map", bytes "markdown", text "bindings" with
-          | Some receiptText, Some contractText, Some fenceBytes, Some modulesText, Some sourceMapBytes, Some markdownBytes, Some bindingsText ->
+          match text "compilation-receipt", text "compiled-contract", bytes "fence-manifest", text "generated-modules", bytes "source-map", bytes "markdown", text "typed-effect", text "bindings" with
+          | Some receiptText, Some contractText, Some fenceBytes, Some modulesText, Some sourceMapBytes, Some markdownBytes, Some typedEffectText, Some bindingsText ->
               try
                   use receiptDocument = JsonDocument.Parse receiptText
                   let receipt = receiptDocument.RootElement
@@ -191,6 +192,7 @@ module TypedAuthority =
                               if sourceSha <> sourceHash
                                  || toolchainSha <> manifest.ToolchainIdentity
                                  || contractSha <> contractHash
+                                 || TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes typedEffectText) <> typedEffectSha
                                  || contract.Digests <> [ { Name = "typed-effect"; Sha256 = typedEffectSha } ]
                                  || expectedFingerprint <> Ok fingerprint then
                                   yield closure "typedSdd.v2.receiptClosure" "The receipt does not close over the declared source, fences, modules, toolchain, contract, and fingerprint." "Re-author all authority artifacts in one atomic compilation."
@@ -199,14 +201,35 @@ module TypedAuthority =
                               | Ok source, Ok fenceManifest, Ok sourceMap ->
                                   let sourceFindings = QuintSource.validateManifest source fenceManifest @ QuintSource.validateSourceMap source fenceManifest sourceMap
                                   let targets = fenceManifest.Fences |> List.map _.Target |> List.distinct
+                                  let sourceLines = source.Text.Split('\n')
+                                  let extracted =
+                                      try
+                                          fenceManifest.Fences
+                                          |> List.sortBy _.Ordinal
+                                          |> List.map (fun fence ->
+                                              let contentLines = sourceLines[fence.SourceRange.Start.Line .. fence.SourceRange.End.Line - 2]
+                                              let content = String.Join("\n", contentLines) + "\n"
+                                              fence.Target, content, TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes content))
+                                          |> Ok
+                                      with ex -> Error ex.Message
+                                  let contentDigestsMatch =
+                                      match extracted with
+                                      | Error _ -> false
+                                      | Ok values ->
+                                          List.zip values (fenceManifest.Fences |> List.sortBy _.Ordinal)
+                                          |> List.forall (fun ((_, _, digest), fence) -> digest = fence.ContentSha256)
                                   if not (List.isEmpty sourceFindings)
                                      || QuintSource.encodeFenceManifest fenceManifest <> fenceBytes
                                      || QuintSource.encodeSourceMap sourceMap <> sourceMapBytes
-                                     || targets.Length <> 1 then
+                                     || targets.Length <> 1
+                                     || not contentDigestsMatch then
                                       yield closure "typedSdd.v2.sourceMapClosure" "The source, fence manifest, and source map do not form one canonical closed mapping." "Regenerate all source projections from the same Markdown source."
                                   else
                                       let actualModulesSha = generatedModuleDigest targets.Head (Encoding.UTF8.GetBytes modulesText)
-                                      if actualModulesSha <> modulesSha then
+                                      let extractedModule =
+                                          extracted
+                                          |> Result.map (List.map (fun (_, content, _) -> content) >> String.concat "")
+                                      if actualModulesSha <> modulesSha || extractedModule <> Ok modulesText then
                                           yield closure "typedSdd.v2.modulesClosure" "The generated module bytes do not bind the compilation receipt." "Regenerate modules and receipt in the same compilation."
                               | _ ->
                                   yield closure "typedSdd.v2.sourceMapClosure" "The source, fence manifest, or source map is malformed." "Regenerate all source projections from the same Markdown source."

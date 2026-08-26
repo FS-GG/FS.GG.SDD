@@ -104,6 +104,8 @@ module TypedSddCommandTests =
                 | Error findings -> failwithf "expected success, got %A" findings
             let markdown = Text.Encoding.UTF8.GetBytes "# specification\n```quint demo.qnt +=\nmodule Demo {}\n```\n"
             let source = QuintSource.createMarkdown "work/demo/specification.md" markdown |> expectOk
+            let typedEffectBytes = Text.Encoding.UTF8.GetBytes "{\"typed\":true}\n"
+            let typedEffectDigest = TypedAuthorityManifest.sha256 typedEffectBytes
             let sourceRange =
                 { Path = source.Path
                   Start = { Line = 3; Column = 1 }
@@ -126,7 +128,7 @@ module TypedSddCommandTests =
                   Bounds = []
                   Impacts = []
                   Compatibility = []
-                  Digests = [ { Name = "typed-effect"; Sha256 = String.replicate 64 "c" } ] }
+                  Digests = [ { Name = "typed-effect"; Sha256 = typedEffectDigest } ] }
             let contractBytes = QuintContract.serializeCanonical contract |> expectOk |> Text.Encoding.UTF8.GetBytes
             let moduleBytes = Text.Encoding.UTF8.GetBytes "module Demo {}\n"
             let fenceBytes =
@@ -175,7 +177,7 @@ module TypedSddCommandTests =
                       FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
                       GeneratedModulesSha256 = modulesDigest
                       ToolchainSha256 = toolchain
-                      TypedEffectSha256 = String.replicate 64 "c"
+                      TypedEffectSha256 = typedEffectDigest
                       ContractSha256 = TypedAuthorityManifest.sha256 contractBytes
                       CompilationFingerprint = fingerprint
                       ProcessSteps = [ "extract"; "typecheck" ] }
@@ -188,6 +190,7 @@ module TypedSddCommandTests =
                   "fence-manifest", "readiness/demo/quint/fences.json", fenceBytes
                   "generated-modules", "readiness/demo/quint/demo.qnt", moduleBytes
                   "source-map", "readiness/demo/quint/source-map.json", sourceMapBytes
+                  "typed-effect", "readiness/demo/quint/typed-effect.json", typedEffectBytes
                   "compiled-contract", "readiness/demo/quint/contract.json", contractBytes
                   "bindings", "readiness/demo/quint/bindings.fs", bindingsBytes
                   "compilation-receipt", "readiness/demo/quint/receipt.json", receiptBytes ]
@@ -397,6 +400,26 @@ module TypedSddCommandTests =
                 Assert.Equal<byte>(typedMarkdown, File.ReadAllBytes source)
                 Assert.True(File.Exists(Path.Combine(target, "specification.fsx")))
                 Assert.True(File.Exists(Path.Combine(readiness, "typed-authority.json"))))
+
+    [<Fact>]
+    let ``Quint author cannot bypass v1 migration or accept multiline source skew`` () =
+        inTemp (fun root ->
+            let cache = Path.Combine(root, "cache")
+            Directory.CreateDirectory cache |> ignore
+            let v1Code, _, _ =
+                run root [ "typed-sdd"; "author"; "--root"; root; "--work"; "demo"; "--agent"; "tern"; "--session"; "v1" ]
+            Assert.Equal(0, v1Code)
+            let replaceCode, replaceReport, _ =
+                run root [ "typed-sdd"; "author"; "--root"; root; "--work"; "demo"; "--agent"; "tern"; "--session"; "v2"; "--backend"; "quint"; "--cache"; cache; "--accept" ]
+            Assert.Equal(1, replaceCode)
+            Assert.Contains("typedSdd.v2.migrationRequired", replaceReport)
+
+            let titleRoot = Path.Combine(root, "title")
+            Directory.CreateDirectory titleRoot |> ignore
+            let titleCode, titleReport, _ =
+                run titleRoot [ "typed-sdd"; "author"; "--root"; titleRoot; "--work"; "demo"; "--title"; "bad\nline"; "--agent"; "tern"; "--session"; "title"; "--backend"; "quint"; "--cache"; cache ]
+            Assert.Equal(1, titleCode)
+            Assert.Contains("typedSdd.v2.titleInvalid", titleReport))
 
     [<Fact>]
     let ``unknown typed option fails closed`` () =
