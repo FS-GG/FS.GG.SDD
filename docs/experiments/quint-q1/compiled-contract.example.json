@@ -1,0 +1,29 @@
+{
+  "schema": "fsgg.quint.compiled-contract/q1",
+  "profile": "fsgg-quint-profile/1",
+  "specification": "RequirementsSlice",
+  "sources": [
+    {
+      "id": "RequirementsSource",
+      "path": "docs/experiments/quint-q1/slices/requirements-and-evidence.md",
+      "startLine": 1,
+      "endLine": 80
+    }
+  ],
+  "requirements": ["REQ-AUDIT-001"],
+  "actions": [
+    { "id": "ObserveEvidence", "reads": ["EvidenceCatalogue"], "writes": ["ObservedEvidence"] },
+    { "id": "AcceptRequirement", "reads": ["ObservedEvidence"], "writes": ["AcceptedRequirements"] }
+  ],
+  "invariants": ["AcceptedOnlyWithEvidence"],
+  "evidence": ["EV-VERIFY-001"],
+  "relations": [
+    { "from": "REQ-AUDIT-001", "kind": "verifiedBy", "to": "EV-VERIFY-001" }
+  ],
+  "verificationProfiles": ["Typecheck", "NamedTests", "SeededSimulation"],
+  "bounds": { "maxSteps": 8, "maxSamples": 200 },
+  "digests": {
+    "canonicalSource": "sha256:18f485ede97c15d0f3b3b790170e58c20040fb1174acdd869572da00476c1a8c",
+    "generatedModule": "sha256:54a5f4af37db09128d73aeef9105870464b482a1dd45b956799dffa6550a2b02"
+  }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="quint-q1-qualification" tests="24" failures="0" errors="0" skipped="0">
+  <testcase classname="FS.GG.SDD.QuintQ1" name="pinned-tools"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="canonical-sources"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="fence-inventory"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="contract-shape"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="deterministic-extraction"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="typecheck"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="named-tests"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="normalized-sir-witness"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="requirements-simulation"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="sir-simulation"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="coordination-simulation"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="apalache-safety"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="tlc-liveness"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="complete-positive-bundle"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-missing-fence"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-reordered-target"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-duplicate-fence"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-stale-source"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-edited-output"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-missing-evidence"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-combat-boundary"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-double-apply"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-unbounded-liveness"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-arbitrary-expression"/>
+</testsuite>

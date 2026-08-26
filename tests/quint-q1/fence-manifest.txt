@@ -1,0 +1,6 @@
+coordination-process.md|coordination.qnt +=
+coordination-process.md|coordination.qnt +=
+requirements-and-evidence.md|requirements.qnt +=
+requirements-and-evidence.md|requirements.qnt +=
+sir-damage-rule.md|sir-damage.qnt +=
+sir-damage-rule.md|sir-damage.qnt +=
