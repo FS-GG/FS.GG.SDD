@@ -95,6 +95,65 @@ module TypedSddCommandTests =
             Assert.Contains("typedSdd.directCanonicalEdit", edited))
 
     [<Fact>]
+    let ``inspect dispatches explicit manifest v2 and rejects edited Quint artifacts`` () =
+        inTemp (fun root ->
+            let content: (string * string * string) list =
+                [ "markdown", "work/demo/specification.md", "markdown"
+                  "fence-manifest", "readiness/demo/quint/fences.json", "fences"
+                  "generated-modules", "readiness/demo/quint/modules.digest", "modules"
+                  "source-map", "readiness/demo/quint/source-map.json", "source-map"
+                  "compiled-contract", "readiness/demo/quint/contract.json", "contract"
+                  "bindings", "readiness/demo/quint/bindings.fs", "bindings"
+                  "compilation-receipt", "readiness/demo/quint/receipt.json", "receipt" ]
+
+            let artifacts =
+                content
+                |> List.map (fun (id, path, value) ->
+                    let full = Path.Combine(root, path)
+                    Path.GetDirectoryName full
+                    |> Option.ofObj
+                    |> Option.iter (fun directory -> Directory.CreateDirectory directory |> ignore)
+                    File.WriteAllText(full, value)
+
+                    { Id = id
+                      Path = path
+                      Sha256 = TypedAuthorityManifest.sha256 (Text.Encoding.UTF8.GetBytes value) })
+
+            let authority =
+                { SchemaVersion = 2
+                  Lifecycle = "typed-sdd"
+                  Backend = "quint-specification-v1"
+                  ProfileIdentity = QuintProfile.identity
+                  ToolchainIdentity = QuintToolchain.fingerprint QuintToolchain.q1
+                  PackageIdentity =
+                    $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
+                  Artifacts = artifacts
+                  AuthoringAgent = "tern"
+                  AuthoringSession = "v2"
+                  RollbackManifestPath = None
+                  RollbackManifestSha256 = None }
+
+            let manifestPath = Path.Combine(root, TypedAuthorityManifest.path "demo")
+            Path.GetDirectoryName manifestPath
+            |> Option.ofObj
+            |> Option.iter (fun directory -> Directory.CreateDirectory directory |> ignore)
+            File.WriteAllText(manifestPath, TypedAuthority.serializeQuintV2 authority)
+
+            let code, report, _ =
+                run root [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo" ]
+
+            Assert.Equal(0, code)
+            Assert.Contains("quint-specification-v1", report)
+            Assert.Contains("\"outcome\": \"succeeded\"", report)
+
+            File.WriteAllText(Path.Combine(root, "readiness/demo/quint/contract.json"), "edited")
+            let editCode, edited, _ =
+                run root [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo" ]
+
+            Assert.Equal(1, editCode)
+            Assert.Contains("typedSdd.v2.artifactMismatch", edited))
+
+    [<Fact>]
     let ``migration analysis classifies supported input and performs no preaccept write`` () =
         inTemp (fun root ->
             let target = Path.Combine(root, "work", "demo")

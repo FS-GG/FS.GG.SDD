@@ -628,7 +628,7 @@ module TypedSdd =
                               "The Typed SDD authority manifest is missing."
                               "Run typed-sdd author or accept a migration." ] }
             else
-                match TypedAuthorityManifest.deserialize (File.ReadAllText manifestPath) with
+                match TypedAuthority.deserialize (File.ReadAllText manifestPath) with
                 | Error finding ->
                     emit
                         { Operation = "inspect"
@@ -638,7 +638,7 @@ module TypedSdd =
                           SemanticDiff = []
                           RollbackSourceSha256 = None
                           Diagnostics = [ finding ] }
-                | Ok authority ->
+                | Ok(FsharpSpecificationV1 authority) ->
                     let read relative =
                         containedPath rootPath relative
                         |> Option.bind (fun path ->
@@ -701,6 +701,33 @@ module TypedSdd =
                           ChangedPaths = []
                           SemanticDiff = []
                           RollbackSourceSha256 = authority.RollbackSourceSha256
+                          Diagnostics = findings }
+                | Ok(QuintSpecificationV1 authority) ->
+                    let read relative =
+                        containedPath rootPath relative
+                        |> Option.bind (fun path ->
+                            if File.Exists path then
+                                Some(File.ReadAllBytes path)
+                            else
+                                None)
+
+                    let observations =
+                        [ for artifact in authority.Artifacts do
+                              yield artifact.Path, read artifact.Path
+                          match authority.RollbackManifestPath with
+                          | Some path -> yield path, read path
+                          | None -> () ]
+
+                    let findings =
+                        TypedAuthority.validateQuintV2 (packageIdentity ()) observations authority
+
+                    emit
+                        { Operation = "inspect"
+                          Outcome = (if List.isEmpty findings then "succeeded" else "blocked")
+                          Classification = Some "quint-specification-v1"
+                          ChangedPaths = []
+                          SemanticDiff = []
+                          RollbackSourceSha256 = authority.RollbackManifestSha256
                           Diagnostics = findings }
 
     let private rollback args =
