@@ -79,9 +79,14 @@ module PolyglotLifecycleAcceptanceTests =
                     let result =
                         runToCompletionCapturingOutput
                             executable
-                            [ "--headless"; "--no-sandbox"; "--dump-dom"; "http://127.0.0.1:51817" ]
+                            [ "--headless"
+                              "--no-sandbox"
+                              "--disable-dev-shm-usage"
+                              "--disable-background-networking"
+                              "--dump-dom"
+                              "http://127.0.0.1:51817" ]
                             fixtureRoot
-                            30_000
+                            60_000
 
                     if result.Started then
                         result

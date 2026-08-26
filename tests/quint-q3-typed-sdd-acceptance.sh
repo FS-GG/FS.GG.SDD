@@ -2,6 +2,10 @@
 set -euo pipefail
 ulimit -c 0
 
+current_stage='bootstrap'
+error_trap='status=$?; printf "Q3-ACCEPTANCE-ERROR: stage=%s line=%s status=%s command=%s\n" "$current_stage" "$LINENO" "$status" "$BASH_COMMAND" >&2'
+trap "$error_trap" ERR
+
 repo_root="$(git rev-parse --show-toplevel)"
 : "${QUINT_BIN:?preseed exact Quint 0.32.0 binary in QUINT_BIN}"
 : "${LMT_BIN:?preseed exact lmt binary in LMT_BIN}"
@@ -33,6 +37,7 @@ version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' "$repo_root/Director
 if [[ -n "${Q3_PACKAGE_SOURCE:-}" ]]; then
   feed="$Q3_PACKAGE_SOURCE"
 else
+  current_stage='pack-local-feed'
   feed="$scratch/feed"
   mkdir -p "$feed"
   for project in FS.GG.Contracts FS.GG.SDD.Artifacts FS.GG.SDD.Commands FS.GG.SDD.Validation FS.GG.SDD.Cli; do
@@ -75,6 +80,7 @@ cp "$QUINT_BIN" "$cache/939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e5
 cp "$LMT_BIN" "$cache/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"
 
 for run in a b; do
+  current_stage="deterministic-author-$run"
   root="$scratch/author-$run"
   mkdir -p "$root"
   "$cli" typed-sdd author --root "$root" --work demo --title Demo --agent acceptance --session exact \
@@ -88,6 +94,7 @@ cmp "$scratch/author-a.json" "$scratch/author-b.json" >/dev/null || fail 'two in
 
 # Hard process death at every live-author move must recover before another operation reads authority.
 for boundary in $(seq 1 10); do
+  current_stage="author-crash-boundary-$boundary"
   crash_root="$scratch/crash-author-$boundary"
   mkdir -p "$crash_root"
   if FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE="$boundary" "$cli" typed-sdd author \
@@ -106,6 +113,7 @@ done
 
 # Inspect shares the transaction lock and cannot observe a prepared commit.
 concurrent_root="$scratch/concurrent-author"
+current_stage='concurrent-inspect-lock'
 mkdir -p "$concurrent_root"
 FSGG_TYPED_SDD_TEST_PAUSE_AFTER_PREPARE_MS=1000 "$cli" typed-sdd author \
   --root "$concurrent_root" --work demo --title Demo --agent acceptance --session concurrent \
@@ -121,6 +129,7 @@ grep -F '"outcome": "succeeded"' "$scratch/concurrent-inspect.json" >/dev/null \
   || fail 'concurrent inspect observed an incomplete authority'
 
 mkdir -p "$scratch/missing-cache-root"
+current_stage='negative-integrity-cases'
 if "$cli" typed-sdd author --root "$scratch/missing-cache-root" --work demo --agent acceptance --session missing \
   --backend quint-specification-v1 --cache "$scratch/missing-cache" >"$scratch/missing-cache.json"; then
   fail 'missing cache unexpectedly authored an authority'
@@ -147,6 +156,7 @@ grep -F 'typedSdd.v2.typedEffectClosure' "$scratch/forged-typed-effect.json" >/d
   || fail 'typed/effect semantic adapter closure was not enforced'
 
 migration="$scratch/migration"
+current_stage='v1-migration'
 mkdir -p "$migration"
 "$cli" typed-sdd author --root "$migration" --work demo --title 'Unrelated legacy identifiers' \
   --agent acceptance --session v1 >/dev/null
@@ -176,6 +186,7 @@ grep -F 'fsgg.requirements-extension/v1+base64' "$migration/work/demo/specificat
 # An accepted replacement and accepted rollback share one decision-to-commit lock. They cannot both
 # commit from the same observed v2 authority or resurrect a stale replacement after rollback.
 race_root="$scratch/replacement-rollback-race"
+current_stage='replacement-rollback-race'
 cp -a "$migration" "$race_root"
 FSGG_TYPED_SDD_TEST_PAUSE_AFTER_PREPARE_MS=1000 "$cli" typed-sdd author \
   --root "$race_root" --work demo --title 'Concurrent replacement' --agent acceptance --session replacement \
@@ -185,22 +196,27 @@ for _ in $(seq 1 100); do
   [[ -n "$(find "$race_root/.fsgg/typed-sdd-transactions" -name journal.json -print -quit 2>/dev/null)" ]] && break
   sleep 0.02
 done
+trap - ERR
 set +e
 "$cli" typed-sdd rollback --root "$race_root" --work demo --accept >"$scratch/race-rollback.json"
 race_rollback_status=$?
 wait "$race_author_pid"
 race_author_status=$?
 set -e
+trap "$error_trap" ERR
 [[ $race_author_status -eq 0 && $race_rollback_status -ne 0 ]] \
   || fail 'concurrent replacement and rollback did not serialize to exactly one accepted commit'
 grep -F 'typedSdd.v2.rollbackMissing' "$scratch/race-rollback.json" >/dev/null \
   || fail 'serialized rollback did not diagnose the replacement-cleared rollback receipt'
 "$cli" typed-sdd inspect --root "$race_root" --work demo >/dev/null \
   || fail 'serialized replacement/rollback race left invalid authority'
+current_stage='rollback-crash-recovery'
+trap - ERR
 set +e
 FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE=5 "$cli" typed-sdd rollback --root "$migration" --work demo --accept >/dev/null 2>&1
 rollback_crash=$?
 set -e
+trap "$error_trap" ERR
 [[ $rollback_crash -ne 0 ]] || fail 'injected rollback crash unexpectedly succeeded'
 "$cli" typed-sdd inspect --root "$migration" --work demo >/dev/null || fail 'rollback crash did not recover the complete v2 pre-state'
 "$cli" typed-sdd rollback --root "$migration" --work demo --accept >"$scratch/rollback.json"
@@ -209,6 +225,7 @@ find "$migration" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/v1.a
 cmp "$scratch/v1.before" "$scratch/v1.after" >/dev/null || fail 'rollback did not restore the exact v1 tree'
 
 if [[ -n "${Q3_JUNIT_OUT:-}" ]]; then
+  current_stage='junit-report'
   mkdir -p "$(dirname "$Q3_JUNIT_OUT")"
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
