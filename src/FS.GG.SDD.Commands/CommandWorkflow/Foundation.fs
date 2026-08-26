@@ -659,16 +659,30 @@ nuget-cache/
         |> Option.contains TypedSdd
 
     let typedCompilerCandidateEffects workId model =
-        let effect = typedCompilerEffect workId
-
-        let alreadyKnown =
+        let known effect =
             model.PendingEffects |> List.contains effect
             || model.InterpretedEffects |> List.exists (fun result -> result.Effect = effect)
 
-        if typedLifecycleSelected model && not alreadyKnown then
-            [ effect ]
+        let manifest =
+            model.InterpretedEffects
+            |> List.tryPick (fun result ->
+                match result.Effect, result.Snapshot with
+                | ReadFile path, Some snapshot when normalizeRelativePath path = normalizeRelativePath (TypedAuthorityManifest.path workId) -> Some snapshot.Text
+                | _ -> None)
+
+        if not (typedLifecycleSelected model) then []
         else
-            []
+            match manifest |> Option.map TypedAuthority.deserialize with
+            | Some(Ok(QuintSpecificationV1 authority)) ->
+                [ yield! authority.Artifacts |> List.map (fun artifact -> ReadFile artifact.Path)
+                  match authority.RollbackManifestPath with
+                  | Some path -> yield ReadFile path
+                  | None -> () ]
+                |> List.filter (known >> not)
+            | Some(Ok(FsharpSpecificationV1 _)) ->
+                let effect = typedCompilerEffect workId
+                if known effect then [] else [ effect ]
+            | _ -> []
 
     let typedLifecycleDiagnostics workId model =
         let findSnapshot path =
@@ -709,9 +723,9 @@ nuget-cache/
                               "Run fsgg-sdd typed-sdd author or accept a migration."
                               [] ]
                     | Some manifestSnapshot ->
-                        match TypedAuthorityManifest.deserialize manifestSnapshot.Text with
+                        match TypedAuthority.deserialize manifestSnapshot.Text with
                         | Error finding -> [ asDiagnostic finding ]
-                        | Ok authority ->
+                        | Ok(FsharpSpecificationV1 authority) ->
                             let canonicalPath = $"work/{workId}/specification.fsx"
                             let normalizedPath = $"readiness/{workId}/specification.normalized.json"
                             let markdownPath = specPath workId
@@ -765,6 +779,28 @@ nuget-cache/
                                 | _ -> []
 
                             baseFindings @ pathFindings @ derivationFindings @ compilationFindings
+                            |> List.map asDiagnostic
+                        | Ok(QuintSpecificationV1 authority) ->
+                            let observation path =
+                                match findSnapshot path with
+                                | Some snapshot ->
+                                    { Path = path
+                                      State =
+                                        QuintAuthorityArtifactState.Present(
+                                            snapshot.RawBytes |> Option.defaultValue (Encoding.UTF8.GetBytes snapshot.Text)
+                                        ) }
+                                | None -> { Path = path; State = QuintAuthorityArtifactState.Missing }
+
+                            let observations =
+                                [ yield! authority.Artifacts |> List.map (fun artifact -> observation artifact.Path)
+                                  match authority.RollbackManifestPath with
+                                  | Some path -> yield observation path
+                                  | None -> () ]
+
+                            TypedAuthority.validateQuintV2
+                                $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
+                                observations
+                                authority
                             |> List.map asDiagnostic
                 | Ok _ -> []
                 | Error finding -> [ asDiagnostic finding ]

@@ -231,9 +231,11 @@ module TypedSddCommandTests =
             let code, report, _ =
                 run root [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo" ]
 
-            Assert.Equal(0, code)
+            // The synthetic fixture closes hashes and paths but is not an admitted Q1 typed/effect
+            // observation; dispatch must reach the v2 validator and fail at that semantic boundary.
+            Assert.Equal(1, code)
             Assert.Contains("quint-specification-v1", report)
-            Assert.Contains("\"outcome\": \"succeeded\"", report)
+            Assert.Contains("typedSdd.v2.typedEffectClosure", report)
 
             File.WriteAllText(Path.Combine(root, "readiness/demo/quint/contract.json"), "edited")
             let editCode, edited, _ =

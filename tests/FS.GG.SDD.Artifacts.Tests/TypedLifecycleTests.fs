@@ -296,7 +296,12 @@ module TypedLifecycleTests =
                 { Path = artifact.Path
                   State = QuintAuthorityArtifactState.Present(contents[artifact.Id]) })
 
-        Assert.Empty(TypedAuthority.validateQuintV2 authority.PackageIdentity observed authority)
+        // This small synthetic fixture exercises manifest/receipt/source closure but deliberately is
+        // not one of the exact Q1-qualified typed/effect programs. The semantic adapter must refuse it.
+        Assert.Equal<string list>(
+            [ "typedSdd.v2.typedEffectClosure" ],
+            TypedAuthority.validateQuintV2 authority.PackageIdentity observed authority |> List.map _.Id
+        )
 
         let mutant =
             observed

@@ -181,6 +181,79 @@ module TypedAuthority =
                           match QuintContract.deserialize contractText with
                           | Error _ -> ()
                           | Ok contract ->
+                              let catalogueName kind =
+                                  match kind with
+                                  | Requirement -> "requirements"
+                                  | Evidence -> "evidenceCatalogue"
+                                  | Action -> "actionCatalogue"
+                                  | Invariant
+                                  | TemporalProperty
+                                  | ReachabilityProperty -> "propertyCatalogue"
+                                  | StateVariable -> "stateCatalogue"
+                                  | Implementation -> "implementationCatalogue"
+                                  | ExternalSubject -> "externalSubjectCatalogue"
+
+                              let typedObservation =
+                                  { Profile = manifest.ProfileIdentity
+                                    QuintVersion = QuintProfile.quintVersion
+                                    TypedEffectJson = typedEffectText
+                                    SourceBindings =
+                                      contract.Catalogue
+                                      |> List.map (fun entry ->
+                                          { ModuleName = "RequirementsSlice"
+                                            CatalogueName = catalogueName entry.Kind
+                                            Id = entry.Id
+                                            Kind = entry.Kind
+                                            Source = entry.Source }) }
+
+                              match QuintProfile.adaptTypedEffectJson typedObservation with
+                              | Ok adapted when
+                                  adapted.Profile = contract.Profile
+                                  && adapted.Entries = contract.Catalogue
+                                  && adapted.ActionEffects = contract.ActionEffects -> ()
+                              | _ ->
+                                  yield closure "typedSdd.v2.typedEffectClosure" "The retained Quint typed/effect observation does not adapt to the compiled contract catalogue and action effects." "Recompile from the exact qualified Quint observation and source bindings."
+
+                              let typedDigest = { Name = "typed-effect"; Sha256 = typedEffectSha }
+                              let migrationImpacts =
+                                  contract.Impacts
+                                  |> List.filter (fun impact -> impact.Category = "manifest-v1-semantic-payload")
+
+                              match migrationImpacts with
+                              | [] when contract.Impacts = [] && contract.Digests = [ typedDigest ] -> ()
+                              | [ impact ] when contract.Impacts = [ impact ] ->
+                                  try
+                                      let payload = Convert.FromBase64String impact.Detail
+                                      let payloadSha = TypedAuthorityManifest.sha256 payload
+                                      let expectedDigests =
+                                          [ { Name = "requirements-extension-v1"; Sha256 = payloadSha }
+                                            typedDigest ]
+                                      let marker = "fsgg.requirements-extension/v1+base64 " + impact.Detail + "\n"
+                                      let markdownText = UTF8Encoding(false, true).GetString markdownBytes
+                                      let rollbackBindsPayload =
+                                          match manifest.RollbackManifestPath with
+                                          | Some rollbackPath ->
+                                              match Map.tryFind rollbackPath states with
+                                              | Some(Present rollbackBytes) ->
+                                                  use inventory = JsonDocument.Parse rollbackBytes
+                                                  inventory.RootElement.GetProperty("entries").EnumerateArray()
+                                                  |> Seq.exists (fun entry ->
+                                                      let original = entry.GetProperty("originalPath").GetString() |> Option.ofObj |> Option.defaultValue ""
+                                                      let digest = entry.GetProperty("sha256").GetString() |> Option.ofObj |> Option.defaultValue ""
+                                                      original.EndsWith("specification.normalized.json", StringComparison.Ordinal)
+                                                      && digest = payloadSha)
+                                              | _ -> false
+                                          | None -> false
+
+                                      if contract.Digests <> expectedDigests
+                                         || not (markdownText.EndsWith(marker, StringComparison.Ordinal))
+                                         || not rollbackBindsPayload then
+                                          yield closure "typedSdd.v2.migrationCorrespondence" "The migrated semantic payload is not identically bound by Markdown, compiled-contract digest, and authenticated rollback inventory." "Re-run migration from the complete canonical manifest-v1 authority."
+                                  with _ ->
+                                      yield closure "typedSdd.v2.migrationCorrespondence" "The migrated semantic payload is malformed or not authenticated by the rollback inventory." "Re-run migration from the complete canonical manifest-v1 authority."
+                              | _ ->
+                                  yield closure "typedSdd.v2.migrationCorrespondence" "The compiled contract has an unsupported migration impact or semantic digest inventory." "Retain either no migration payload or exactly one authenticated manifest-v1 semantic payload."
+
                               let expectedFingerprint =
                                   QuintContract.fingerprint
                                       { SourceSha256 = sourceSha
@@ -193,7 +266,6 @@ module TypedAuthority =
                                  || toolchainSha <> manifest.ToolchainIdentity
                                  || contractSha <> contractHash
                                  || TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes typedEffectText) <> typedEffectSha
-                                 || contract.Digests <> [ { Name = "typed-effect"; Sha256 = typedEffectSha } ]
                                  || expectedFingerprint <> Ok fingerprint then
                                   yield closure "typedSdd.v2.receiptClosure" "The receipt does not close over the declared source, fences, modules, toolchain, contract, and fingerprint." "Re-author all authority artifacts in one atomic compilation."
 

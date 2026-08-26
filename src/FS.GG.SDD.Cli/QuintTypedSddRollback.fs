@@ -117,18 +117,7 @@ module internal QuintTypedSddRollback =
         with ex ->
             Error [ diagnostic "typedSdd.v2.rollbackSnapshotFailed" ex.Message "Restore the complete readable v1 authority before migration." ]
 
-    let private writeAtomically (writes: (string * byte array) list) =
-        let staged =
-            writes
-            |> List.map (fun (path, bytes) ->
-                Path.GetDirectoryName path |> Option.ofObj |> Option.iter (Directory.CreateDirectory >> ignore)
-                let temporary = path + ".restore-" + Guid.NewGuid().ToString("N")
-                File.WriteAllBytes(temporary, bytes)
-                path, temporary)
-        try staged |> List.iter (fun (path, temporary) -> File.Move(temporary, path, true))
-        finally staged |> List.iter (fun (_, temporary) -> if File.Exists temporary then File.Delete temporary)
-
-    let restore rootPath workId (authority: QuintAuthorityManifest) =
+    let restore rootPath workId (authority: QuintAuthorityManifest) apply =
         match authority.RollbackManifestPath, authority.RollbackManifestSha256 with
         | Some inventoryRelative, Some inventorySha ->
             try
@@ -152,35 +141,22 @@ module internal QuintTypedSddRollback =
                 let v2Relatives = TypedAuthorityManifest.path workId :: (authority.Artifacts |> List.map _.Path)
                 let backupRelatives = inventoryRelative :: (entries |> List.map _.BackupPath)
                 let affectedRelatives = (v2Relatives @ backupRelatives @ (entries |> List.map _.OriginalPath)) |> List.distinct
-                let affected =
-                    affectedRelatives
-                    |> List.map (fun relative ->
-                        let path = containedPath rootPath relative |> Option.defaultWith (fun () -> invalidOp "unsafe affected path")
-                        path, (if File.Exists path then Some(File.ReadAllBytes path) else None))
+                let originalSet = entries |> List.map _.OriginalPath |> Set.ofList
+                let deletes =
+                    (v2Relatives @ backupRelatives)
+                    |> List.distinct
+                    |> List.filter (originalSet.Contains >> not)
+                    |> List.map (fun relative -> containedPath rootPath relative |> Option.defaultWith (fun () -> invalidOp "unsafe delete path"))
 
                 try
-                    writeAtomically restores
-                    let originalSet = entries |> List.map _.OriginalPath |> Set.ofList
-                    for relative in (v2Relatives @ backupRelatives) |> List.distinct do
-                        if not (originalSet.Contains relative) then
-                            let path = containedPath rootPath relative |> Option.get
-                            if File.Exists path then File.Delete path
-
+                    apply restores deletes
                     for entry in entries do
                         let path = containedPath rootPath entry.OriginalPath |> Option.get
                         if not (File.Exists path) || TypedAuthorityManifest.sha256 (File.ReadAllBytes path) <> entry.Sha256 then
                             invalidOp $"rollback post-state mismatch for '{entry.OriginalPath}'"
 
                     Ok affectedRelatives
-                with ex ->
-                    for path, prior in affected do
-                        match prior with
-                        | Some bytes ->
-                            Path.GetDirectoryName path |> Option.ofObj |> Option.iter (Directory.CreateDirectory >> ignore)
-                            File.WriteAllBytes(path, bytes)
-                        | None when File.Exists path -> File.Delete path
-                        | None -> ()
-                    raise ex
+                with ex -> raise ex
             with ex ->
                 Error [ diagnostic "typedSdd.v2.rollbackFailed" ex.Message "Restore the authenticated rollback inventory and retry; the live tree was preserved." ]
         | _ ->

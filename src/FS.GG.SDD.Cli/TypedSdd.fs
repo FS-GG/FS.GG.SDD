@@ -237,16 +237,98 @@ module TypedSdd =
             if File.Exists temporary then
                 File.Delete temporary
 
-    let private atomicWrite rootPath (writes: (string * byte array) list) =
-        let coordination = Path.Combine(rootPath, ".fsgg", "typed-sdd-transactions")
+    type private TransactionEntry =
+        { Target: string
+          Backup: string
+          Existed: bool }
+
+    let private transactionRoot rootPath = Path.Combine(rootPath, ".fsgg", "typed-sdd-transactions")
+
+    let private writeJournal (transaction: string) (state: string) (entries: TransactionEntry list) =
+        let path = Path.Combine(transaction, "journal.json")
+        let temporary = path + ".new"
+        use stream = new MemoryStream()
+        use writer = new System.Text.Json.Utf8JsonWriter(stream)
+        writer.WriteStartObject()
+        writer.WriteString("schema", "fsgg.typed-sdd-transaction/v1")
+        writer.WriteString("state", state)
+        writer.WriteStartArray("entries")
+        for entry in entries do
+            writer.WriteStartObject()
+            writer.WriteString("target", entry.Target)
+            writer.WriteString("backup", entry.Backup)
+            writer.WriteBoolean("existed", entry.Existed)
+            writer.WriteEndObject()
+        writer.WriteEndArray()
+        writer.WriteEndObject()
+        writer.Flush()
+        File.WriteAllBytes(temporary, Array.append (stream.ToArray()) [| byte '\n' |])
+        File.Move(temporary, path, true)
+
+    let private readJournal transaction =
+        use document = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(transaction, "journal.json")))
+        let root = document.RootElement
+        if root.GetProperty("schema").GetString() <> "fsgg.typed-sdd-transaction/v1" then
+            invalidOp "unsupported Typed SDD transaction journal"
+        let state = root.GetProperty("state").GetString() |> Option.ofObj |> Option.defaultValue ""
+        let entries =
+            root.GetProperty("entries").EnumerateArray()
+            |> Seq.map (fun item ->
+                { Target = item.GetProperty("target").GetString() |> Option.ofObj |> Option.defaultValue ""
+                  Backup = item.GetProperty("backup").GetString() |> Option.ofObj |> Option.defaultValue ""
+                  Existed = item.GetProperty("existed").GetBoolean() })
+            |> Seq.toList
+        state, entries
+
+    let private recoverTransactions rootPath =
+        let coordination = transactionRoot rootPath
+        Directory.CreateDirectory coordination |> ignore
+        for transaction in Directory.GetDirectories coordination |> Array.sort do
+            let journalPath = Path.Combine(transaction, "journal.json")
+            if File.Exists journalPath then
+                let state, entries = readJournal transaction
+                if state = "prepared" then
+                    for entry in entries do
+                        let target = containedPath rootPath entry.Target |> Option.defaultWith (fun () -> invalidOp "unsafe transaction recovery target")
+                        let backup = Path.Combine(transaction, entry.Backup)
+                        if entry.Existed then
+                            if not (File.Exists backup) then invalidOp "transaction recovery backup is missing"
+                            Path.GetDirectoryName target |> Option.ofObj |> Option.iter (Directory.CreateDirectory >> ignore)
+                            File.Copy(backup, target, true)
+                        elif File.Exists target then
+                            File.Delete target
+                elif state <> "committed" then
+                    invalidOp "unknown Typed SDD transaction state"
+            Directory.Delete(transaction, true)
+
+    let private acquireAuthorityLock rootPath =
+        let coordination = transactionRoot rootPath
         Directory.CreateDirectory coordination |> ignore
         let lockPath = Path.Combine(coordination, "authority.lock")
-        use transactionLock = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)
+        let timer = Stopwatch.StartNew()
+        let mutable transactionLock: FileStream option = None
+        while transactionLock.IsNone && timer.Elapsed < TimeSpan.FromSeconds 60.0 do
+            try
+                transactionLock <- Some(new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+            with :? IOException ->
+                Threading.Thread.Sleep 10
+        let transactionLock =
+            transactionLock
+            |> Option.defaultWith (fun () -> raise (TimeoutException("Timed out waiting for the Typed SDD authority transaction lock.")))
+        recoverTransactions rootPath
+        transactionLock
+
+    let private atomicReplaceUnlocked rootPath (writes: (string * byte array) list) (deletes: string list) =
+        let coordination = Path.Combine(rootPath, ".fsgg", "typed-sdd-transactions")
+        Directory.CreateDirectory coordination |> ignore
         let transaction = Path.Combine(coordination, Guid.NewGuid().ToString("N"))
         Directory.CreateDirectory transaction |> ignore
-        let prior =
-            writes
-            |> List.mapi (fun index (path, _) ->
+        let writePaths = writes |> List.map fst |> Set.ofList
+        if deletes |> List.exists writePaths.Contains then invalidArg "deletes" "a transaction path cannot be written and deleted"
+        let affectedPaths = (writes |> List.map fst) @ deletes |> List.distinct
+        let journalEntries, prior =
+            affectedPaths
+            |> List.mapi (fun index path ->
                 let backup = Path.Combine(transaction, $"prior-{index:D4}.bin")
                 let previous =
                     if File.Exists path then
@@ -254,10 +336,12 @@ module TypedSdd =
                         File.WriteAllBytes(backup, bytes)
                         Some bytes
                     else None
-                path,
-                previous)
+                { Target = Path.GetRelativePath(rootPath, path)
+                  Backup = Path.GetFileName backup |> Option.ofObj |> Option.defaultValue $"prior-{index:D4}.bin"
+                  Existed = previous.IsSome },
+                (path, previous))
+            |> List.unzip
 
-        File.WriteAllText(Path.Combine(transaction, "journal.state"), "prepared\n")
         let staged = ResizeArray<string * string * byte array>()
 
         try
@@ -268,15 +352,40 @@ module TypedSdd =
                 File.WriteAllBytes(temporary, bytes)
                 staged.Add(path, temporary, bytes))
 
+            writeJournal transaction "prepared" journalEntries
+
+            Environment.GetEnvironmentVariable("FSGG_TYPED_SDD_TEST_PAUSE_AFTER_PREPARE_MS")
+            |> Option.ofObj
+            |> Option.bind (fun value -> match Int32.TryParse value with | true, parsed when parsed > 0 -> Some parsed | _ -> None)
+            |> Option.iter Threading.Thread.Sleep
+
+            let crashAfter =
+                Environment.GetEnvironmentVariable("FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE")
+                |> Option.ofObj
+                |> Option.bind (fun value -> match Int32.TryParse value with | true, parsed when parsed > 0 -> Some parsed | _ -> None)
+            let mutable moved = 0
+
             staged
             |> Seq.sortBy (fun (path, _, _) -> if path.EndsWith("typed-authority.json", StringComparison.Ordinal) then 1 else 0)
-            |> Seq.iter (fun (path, temporary, _) -> File.Move(temporary, path, true))
+            |> Seq.iter (fun (path, temporary, _) ->
+                File.Move(temporary, path, true)
+                moved <- moved + 1
+                if crashAfter = Some moved then
+                    Environment.FailFast($"injected Typed SDD crash after move {moved}"))
+
+            for path in deletes do
+                if File.Exists path then File.Delete path
+                moved <- moved + 1
+                if crashAfter = Some moved then
+                    Environment.FailFast($"injected Typed SDD crash after move {moved}")
 
             for path, _, expected in staged do
                 if not (File.Exists path) || File.ReadAllBytes path <> expected then
                     invalidOp $"transaction post-state mismatch for '{path}'"
+            for path in deletes do
+                if File.Exists path then invalidOp $"transaction delete post-state mismatch for '{path}'"
 
-            File.WriteAllText(Path.Combine(transaction, "journal.state"), "committed\n")
+            writeJournal transaction "committed" journalEntries
             Directory.Delete(transaction, true)
         with ex ->
             for path, bytes in prior do
@@ -291,6 +400,10 @@ module TypedSdd =
                     File.Delete temporary)
             if Directory.Exists transaction then Directory.Delete(transaction, true)
             raise ex
+
+    let private atomicWrite rootPath writes =
+        use transactionLock = acquireAuthorityLock rootPath
+        atomicReplaceUnlocked rootPath writes []
 
     let private paths root workId =
         let relativeCanonical = $"work/{workId}/specification.fsx"
@@ -399,7 +512,7 @@ module TypedSdd =
                 if title.Contains('\r') || title.Contains('\n') || title |> Seq.exists Char.IsControl then
                     Error [ diagnostic "typedSdd.v2.titleInvalid" "Quint authority titles must be one printable line." "Remove line breaks and control characters from --title." ]
                 else
-                  match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) None with
+                  match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) None None with
                   | Error findings -> Error findings
                   | Ok output ->
                     try
@@ -419,7 +532,7 @@ module TypedSdd =
                                   ex.Message
                                   "Correct filesystem access and retry; the prior authority was restored." ]
 
-    let private migrateQuint args workId sourceRelative =
+    let private migrateQuint args workId sourceRelative (migrationPayload: byte array) =
         let rootPath = root args
         let agent = optionValue "--agent" args |> Option.defaultValue ""
         let session = optionValue "--session" args |> Option.defaultValue ""
@@ -436,9 +549,12 @@ module TypedSdd =
             | Error findings -> Error findings
             | Ok rollback ->
                 let title = optionValue "--title" args |> Option.defaultValue workId
-                match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) (Some rollback) with
-                | Error findings -> Error findings
-                | Ok output ->
+                if title.Contains('\r') || title.Contains('\n') || title |> Seq.exists Char.IsControl then
+                    Error [ diagnostic "typedSdd.v2.titleInvalid" "Quint authority titles must be one printable line." "Remove line breaks and control characters from --title." ]
+                else
+                  match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) (Some rollback) (Some migrationPayload) with
+                  | Error findings -> Error findings
+                  | Ok output ->
                     try
                         let writes =
                             output.Writes
@@ -669,6 +785,28 @@ module TypedSdd =
                     else
                         RequirementsMigration.analyzeMarkdown (Encoding.UTF8.GetString sourceBytes)
 
+                let migrationPayload extension =
+                    try
+                        let authorityPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
+                        if File.Exists authorityPath then
+                            match File.ReadAllText authorityPath |> TypedAuthority.deserialize with
+                            | Ok(FsharpSpecificationV1 authority) ->
+                                match containedPath rootPath authority.NormalizedPath with
+                                | Some normalizedPath when File.Exists normalizedPath -> Ok(File.ReadAllBytes normalizedPath)
+                                | _ -> Error "The manifest-v1 normalized authority is missing."
+                            | _ -> Error "The existing authority is not manifest-v1."
+                        else
+                            let seed =
+                                newModel
+                                    workId
+                                    (optionValue "--title" args |> Option.defaultValue workId)
+                                    (optionValue "--agent" args |> Option.defaultValue "migration")
+                                    (optionValue "--session" args |> Option.defaultValue "migration")
+                            match SpecificationCodec.serialize RequirementsExtension.contract { seed with Extension = extension } with
+                            | Ok normalized -> Ok(Encoding.UTF8.GetBytes(normalized + "\n"))
+                            | Error findings -> Error findings.Head.Message
+                    with ex -> Error ex.Message
+
                 match migrationAnalysis with
                 | Ambiguous findings ->
                     emit
@@ -688,25 +826,18 @@ module TypedSdd =
                           SemanticDiff = findings |> List.map _.Message
                           RollbackSourceSha256 = Some rollback
                           Diagnostics = [] }
-                | Migrated _ when
-                    (optionValue "--backend" args |> Option.exists (fun value -> value = "quint" || value = "quint-specification-v1"))
-                    && (let text = Encoding.UTF8.GetString sourceBytes
-                        not (text.Contains("REQ-AUDIT-001", StringComparison.Ordinal) && text.Contains("EV-VERIFY-001", StringComparison.Ordinal))) ->
-                    emit
-                        { Operation = "migrate"
-                          Outcome = "noChange"
-                          Classification = Some "Unsupported"
-                          ChangedPaths = []
-                          SemanticDiff = [ "The qualified v1-to-v2 migrator accepts only the closed Q1 requirements/evidence profile." ]
-                          RollbackSourceSha256 = Some rollback
-                          Diagnostics = [] }
                 | Migrated extension when not (has "--accept" args) ->
+                    let payloadSummary =
+                        migrationPayload extension
+                        |> Result.map (fun payload -> [ $"semantic payload sha256: {TypedAuthorityManifest.sha256 payload}" ])
+                        |> Result.defaultValue []
                     let summary =
                         [ $"scope boundaries: {extension.Scope.Length}"
                           $"user stories: {extension.Stories.Length}"
                           $"requirements: {extension.Requirements.Length}"
                           $"acceptance criteria: {extension.Acceptance.Length}"
-                          $"lifecycle notes: {extension.LifecycleNotes.Length}" ]
+                          $"lifecycle notes: {extension.LifecycleNotes.Length}"
+                          yield! payloadSummary ]
 
                     emit
                         { Operation = "migrate"
@@ -727,17 +858,8 @@ module TypedSdd =
                     let backend = optionValue "--backend" args |> Option.defaultValue "fsharp-specification-v1"
 
                     if backend = "quint" || backend = "quint-specification-v1" then
-                        match migrateQuint args workId source with
-                        | Ok changed ->
-                            emit
-                                { Operation = "migrate"
-                                  Outcome = "succeeded"
-                                  Classification = Some "Migrated"
-                                  ChangedPaths = changed
-                                  SemanticDiff = summary
-                                  RollbackSourceSha256 = Some rollback
-                                  Diagnostics = [] }
-                        | Error findings ->
+                        match migrationPayload extension with
+                        | Error detail ->
                             emit
                                 { Operation = "migrate"
                                   Outcome = "blocked"
@@ -745,7 +867,29 @@ module TypedSdd =
                                   ChangedPaths = []
                                   SemanticDiff = []
                                   RollbackSourceSha256 = Some rollback
-                                  Diagnostics = findings }
+                                  Diagnostics = [ diagnostic "typedSdd.v2.migrationPayloadInvalid" detail "Restore the canonical manifest-v1 normalized authority and retry." ] }
+                        | Ok payload ->
+                            let acceptedSummary =
+                                summary @ [ $"semantic payload sha256: {TypedAuthorityManifest.sha256 payload}" ]
+                            match migrateQuint args workId source payload with
+                            | Ok changed ->
+                                emit
+                                    { Operation = "migrate"
+                                      Outcome = "succeeded"
+                                      Classification = Some "Migrated"
+                                      ChangedPaths = changed
+                                      SemanticDiff = acceptedSummary
+                                      RollbackSourceSha256 = Some rollback
+                                      Diagnostics = [] }
+                            | Error findings ->
+                                emit
+                                    { Operation = "migrate"
+                                      Outcome = "blocked"
+                                      Classification = Some "Unsupported"
+                                      ChangedPaths = []
+                                      SemanticDiff = []
+                                      RollbackSourceSha256 = Some rollback
+                                      Diagnostics = findings }
                     else
                       let seed =
                         newModel
@@ -823,6 +967,7 @@ module TypedSdd =
                           "Pass a work id without separators or traversal segments." ] }
         | Some workId ->
             let rootPath = root args
+            use transactionLock = acquireAuthorityLock rootPath
             let manifestPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
 
             if not (File.Exists manifestPath) then
@@ -948,6 +1093,7 @@ module TypedSdd =
         match work args with
         | Some workId when validWorkId workId ->
             let rootPath = root args
+            use transactionLock = acquireAuthorityLock rootPath
             let rc, rn, rm, canonicalPath, normalizedPath, markdownPath = paths rootPath workId
             let rollbackRelative = $"work/{workId}/spec.standard-sdd.rollback.md"
             let rollbackPath = Path.Combine(rootPath, rollbackRelative)
@@ -989,7 +1135,7 @@ module TypedSdd =
                           RollbackSourceSha256 = authority.RollbackManifestSha256
                           Diagnostics = findings }
                 else
-                    match QuintTypedSddRollback.restore rootPath workId authority with
+                    match QuintTypedSddRollback.restore rootPath workId authority (atomicReplaceUnlocked rootPath) with
                     | Ok changed ->
                         emit
                             { Operation = "rollback"
@@ -1036,12 +1182,7 @@ module TypedSdd =
                              None))
 
                 try
-                    atomicWrite rootPath [ markdownPath, rollbackBytes ]
-
-                    typedPaths
-                    |> List.iter (fun path ->
-                        if File.Exists path then
-                            File.Delete path)
+                    atomicReplaceUnlocked rootPath [ markdownPath, rollbackBytes ] typedPaths
 
                     emit
                         { Operation = "rollback"

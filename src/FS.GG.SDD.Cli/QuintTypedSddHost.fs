@@ -214,23 +214,31 @@ example are all explicit in the embedded Quint source.
         { StepId = step
           ExecutableObjectId = objectId
           Arguments = arguments
-          Environment = []
+          Environment = [ "LANG", "C.UTF-8"; "TZ", "UTC" ]
           WorkingDirectory = "isolated-run" }
 
     let private execute executable (request: QuintProcessRequest) workingDirectory =
         try
-            let start = ProcessStartInfo(executable)
+            if not (OperatingSystem.IsLinux()) then
+                invalidOp "the qualified Quint backend requires Linux network-namespace isolation"
+
+            let unshare = "/usr/bin/unshare"
+            if not (File.Exists unshare) then
+                invalidOp "the qualified Quint backend requires /usr/bin/unshare for network isolation"
+
+            let start = ProcessStartInfo(unshare)
             start.WorkingDirectory <- workingDirectory
             start.RedirectStandardOutput <- true
             start.RedirectStandardError <- true
             start.UseShellExecute <- false
             start.Environment.Clear()
-            start.Environment["LANG"] <- "C.UTF-8"
-            start.Environment["TZ"] <- "UTC"
-            start.Environment["HTTP_PROXY"] <- "http://127.0.0.1:1"
-            start.Environment["HTTPS_PROXY"] <- "http://127.0.0.1:1"
-            start.Environment["ALL_PROXY"] <- "http://127.0.0.1:1"
-            start.Environment["NO_PROXY"] <- "*"
+            for name, value in request.Environment do
+                start.Environment[name] <- value
+            start.ArgumentList.Add "--user"
+            start.ArgumentList.Add "--map-root-user"
+            start.ArgumentList.Add "--net"
+            start.ArgumentList.Add "--"
+            start.ArgumentList.Add executable
             request.Arguments |> List.iter start.ArgumentList.Add
             use child = Process.Start start |> Option.ofObj |> Option.defaultWith (fun () -> invalidOp "process did not start")
             let stdout = child.StandardOutput.ReadToEndAsync()
@@ -273,7 +281,7 @@ example are all explicit in the embedded Quint source.
                     if not (File.Exists typedPath) then Error("typecheck", -1, "Quint did not emit typed.json")
                     else Ok(File.ReadAllBytes generatedPath, File.ReadAllBytes typedPath, extractionOutput @ quintOutput)
 
-    let author packageIdentity workId title agent session cacheRoot (rollback: Rollback option) =
+    let author packageIdentity workId title agent session cacheRoot (rollback: Rollback option) (migrationPayload: byte array option) =
         let lmtObservation, lmtBytes = observeCache cacheRoot "lmt-binary"
         let quintObservation, quintBytes = observeCache cacheRoot "quint-binary"
         let cache = [ lmtObservation; quintObservation ]
@@ -285,7 +293,17 @@ example are all explicit in the embedded Quint source.
         | Error findings, _, _ ->
             Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.cacheInvalid" finding.Message "Preseed --cache/objects with the exact Q1 lmt and Quint objects."))
         | Ok _, Some lmtObject, Some quintObject ->
-            let markdownText = template.Replace("# Requirements and evidence vertical slice", $"# {title}", StringComparison.Ordinal)
+            let migrationProjection =
+                migrationPayload
+                |> Option.map (fun bytes ->
+                    "\n## Migrated manifest-v1 semantic payload\n\n"
+                    + "fsgg.requirements-extension/v1+base64 "
+                    + Convert.ToBase64String bytes
+                    + "\n")
+                |> Option.defaultValue ""
+            let markdownText =
+                template.Replace("# Requirements and evidence vertical slice", $"# {title}", StringComparison.Ordinal)
+                + migrationProjection
             let markdownBytes = Encoding.UTF8.GetBytes markdownText
             match QuintSource.createMarkdown logicalPath markdownBytes with
             | Error findings ->
@@ -324,9 +342,21 @@ example are all explicit in the embedded Quint source.
                                   Relationships = []
                                   VerificationProfiles = []
                                   Bounds = []
-                                  Impacts = []
+                                  Impacts =
+                                    migrationPayload
+                                    |> Option.map (fun bytes ->
+                                        [ { SubjectId = "REQ-AUDIT-001"
+                                            Category = "manifest-v1-semantic-payload"
+                                            Detail = Convert.ToBase64String bytes } ])
+                                    |> Option.defaultValue []
                                   Compatibility = []
-                                  Digests = [ { Name = "typed-effect"; Sha256 = sha256 typed } ] } }
+                                  Digests =
+                                    [ { Name = "typed-effect"; Sha256 = sha256 typed }
+                                      match migrationPayload with
+                                      | Some bytes ->
+                                          { Name = "requirements-extension-v1"
+                                            Sha256 = sha256 bytes }
+                                      | None -> () ] } }
                         match QuintCompiler.compileObserved input with
                         | Error findings ->
                             Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.compilationFailed" finding.Message "Correct the authored source or exact tool observations."))

@@ -299,6 +299,7 @@ jobs:
           LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
           FABLE_BIN: ${{ runner.temp }}/quint-q2-tools/fable/fable
           Q3_SKIP_Q2: "1"
+          Q2_JUNIT_IN: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
           Q3_JUNIT_OUT: artifacts/test-results/quint-q3-typed-sdd-acceptance.junit.xml
         run: bash tests/quint-q3-typed-sdd-acceptance.sh
 
