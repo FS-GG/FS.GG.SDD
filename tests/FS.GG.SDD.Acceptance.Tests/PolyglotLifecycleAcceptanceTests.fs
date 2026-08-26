@@ -32,6 +32,27 @@ module PolyglotLifecycleAcceptanceTests =
         Assert.True(result.Started, $"{lane} did not start: {result.Diagnostic}")
         Assert.True(result.ExitCode = 0, $"{lane} failed: {result.Diagnostic}")
 
+    let private waitForHttp (child: Process) (url: string) (timeoutMs: int) =
+        use client = new HttpClient()
+        client.Timeout <- TimeSpan.FromSeconds 2.0
+        let elapsed = Stopwatch.StartNew()
+        let mutable body = None
+        let mutable lastError = "endpoint did not answer"
+
+        while body.IsNone
+              && elapsed.ElapsedMilliseconds < int64 timeoutMs
+              && not child.HasExited do
+            try
+                body <- Some(client.GetStringAsync(url).GetAwaiter().GetResult())
+            with ex ->
+                lastError <- ex.Message
+                Threading.Thread.Sleep 250
+
+        match body with
+        | Some value -> value
+        | None when child.HasExited -> failwith $"fixture process exited before {url} became ready"
+        | None -> failwith $"fixture endpoint {url} was not ready after {timeoutMs} ms: {lastError}"
+
     let private assertServerEndpoint () =
         let start =
             ProcessStartInfo("dotnet", "run --no-restore --project server/Polyglot.Server.fsproj")
@@ -45,13 +66,13 @@ module PolyglotLifecycleAcceptanceTests =
         | null -> failwith "could not start the ASP.NET Core fixture"
         | server ->
             use server = server
-            Threading.Thread.Sleep 3000
-            use client = new HttpClient()
-            let body = client.GetStringAsync("http://127.0.0.1:51816/health").Result
-            Assert.Equal("polyglot server ready", body)
 
-            if not server.HasExited then
-                server.Kill(true)
+            try
+                let body = waitForHttp server "http://127.0.0.1:51816/health" 60_000
+                Assert.Equal("polyglot server ready", body)
+            finally
+                if not server.HasExited then
+                    server.Kill(true)
 
     let private assertBrowserRuntime () =
         let start = ProcessStartInfo("npm", "run serve --silent")
@@ -61,46 +82,48 @@ module PolyglotLifecycleAcceptanceTests =
         | null -> failwith "could not start Vite"
         | vite ->
             use vite = vite
-            Threading.Thread.Sleep 1500
 
-            // Hosted runners and developer machines install the same browser under different
-            // prefixes. Let the process edge resolve it through PATH, just as a shell would, and
-            // fall back only when a candidate could not be started at all. A browser that starts
-            // but fails remains a real acceptance failure rather than being hidden by fallback.
-            let rec runBrowser candidates diagnostics =
-                match candidates with
-                | [] ->
-                    { Started = false
-                      ExitCode = -1
-                      Diagnostic =
-                        "could not start a supported browser from PATH (tried chromium and google-chrome): "
-                        + String.concat "; " (List.rev diagnostics) }
-                | executable :: remaining ->
-                    let result =
-                        runToCompletionCapturingOutput
-                            executable
-                            [ "--headless"
-                              "--no-sandbox"
-                              "--disable-dev-shm-usage"
-                              "--disable-background-networking"
-                              "--dump-dom"
-                              "http://127.0.0.1:51817" ]
-                            fixtureRoot
-                            60_000
+            try
+                waitForHttp vite "http://127.0.0.1:51817" 60_000 |> ignore
 
-                    if result.Started then
-                        result
-                    else
-                        runBrowser remaining ($"{executable}: {result.Diagnostic}" :: diagnostics)
+                // Hosted runners and developer machines install the same browser under different
+                // prefixes. Let the process edge resolve it through PATH, just as a shell would, and
+                // fall back only when a candidate could not be started at all. A browser that starts
+                // but fails remains a real acceptance failure rather than being hidden by fallback.
+                let rec runBrowser candidates diagnostics =
+                    match candidates with
+                    | [] ->
+                        { Started = false
+                          ExitCode = -1
+                          Diagnostic =
+                            "could not start a supported browser from PATH (tried chromium and google-chrome): "
+                            + String.concat "; " (List.rev diagnostics) }
+                    | executable :: remaining ->
+                        let result =
+                            runToCompletionCapturingOutput
+                                executable
+                                [ "--headless"
+                                  "--no-sandbox"
+                                  "--disable-dev-shm-usage"
+                                  "--disable-background-networking"
+                                  "--dump-dom"
+                                  "http://127.0.0.1:51817" ]
+                                fixtureRoot
+                                60_000
 
-            let browser = runBrowser [ "chromium"; "google-chrome" ] []
+                        if result.Started then
+                            result
+                        else
+                            runBrowser remaining ($"{executable}: {result.Diagnostic}" :: diagnostics)
 
-            assertGreen "Vite browser runtime" browser
-            Assert.Contains("data-executed=\"typescript\"", browser.Diagnostic)
-            Assert.Contains("polyglot browser ready", browser.Diagnostic)
+                let browser = runBrowser [ "chromium"; "google-chrome" ] []
 
-            if not vite.HasExited then
-                vite.Kill(true)
+                assertGreen "Vite browser runtime" browser
+                Assert.Contains("data-executed=\"typescript\"", browser.Diagnostic)
+                Assert.Contains("polyglot browser ready", browser.Diagnostic)
+            finally
+                if not vite.HasExited then
+                    vite.Kill(true)
 
     let private evidenceText root workId =
         TestSupport.readRelative root $"work/{workId}/evidence.yml"
