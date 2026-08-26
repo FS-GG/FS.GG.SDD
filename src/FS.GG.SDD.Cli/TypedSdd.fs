@@ -51,6 +51,23 @@ module TypedSdd =
             else
                 None
 
+    let private observeAuthorityArtifact rootPath relative =
+        match containedPath rootPath relative with
+        | None ->
+            { Path = relative
+              State = QuintAuthorityArtifactState.Unreadable "path is outside the selected project root" }
+        | Some path ->
+            try
+                if File.Exists path then
+                    { Path = relative
+                      State = QuintAuthorityArtifactState.Present(File.ReadAllBytes path) }
+                else
+                    { Path = relative
+                      State = QuintAuthorityArtifactState.Missing }
+            with ex ->
+                { Path = relative
+                  State = QuintAuthorityArtifactState.Unreadable ex.Message }
+
     let private packageIdentity () =
         let version = SchemaVersion.currentGeneratorVersion().Version
         $"FS.GG.SDD.Artifacts/{version}"
@@ -628,7 +645,18 @@ module TypedSdd =
                               "The Typed SDD authority manifest is missing."
                               "Run typed-sdd author or accept a migration." ] }
             else
-                match TypedAuthority.deserialize (File.ReadAllText manifestPath) with
+                let decoded =
+                    try
+                        File.ReadAllText manifestPath |> TypedAuthority.deserialize
+                    with ex ->
+                        Error(
+                            diagnostic
+                                "typedSdd.authorityUnreadable"
+                                $"The Typed SDD authority manifest is unreadable: {ex.Message}"
+                                "Correct filesystem access and inspect again."
+                        )
+
+                match decoded with
                 | Error finding ->
                     emit
                         { Operation = "inspect"
@@ -703,19 +731,11 @@ module TypedSdd =
                           RollbackSourceSha256 = authority.RollbackSourceSha256
                           Diagnostics = findings }
                 | Ok(QuintSpecificationV1 authority) ->
-                    let read relative =
-                        containedPath rootPath relative
-                        |> Option.bind (fun path ->
-                            if File.Exists path then
-                                Some(File.ReadAllBytes path)
-                            else
-                                None)
-
                     let observations =
                         [ for artifact in authority.Artifacts do
-                              yield artifact.Path, read artifact.Path
+                              yield observeAuthorityArtifact rootPath artifact.Path
                           match authority.RollbackManifestPath with
-                          | Some path -> yield path, read path
+                          | Some path -> yield observeAuthorityArtifact rootPath path
                           | None -> () ]
 
                     let findings =

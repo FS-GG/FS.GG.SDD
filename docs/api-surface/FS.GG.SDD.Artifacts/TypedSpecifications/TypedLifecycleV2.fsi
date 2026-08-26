@@ -20,6 +20,17 @@ type QuintAuthorityManifest =
       RollbackManifestPath: string option
       RollbackManifestSha256: string option }
 
+/// Distinct effect-edge states for one declared authority artifact.
+type QuintAuthorityArtifactState =
+    | Missing
+    | Unreadable of detail: string
+    | Present of bytes: byte array
+
+/// One path-bound artifact observation; duplicate paths fail closed.
+type QuintAuthorityArtifactObservation =
+    { Path: string
+      State: QuintAuthorityArtifactState }
+
 /// Explicitly decoded authority. File presence never selects a backend.
 type TypedAuthority =
     | FsharpSpecificationV1 of TypedAuthorityManifest
@@ -49,7 +60,7 @@ module TypedAuthority =
     /// Validate manifest-v2 identity, required artifacts, exact bytes, and rollback pairing.
     val validateQuintV2:
         expectedPackageIdentity: string ->
-        artifactBytes: (string * byte array option) list ->
+        observations: QuintAuthorityArtifactObservation list ->
         manifest: QuintAuthorityManifest ->
             TypedLifecycleDiagnostic list
 
