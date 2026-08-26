@@ -293,6 +293,14 @@ jobs:
           Q2_EXACT_IR_JUNIT_OUT: artifacts/test-results/quint-q2-exact-ir.junit.xml
         run: bash tests/quint-q2-compiler-acceptance.sh
 
+      - name: Qualify the Linux user and network namespace sandbox
+        run: |
+          set -euo pipefail
+          if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
+
       - name: Exact package-only Quint Typed SDD v2 acceptance
         env:
           QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint

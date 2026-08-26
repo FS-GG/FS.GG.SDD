@@ -513,7 +513,13 @@ jobs:
           Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
           Q2_JUNIT_OUT: artifacts/feed-readback/quint-q2-public.junit.xml
           Q3_JUNIT_OUT: artifacts/feed-readback/quint-q3-public.junit.xml
-        run: bash tests/quint-q3-typed-sdd-acceptance.sh
+        run: |
+          set -euo pipefail
+          if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
+          bash tests/quint-q3-typed-sdd-acceptance.sh
 
       - name: Upload durable dual-feed receipt
         uses: actions/upload-artifact@v4

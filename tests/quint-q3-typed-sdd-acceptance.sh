@@ -83,8 +83,11 @@ for run in a b; do
   current_stage="deterministic-author-$run"
   root="$scratch/author-$run"
   mkdir -p "$root"
-  "$cli" typed-sdd author --root "$root" --work demo --title Demo --agent acceptance --session exact \
-    --backend quint-specification-v1 --cache "$scratch/cache" >"$scratch/author-$run.json"
+  if ! "$cli" typed-sdd author --root "$root" --work demo --title Demo --agent acceptance --session exact \
+    --backend quint-specification-v1 --cache "$scratch/cache" >"$scratch/author-$run.json"; then
+    cat "$scratch/author-$run.json" >&2
+    fail "installed author $run failed"
+  fi
   grep -F '"outcome": "succeeded"' "$scratch/author-$run.json" >/dev/null || fail "installed author $run failed"
   "$cli" typed-sdd inspect --root "$root" --work demo >"$scratch/inspect-$run.json"
   grep -F '"outcome": "succeeded"' "$scratch/inspect-$run.json" >/dev/null || fail "installed inspect $run failed"

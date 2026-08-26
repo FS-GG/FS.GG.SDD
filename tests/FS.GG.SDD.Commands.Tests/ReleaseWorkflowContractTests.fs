@@ -9,6 +9,10 @@ module ReleaseWorkflowContractTests =
         Path.Combine(TestSupport.repoRoot, ".github", "workflows", "release.yml")
         |> File.ReadAllText
 
+    let private gateWorkflow =
+        Path.Combine(TestSupport.repoRoot, ".github", "workflows", "gate.yml")
+        |> File.ReadAllText
+
     let private contract =
         Path.Combine(TestSupport.repoRoot, "specs", "044-publish-cli-tool", "contracts", "release-workflow.md")
         |> File.ReadAllText
@@ -61,8 +65,12 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("Verify clean public installs", publish)
         Assert.Contains("Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
         Assert.Contains("Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
-        Assert.Contains("run: bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
+        Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", publish)
+        Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", publish)
+        Assert.Contains("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
         Assert.Contains("quint-q3-public.junit.xml", publish)
+        Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", gateWorkflow)
+        Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", gateWorkflow)
 
         let orgFeed =
             publish.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)
