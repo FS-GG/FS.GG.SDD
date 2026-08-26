@@ -6,23 +6,33 @@ one mutation, and may apply it exactly once only while the live revision still m
 may cause retries, but the durable receipt makes retry idempotent. A stale observer is refused and must
 refresh. Completion requires the receipt.
 
-The stable actions are `Prepare`, `Interfere`, `Apply`, `LoseResponse`, `Retry`, `Refresh`, and `Complete`.
+The stable actions are `Prepare`, `Interfere`, `Apply`, `RefuseStale`, `LoseResponse`, `Retry`, `Refresh`, and `Complete`.
 Their reads/writes are explicit in `actionCatalogue`, so no prose-only transition exists.
 
 ```quint coordination.qnt +=
 module CoordinationSlice {
   type Phase = Idle | Prepared | Applied | Complete
   type ActionEntry = { id: str, reads: Set[str], writes: Set[str] }
+  type PropertyEntry = { id: str, kind: str }
 
   pure val actionCatalogue = Set(
-    { id: "Prepare", reads: Set("revision"), writes: Set("phase", "observedRevision") },
-    { id: "Interfere", reads: Set("revision"), writes: Set("revision") },
-    { id: "Apply", reads: Set("revision", "observedRevision", "receipt"), writes: Set("revision", "receipt", "applyCount") },
-    { id: "RefuseStale", reads: Set("revision", "observedRevision"), writes: Set("staleRefused") },
-    { id: "LoseResponse", reads: Set("receipt", "lossCount"), writes: Set("responseLost", "lossCount") },
-    { id: "Retry", reads: Set("receipt", "responseLost"), writes: Set("retryCount", "responseLost") },
-    { id: "Refresh", reads: Set("revision"), writes: Set("observedRevision", "phase") },
-    { id: "Complete", reads: Set("receipt"), writes: Set("phase") }
+    { id: "Prepare", reads: Set("Phase", "Revision"), writes: Set("Phase", "ObservedRevision", "StaleRefused") },
+    { id: "Interfere", reads: Set("Phase", "Revision"), writes: Set("Revision") },
+    { id: "Apply", reads: Set("Phase", "Revision", "ObservedRevision", "Receipt"), writes: Set("Phase", "Revision", "Receipt", "ApplyCount") },
+    { id: "RefuseStale", reads: Set("Phase", "Revision", "ObservedRevision"), writes: Set("StaleRefused") },
+    { id: "LoseResponse", reads: Set("Phase", "Receipt", "LossCount"), writes: Set("ResponseLost", "LossCount") },
+    { id: "Retry", reads: Set("Receipt", "ResponseLost"), writes: Set("Phase", "RetryCount", "ResponseLost") },
+    { id: "Refresh", reads: Set("Phase", "Revision", "ObservedRevision"), writes: Set("ObservedRevision", "Phase") },
+    { id: "Complete", reads: Set("Phase", "Receipt", "ResponseLost"), writes: Set("Phase") }
+  )
+  pure val propertyCatalogue = Set(
+    { id: "AtMostOneApply", kind: "invariant" },
+    { id: "ReceiptMatchesApply", kind: "invariant" },
+    { id: "CompleteHasReceipt", kind: "invariant" },
+    { id: "StaleNeverApplies", kind: "invariant" },
+    { id: "StaleRefusalNeverApplies", kind: "invariant" },
+    { id: "KnownPhase", kind: "invariant" },
+    { id: "EventualCompletion", kind: "temporal" }
   )
 
   // Verification bounds are not production-domain constants. They close the Q1 state space while
@@ -60,7 +70,7 @@ module CoordinationSlice {
     responseLost' = responseLost,
     applyCount' = applyCount,
     retryCount' = retryCount,
-    staleRefused' = staleRefused,
+    staleRefused' = false,
     lossCount' = lossCount,
   }
 
@@ -175,6 +185,7 @@ module CoordinationSlice {
   val staleNeverApplies =
     (phase == Prepared and observedRevision != revision) implies
       (applyCount == 0 and not(receipt))
+  val staleRefusalNeverApplies = staleRefused implies applyCount == 0
   val knownPhase = Set(Idle, Prepared, Applied, Complete).contains(phase)
   temporal eventualCompletion = progress.weakFair(
     Set((phase, revision, observedRevision, receipt, responseLost, applyCount, retryCount, staleRefused, lossCount))
@@ -219,5 +230,6 @@ module CoordinationSliceTests {
 }
 ```
 
-The required mutations remove the revision equality, increment `applyCount` on retry, permit completion
-without a receipt, or make stale refusal apply anyway. Each must fail a named invariant or example.
+The required mutations remove the revision equality (lost update), increment `applyCount` on retry,
+permit out-of-order completion without a receipt, make stale refusal apply anyway, or admit an unbounded
+lost-response cycle. Each must fail a named invariant, temporal property, or example.

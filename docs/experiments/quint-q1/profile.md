@@ -14,6 +14,7 @@ amendment are independently accepted, Q2 implements it, and Q3 publishes it.
 | Rust evaluator | `v0.6.0`, archive SHA-256 `61755a09d5052d93a4e75e840059edfd0d3674aeda164b9d2464be3d6e21b1c2`, binary SHA-256 `b2efdeac5713d153e41bf2143b94ed75d888fdd5637f4a5d61a04c695313510a` |
 | JRE | Eclipse Temurin `21.0.9+10`, Linux amd64 JRE archive SHA-256 `aeab55d064a1a27a3744b0880b9b414077b4ed2b1790817eea3df60aec946431`, `java` binary SHA-256 `e865867065e48928c58293f30e7ae26a79c842f8607fa51d7e2e9fb90b602786` |
 | Apalache | `v0.56.1`, archive SHA-256 `a61c07569d7195ddc589f01037fa10fafef4fb0796af2f1c9cb45226375dfbfc`, extracted-tree receipt `3466d07f06d7ac80ee0f171a96383183cee9d91bf1b5995d897d4f15c004569f`, jar SHA-256 `4753c0ebb2cbb266e2c6ac19ab5ca3827d726cc80fd1fc5d7c1eeb64736cd60b` |
+| JSON Schema evaluator | Ajv `8.17.1`, closure receipt SHA-256 `e14d4bfc96cce335d1d370f844294c8c6eeced38c61da0f5ae224e26f74d5007`, under Node.js `v26.7.0` binary SHA-256 `d51d79e0e04abfe366345496a8e1379d56493271af4e0d6f27dd6ba76be628ea` |
 | Guidance corpus | `quint-co/quint-llm-kit@cc75369f741af7d490936f82002c2d28e3b3d78d`, tracked-tree receipt SHA-256 `68a11d403846de3af26759eef97f4a35eff5e71d561d41ea17d96e535c171556` |
 
 `lmt` has no tagged release and no Go module declaration at the selected commit. Q1 can reproduce its
@@ -60,7 +61,11 @@ growth requiring new fixtures and compatibility judgement.
 1. `typecheck` and profile/contract validation for every semantic change.
 2. Named `test` and seeded Rust `run` for calculations/actions.
 3. Bounded Apalache/TLC verification for affected invariant, temporal, dispatcher, bound, compiler, or
-   profile changes. Q1 records the exact separate toolchain requirement; Q2 owns its hermetic cache.
+   profile changes. Q1 uses a fresh `QUINT_HOME`, links only the verified Rust evaluator and complete
+   Apalache distribution into it, refuses a pre-existing dedicated server endpoint, and rechecks the
+   Apalache tree after execution. Q2 owns the eventual hermetic cache.
 4. Consumer-owned ITF/runtime replay when the impact graph reaches a bound implementation.
 
 An unavailable model checker is distinct from a pass. It cannot be replaced by more simulation.
+The compiled contract must pass its Draft 2020-12 schema and semantic uniqueness, ordering, safe-path,
+line-range, reference, and source/generated digest bindings; valid JSON alone is never acceptance.

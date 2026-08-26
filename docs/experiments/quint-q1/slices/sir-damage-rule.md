@@ -9,12 +9,18 @@ The safety rule is executable: damage clamps hit points at zero and records the 
 
 ```quint sir-damage.qnt +=
 module SirDamageSlice {
-  type ActionEntry = { id: str, argument: str }
+  type ActionEntry = { id: str, argument: str, reads: Set[str], writes: Set[str] }
+  type PropertyEntry = { id: str, kind: str }
   type Observation = { hitPoints: int, lastAction: str, lastAmount: int }
 
   pure val actions = Set(
-    { id: "Initialize", argument: "none" },
-    { id: "ApplyDamage", argument: "amount:int" }
+    { id: "Initialize", argument: "none", reads: Set(), writes: Set("HitPoints", "LastAction", "LastAmount") },
+    { id: "ApplyDamage", argument: "amount:int", reads: Set("HitPoints", "Amount"), writes: Set("HitPoints", "LastAction", "LastAmount") }
+  )
+  pure val propertyCatalogue = Set(
+    { id: "NonNegativeHitPoints", kind: "invariant" },
+    { id: "KnownLastAction", kind: "invariant" },
+    { id: "DamageCanReachZero", kind: "reachability" }
   )
 
   pure def clampAtZero(value: int): int = if (value < 0) 0 else value

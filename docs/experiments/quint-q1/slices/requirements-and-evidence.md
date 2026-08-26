@@ -12,6 +12,8 @@ The catalogue is data, not a compiler-node naming convention. `RequirementEntry.
 module RequirementsSlice {
   type RequirementEntry = { id: str, evidenceId: str, priority: int }
   type EvidenceEntry = { id: str, kind: str, required: bool }
+  type ActionEntry = { id: str, reads: Set[str], writes: Set[str] }
+  type PropertyEntry = { id: str, kind: str }
 
   pure val auditRequirement =
     { id: "REQ-AUDIT-001", evidenceId: "EV-VERIFY-001", priority: 1 }
@@ -19,6 +21,14 @@ module RequirementsSlice {
 
   pure val evidenceCatalogue = Set(
     { id: "EV-VERIFY-001", kind: "verification", required: true }
+  )
+  pure val actionCatalogue = Set(
+    { id: "ObserveEvidence", reads: Set("EvidenceCatalogue"), writes: Set("ObservedEvidence") },
+    { id: "AcceptRequirement", reads: Set("AuditRequirement", "ObservedEvidence"), writes: Set("AcceptedRequirements") }
+  )
+  pure val propertyCatalogue = Set(
+    { id: "AcceptedOnlyWithEvidence", kind: "invariant" },
+    { id: "RequirementCanBeAccepted", kind: "reachability" }
   )
 
   var observedEvidence: Set[str]

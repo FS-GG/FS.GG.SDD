@@ -1,6 +1,6 @@
-coordination-process.md|coordination.qnt +=
-coordination-process.md|coordination.qnt +=
-requirements-and-evidence.md|requirements.qnt +=
-requirements-and-evidence.md|requirements.qnt +=
-sir-damage-rule.md|sir-damage.qnt +=
-sir-damage-rule.md|sir-damage.qnt +=
+coordination-process.md:12|coordination.qnt +=
+coordination-process.md:199|coordination.qnt +=
+requirements-and-evidence.md:11|requirements.qnt +=
+requirements-and-evidence.md:74|requirements.qnt +=
+sir-damage-rule.md:10|sir-damage.qnt +=
+sir-damage-rule.md:65|sir-damage.qnt +=

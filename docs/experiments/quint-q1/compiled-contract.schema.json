@@ -28,7 +28,7 @@
       "required": ["id", "path", "startLine", "endLine"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
-        "path": { "type": "string", "pattern": "^[^/].*\\.md$" },
+        "path": { "type": "string", "pattern": "^docs/(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//)[A-Za-z0-9._/-]+\\.md$" },
         "startLine": { "type": "integer", "minimum": 1 },
         "endLine": { "type": "integer", "minimum": 1 }
       }

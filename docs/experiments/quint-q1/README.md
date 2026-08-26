@@ -9,6 +9,7 @@ concurrent coordination process. It changes no production backend or public auth
 - `compiled-contract.schema.json` and `compiled-contract.example.json` demonstrate the smallest
   language-neutral contract admitted by Q1.
 - `quint-llm-kit-evaluation.md` records the pinned guidance review and attribution.
+- `workflow-comparison.md` records the same-corpus pinned-kit/minimal execution comparison.
 - `candidate-manifest.json` is the machine-readable identity receipt.
 - `qualification-report.md` is the human review report and verdict.
 - `../../../tests/quint-q1/qualify.sh` is the pinned positive and mutation harness.

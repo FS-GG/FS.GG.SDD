@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="quint-q1-qualification" tests="24" failures="0" errors="0" skipped="0">
+<testsuite name="quint-q1-qualification" tests="42" failures="0" errors="0" skipped="0">
   <testcase classname="FS.GG.SDD.QuintQ1" name="pinned-tools"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="canonical-sources"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="fence-inventory"/>
@@ -14,6 +14,15 @@
   <testcase classname="FS.GG.SDD.QuintQ1" name="apalache-safety"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="tlc-liveness"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="complete-positive-bundle"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="coordination-stale-example"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="coordination-retry-example"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="kit-requirements-typecheck"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="kit-sir-typecheck"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="kit-coordination-typecheck"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="kit-requirements-tests"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="kit-sir-tests"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="kit-coordination-tests"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="kit-coordination-simulation"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-missing-fence"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-reordered-target"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-duplicate-fence"/>
@@ -24,4 +33,13 @@
   <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-double-apply"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-unbounded-liveness"/>
   <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-arbitrary-expression"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-lost-update"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-stale-refusal-apply"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-completion-order"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-invalid-contract-id"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-escaping-contract-path"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-reversed-line-range"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-malformed-digest"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-duplicate-action"/>
+  <testcase classname="FS.GG.SDD.QuintQ1" name="mutation-moving-guidance"/>
 </testsuite>
