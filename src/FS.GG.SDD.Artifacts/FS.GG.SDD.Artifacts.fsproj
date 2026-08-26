@@ -29,6 +29,20 @@
     <Compile Include="TypedSpecifications/RequirementsExtension.fs" />
     <Compile Include="TypedSpecifications/TypedLifecycle.fsi" />
     <Compile Include="TypedSpecifications/TypedLifecycle.fs" />
+    <Compile Include="TypedSpecifications/QuintProfile.fsi" />
+    <Compile Include="TypedSpecifications/QuintProfile.fs" />
+    <Compile Include="TypedSpecifications/QuintSource.fsi" />
+    <Compile Include="TypedSpecifications/QuintSource.fs" />
+    <Compile Include="TypedSpecifications/QuintToolchain.fsi" />
+    <Compile Include="TypedSpecifications/QuintToolchain.fs" />
+    <Compile Include="TypedSpecifications/QuintContract.fsi" />
+    <Compile Include="TypedSpecifications/QuintContract.fs" />
+    <Compile Include="TypedSpecifications/QuintBindings.fsi" />
+    <Compile Include="TypedSpecifications/QuintBindings.fs" />
+    <Compile Include="TypedSpecifications/QuintReplay.fsi" />
+    <Compile Include="TypedSpecifications/QuintReplay.fs" />
+    <Compile Include="TypedSpecifications/QuintCompiler.fsi" />
+    <Compile Include="TypedSpecifications/QuintCompiler.fs" />
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />
@@ -102,6 +116,9 @@
   <ItemGroup>
     <None Include="TypedSpecifications/Fable/FS.GG.SDD.Artifacts.fsproj" Pack="true" PackagePath="fable/FS.GG.SDD.Artifacts.fsproj" />
     <None Include="TypedSpecifications/Fable/SpecificationKernel.fs" Pack="true" PackagePath="fable/SpecificationKernel.fs" />
+    <None Include="TypedSpecifications/QuintAssets/q1-identity-manifest.json" Pack="true" PackagePath="quint/q1-identity-manifest.json" />
+    <None Include="TypedSpecifications/QuintAssets/lmt/main.go" Pack="true" PackagePath="quint/lmt/main.go" />
+    <None Include="TypedSpecifications/QuintAssets/lmt/LICENSE" Pack="true" PackagePath="quint/lmt/" />
   </ItemGroup>
 
   <ItemGroup>

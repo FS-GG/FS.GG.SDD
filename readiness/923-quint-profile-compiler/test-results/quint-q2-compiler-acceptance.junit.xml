@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="FS.GG.SDD.QuintQ2CompilerAcceptance" tests="10" failures="0">
+  <testcase classname="QuintQ2" name="preseeded-exact-tool-identity" />
+  <testcase classname="QuintQ2" name="fresh-cache-offline-package-restore" />
+  <testcase classname="QuintQ2" name="three-q1-slices" />
+  <testcase classname="QuintQ2" name="two-isolated-extractions" />
+  <testcase classname="QuintQ2" name="two-isolated-typechecks" />
+  <testcase classname="QuintQ2" name="package-only-public-compiler" />
+  <testcase classname="QuintQ2" name="installed-package-sir-replay" />
+  <testcase classname="QuintQ2" name="canonical-receipt-parity" />
+  <testcase classname="QuintQ2" name="fable-runtime-parity" />
+  <testcase classname="QuintQ2" name="fable-independent-mutation" />
+</testsuite>

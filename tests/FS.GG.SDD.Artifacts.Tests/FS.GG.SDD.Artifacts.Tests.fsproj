@@ -8,6 +8,9 @@
     <Compile Include="TestSupport.fs" />
     <Compile Include="TypedSpecificationKernelTests.fs" />
     <Compile Include="TypedLifecycleTests.fs" />
+    <Compile Include="QuintProfileContractTests.fs" />
+    <Compile Include="QuintToolchainSourceTests.fs" />
+    <Compile Include="QuintReplayBindingsTests.fs" />
     <Compile Include="PackedDependencyContractTests.fs" />
     <Compile Include="IdentifierTests.fs" />
     <Compile Include="DriverManifestTests.fs" />
@@ -50,6 +53,10 @@
     <Compile Include="TestReportTests.fs" />
     <Compile Include="DependencySurfaceTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Fixtures/QuintQ2/q1-sir-reviewed-witness.itf.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

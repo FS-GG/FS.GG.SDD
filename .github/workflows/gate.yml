@@ -247,6 +247,59 @@ jobs:
       - name: Working tree stayed clean (the suite must not dirty it)
         run: bash scripts/check-tree-clean.sh --label "scripts/test.sh --no-build -c Debug (full tier)"
 
+      # Q2's public compiler is accepted from the package a consumer will install, against the
+      # three exact Q1 literate slices. Tool acquisition is an explicit provisioning phase; the
+      # acceptance script then poisons network proxy settings and accepts only the content-addressed
+      # Quint/lmt objects plus pinned Fable. It runs extraction and typecheck in two isolated roots,
+      # compares every result byte-for-byte, and executes generated bindings under both .NET and
+      # Fable/Node. Keeping this in the existing required `gate` job makes the check merge-enforcing.
+      - name: Set up exact Go toolchain for the Q1 lmt object
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.1"
+          cache: false
+
+      - name: Provision exact Q2 compiler-acceptance tools
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/quint-q2-tools"
+          curl --fail --location --silent --show-error \
+            https://github.com/quint-co/quint/releases/download/v0.32.0/quint-linux-amd64 \
+            --output "$RUNNER_TEMP/quint-q2-tools/quint"
+          chmod +x "$RUNNER_TEMP/quint-q2-tools/quint"
+          printf '%s  %s\n' \
+            '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' \
+            "$RUNNER_TEMP/quint-q2-tools/quint" | sha256sum --check --strict
+          (
+            cd src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/lmt
+            # Go's action/build IDs include the source invocation path even under -trimpath.
+            # Q1 qualified this exact command-line-arguments build ID and its ELF note;
+            # pin both so the reviewed bytes reproduce in a Git checkout and on a clean host.
+            GO111MODULE=off go build -trimpath \
+              -ldflags '-buildid=IvXAt1kJ-3iINki1alCT/Ut12KGabgkWIkwVpw-xO/c4zkZMLAubfWHvjZOY8o/8-oR_8tNNndNgfMVoD8F -B 0x03d1703027f57ed4dd2ba90b7cdfc8cdea2815da' \
+              -o "$RUNNER_TEMP/quint-q2-tools/lmt" main.go
+          )
+          printf '%s  %s\n' \
+            '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' \
+            "$RUNNER_TEMP/quint-q2-tools/lmt" | sha256sum --check --strict
+          dotnet tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-q2-tools/fable"
+
+      - name: Exact package-only Quint compiler acceptance
+        env:
+          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
+          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
+          FABLE_BIN: ${{ runner.temp }}/quint-q2-tools/fable/fable
+          Q2_JUNIT_OUT: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
+          Q2_EXACT_IR_JUNIT_OUT: artifacts/test-results/quint-q2-exact-ir.junit.xml
+        run: bash tests/quint-q2-compiler-acceptance.sh
+
+      - name: Upload exact Q2 compiler acceptance report (JUnit)
+        uses: actions/upload-artifact@v4
+        with:
+          name: quint-q2-compiler-acceptance-junit
+          path: artifacts/test-results/quint-q2-*.junit.xml
+          if-no-files-found: error
+
       # Publish the TRX bundle so it outlives the run and a work item's `verify` can cite it.
       # Uploaded whenever the suite actually RAN — a red suite still writes a per-project report,
       # and a failing run is a receipt too (`evidence --from-test-report` blocks on it, ADR-0035),

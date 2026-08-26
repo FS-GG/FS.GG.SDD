@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="FS.GG.SDD.QuintQ2ExactIr" tests="20" failures="0">
+  <testcase classname="QuintQ2ExactIr" name="requirements-exact-quint-0.32-ir" />
+  <testcase classname="QuintQ2ExactIr" name="sir-exact-quint-0.32-ir" />
+  <testcase classname="QuintQ2ExactIr" name="coordination-exact-quint-0.32-ir" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-profile-version" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-missing-profile-version" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-profile-identity" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-missing-source-binding" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-unknown-root-field" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-wrong-stage" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-compiler-warning" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-catalogue-opcode" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-expression-kind" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-property-kind" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-typedef-field" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-unsupported-choreo" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-empty-tables" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-type-effect-mismatch" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-catalogue-evidence" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-wrong-type-relation" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-hidden-init-semantics" />
+</testsuite>

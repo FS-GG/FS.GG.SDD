@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "923-quint-profile-compiler",
+  "stage": "ship",
+  "status": "shipReady",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0-preview.1",
+  "sourcesDigest": {
+    "algorithm": "sha256",
+    "value": "7d83bfe7aaa33fc36d7b8bcae61532f731476c091fcf2930a6ac554ed0658986"
+  },
+  "verificationReadiness": {
+    "status": "verificationReady",
+    "evidenceSupportedCount": 44,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 44
+  },
+  "disposition": {
+    "state": "shipReady",
+    "blockingFindingIds": []
+  },
+  "readiness": "shipReady"
+}

@@ -1,0 +1,3076 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.2.0",
+  "workId": "923-quint-profile-compiler",
+  "project": {
+    "id": "fs.gg.sdd-833",
+    "defaultWorkRoot": "work",
+    "profile": null
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      }
+    },
+    {
+      "path": "work/923-quint-profile-compiler/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "d32d896ec48672b3c17be97438a3f5562bf35c553222cfcee1e1577c41510652"
+      }
+    },
+    {
+      "path": "work/923-quint-profile-compiler/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "ac81ffb17f102ff7db028dd064d36e15638afc536110634cd0a2da8a4e7a49c0"
+      }
+    },
+    {
+      "path": "work/923-quint-profile-compiler/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "f67dc1ec26b13c9e8de7fa9a45c16ea697ce1cc1a253dfa724523f7602db34b7"
+      }
+    },
+    {
+      "path": "work/923-quint-profile-compiler/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "387bf1814a7514fde026eebd7344c5c1693f95b0caf1a4003ef4c96198ab838d"
+      }
+    },
+    {
+      "path": "work/923-quint-profile-compiler/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "64b1ea75a3e5dcf96bde6a00c3360f54dba902014516ef72541f9432f783a161"
+      }
+    },
+    {
+      "path": "work/923-quint-profile-compiler/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "ebc9dee078a7076595d2d52fbdfc6e14627b9f5bbf732e1cad46f8b0dd5a2032"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "923-quint-profile-compiler",
+    "title": "Build the hermetic Quint profile and compiled-contract boundary",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "performanceIntent": null,
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "The library MUST represent the exact extractor, Go, Quint, evaluator, JRE, Apalache, Node/Ajv, guidance, and profile identities as a canonical toolchain manifest and validate every file/tree/closure digest before use. (Stories: US-001; Acceptance: AC-001, AC-002)",
+      "text": "The library MUST represent the exact extractor, Go, Quint, evaluator, JRE, Apalache, Node/Ajv, guidance, and profile identities as a canonical toolchain manifest and validate every file/tree/closure digest before use. (Stories: US-001; Acceptance: AC-001, AC-002)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 43,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": [
+        "EV001",
+        "EV023"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "title": "The extraction boundary MUST accept one canonical UTF-8 Markdown source plus an ordered fence manifest, require plain safe \u0060.qnt\u0060 targets, treat warnings as errors, bind source/fence/module bytes, and prove two isolated extractions agree. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "text": "The extraction boundary MUST accept one canonical UTF-8 Markdown source plus an ordered fence manifest, require plain safe \u0060.qnt\u0060 targets, treat warnings as errors, bind source/fence/module bytes, and prove two isolated extractions agree. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 44,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T006"
+      ],
+      "linkedEvidenceIds": [
+        "EV006",
+        "EV024"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "title": "A deterministic source-map codec MUST map generated module ranges and diagnostics back to canonical Markdown path/line/column ranges without publishing compiler node ids or host paths. (Stories: US-002; Acceptance: AC-002)",
+      "text": "A deterministic source-map codec MUST map generated module ranges and diagnostics back to canonical Markdown path/line/column ranges without publishing compiler node ids or host paths. (Stories: US-002; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 45,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T007"
+      ],
+      "linkedEvidenceIds": [
+        "EV007",
+        "EV024"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "title": "The profile validator MUST accept only the Q1-demonstrated \u0060fsgg-quint-profile/1\u0060 subset and catalogue rules, validate exact Quint 0.32.0 typed/effect output, and reject unknown constructs, arbitrary-expression lowering, invalid ids/references, and undeclared semantics with source-located diagnostics. (Stories: US-002; Acceptance: AC-002)",
+      "text": "The profile validator MUST accept only the Q1-demonstrated \u0060fsgg-quint-profile/1\u0060 subset and catalogue rules, validate exact Quint 0.32.0 typed/effect output, and reject unknown constructs, arbitrary-expression lowering, invalid ids/references, and undeclared semantics with source-located diagnostics. (Stories: US-002; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 46,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV008",
+        "EV025"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "title": "The compiled-contract v1 codec MUST emit canonical language-neutral bytes containing stable identities, source locations, reads/writes/subjects, relationships, verification profiles, finite bounds, impact/compatibility metadata, and semantic digests, with no arbitrary Quint expression or raw IR field. (Stories: US-001, US-004; Acceptance: AC-003)",
+      "text": "The compiled-contract v1 codec MUST emit canonical language-neutral bytes containing stable identities, source locations, reads/writes/subjects, relationships, verification profiles, finite bounds, impact/compatibility metadata, and semantic digests, with no arbitrary Quint expression or raw IR field. (Stories: US-001, US-004; Acceptance: AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 47,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T009"
+      ],
+      "linkedEvidenceIds": [
+        "EV009",
+        "EV026"
+      ]
+    },
+    {
+      "id": "FR-006",
+      "title": "Generated F# and Fable bindings MUST derive only from compiled-contract v1, use deterministic collision-refusing identifiers and ordering, and project byte-equivalent canonical JSON for the same contract. (Stories: US-004; Acceptance: AC-003, AC-006)",
+      "text": "Generated F# and Fable bindings MUST derive only from compiled-contract v1, use deterministic collision-refusing identifiers and ordering, and project byte-equivalent canonical JSON for the same contract. (Stories: US-004; Acceptance: AC-003, AC-006)",
+      "acceptanceCriteria": [
+        "AC-003",
+        "AC-006"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 48,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T010"
+      ],
+      "linkedEvidenceIds": [
+        "EV010",
+        "EV027"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "title": "The semantic fingerprint/diff API MUST bind source, fence manifest, generated modules, tool/profile identities, and contract bytes; it MUST classify stable integration changes independently of provenance/session/time noise and refuse incompatible schema/profile comparisons. (Stories: US-004; Acceptance: AC-003)",
+      "text": "The semantic fingerprint/diff API MUST bind source, fence manifest, generated modules, tool/profile identities, and contract bytes; it MUST classify stable integration changes independently of provenance/session/time noise and refuse incompatible schema/profile comparisons. (Stories: US-004; Acceptance: AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 49,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T011"
+      ],
+      "linkedEvidenceIds": [
+        "EV011"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "title": "The generic ITF/replay API MUST validate trace/action/state identity, seed/bounds/tool/profile/contract digests, adapter and implementation fingerprints, canonical state ordering, and first-divergence diagnostics without containing product transition logic. (Stories: US-003; Acceptance: AC-004)",
+      "text": "The generic ITF/replay API MUST validate trace/action/state identity, seed/bounds/tool/profile/contract digests, adapter and implementation fingerprints, canonical state ordering, and first-divergence diagnostics without containing product transition logic. (Stories: US-003; Acceptance: AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 50,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T012"
+      ],
+      "linkedEvidenceIds": [
+        "EV012"
+      ]
+    },
+    {
+      "id": "FR-009",
+      "title": "Diagnostics MUST use stable codes, deterministic ordering, JSON-pointer or literate source paths, expected/actual version or digest, and actionable correction; absence, unreadability, mismatch, unsupported input, and tool failure MUST remain distinct. (Stories: US-002; Acceptance: AC-002)",
+      "text": "Diagnostics MUST use stable codes, deterministic ordering, JSON-pointer or literate source paths, expected/actual version or digest, and actionable correction; absence, unreadability, mismatch, unsupported input, and tool failure MUST remain distinct. (Stories: US-002; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 51,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T013"
+      ],
+      "linkedEvidenceIds": [
+        "EV013",
+        "EV023"
+      ]
+    },
+    {
+      "id": "FR-010",
+      "title": "A package-only acceptance fixture MUST compile all three exact Q1 slices and replay the reviewed S.I.R. witness from installed artifacts with a preseeded offline cache, no source-project reference, no network install, and byte-identical repeated output. (Stories: US-001, US-003; Acceptance: AC-001, AC-004)",
+      "text": "A package-only acceptance fixture MUST compile all three exact Q1 slices and replay the reviewed S.I.R. witness from installed artifacts with a preseeded offline cache, no source-project reference, no network install, and byte-identical repeated output. (Stories: US-001, US-003; Acceptance: AC-001, AC-004)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 52,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T014"
+      ],
+      "linkedEvidenceIds": [
+        "EV014",
+        "EV028"
+      ]
+    },
+    {
+      "id": "FR-011",
+      "title": "The verification harness MUST include independent negative controls for missing/reordered/duplicate/stale fences, unsafe targets, hand-edited modules, wrong/incomplete tool closure, latest/moving guidance, wrong Quint/profile/schema, unsupported IR, malformed/duplicate contract facts, stale source maps, identifier collisions, replay mismatch, and hidden product semantics. (Stories: US-002; Acceptance: AC-005)",
+      "text": "The verification harness MUST include independent negative controls for missing/reordered/duplicate/stale fences, unsafe targets, hand-edited modules, wrong/incomplete tool closure, latest/moving guidance, wrong Quint/profile/schema, unsupported IR, malformed/duplicate contract facts, stale source maps, identifier collisions, replay mismatch, and hidden product semantics. (Stories: US-002; Acceptance: AC-005)",
+      "acceptanceCriteria": [
+        "AC-005"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 53,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T015"
+      ],
+      "linkedEvidenceIds": [
+        "EV015"
+      ]
+    },
+    {
+      "id": "FR-012",
+      "title": "The exact Apache-2.0 guidance snapshot MUST remain separately content-addressed and optional; runtime-specific orchestration, moving installers, and incompatible latest-Quint behavior MUST not enter canonical compilation. (Stories: US-001; Acceptance: AC-005)",
+      "text": "The exact Apache-2.0 guidance snapshot MUST remain separately content-addressed and optional; runtime-specific orchestration, moving installers, and incompatible latest-Quint behavior MUST not enter canonical compilation. (Stories: US-001; Acceptance: AC-005)",
+      "acceptanceCriteria": [
+        "AC-005"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 54,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T016"
+      ],
+      "linkedEvidenceIds": [
+        "EV016",
+        "EV029"
+      ]
+    },
+    {
+      "id": "FR-013",
+      "title": "Every public Q2 type/function MUST be declared in \u0060.fsi\u0060, have native semantic tests and current surface baselines, and preserve the repository\u0027s pure-core/effect-edge boundary. (Stories: US-004; Acceptance: AC-006)",
+      "text": "Every public Q2 type/function MUST be declared in \u0060.fsi\u0060, have native semantic tests and current surface baselines, and preserve the repository\u0027s pure-core/effect-edge boundary. (Stories: US-004; Acceptance: AC-006)",
+      "acceptanceCriteria": [
+        "AC-006"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 55,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T017"
+      ],
+      "linkedEvidenceIds": [
+        "EV017"
+      ]
+    },
+    {
+      "id": "FR-014",
+      "title": "Q2 MUST change no lifecycle backend identity, author/inspect/migrate/rollback command, manifest authority, public package version, provider floor, registry row, consumer source, or default; it produces implementation-ready library contracts for Q3 publication. (Stories: US-004; Acceptance: AC-006)",
+      "text": "Q2 MUST change no lifecycle backend identity, author/inspect/migrate/rollback command, manifest authority, public package version, provider floor, registry row, consumer source, or default; it produces implementation-ready library contracts for Q3 publication. (Stories: US-004; Acceptance: AC-006)",
+      "acceptanceCriteria": [
+        "AC-006"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/923-quint-profile-compiler/spec.md",
+      "sourceLocation": {
+        "line": 56,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T018"
+      ],
+      "linkedEvidenceIds": [
+        "EV018",
+        "EV030"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "Use a content-addressed offline cache contract and package the exact reviewed \u0060lmt\u0060 source identity; reject moving Go/Quint/tool installation.",
+      "decision": "Use a content-addressed offline cache contract and package the exact reviewed \u0060lmt\u0060 source identity; reject moving Go/Quint/tool installation.",
+      "requirementRefs": [
+        "FR-001",
+        "FR-002"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/923-quint-profile-compiler/clarifications.md",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T019"
+      ]
+    },
+    {
+      "id": "DEC-002",
+      "title": "Make the Quint 0.32.0 typed-IR reader a private adapter. Stable public authority begins at explicit catalogue/source-map facts and canonical compiled-contract v1.",
+      "decision": "Make the Quint 0.32.0 typed-IR reader a private adapter. Stable public authority begins at explicit catalogue/source-map facts and canonical compiled-contract v1.",
+      "requirementRefs": [
+        "FR-003",
+        "FR-004",
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/923-quint-profile-compiler/clarifications.md",
+      "sourceLocation": {
+        "line": 31,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T020"
+      ]
+    },
+    {
+      "id": "DEC-003",
+      "title": "Separate pure plan/validation from the local process edge. Tool output is accepted only with a complete request/observation/receipt binding and no network effect.",
+      "decision": "Separate pure plan/validation from the local process edge. Tool output is accepted only with a complete request/observation/receipt binding and no network effect.",
+      "requirementRefs": [
+        "FR-001",
+        "FR-009",
+        "FR-010"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/923-quint-profile-compiler/clarifications.md",
+      "sourceLocation": {
+        "line": 32,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T021"
+      ]
+    },
+    {
+      "id": "DEC-004",
+      "title": "Generate contract-only F#/Fable bindings in Q2 and leave lifecycle backend integration/publication entirely to Q3.",
+      "decision": "Generate contract-only F#/Fable bindings in Q2 and leave lifecycle backend integration/publication entirely to Q3.",
+      "requirementRefs": [
+        "FR-006",
+        "FR-013",
+        "FR-014"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/923-quint-profile-compiler/clarifications.md",
+      "sourceLocation": {
+        "line": 33,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T022"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Implement requirement FR-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "FR-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Update contract surface PC-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-002",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Record verification evidence VO-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-002",
+        "PD-003",
+        "VO-001"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Handle migration posture PM-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PC-002",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Refresh generated view impact GV-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-001",
+        "PD-001",
+        "PD-012"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Implement requirement FR-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-002"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "FR-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "T007",
+      "title": "Implement requirement FR-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-003"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "FR-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV007"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "T008",
+      "title": "Implement requirement FR-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-004"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "FR-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV008"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "T009",
+      "title": "Implement requirement FR-005",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-005"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "FR-005"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV009"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "T010",
+      "title": "Implement requirement FR-006",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-006"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "AC-006",
+        "FR-006"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV010"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "T011",
+      "title": "Implement requirement FR-007",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-007"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "FR-007",
+        "PD-006"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV011"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "T012",
+      "title": "Implement requirement FR-008",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-008"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-004",
+        "FR-008",
+        "PD-007"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV012"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "T013",
+      "title": "Implement requirement FR-009",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-009"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "FR-009"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV013"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "T014",
+      "title": "Implement requirement FR-010",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-010"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-004",
+        "FR-010"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV014"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "T015",
+      "title": "Implement requirement FR-011",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-011"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "FR-011",
+        "PD-009"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV015"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "T016",
+      "title": "Implement requirement FR-012",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-012"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "FR-012"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV016"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    },
+    {
+      "id": "T017",
+      "title": "Implement requirement FR-013",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-013"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-006",
+        "FR-013",
+        "PD-011"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV017"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 17,
+        "column": 1
+      }
+    },
+    {
+      "id": "T018",
+      "title": "Implement requirement FR-014",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-014"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-006",
+        "FR-014"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV018"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 18,
+        "column": 1
+      }
+    },
+    {
+      "id": "T019",
+      "title": "Implement clarification decision DEC-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-001"
+      ],
+      "sourceIds": [
+        "DEC-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV019"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "id": "T020",
+      "title": "Implement clarification decision DEC-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-002"
+      ],
+      "sourceIds": [
+        "DEC-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV020"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 20,
+        "column": 1
+      }
+    },
+    {
+      "id": "T021",
+      "title": "Implement clarification decision DEC-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-003"
+      ],
+      "sourceIds": [
+        "DEC-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV021"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 21,
+        "column": 1
+      }
+    },
+    {
+      "id": "T022",
+      "title": "Implement clarification decision DEC-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-004"
+      ],
+      "sourceIds": [
+        "DEC-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV022"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 22,
+        "column": 1
+      }
+    },
+    {
+      "id": "T023",
+      "title": "Implement plan decision PD-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "DEC-001",
+        "DEC-003",
+        "FR-001",
+        "FR-009",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV023"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 23,
+        "column": 1
+      }
+    },
+    {
+      "id": "T024",
+      "title": "Implement plan decision PD-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "FR-002",
+        "FR-003",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV024"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      }
+    },
+    {
+      "id": "T025",
+      "title": "Implement plan decision PD-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "AC-003",
+        "DEC-002",
+        "FR-004",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV025"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      }
+    },
+    {
+      "id": "T026",
+      "title": "Implement plan decision PD-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "DEC-002",
+        "FR-005",
+        "PD-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV026"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      }
+    },
+    {
+      "id": "T027",
+      "title": "Implement plan decision PD-005",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "AC-006",
+        "DEC-004",
+        "FR-006",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV027"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      }
+    },
+    {
+      "id": "T028",
+      "title": "Implement plan decision PD-008",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-004",
+        "DEC-003",
+        "FR-010",
+        "PD-008"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV028"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      }
+    },
+    {
+      "id": "T029",
+      "title": "Implement plan decision PD-010",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "DEC-001",
+        "FR-012",
+        "PD-010"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV029"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      }
+    },
+    {
+      "id": "T030",
+      "title": "Implement plan decision PD-012",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-006",
+        "DEC-004",
+        "FR-014",
+        "PD-012"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV030"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      }
+    },
+    {
+      "id": "T031",
+      "title": "Update contract surface PC-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PD-004",
+        "PD-006"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV031"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 31,
+        "column": 1
+      }
+    },
+    {
+      "id": "T032",
+      "title": "Update contract surface PC-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV032"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 32,
+        "column": 1
+      }
+    },
+    {
+      "id": "T033",
+      "title": "Update contract surface PC-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-004",
+        "PD-007"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV033"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 33,
+        "column": 1
+      }
+    },
+    {
+      "id": "T034",
+      "title": "Update contract surface PC-005",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-005",
+        "PD-001",
+        "PD-008"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV034"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 34,
+        "column": 1
+      }
+    },
+    {
+      "id": "T035",
+      "title": "Update contract surface PC-006",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-006",
+        "PD-010"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV035"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 35,
+        "column": 1
+      }
+    },
+    {
+      "id": "T036",
+      "title": "Record verification evidence VO-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PD-004",
+        "PD-006",
+        "VO-002"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV036"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 36,
+        "column": 1
+      }
+    },
+    {
+      "id": "T037",
+      "title": "Record verification evidence VO-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PD-005",
+        "PD-011",
+        "VO-003"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV037"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 37,
+        "column": 1
+      }
+    },
+    {
+      "id": "T038",
+      "title": "Record verification evidence VO-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-004",
+        "PD-007",
+        "VO-004"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV038"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 38,
+        "column": 1
+      }
+    },
+    {
+      "id": "T039",
+      "title": "Record verification evidence VO-005",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-005",
+        "PD-008",
+        "VO-005"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV039"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 39,
+        "column": 1
+      }
+    },
+    {
+      "id": "T040",
+      "title": "Record verification evidence VO-006",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-009",
+        "VO-006"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV040"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 40,
+        "column": 1
+      }
+    },
+    {
+      "id": "T041",
+      "title": "Record verification evidence VO-007",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-006",
+        "PD-010",
+        "VO-007"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV041"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 41,
+        "column": 1
+      }
+    },
+    {
+      "id": "T042",
+      "title": "Record verification evidence VO-008",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-012",
+        "VO-008"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV042"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 42,
+        "column": 1
+      }
+    },
+    {
+      "id": "T043",
+      "title": "Handle migration posture PM-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-005",
+        "PM-002"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV043"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 43,
+        "column": 1
+      }
+    },
+    {
+      "id": "T044",
+      "title": "Handle migration posture PM-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PC-004",
+        "PM-003"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV044"
+      ],
+      "source": "work/923-quint-profile-compiler/tasks.yml",
+      "sourceLocation": {
+        "line": 44,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV007",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T007",
+      "taskRefs": [
+        "T007"
+      ],
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV008",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T008",
+      "taskRefs": [
+        "T008"
+      ],
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV009",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T009",
+      "taskRefs": [
+        "T009"
+      ],
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV010",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T010",
+      "taskRefs": [
+        "T010"
+      ],
+      "requirementRefs": [
+        "FR-006"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV011",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T011",
+      "taskRefs": [
+        "T011"
+      ],
+      "requirementRefs": [
+        "FR-007"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV012",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T012",
+      "taskRefs": [
+        "T012"
+      ],
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV013",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T013",
+      "taskRefs": [
+        "T013"
+      ],
+      "requirementRefs": [
+        "FR-009"
+      ],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV014",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T014",
+      "taskRefs": [
+        "T014"
+      ],
+      "requirementRefs": [
+        "FR-010"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/fixtures/quint-compiler-consumer/Consumer.fsproj",
+        "tests/fixtures/quint-compiler-consumer/NuGet.Config",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/fixtures/quint-compiler-consumer/Provisioning.NuGet.Config",
+        "tests/quint-q1/fixtures/sir-reviewed-witness.itf.json",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV015",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T015",
+      "taskRefs": [
+        "T015"
+      ],
+      "requirementRefs": [
+        "FR-011"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV016",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T016",
+      "taskRefs": [
+        "T016"
+      ],
+      "requirementRefs": [
+        "FR-012"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV017",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T017",
+      "taskRefs": [
+        "T017"
+      ],
+      "requirementRefs": [
+        "FR-013"
+      ],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 17,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV018",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T018",
+      "taskRefs": [
+        "T018"
+      ],
+      "requirementRefs": [
+        "FR-014"
+      ],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 18,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV019",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T019",
+      "taskRefs": [
+        "T019"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV020",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T020",
+      "taskRefs": [
+        "T020"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 20,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV021",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T021",
+      "taskRefs": [
+        "T021"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 21,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV022",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T022",
+      "taskRefs": [
+        "T022"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 22,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV023",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T023",
+      "taskRefs": [
+        "T023"
+      ],
+      "requirementRefs": [
+        "FR-001",
+        "FR-009"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 23,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV024",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T024",
+      "taskRefs": [
+        "T024"
+      ],
+      "requirementRefs": [
+        "FR-002",
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintSource.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV025",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T025",
+      "taskRefs": [
+        "T025"
+      ],
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV026",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T026",
+      "taskRefs": [
+        "T026"
+      ],
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV027",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T027",
+      "taskRefs": [
+        "T027"
+      ],
+      "requirementRefs": [
+        "FR-006"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV028",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T028",
+      "taskRefs": [
+        "T028"
+      ],
+      "requirementRefs": [
+        "FR-010"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/fixtures/quint-compiler-consumer/Consumer.fsproj",
+        "tests/fixtures/quint-compiler-consumer/NuGet.Config",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/quint-q1/fixtures/sir-reviewed-witness.itf.json",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV029",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T029",
+      "taskRefs": [
+        "T029"
+      ],
+      "requirementRefs": [
+        "FR-012"
+      ],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV030",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T030",
+      "taskRefs": [
+        "T030"
+      ],
+      "requirementRefs": [
+        "FR-014"
+      ],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV031",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T031",
+      "taskRefs": [
+        "T031"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 31,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV032",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T032",
+      "taskRefs": [
+        "T032"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 32,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV033",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T033",
+      "taskRefs": [
+        "T033"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 33,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV034",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T034",
+      "taskRefs": [
+        "T034"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 34,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV035",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T035",
+      "taskRefs": [
+        "T035"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 35,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV036",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T036",
+      "taskRefs": [
+        "T036"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintContract.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 36,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV037",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T037",
+      "taskRefs": [
+        "T037"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintBindings.fsi",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 37,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV038",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T038",
+      "taskRefs": [
+        "T038"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 38,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV039",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T039",
+      "taskRefs": [
+        "T039"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/fixtures/quint-compiler-consumer/Consumer.fsproj",
+        "tests/fixtures/quint-compiler-consumer/NuGet.Config",
+        "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/fixtures/quint-compiler-consumer/Provisioning.NuGet.Config",
+        "tests/quint-q1/fixtures/sir-reviewed-witness.itf.json",
+        "tests/quint-q2-compiler-acceptance.sh"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 39,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV040",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T040",
+      "taskRefs": [
+        "T040"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 40,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV041",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T041",
+      "taskRefs": [
+        "T041"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 41,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV042",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T042",
+      "taskRefs": [
+        "T042"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "docs/reference/typed-specifications.md",
+        "src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj",
+        "tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 42,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV043",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T043",
+      "taskRefs": [
+        "T043"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/q1-identity-manifest.json",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintToolchain.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintToolchainSourceTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 43,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV044",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T044",
+      "taskRefs": [
+        "T044"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/FS.GG.SDD.Artifacts.Tests/QuintReplayBindingsTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/923-quint-profile-compiler/evidence.yml",
+      "sourceLocation": {
+        "line": 44,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/923-quint-profile-compiler/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "1.4.0-preview.1"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/923-quint-profile-compiler/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "d32d896ec48672b3c17be97438a3f5562bf35c553222cfcee1e1577c41510652"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/923-quint-profile-compiler/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "ac81ffb17f102ff7db028dd064d36e15638afc536110634cd0a2da8a4e7a49c0"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/923-quint-profile-compiler/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "f67dc1ec26b13c9e8de7fa9a45c16ea697ce1cc1a253dfa724523f7602db34b7"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/923-quint-profile-compiler/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "387bf1814a7514fde026eebd7344c5c1693f95b0caf1a4003ef4c96198ab838d"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/923-quint-profile-compiler/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "64b1ea75a3e5dcf96bde6a00c3360f54dba902014516ef72541f9432f783a161"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/923-quint-profile-compiler/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "ebc9dee078a7076595d2d52fbdfc6e14627b9f5bbf732e1cad46f8b0dd5a2032"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "1b093e22eb3e2f275bc540415d57cf3f0a23fbe193b7d2c2127d330c4d76ada5"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}

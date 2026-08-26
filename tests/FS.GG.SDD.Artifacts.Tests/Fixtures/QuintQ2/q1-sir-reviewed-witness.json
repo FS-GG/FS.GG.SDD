@@ -1,0 +1,36 @@
+{
+  "schema": "fsgg.quint.replay-witness/q1",
+  "id": "SIR-Damage-Reviewed-001",
+  "profile": "fsgg-quint-profile/1",
+  "seed": "92220",
+  "bounds": {
+    "maxSamples": 1,
+    "transitions": 2
+  },
+  "fingerprints": {
+    "literateSource": "sha256:51e39cb14a6490313fbf3c7eb35e7e05aeafe1f4df92883bf2183d41ea87c9e0",
+    "generatedModule": "sha256:39b06159db6f0a76b8cc1d7b60eed6155a33539f9c47cb4d4079a915ad4a72d5",
+    "compiledContractSchema": "sha256:db078e5bf9a17924e69d8451b7dfca091e8b18600633bf0bcad454b22b4fb185",
+    "compiledContractExample": "sha256:7112b215f266bfec9edc0c4e7fec03f07366adbcc095d9eb52a8ce735b4626f6",
+    "normalizedItf": "sha256:70d1f8343fc212a86b7dacc4a2507a4513bdaadf1ee85b36c5c1d2907a2a4ddf",
+    "quint": "sha256:939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f",
+    "profileDocument": "sha256:7a693471312f29c07fb3a30535a4e518ed15038d516e5ff95a58d29f7a799300"
+  },
+  "steps": [
+    {
+      "action": "Initialize",
+      "arguments": {},
+      "expected": { "hitPoints": 10, "lastAction": "Initialize", "lastAmount": 0 }
+    },
+    {
+      "action": "ApplyDamage",
+      "arguments": { "amount": 3 },
+      "expected": { "hitPoints": 7, "lastAction": "ApplyDamage", "lastAmount": 3 }
+    },
+    {
+      "action": "ApplyDamage",
+      "arguments": { "amount": 20 },
+      "expected": { "hitPoints": 0, "lastAction": "ApplyDamage", "lastAmount": 20 }
+    }
+  ]
+}
