@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Artifacts.TypedSpecifications
 
 open System
 open System.IO
+open System.Globalization
 open System.Text
 open System.Text.Json
 
@@ -91,6 +92,18 @@ module TypedAuthority =
         with :? DecoderFallbackException as ex ->
             Error ex.Message
 
+    let private generatedModuleDigest target (moduleBytes: byte array) =
+        let frame (value: string) =
+            let valueBytes = Encoding.UTF8.GetBytes value
+            Array.concat [ Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":"); valueBytes ]
+
+        [ target
+          TypedAuthorityManifest.sha256 moduleBytes
+          moduleBytes.LongLength.ToString(CultureInfo.InvariantCulture) ]
+        |> List.collect (frame >> Array.toList)
+        |> List.toArray
+        |> TypedAuthorityManifest.sha256
+
     let private semanticClosure observations (manifest: QuintAuthorityManifest) =
         let artifacts = manifest.Artifacts |> List.map (fun artifact -> artifact.Id, artifact) |> Map.ofList
         let states = observations |> List.map (fun observation -> observation.Path, observation.State) |> Map.ofList
@@ -141,18 +154,25 @@ module TypedAuthority =
                       let fenceSha = read "fenceManifestSha256"
                       let modulesSha = read "generatedModulesSha256"
                       let toolchainSha = read "toolchainSha256"
+                      let typedEffectSha = read "typedEffectSha256"
                       let contractSha = read "contractSha256"
                       let fingerprint = read "compilationFingerprint"
                       let processSteps = receipt.GetProperty("processSteps")
-                      let digests = [ sourceSha; fenceSha; modulesSha; toolchainSha; read "typedEffectSha256"; contractSha; fingerprint ]
+                      let processStepValues =
+                          if processSteps.ValueKind = JsonValueKind.Array then
+                              processSteps.EnumerateArray()
+                              |> Seq.choose (fun item -> if item.ValueKind = JsonValueKind.String then item.GetString() |> Option.ofObj else None)
+                              |> Seq.toList
+                          else []
+                      let digests = [ sourceSha; fenceSha; modulesSha; toolchainSha; typedEffectSha; contractSha; fingerprint ]
 
                       if schema <> QuintCompiler.receiptSchema
                          || processSteps.ValueKind <> JsonValueKind.Array
                          || (processSteps.EnumerateArray() |> Seq.exists (fun item -> item.ValueKind <> JsonValueKind.String))
+                         || processStepValues <> [ "extract"; "typecheck" ]
                          || digests |> List.exists (isSha256 >> not) then
                           yield closure "typedSdd.v2.receiptMalformed" "The compilation receipt contains an unsupported schema or malformed value." "Regenerate the receipt with the qualified compiler."
                       else
-                          let modulesValue = modulesText.TrimEnd('\r', '\n')
                           let contractHash = TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes contractText)
                           let fenceHash = TypedAuthorityManifest.sha256 fenceBytes
                           let sourceHash = TypedAuthorityManifest.sha256 markdownBytes
@@ -169,34 +189,31 @@ module TypedAuthority =
                                         Contract = contract }
 
                               if sourceSha <> sourceHash
-                                 || fenceSha <> fenceHash
-                                 || modulesSha <> modulesValue
                                  || toolchainSha <> manifest.ToolchainIdentity
                                  || contractSha <> contractHash
+                                 || contract.Digests <> [ { Name = "typed-effect"; Sha256 = typedEffectSha } ]
                                  || expectedFingerprint <> Ok fingerprint then
                                   yield closure "typedSdd.v2.receiptClosure" "The receipt does not close over the declared source, fences, modules, toolchain, contract, and fingerprint." "Re-author all authority artifacts in one atomic compilation."
 
-                              match QuintSource.decodeSourceMap sourceMapBytes with
-                              | Ok sourceMap when sourceMap.SourceSha256 = sourceSha -> ()
+                              match QuintSource.createMarkdown artifacts["markdown"].Path markdownBytes, QuintSource.decodeFenceManifest fenceBytes, QuintSource.decodeSourceMap sourceMapBytes with
+                              | Ok source, Ok fenceManifest, Ok sourceMap ->
+                                  let sourceFindings = QuintSource.validateManifest source fenceManifest @ QuintSource.validateSourceMap source fenceManifest sourceMap
+                                  let targets = fenceManifest.Fences |> List.map _.Target |> List.distinct
+                                  if not (List.isEmpty sourceFindings)
+                                     || QuintSource.encodeFenceManifest fenceManifest <> fenceBytes
+                                     || QuintSource.encodeSourceMap sourceMap <> sourceMapBytes
+                                     || targets.Length <> 1 then
+                                      yield closure "typedSdd.v2.sourceMapClosure" "The source, fence manifest, and source map do not form one canonical closed mapping." "Regenerate all source projections from the same Markdown source."
+                                  else
+                                      let actualModulesSha = generatedModuleDigest targets.Head (Encoding.UTF8.GetBytes modulesText)
+                                      if actualModulesSha <> modulesSha then
+                                          yield closure "typedSdd.v2.modulesClosure" "The generated module bytes do not bind the compilation receipt." "Regenerate modules and receipt in the same compilation."
                               | _ ->
-                                  yield closure "typedSdd.v2.sourceMapClosure" "The source map is malformed or does not bind the receipt source." "Regenerate the source map from the same compilation."
+                                  yield closure "typedSdd.v2.sourceMapClosure" "The source, fence manifest, or source map is malformed." "Regenerate all source projections from the same Markdown source."
 
-                              try
-                                  use fenceDocument = JsonDocument.Parse fenceBytes
-                                  let fence = fenceDocument.RootElement
-                                  let fenceFields = fence.EnumerateObject() |> Seq.map _.Name |> Seq.toList
-                                  if fence.ValueKind <> JsonValueKind.Object
-                                     || Set.ofList fenceFields <> set [ "schema"; "sourcePath"; "sourceSha256"; "fences" ]
-                                     || fenceFields.Length <> 4
-                                     || fence.GetProperty("schema").GetString() <> QuintSource.fenceManifestSchema
-                                     || fence.GetProperty("sourceSha256").GetString() <> sourceSha
-                                     || fence.GetProperty("fences").ValueKind <> JsonValueKind.Array then
-                                      yield closure "typedSdd.v2.fenceClosure" "The fence manifest is malformed or does not bind the receipt source." "Regenerate the fence manifest from the same Markdown source."
-                              with _ ->
-                                  yield closure "typedSdd.v2.fenceClosure" "The fence manifest is malformed or does not bind the receipt source." "Regenerate the fence manifest from the same Markdown source."
-
-                              let contractFingerprint = TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes contractText)
-                              if not (bindingsText.Contains(contractFingerprint, StringComparison.Ordinal)) then
+                              match QuintBindings.generate "RequirementsBindings" contract with
+                              | Ok bindings when bindings.FSharpSource = bindingsText -> ()
+                              | _ ->
                                   yield closure "typedSdd.v2.bindingsClosure" "Generated bindings do not identify the declared compiled contract." "Regenerate bindings from the same compiled contract."
               with _ ->
                   yield closure "typedSdd.v2.receiptMalformed" "The compilation receipt is not valid closed-schema JSON." "Regenerate the receipt with the qualified compiler."
@@ -362,6 +379,11 @@ module TypedAuthority =
                 Error firstError
 
     let deserialize (text: string) =
+        let legacyMalformed () =
+            match TypedAuthorityManifest.deserialize text with
+            | Error finding -> Error finding
+            | Ok manifest -> Ok(FsharpSpecificationV1 manifest)
+
         try
             use document = JsonDocument.Parse text
             let root = document.RootElement
@@ -400,9 +422,8 @@ module TypedAuthority =
                             $"Authority schema {value.GetInt32()} is unsupported."
                             "Upgrade the CLI or use manifest schemaVersion 1 or 2."
                     )
-                | _ -> Error(diagnostic "typedSdd.v2.manifestMalformed" "Missing numeric schemaVersion." "Regenerate the authority manifest.")
-        with ex ->
-            Error(diagnostic "typedSdd.v2.manifestMalformed" ex.Message "Regenerate the authority manifest.")
+                | _ -> legacyMalformed ()
+        with _ -> legacyMalformed ()
 
     let validateQuintV2 expectedPackageIdentity observations manifest =
         let observationMap = observations |> List.map (fun observation -> observation.Path, observation.State) |> Map.ofList

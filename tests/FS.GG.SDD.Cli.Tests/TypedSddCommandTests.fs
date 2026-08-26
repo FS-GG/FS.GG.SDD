@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Cli.Tests
 open System
 open System.Diagnostics
 open System.IO
+open System.Globalization
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
@@ -101,12 +102,16 @@ module TypedSddCommandTests =
                 match result with
                 | Ok value -> value
                 | Error findings -> failwithf "expected success, got %A" findings
-            let markdown = Text.Encoding.UTF8.GetBytes "# specification\n"
+            let markdown = Text.Encoding.UTF8.GetBytes "# specification\n```quint demo.qnt +=\nmodule Demo {}\n```\n"
             let source = QuintSource.createMarkdown "work/demo/specification.md" markdown |> expectOk
             let sourceRange =
                 { Path = source.Path
-                  Start = { Line = 1; Column = 1 }
-                  End = { Line = 1; Column = 2 } }
+                  Start = { Line = 3; Column = 1 }
+                  End = { Line = 3; Column = 14 } }
+            let fenceRange =
+                { Path = source.Path
+                  Start = { Line = 2; Column = 1 }
+                  End = { Line = 4; Column = 3 } }
             let contract =
                 { Schema = QuintContract.schema
                   Profile = QuintProfile.identity
@@ -116,20 +121,44 @@ module TypedSddCommandTests =
                       { Id = "ADVANCE"; Kind = QuintCatalogueKind.Action; Source = sourceRange } ]
                   ActionEffects =
                     [ { ActionId = "ADVANCE"; Reads = [ "STATE" ]; Writes = [ "STATE" ]; Subjects = [ "STATE" ] } ]
-                  Relationships = []; VerificationProfiles = []; Bounds = []; Impacts = []; Compatibility = []; Digests = [] }
+                  Relationships = []
+                  VerificationProfiles = []
+                  Bounds = []
+                  Impacts = []
+                  Compatibility = []
+                  Digests = [ { Name = "typed-effect"; Sha256 = String.replicate 64 "c" } ] }
             let contractBytes = QuintContract.serializeCanonical contract |> expectOk |> Text.Encoding.UTF8.GetBytes
+            let moduleBytes = Text.Encoding.UTF8.GetBytes "module Demo {}\n"
             let fenceBytes =
                 QuintSource.encodeFenceManifest
                     { Schema = QuintSource.fenceManifestSchema
                       SourcePath = source.Path
                       SourceSha256 = source.Sha256
-                      Fences = [] }
+                      Fences =
+                        [ { Ordinal = 0
+                            Target = "demo.qnt"
+                            ModuleName = "Demo"
+                            SourceRange = fenceRange
+                            ContentSha256 = TypedAuthorityManifest.sha256 moduleBytes } ] }
             let sourceMapBytes =
                 QuintSource.encodeSourceMap
                     { Schema = QuintSource.sourceMapSchema
                       SourceSha256 = source.Sha256
-                      Entries = [] }
-            let modulesDigest = String.replicate 64 "b"
+                      Entries =
+                        [ { Target = "demo.qnt"
+                            GeneratedRange =
+                                { Path = "demo.qnt"
+                                  Start = { Line = 1; Column = 1 }
+                                  End = { Line = 1; Column = 14 } }
+                            Source = { FenceOrdinal = 0; Range = sourceRange } } ] }
+            let frame (value: string) =
+                let valueBytes = Text.Encoding.UTF8.GetBytes value
+                Array.concat [ Text.Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":"); valueBytes ]
+            let modulesDigest =
+                [ "demo.qnt"; TypedAuthorityManifest.sha256 moduleBytes; moduleBytes.LongLength.ToString(CultureInfo.InvariantCulture) ]
+                |> List.collect (frame >> Array.toList)
+                |> List.toArray
+                |> TypedAuthorityManifest.sha256
             let toolchain = QuintToolchain.fingerprint QuintToolchain.q1
             let fingerprint =
                 QuintContract.fingerprint
@@ -152,12 +181,12 @@ module TypedSddCommandTests =
                       ProcessSteps = [ "extract"; "typecheck" ] }
                 |> Text.Encoding.UTF8.GetBytes
             let bindingsBytes =
-                (QuintBindings.generate "DemoContract" contract |> expectOk).FSharpSource
+                (QuintBindings.generate "RequirementsBindings" contract |> expectOk).FSharpSource
                 |> Text.Encoding.UTF8.GetBytes
             let content: (string * string * byte array) list =
                 [ "markdown", "work/demo/specification.md", markdown
                   "fence-manifest", "readiness/demo/quint/fences.json", fenceBytes
-                  "generated-modules", "readiness/demo/quint/modules.digest", Text.Encoding.UTF8.GetBytes(modulesDigest + "\n")
+                  "generated-modules", "readiness/demo/quint/demo.qnt", moduleBytes
                   "source-map", "readiness/demo/quint/source-map.json", sourceMapBytes
                   "compiled-contract", "readiness/demo/quint/contract.json", contractBytes
                   "bindings", "readiness/demo/quint/bindings.fs", bindingsBytes

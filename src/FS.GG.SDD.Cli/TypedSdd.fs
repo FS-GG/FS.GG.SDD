@@ -346,6 +346,52 @@ module TypedSdd =
                         "Correct the model using the published requirements extension.")
             )
 
+    let private authorQuint args workId agent session =
+        let rootPath = root args
+        let manifestPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
+
+        match optionValue "--cache" args with
+        | None ->
+            Error
+                [ diagnostic
+                      "typedSdd.v2.cacheRequired"
+                      "Explicit Quint authoring requires a caller-selected local cache."
+                      "Pass --cache <path> containing objects/<qualified-sha256>; no acquisition is performed." ]
+        | Some cache when not (Directory.Exists cache) ->
+            Error
+                [ diagnostic
+                      "typedSdd.v2.cacheMissing"
+                      "The selected local Quint cache does not exist."
+                      "Preseed the exact Q1/Q2 cache and pass its path." ]
+        | Some _ when File.Exists manifestPath && not (has "--accept" args) ->
+            Error
+                [ diagnostic
+                      "typedSdd.acceptRequired"
+                      "Typed SDD authority already exists."
+                      "Review the replacement, then pass --accept with a fresh authoring receipt." ]
+        | Some cache ->
+            let title = optionValue "--title" args |> Option.defaultValue workId
+
+            match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) None with
+            | Error findings -> Error findings
+            | Ok output ->
+                try
+                    let writes =
+                        output.Writes
+                        |> List.map (fun (relative, bytes) ->
+                            match containedPath rootPath relative with
+                            | Some path -> path, bytes
+                            | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
+
+                    atomicWrite writes
+                    Ok(output.Writes |> List.map fst)
+                with ex ->
+                    Error
+                        [ diagnostic
+                              "typedSdd.v2.transactionFailed"
+                              ex.Message
+                              "Correct filesystem access and retry; the prior authority was restored." ]
+
     let private author args =
         match work args with
         | None ->
@@ -388,11 +434,47 @@ module TypedSdd =
                               "An authoring agent and session receipt are required."
                               "Pass --agent <id> --session <id>." ] }
             else
-                let title = optionValue "--title" args |> Option.defaultValue workId
+                let backend = optionValue "--backend" args |> Option.defaultValue "fsharp-specification-v1"
 
-                let _, _, _, canonicalPath, _, _ = paths (root args) workId
+                if backend = "quint" || backend = "quint-specification-v1" then
+                    match authorQuint args workId agent session with
+                    | Ok changed ->
+                        emit
+                            { Operation = "author"
+                              Outcome = "succeeded"
+                              Classification = Some "quint-specification-v1"
+                              ChangedPaths = changed
+                              SemanticDiff = []
+                              RollbackSourceSha256 = None
+                              Diagnostics = [] }
+                    | Error findings ->
+                        emit
+                            { Operation = "author"
+                              Outcome = "blocked"
+                              Classification = Some "quint-specification-v1"
+                              ChangedPaths = []
+                              SemanticDiff = []
+                              RollbackSourceSha256 = None
+                              Diagnostics = findings }
+                elif backend <> "fsharp" && backend <> "fsharp-specification-v1" then
+                    emit
+                        { Operation = "author"
+                          Outcome = "blocked"
+                          Classification = None
+                          ChangedPaths = []
+                          SemanticDiff = []
+                          RollbackSourceSha256 = None
+                          Diagnostics =
+                            [ diagnostic
+                                  "typedSdd.backendUnsupported"
+                                  $"Unsupported explicit Typed SDD backend '{backend}'."
+                                  "Use fsharp-specification-v1 or quint-specification-v1." ] }
+                else
+                  let title = optionValue "--title" args |> Option.defaultValue workId
 
-                let modelResult =
+                  let _, _, _, canonicalPath, _, _ = paths (root args) workId
+
+                  let modelResult =
                     if File.Exists canonicalPath then
                         if not (has "--accept" args) then
                             Error
@@ -438,28 +520,28 @@ module TypedSdd =
                     else
                         Ok(newModel workId title agent session)
 
-                match
-                    modelResult
-                    |> Result.bind (fun model -> writeAuthority (root args) workId model None [])
-                with
-                | Ok changed ->
-                    emit
-                        { Operation = "author"
-                          Outcome = "succeeded"
-                          Classification = None
-                          ChangedPaths = changed
-                          SemanticDiff = []
-                          RollbackSourceSha256 = None
-                          Diagnostics = [] }
-                | Error findings ->
-                    emit
-                        { Operation = "author"
-                          Outcome = "blocked"
-                          Classification = None
-                          ChangedPaths = []
-                          SemanticDiff = []
-                          RollbackSourceSha256 = None
-                          Diagnostics = findings }
+                  match
+                      modelResult
+                      |> Result.bind (fun model -> writeAuthority (root args) workId model None [])
+                  with
+                  | Ok changed ->
+                      emit
+                          { Operation = "author"
+                            Outcome = "succeeded"
+                            Classification = None
+                            ChangedPaths = changed
+                            SemanticDiff = []
+                            RollbackSourceSha256 = None
+                            Diagnostics = [] }
+                  | Error findings ->
+                      emit
+                          { Operation = "author"
+                            Outcome = "blocked"
+                            Classification = None
+                            ChangedPaths = []
+                            SemanticDiff = []
+                            RollbackSourceSha256 = None
+                            Diagnostics = findings }
 
     let private migrate args =
         match work args, optionValue "--source" args with
@@ -850,7 +932,7 @@ module TypedSdd =
     let private unknownArgument operation args =
         let valued, flags =
             match operation with
-            | "author" -> set [ "--root"; "--work"; "--title"; "--agent"; "--session" ], set [ "--accept" ]
+            | "author" -> set [ "--root"; "--work"; "--title"; "--agent"; "--session"; "--backend"; "--cache" ], set [ "--accept" ]
             | "inspect" -> set [ "--root"; "--work" ], Set.empty
             | "migrate" -> set [ "--root"; "--work"; "--source"; "--title"; "--agent"; "--session" ], set [ "--accept" ]
             | "rollback" -> set [ "--root"; "--work" ], set [ "--accept" ]

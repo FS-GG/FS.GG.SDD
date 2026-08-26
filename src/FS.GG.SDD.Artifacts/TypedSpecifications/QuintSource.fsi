@@ -77,6 +77,9 @@ module QuintSource =
     /// Return lowercase SHA-256 over canonical fence-manifest bytes.
     val fenceManifestFingerprint: manifest: QuintFenceManifest -> string
 
+    /// Strictly decode fence-manifest v1; unknown and duplicate fields fail closed.
+    val decodeFenceManifest: bytes: byte array -> Result<QuintFenceManifest, SpecificationDiagnostic list>
+
     /// Validate all generated and canonical ranges and their fence bindings.
     val validateSourceMap:
         source: QuintMarkdownSource ->

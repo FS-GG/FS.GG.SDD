@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
 open System.Text
+open System.Globalization
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
@@ -115,18 +116,31 @@ module TypedLifecycleTests =
         | Ok value -> value
         | Error findings -> failwithf "expected success, got %A" findings
 
+    let private generatedDigest target (moduleBytes: byte array) =
+        let frame (value: string) =
+            let valueBytes = Encoding.UTF8.GetBytes value
+            Array.concat [ Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":"); valueBytes ]
+        [ target; TypedAuthorityManifest.sha256 moduleBytes; moduleBytes.LongLength.ToString(CultureInfo.InvariantCulture) ]
+        |> List.collect (frame >> Array.toList)
+        |> List.toArray
+        |> TypedAuthorityManifest.sha256
+
     let private quintArtifact id path content =
         { Id = id
           Path = path
           Sha256 = content |> TypedAuthorityManifest.sha256 }
 
     let private quintFixture () =
-        let markdown = bytes "# specification\n"
+        let markdown = bytes "# specification\n```quint demo.qnt +=\nmodule Demo {}\n```\n"
         let source = QuintSource.createMarkdown "work/demo/specification.md" markdown |> expectOk
         let range =
             { Path = source.Path
-              Start = { Line = 1; Column = 1 }
-              End = { Line = 1; Column = 2 } }
+              Start = { Line = 3; Column = 1 }
+              End = { Line = 3; Column = 14 } }
+        let fenceRange =
+            { Path = source.Path
+              Start = { Line = 2; Column = 1 }
+              End = { Line = 4; Column = 3 } }
         let contract =
             { Schema = QuintContract.schema
               Profile = QuintProfile.identity
@@ -148,28 +162,39 @@ module TypedLifecycleTests =
               Bounds = []
               Impacts = []
               Compatibility = []
-              Digests = [] }
+              Digests = [ { Name = "typed-effect"; Sha256 = String.replicate 64 "c" } ] }
         let contractText = QuintContract.serializeCanonical contract |> expectOk
         let contractBytes = bytes contractText
+        let moduleBytes = bytes "module Demo {}\n"
         let fenceManifest =
             { Schema = QuintSource.fenceManifestSchema
               SourcePath = source.Path
               SourceSha256 = source.Sha256
-              Fences = [] }
+              Fences =
+                [ { Ordinal = 0
+                    Target = "demo.qnt"
+                    ModuleName = "Demo"
+                    SourceRange = fenceRange
+                    ContentSha256 = TypedAuthorityManifest.sha256 moduleBytes } ] }
         let fenceBytes = QuintSource.encodeFenceManifest fenceManifest
         let sourceMap =
             { Schema = QuintSource.sourceMapSchema
               SourceSha256 = source.Sha256
-              Entries = [] }
+              Entries =
+                [ { Target = "demo.qnt"
+                    GeneratedRange =
+                        { Path = "demo.qnt"
+                          Start = { Line = 1; Column = 1 }
+                          End = { Line = 1; Column = 14 } }
+                    Source = { FenceOrdinal = 0; Range = range } } ] }
         let sourceMapBytes = QuintSource.encodeSourceMap sourceMap
-        let generatedDigest = String.replicate 64 "b"
-        let generatedBytes = bytes (generatedDigest + "\n")
+        let generatedModulesDigest = generatedDigest "demo.qnt" moduleBytes
         let toolchain = QuintToolchain.fingerprint QuintToolchain.q1
         let compilationFingerprint =
             QuintContract.fingerprint
                 { SourceSha256 = source.Sha256
                   FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
-                  GeneratedModulesSha256 = generatedDigest
+                  GeneratedModulesSha256 = generatedModulesDigest
                   ToolchainSha256 = toolchain
                   Contract = contract }
             |> expectOk
@@ -177,17 +202,17 @@ module TypedLifecycleTests =
             { Schema = QuintCompiler.receiptSchema
               SourceSha256 = source.Sha256
               FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
-              GeneratedModulesSha256 = generatedDigest
+              GeneratedModulesSha256 = generatedModulesDigest
               ToolchainSha256 = toolchain
               TypedEffectSha256 = String.replicate 64 "c"
               ContractSha256 = TypedAuthorityManifest.sha256 contractBytes
               CompilationFingerprint = compilationFingerprint
               ProcessSteps = [ "extract"; "typecheck" ] }
-        let bindings = QuintBindings.generate "DemoContract" contract |> expectOk
+        let bindings = QuintBindings.generate "RequirementsBindings" contract |> expectOk
         let contents =
             Map [ "markdown", markdown
                   "fence-manifest", fenceBytes
-                  "generated-modules", generatedBytes
+                  "generated-modules", moduleBytes
                   "source-map", sourceMapBytes
                   "compiled-contract", contractBytes
                   "bindings", bytes bindings.FSharpSource
@@ -307,6 +332,49 @@ module TypedLifecycleTests =
             |> List.map _.Id
         Assert.Contains("typedSdd.v2.receiptClosure", semanticIds)
 
+        let validateSelfConsistentMutant id mutantBytes =
+            let artifact = authority.Artifacts |> List.find (fun item -> item.Id = id)
+            let mutantAuthority =
+                { authority with
+                    Artifacts =
+                        authority.Artifacts
+                        |> List.map (fun item ->
+                            if item.Id = id then { item with Sha256 = TypedAuthorityManifest.sha256 mutantBytes }
+                            else item) }
+            let mutantObserved =
+                observed
+                |> List.map (fun item ->
+                    if item.Path = artifact.Path then
+                        { item with State = QuintAuthorityArtifactState.Present mutantBytes }
+                    else item)
+            TypedAuthority.validateQuintV2 mutantAuthority.PackageIdentity mutantObserved mutantAuthority
+            |> List.map _.Id
+
+        let receipt = Encoding.UTF8.GetString contents["compilation-receipt"]
+        let typedEffectC = String.replicate 64 "c"
+        let typedEffectD = String.replicate 64 "d"
+        let wrongTypedEffect =
+            receipt.Replace(
+                $"\"typedEffectSha256\":\"{typedEffectC}\"",
+                $"\"typedEffectSha256\":\"{typedEffectD}\""
+            )
+            |> bytes
+        Assert.Contains("typedSdd.v2.receiptClosure", validateSelfConsistentMutant "compilation-receipt" wrongTypedEffect)
+
+        let unexpectedProcess = receipt.Replace("[\"extract\",\"typecheck\"]", "[\"unexpected-tool\"]") |> bytes
+        Assert.Contains("typedSdd.v2.receiptMalformed", validateSelfConsistentMutant "compilation-receipt" unexpectedProcess)
+
+        let contractDigest = TypedAuthorityManifest.sha256 contents["compiled-contract"]
+        let forgedBindings = bytes ($"not F# {contractDigest}")
+        Assert.Contains("typedSdd.v2.bindingsClosure", validateSelfConsistentMutant "bindings" forgedBindings)
+
+        let ghostMap =
+            Encoding.UTF8.GetString(contents["source-map"])
+                .Replace("demo.qnt", "ghost.qnt")
+                .Replace("\"fenceOrdinal\":0", "\"fenceOrdinal\":99")
+            |> bytes
+        Assert.Contains("typedSdd.v2.sourceMapClosure", validateSelfConsistentMutant "source-map" ghostMap)
+
         let incomplete =
             { authority with
                 Artifacts = authority.Artifacts.Tail }
@@ -330,6 +398,13 @@ module TypedLifecycleTests =
             |> List.map _.Id
 
         Assert.Contains("typedSdd.v2.artifactPathAlias", aliasIds)
+
+    [<Fact>]
+    let ``dispatcher preserves stable malformed v1 diagnostics`` () =
+        for malformed in [ "{"; "{}"; "{\"schemaVersion\":\"1\"}" ] do
+            match TypedAuthority.deserialize malformed with
+            | Error finding -> Assert.Equal("typedSdd.authorityMalformed", finding.Id)
+            | Ok _ -> failwith "malformed authority was accepted"
 
     [<Fact>]
     let ``verification selector broadens monotonically and unknown input fails safe`` () =

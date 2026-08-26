@@ -39,6 +39,7 @@
     <Compile Include="RegistryValidate.fs" />
     <Compile Include="RegistrySkillManifest.fsi" />
     <Compile Include="RegistrySkillManifest.fs" />
+    <Compile Include="QuintTypedSddHost.fs" />
     <Compile Include="TypedSdd.fsi" />
     <Compile Include="TypedSdd.fs" />
     <Compile Include="Program.fs" />
