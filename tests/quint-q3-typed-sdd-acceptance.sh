@@ -27,36 +27,45 @@ fi
 
 scratch="$(mktemp -d /tmp/fsgg-quint-q3.XXXXXX)"
 trap 'rm -rf -- "$scratch"' EXIT
-feed="$scratch/feed"
-mkdir -p "$feed"
-
-for project in FS.GG.Contracts FS.GG.SDD.Artifacts FS.GG.SDD.Commands FS.GG.SDD.Validation FS.GG.SDD.Cli; do
-  dotnet pack "$repo_root/src/$project/$project.fsproj" -c Release -o "$feed" >/dev/null
-done
-
 version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' "$repo_root/Directory.Build.local.props" | head -1)"
 [[ -n "$version" ]] || fail 'could not resolve coherent package version'
 
-# Materialize external dependency nupkgs while provisioning is still allowed, then
-# switch to one source and fresh caches before installing the reviewed tool package.
-provisioning_packages="$scratch/provisioning-packages"
-NUGET_PACKAGES="$provisioning_packages" dotnet restore "$repo_root/src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj" --no-http-cache >/dev/null
-find "$provisioning_packages" -type f -name '*.nupkg' -exec cp -f '{}' "$feed/" \;
+if [[ -n "${Q3_PACKAGE_SOURCE:-}" ]]; then
+  feed="$Q3_PACKAGE_SOURCE"
+else
+  feed="$scratch/feed"
+  mkdir -p "$feed"
+  for project in FS.GG.Contracts FS.GG.SDD.Artifacts FS.GG.SDD.Commands FS.GG.SDD.Validation FS.GG.SDD.Cli; do
+    dotnet pack "$repo_root/src/$project/$project.fsproj" -c Release -o "$feed" >/dev/null
+  done
+
+  # Materialize external dependency nupkgs while provisioning is still allowed, then
+  # switch to one local source before installing the reviewed tool package.
+  provisioning_packages="$scratch/provisioning-packages"
+  NUGET_PACKAGES="$provisioning_packages" dotnet restore "$repo_root/src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj" --no-http-cache >/dev/null
+  find "$provisioning_packages" -type f -name '*.nupkg' -exec cp -f '{}' "$feed/" \;
+fi
 
 printf '%s\n' \
   '<?xml version="1.0" encoding="utf-8"?>' \
   '<configuration><packageSources><clear /><add key="local" value="'"$feed"'" /></packageSources></configuration>' \
   >"$scratch/NuGet.Config"
 
-export HTTP_PROXY='http://127.0.0.1:1'
-export HTTPS_PROXY='http://127.0.0.1:1'
-export ALL_PROXY='http://127.0.0.1:1'
-export NO_PROXY='127.0.0.1,localhost'
 export NUGET_PACKAGES="$scratch/fresh-packages"
 export NUGET_HTTP_CACHE_PATH="$scratch/fresh-http"
 
+poison_network() {
+  export HTTP_PROXY='http://127.0.0.1:1'
+  export HTTPS_PROXY='http://127.0.0.1:1'
+  export ALL_PROXY='http://127.0.0.1:1'
+  export NO_PROXY='127.0.0.1,localhost'
+}
+
+[[ -z "${Q3_PACKAGE_SOURCE:-}" ]] && poison_network
+
 dotnet tool install FS.GG.SDD.Cli --version "$version" --tool-path "$scratch/tool" \
   --configfile "$scratch/NuGet.Config" --no-cache >/dev/null
+[[ -n "${Q3_PACKAGE_SOURCE:-}" ]] && poison_network
 cli="$scratch/tool/fsgg-sdd"
 [[ -x "$cli" ]] || fail 'installed CLI executable is absent'
 
@@ -78,7 +87,7 @@ diff -ru "$scratch/author-a" "$scratch/author-b" >/dev/null || fail 'two install
 cmp "$scratch/author-a.json" "$scratch/author-b.json" >/dev/null || fail 'two installed author reports differ'
 
 # Hard process death at every live-author move must recover before another operation reads authority.
-for boundary in $(seq 1 9); do
+for boundary in $(seq 1 10); do
   crash_root="$scratch/crash-author-$boundary"
   mkdir -p "$crash_root"
   if FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE="$boundary" "$cli" typed-sdd author \
@@ -157,8 +166,37 @@ preflight_payload="$(grep -F 'semantic payload sha256:' "$scratch/migrate-prefli
 accepted_payload="$(grep -F 'semantic payload sha256:' "$scratch/migrate.json" | sed 's/.*semantic payload sha256: \([0-9a-f]*\).*/\1/')"
 [[ -n "$preflight_payload" && "$preflight_payload" == "$accepted_payload" ]] || fail 'accepted migration did not commit the preflight semantic proposal'
 grep -F 'requirements-extension-v1' "$migration/readiness/demo/quint/contract.json" >/dev/null || fail 'compiled contract lacks v1 correspondence digest'
+for semantic_id in SPEC-001 SB-001 US-001 FR-001 AC-001 EV001 Evaluate-AC-001; do
+  grep -F "\"$semantic_id\"" "$migration/readiness/demo/quint/contract.json" >/dev/null \
+    || fail "compiled contract failed to lower v1 semantic identity $semantic_id"
+done
 grep -F 'fsgg.requirements-extension/v1+base64' "$migration/work/demo/specification.md" >/dev/null || fail 'literate authority lacks retained v1 semantic payload'
 "$cli" typed-sdd inspect --root "$migration" --work demo >/dev/null || fail 'migrated authority did not inspect'
+
+# An accepted replacement and accepted rollback share one decision-to-commit lock. They cannot both
+# commit from the same observed v2 authority or resurrect a stale replacement after rollback.
+race_root="$scratch/replacement-rollback-race"
+cp -a "$migration" "$race_root"
+FSGG_TYPED_SDD_TEST_PAUSE_AFTER_PREPARE_MS=1000 "$cli" typed-sdd author \
+  --root "$race_root" --work demo --title 'Concurrent replacement' --agent acceptance --session replacement \
+  --backend quint-specification-v1 --cache "$scratch/cache" --accept >"$scratch/race-author.json" &
+race_author_pid=$!
+for _ in $(seq 1 100); do
+  [[ -n "$(find "$race_root/.fsgg/typed-sdd-transactions" -name journal.json -print -quit 2>/dev/null)" ]] && break
+  sleep 0.02
+done
+set +e
+"$cli" typed-sdd rollback --root "$race_root" --work demo --accept >"$scratch/race-rollback.json"
+race_rollback_status=$?
+wait "$race_author_pid"
+race_author_status=$?
+set -e
+[[ $race_author_status -eq 0 && $race_rollback_status -ne 0 ]] \
+  || fail 'concurrent replacement and rollback did not serialize to exactly one accepted commit'
+grep -F 'typedSdd.v2.rollbackMissing' "$scratch/race-rollback.json" >/dev/null \
+  || fail 'serialized rollback did not diagnose the replacement-cleared rollback receipt'
+"$cli" typed-sdd inspect --root "$race_root" --work demo >/dev/null \
+  || fail 'serialized replacement/rollback race left invalid authority'
 set +e
 FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE=5 "$cli" typed-sdd rollback --root "$migration" --work demo --accept >/dev/null 2>&1
 rollback_crash=$?
@@ -174,7 +212,7 @@ if [[ -n "${Q3_JUNIT_OUT:-}" ]]; then
   mkdir -p "$(dirname "$Q3_JUNIT_OUT")"
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
-    '<testsuite name="FS.GG.SDD.QuintQ3TypedSddAcceptance" tests="12" failures="0">' \
+    '<testsuite name="FS.GG.SDD.QuintQ3TypedSddAcceptance" tests="13" failures="0">' \
     '  <testcase classname="QuintQ3" name="fresh-cache-offline-tool-install" />' \
     '  <testcase classname="QuintQ3" name="exact-content-addressed-tools" />' \
     '  <testcase classname="QuintQ3" name="two-isolated-author-runs" />' \
@@ -185,6 +223,7 @@ if [[ -n "${Q3_JUNIT_OUT:-}" ]]; then
     '  <testcase classname="QuintQ3" name="edited-artifact-red" />' \
     '  <testcase classname="QuintQ3" name="typed-effect-semantic-closure" />' \
     '  <testcase classname="QuintQ3" name="v1-preflight-and-migration" />' \
+    '  <testcase classname="QuintQ3" name="replacement-rollback-decision-lock" />' \
     '  <testcase classname="QuintQ3" name="authenticated-byte-exact-rollback" />' \
     '  <testcase classname="QuintQ3" name="rollback-crash-recovery" />' \
     '</testsuite>' >"$Q3_JUNIT_OUT"

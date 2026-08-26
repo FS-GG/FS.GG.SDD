@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
+open System
 open System.Text
 open System.Globalization
 open FS.GG.SDD.Artifacts
@@ -14,7 +15,7 @@ module TypedLifecycleTests =
           Lifecycle = "typed-sdd"
           Backend = "fsharp-specification-v1"
           CompilerIdentity = "dotnet-fsi/net10.0"
-          PackageIdentity = "FS.GG.SDD.Artifacts/1.4.0-preview.1"
+          PackageIdentity = "FS.GG.SDD.Artifacts/1.4.0"
           ExtensionIdentity = "fsgg.requirements-extension/v1"
           CanonicalPath = "work/demo/specification.fsx"
           CanonicalSha256 = TypedAuthorityManifest.sha256 canonical
@@ -40,7 +41,7 @@ module TypedLifecycleTests =
         let provenance =
             ScaffoldProvenance.devRepoRecord
                 { Id = "FS.GG.SDD"
-                  Version = "1.4.0-preview.1" }
+                  Version = "1.4.0" }
                 []
 
         Assert.Equal(Ok StandardSdd, ScaffoldProvenance.lifecycleLane provenance)
@@ -71,7 +72,7 @@ module TypedLifecycleTests =
 
         let findings =
             TypedAuthorityManifest.validate
-                "FS.GG.SDD.Artifacts/1.4.0-preview.1"
+                "FS.GG.SDD.Artifacts/1.4.0"
                 false
                 (Some(bytes "direct edit"))
                 (Some(bytes "stale"))
@@ -99,7 +100,7 @@ module TypedLifecycleTests =
 
         let ids =
             TypedAuthorityManifest.validate
-                "FS.GG.SDD.Artifacts/1.4.0-preview.1"
+                "FS.GG.SDD.Artifacts/1.4.0"
                 true
                 (Some source)
                 (Some normalized)
@@ -164,7 +165,9 @@ module TypedLifecycleTests =
               Bounds = []
               Impacts = []
               Compatibility = []
-              Digests = [ { Name = "typed-effect"; Sha256 = typedEffectDigest } ] }
+              Digests =
+                [ { Name = "sandbox-contract"; Sha256 = TypedAuthorityManifest.sha256 QuintSandbox.contractBytes }
+                  { Name = "typed-effect"; Sha256 = typedEffectDigest } ] }
         let contractText = QuintContract.serializeCanonical contract |> expectOk
         let contractBytes = bytes contractText
         let moduleBytes = bytes "module Demo {}\n"
@@ -217,6 +220,7 @@ module TypedLifecycleTests =
                   "generated-modules", moduleBytes
                   "source-map", sourceMapBytes
                   "typed-effect", typedEffectBytes
+                  "sandbox-contract", QuintSandbox.contractBytes
                   "compiled-contract", contractBytes
                   "bindings", bytes bindings.FSharpSource
                   "compilation-receipt", bytes (QuintCompiler.encodeReceipt receipt) ]
@@ -226,6 +230,7 @@ module TypedLifecycleTests =
               quintArtifact "generated-modules" "readiness/demo/quint/modules.digest" contents["generated-modules"]
               quintArtifact "source-map" "readiness/demo/quint/source-map.json" contents["source-map"]
               quintArtifact "typed-effect" "readiness/demo/quint/typed-effect.json" contents["typed-effect"]
+              quintArtifact "sandbox-contract" "readiness/demo/quint/sandbox-contract.json" contents["sandbox-contract"]
               quintArtifact "compiled-contract" "readiness/demo/quint/contract.json" contents["compiled-contract"]
               quintArtifact "bindings" "readiness/demo/quint/bindings.fs" contents["bindings"]
               quintArtifact "compilation-receipt" "readiness/demo/quint/receipt.json" contents["compilation-receipt"] ]
@@ -235,7 +240,7 @@ module TypedLifecycleTests =
           Backend = "quint-specification-v1"
           ProfileIdentity = QuintProfile.identity
           ToolchainIdentity = toolchain
-          PackageIdentity = "FS.GG.SDD.Artifacts/1.4.0-preview.1"
+          PackageIdentity = "FS.GG.SDD.Artifacts/1.4.0"
           Artifacts = artifacts
           AuthoringAgent = "tern-002"
           AuthoringSession = "session-2"
@@ -243,6 +248,75 @@ module TypedLifecycleTests =
           RollbackManifestSha256 = None }, contents
 
     let private quintManifest () = quintFixture () |> fst
+
+    [<Fact>]
+    let ``v1 migration lowers every semantic identity relationship and text field`` () =
+        let baseManifest, contents = quintFixture ()
+        let baseContract =
+            contents["compiled-contract"]
+            |> Encoding.UTF8.GetString
+            |> QuintContract.deserialize
+            |> expectOk
+            |> fun contract ->
+                { contract with
+                    Relationships = [ { FromId = "ADVANCE"; Kind = Reads; ToId = "STATE" } ]
+                    Impacts = [ { SubjectId = "STATE"; Category = "base"; Detail = "kept" } ]
+                    Compatibility = [ { Surface = "base"; Requirement = "STATE"; Detail = "kept" } ] }
+        let id value = SpecificationId.create value |> expectOk
+        let payload =
+            { Identity = id "SPEC-001"
+              SchemaVersion = 1
+              Provenance =
+                { Agent = "test"
+                  Session = "test"
+                  SourcePath = "work/demo/specification.fsx"
+                  SourceRevision = String.replicate 64 "0"
+                  AuthoredAtUtc = "2026-08-26T00:00:00Z" }
+              Intent = "intent text"
+              EvidenceObligations = [ { Id = id "EV001"; Kind = "test"; Description = "evidence text" } ]
+              Extension =
+                { UserValue = "user value"
+                  Scope = [ { Id = id "SB-001"; Statement = "scope text" } ]
+                  NonGoals = []
+                  Stories = [ { Id = id "US-001"; Priority = "P1"; Statement = "story text" } ]
+                  Requirements =
+                    [ { Id = id "FR-001"
+                        Statement = "requirement text"
+                        AcceptanceIds = [ id "AC-001" ]
+                        EvidenceObligationIds = [ id "EV001" ] } ]
+                  Acceptance =
+                    [ { Id = id "AC-001"
+                        StoryIds = [ id "US-001" ]
+                        RequirementIds = [ id "FR-001" ]
+                        Statement = "acceptance text" } ]
+                  Ambiguities = []
+                  PublicImpact = []
+                  LifecycleNotes = [ "note text" ] } }
+            |> SpecificationCodec.serialize RequirementsExtension.contract
+            |> expectOk
+            |> fun text -> bytes (text + "\n")
+        let payloadRange =
+            { Path = baseManifest.Artifacts |> List.find (fun artifact -> artifact.Id = "markdown") |> _.Path
+              Start = { Line = 1; Column = 1 }
+              End = { Line = 1; Column = 2 } }
+        let lowered = QuintV1Migration.lower payload payloadRange baseContract |> expectOk
+        let ids = lowered.Catalogue |> List.map _.Id |> Set.ofList
+
+        for id in [ "SPEC-001"; "SB-001"; "US-001"; "FR-001"; "AC-001"; "EV001"; "Evaluate-AC-001" ] do
+            Assert.Contains(id, ids)
+
+        Assert.Contains(lowered.Relationships, fun item -> item.FromId = "ADVANCE" && item.ToId = "STATE")
+        Assert.Contains(lowered.Impacts, fun item -> item.Category = "base" && item.Detail = "kept")
+        Assert.Contains(lowered.Compatibility, fun item -> item.Surface = "base" && item.Detail = "kept")
+
+        let effect = lowered.ActionEffects |> List.find (fun item -> item.ActionId = "Evaluate-AC-001")
+        Assert.Contains("FR-001", effect.Reads)
+        Assert.Contains("AC-001", effect.Writes)
+        Assert.Contains("US-001", effect.Subjects)
+        Assert.Contains(lowered.Relationships, fun item -> item.FromId = "FR-001" && item.ToId = "EV001")
+
+        for text in [ "intent text"; "user value"; "scope text"; "story text"; "requirement text"; "acceptance text"; "evidence text"; "note text" ] do
+            Assert.Contains(lowered.Compatibility, fun item -> item.Detail = text)
 
     [<Fact>]
     let ``additive authority decoder preserves v1 and strictly round trips v2`` () =

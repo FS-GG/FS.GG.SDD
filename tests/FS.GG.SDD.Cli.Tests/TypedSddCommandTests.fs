@@ -128,7 +128,9 @@ module TypedSddCommandTests =
                   Bounds = []
                   Impacts = []
                   Compatibility = []
-                  Digests = [ { Name = "typed-effect"; Sha256 = typedEffectDigest } ] }
+                  Digests =
+                    [ { Name = "sandbox-contract"; Sha256 = TypedAuthorityManifest.sha256 QuintSandbox.contractBytes }
+                      { Name = "typed-effect"; Sha256 = typedEffectDigest } ] }
             let contractBytes = QuintContract.serializeCanonical contract |> expectOk |> Text.Encoding.UTF8.GetBytes
             let moduleBytes = Text.Encoding.UTF8.GetBytes "module Demo {}\n"
             let fenceBytes =
@@ -191,6 +193,7 @@ module TypedSddCommandTests =
                   "generated-modules", "readiness/demo/quint/demo.qnt", moduleBytes
                   "source-map", "readiness/demo/quint/source-map.json", sourceMapBytes
                   "typed-effect", "readiness/demo/quint/typed-effect.json", typedEffectBytes
+                  "sandbox-contract", "readiness/demo/quint/sandbox-contract.json", QuintSandbox.contractBytes
                   "compiled-contract", "readiness/demo/quint/contract.json", contractBytes
                   "bindings", "readiness/demo/quint/bindings.fs", bindingsBytes
                   "compilation-receipt", "readiness/demo/quint/receipt.json", receiptBytes ]

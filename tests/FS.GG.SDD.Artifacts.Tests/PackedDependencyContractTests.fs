@@ -57,7 +57,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0-preview.1.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -93,7 +93,7 @@ module PackedDependencyContractTests =
                 |> Option.map _.Value
                 |> Option.defaultWith (fun () -> failwith "the Contracts dependency has no version")
 
-            Assert.Equal("1.4.0-preview.1", packageVersion)
+            Assert.Equal("1.4.0", packageVersion)
             Assert.Equal("7.5.2", dependencyVersion)
             Assert.DoesNotContain(packageVersion, dependency.ToString())
         finally
@@ -110,7 +110,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0-preview.1.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -134,11 +134,11 @@ module PackedDependencyContractTests =
             Directory.Delete(outputDirectory, true)
 
     [<Fact>]
-    let ``Artifacts release pack rejects global identity overrides`` () =
+    let ``Artifacts release pack pins the resolved coherent identity`` () =
         let job = artifactsJob ()
         Assert.Contains("dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj", job)
-        Assert.DoesNotContain("-p:Version=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
-        Assert.DoesNotContain("-p:PackageVersion=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
+        Assert.Contains("-p:Version=${{ needs.resolve-versions.outputs.artifacts_version }}", job)
+        Assert.Contains("-p:RepositoryCommit=\"$GITHUB_SHA\"", job)
 
     [<Fact>]
     let ``artifacts package carries exact reviewed Quint source and identity receipts`` () =
@@ -155,7 +155,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0-preview.1.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.1.4.0.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package

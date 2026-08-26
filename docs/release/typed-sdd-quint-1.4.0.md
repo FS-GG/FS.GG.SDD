@@ -33,10 +33,12 @@ Manifest v1 and its public record remain unchanged. Manifest v2 APIs are additiv
 explicit and retains a byte-exact authenticated rollback inventory. Provider floors, registry rows,
 consumer pins, workspace defaults, and coordinated adoption remain outside this release.
 
-Migration never claims that arbitrary legacy requirements were compiled into the fixed Q1 executable
-slice. It carries the complete canonical manifest-v1 model as a lossless semantic payload and binds it
-independently in Markdown, the compiled contract, and rollback inventory. Transaction recovery is
-hard-kill tested at every author move and during rollback; concurrent inspection waits for the same lock.
+Migration lowers every legacy semantic identity, reference, acceptance action effect, and text field
+into the bounded compiled contract while keeping the fixed raw Q1 Quint executable slice distinct. It
+also carries the complete canonical manifest-v1 model as a lossless semantic payload and binds it in
+Markdown, the compiled contract, and rollback inventory. The Linux sandbox invocation is a recorded,
+digest-bound authority artifact. Transaction recovery is hard-kill tested at every author move and
+during rollback; inspect, replacement, migration, and rollback share the same decision-to-commit lock.
 
 ## Release proof
 

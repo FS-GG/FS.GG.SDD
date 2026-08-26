@@ -50,6 +50,21 @@ type QuintVerificationSelection =
       Impacts: QuintImpact list }
 
 [<RequireQualifiedAccess>]
+module QuintSandbox =
+    /// Canonical recorded OS sandbox contract for the Linux user/network namespace effect edge.
+    val contractBytes: byte array
+
+[<RequireQualifiedAccess>]
+module QuintV1Migration =
+    /// Deterministically lower one canonical manifest-v1 model into the bounded migration portion
+    /// of a compiled Quint contract. Every v1 semantic identity, reference, and text field is kept.
+    val lower:
+        normalizedModel: byte array ->
+        payloadSource: QuintSourceRange ->
+        baseContract: QuintCompiledContract ->
+            Result<QuintCompiledContract, TypedLifecycleDiagnostic list>
+
+[<RequireQualifiedAccess>]
 module TypedAuthority =
     /// Strictly decode manifest v1 or v2 by schemaVersion and declared backend.
     val deserialize: text: string -> Result<TypedAuthority, TypedLifecycleDiagnostic>

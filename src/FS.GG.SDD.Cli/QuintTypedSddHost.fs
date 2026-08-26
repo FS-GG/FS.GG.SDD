@@ -342,38 +342,63 @@ example are all explicit in the embedded Quint source.
                                   Relationships = []
                                   VerificationProfiles = []
                                   Bounds = []
-                                  Impacts =
-                                    migrationPayload
-                                    |> Option.map (fun bytes ->
-                                        [ { SubjectId = "REQ-AUDIT-001"
-                                            Category = "manifest-v1-semantic-payload"
-                                            Detail = Convert.ToBase64String bytes } ])
-                                    |> Option.defaultValue []
+                                  Impacts = []
                                   Compatibility = []
                                   Digests =
-                                    [ { Name = "typed-effect"; Sha256 = sha256 typed }
-                                      match migrationPayload with
-                                      | Some bytes ->
-                                          { Name = "requirements-extension-v1"
-                                            Sha256 = sha256 bytes }
-                                      | None -> () ] } }
+                                    [ { Name = "sandbox-contract"; Sha256 = sha256 QuintSandbox.contractBytes }
+                                      { Name = "typed-effect"; Sha256 = sha256 typed } ] } }
                         match QuintCompiler.compileObserved input with
                         | Error findings ->
                             Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.compilationFailed" finding.Message "Correct the authored source or exact tool observations."))
                         | Ok output ->
-                            let fenceBytes = QuintSource.encodeFenceManifest input.FenceManifest
-                            let sourceMapBytes = QuintSource.encodeSourceMap input.SourceMap
-                            let relative =
+                            let finalized =
+                                match migrationPayload with
+                                | None -> Ok(output.Contract, output.CanonicalContract, output.Bindings, output.Receipt, output.CanonicalReceipt)
+                                | Some payload ->
+                                    let payloadLine =
+                                        let markdownLines = markdownText.Split('\n')
+                                        markdownLines
+                                        |> Array.findIndex (fun line -> line.StartsWith("fsgg.requirements-extension/v1+base64 ", StringComparison.Ordinal))
+                                        |> (+) 1
+                                    let markdownLines = markdownText.Split('\n')
+                                    let payloadRange = range logicalPath payloadLine 1 payloadLine markdownLines[payloadLine - 1].Length
+                                    QuintV1Migration.lower payload payloadRange output.Contract
+                                    |> Result.bind (fun contract ->
+                                        match QuintContract.serializeCanonical contract, QuintBindings.generate "RequirementsBindings" contract with
+                                        | Ok canonical, Ok bindings ->
+                                            match QuintContract.fingerprint
+                                                { SourceSha256 = output.Receipt.SourceSha256
+                                                  FenceManifestSha256 = output.Receipt.FenceManifestSha256
+                                                  GeneratedModulesSha256 = output.Receipt.GeneratedModulesSha256
+                                                  ToolchainSha256 = output.Receipt.ToolchainSha256
+                                                  Contract = contract } with
+                                            | Ok fingerprint ->
+                                                let receipt =
+                                                    { output.Receipt with
+                                                        ContractSha256 = sha256 (Encoding.UTF8.GetBytes canonical)
+                                                        CompilationFingerprint = fingerprint }
+                                                Ok(contract, canonical, bindings, receipt, QuintCompiler.encodeReceipt receipt)
+                                            | Error findings -> Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.migrationCompilationFailed" finding.Message finding.Correction))
+                                        | Error findings, _ -> Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.migrationCompilationFailed" finding.Message finding.Correction))
+                                        | _, Error findings -> Error(findings |> List.map (fun finding -> diagnostic "typedSdd.v2.migrationCompilationFailed" finding.Message "Correct the bounded v1 migration identities and references.")))
+
+                            match finalized with
+                            | Error findings -> Error findings
+                            | Ok(_, canonicalContract, bindings, _, canonicalReceipt) ->
+                              let fenceBytes = QuintSource.encodeFenceManifest input.FenceManifest
+                              let sourceMapBytes = QuintSource.encodeSourceMap input.SourceMap
+                              let relative =
                                 [ "markdown", logicalPath, markdownBytes
                                   "fence-manifest", $"readiness/{workId}/quint/fences.json", fenceBytes
                                   "generated-modules", $"readiness/{workId}/quint/{fences.Head.Target}", generated
                                   "source-map", $"readiness/{workId}/quint/source-map.json", sourceMapBytes
                                   "typed-effect", $"readiness/{workId}/quint/typed-effect.json", typed
-                                  "compiled-contract", $"readiness/{workId}/quint/contract.json", Encoding.UTF8.GetBytes output.CanonicalContract
-                                  "bindings", $"readiness/{workId}/quint/bindings.fs", Encoding.UTF8.GetBytes output.Bindings.FSharpSource
-                                  "compilation-receipt", $"readiness/{workId}/quint/receipt.json", Encoding.UTF8.GetBytes output.CanonicalReceipt ]
-                            let artifacts = relative |> List.map (fun (id, path, bytes) -> { Id = id; Path = path; Sha256 = sha256 bytes })
-                            let manifest =
+                                  "sandbox-contract", $"readiness/{workId}/quint/sandbox-contract.json", QuintSandbox.contractBytes
+                                  "compiled-contract", $"readiness/{workId}/quint/contract.json", Encoding.UTF8.GetBytes canonicalContract
+                                  "bindings", $"readiness/{workId}/quint/bindings.fs", Encoding.UTF8.GetBytes bindings.FSharpSource
+                                  "compilation-receipt", $"readiness/{workId}/quint/receipt.json", Encoding.UTF8.GetBytes canonicalReceipt ]
+                              let artifacts = relative |> List.map (fun (id, path, bytes) -> { Id = id; Path = path; Sha256 = sha256 bytes })
+                              let manifest =
                                 { SchemaVersion = 2
                                   Lifecycle = "typed-sdd"
                                   Backend = "quint-specification-v1"
@@ -385,17 +410,17 @@ example are all explicit in the embedded Quint source.
                                   AuthoringSession = session
                                   RollbackManifestPath = rollback |> Option.map _.ManifestPath
                                   RollbackManifestSha256 = rollback |> Option.map (_.ManifestBytes >> sha256) }
-                            let observations =
+                              let observations =
                                 [ yield! relative |> List.map (fun (_, path, bytes) -> { Path = path; State = QuintAuthorityArtifactState.Present bytes })
                                   match rollback with
                                   | Some value -> yield { Path = value.ManifestPath; State = QuintAuthorityArtifactState.Present value.ManifestBytes }
                                   | None -> () ]
-                            match TypedAuthority.validateQuintV2 packageIdentity observations manifest with
-                            | [] ->
+                              match TypedAuthority.validateQuintV2 packageIdentity observations manifest with
+                              | [] ->
                                 let manifestPath = $"readiness/{workId}/typed-authority.json"
                                 let rollbackWrites = rollback |> Option.map _.Writes |> Option.defaultValue []
                                 Ok { Manifest = manifest; Writes = rollbackWrites @ (relative |> List.map (fun (_, path, bytes) -> path, bytes)) @ [ manifestPath, Encoding.UTF8.GetBytes(TypedAuthority.serializeQuintV2 manifest) ] }
-                            | findings -> Error findings
+                              | findings -> Error findings
                 finally
                     if Directory.Exists temporary then Directory.Delete(temporary, true)
         | _ ->

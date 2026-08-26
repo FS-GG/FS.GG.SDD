@@ -495,6 +495,7 @@ module TypedSdd =
                       "The selected local Quint cache does not exist."
                       "Preseed the exact Q1/Q2 cache and pass its path." ]
         | Some cache ->
+            use transactionLock = acquireAuthorityLock rootPath
             let existing =
                 if File.Exists manifestPath then
                     try File.ReadAllText manifestPath |> TypedAuthority.deserialize |> Some
@@ -523,7 +524,7 @@ module TypedSdd =
                                 | Some path -> path, bytes
                                 | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
 
-                        atomicWrite rootPath writes
+                        atomicReplaceUnlocked rootPath writes []
                         Ok(output.Writes |> List.map fst)
                     with ex ->
                         Error
@@ -532,7 +533,7 @@ module TypedSdd =
                                   ex.Message
                                   "Correct filesystem access and retry; the prior authority was restored." ]
 
-    let private migrateQuint args workId sourceRelative (migrationPayload: byte array) =
+    let private migrateQuint args workId sourceRelative (migrationPayload: byte array) expectedSourceSha =
         let rootPath = root args
         let agent = optionValue "--agent" args |> Option.defaultValue ""
         let session = optionValue "--session" args |> Option.defaultValue ""
@@ -545,27 +546,47 @@ module TypedSdd =
         | Some cache when not (Directory.Exists cache) ->
             Error [ diagnostic "typedSdd.v2.cacheMissing" "The selected local Quint cache does not exist." "Preseed the exact Q1/Q2 cache and pass its path." ]
         | Some cache ->
-            match QuintTypedSddRollback.snapshot rootPath workId sourceRelative with
-            | Error findings -> Error findings
-            | Ok rollback ->
-                let title = optionValue "--title" args |> Option.defaultValue workId
-                if title.Contains('\r') || title.Contains('\n') || title |> Seq.exists Char.IsControl then
-                    Error [ diagnostic "typedSdd.v2.titleInvalid" "Quint authority titles must be one printable line." "Remove line breaks and control characters from --title." ]
-                else
-                  match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) (Some rollback) (Some migrationPayload) with
-                  | Error findings -> Error findings
-                  | Ok output ->
+            use transactionLock = acquireAuthorityLock rootPath
+            let manifestPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
+            let currentMatchesProposal =
+                if File.Exists manifestPath then
                     try
-                        let writes =
-                            output.Writes
-                            |> List.map (fun (relative, bytes) ->
-                                match containedPath rootPath relative with
-                                | Some path -> path, bytes
-                                | None -> invalidOp $"Quint migration emitted an unsafe path: {relative}")
-                        atomicWrite rootPath writes
-                        Ok(output.Writes |> List.map fst)
-                    with ex ->
-                        Error [ diagnostic "typedSdd.v2.transactionFailed" ex.Message "Correct filesystem access and retry; the exact v1 authority was restored." ]
+                        match File.ReadAllText manifestPath |> TypedAuthority.deserialize with
+                        | Ok(FsharpSpecificationV1 authority) ->
+                            containedPath rootPath authority.NormalizedPath
+                            |> Option.exists (fun path -> File.Exists path && File.ReadAllBytes path = migrationPayload)
+                        | _ -> false
+                    with _ -> false
+                else
+                    containedPath rootPath sourceRelative
+                    |> Option.exists (fun path -> File.Exists path && TypedAuthorityManifest.sha256 (File.ReadAllBytes path) = expectedSourceSha)
+
+            if not currentMatchesProposal then
+                Error [ diagnostic "typedSdd.v2.migrationProposalStale" "The source authority changed after migration preflight." "Run preflight again and accept only its current semantic payload digest." ]
+            else
+                match QuintTypedSddRollback.snapshot rootPath workId sourceRelative with
+                | Error findings -> Error findings
+                | Ok rollback ->
+                    let title = optionValue "--title" args |> Option.defaultValue workId
+
+                    if title.Contains('\r') || title.Contains('\n') || title |> Seq.exists Char.IsControl then
+                        Error [ diagnostic "typedSdd.v2.titleInvalid" "Quint authority titles must be one printable line." "Remove line breaks and control characters from --title." ]
+                    else
+                        match QuintTypedSddHost.author (packageIdentity ()) workId title agent session (Path.GetFullPath cache) (Some rollback) (Some migrationPayload) with
+                        | Error findings -> Error findings
+                        | Ok output ->
+                            try
+                                let writes =
+                                    output.Writes
+                                    |> List.map (fun (relative, bytes) ->
+                                        match containedPath rootPath relative with
+                                        | Some path -> path, bytes
+                                        | None -> invalidOp $"Quint migration emitted an unsafe path: {relative}")
+
+                                atomicReplaceUnlocked rootPath writes []
+                                Ok(output.Writes |> List.map fst)
+                            with ex ->
+                                Error [ diagnostic "typedSdd.v2.transactionFailed" ex.Message "Correct filesystem access and retry; the exact v1 authority was restored." ]
 
     let private author args =
         match work args with
@@ -871,7 +892,7 @@ module TypedSdd =
                         | Ok payload ->
                             let acceptedSummary =
                                 summary @ [ $"semantic payload sha256: {TypedAuthorityManifest.sha256 payload}" ]
-                            match migrateQuint args workId source payload with
+                            match migrateQuint args workId source payload rollback with
                             | Ok changed ->
                                 emit
                                     { Operation = "migrate"

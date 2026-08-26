@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportVersion": "2.6.0",
-  "toolVersion": "1.4.0-preview.1",
+  "toolVersion": "1.4.0",
   "command": {
     "name": "init",
     "stage": "project"
@@ -207,7 +207,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "152afd040ec8887c48a41c614054a258caa166b94696ae6240e8642592804b4c"
+        "value": "d90ea8872c6ae871b1acf007da42c98c70c95e548a47a5f368d4d5490f1beac1"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -220,7 +220,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "ede462a67d187254ca2158f64cea545af27fbeffee78a4a59c0e1fc93f95c3fb"
+        "value": "acf98b050f401ad583b2c4e651f8b090921c0df3b350f16a1ae4d9d0543bd266"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -233,7 +233,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "02b40f013b0c836cfd058b6ba42de3ddc73a77c0ae432cd09c040ffa44e9ed68"
+        "value": "94ecee820b476651a1eb5a1e6b9d6483a14568a6b257eb8e10ffba5b40f7d2d4"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -454,7 +454,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "152afd040ec8887c48a41c614054a258caa166b94696ae6240e8642592804b4c"
+        "value": "d90ea8872c6ae871b1acf007da42c98c70c95e548a47a5f368d4d5490f1beac1"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -467,7 +467,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "ede462a67d187254ca2158f64cea545af27fbeffee78a4a59c0e1fc93f95c3fb"
+        "value": "acf98b050f401ad583b2c4e651f8b090921c0df3b350f16a1ae4d9d0543bd266"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -480,7 +480,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "02b40f013b0c836cfd058b6ba42de3ddc73a77c0ae432cd09c040ffa44e9ed68"
+        "value": "94ecee820b476651a1eb5a1e6b9d6483a14568a6b257eb8e10ffba5b40f7d2d4"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -594,7 +594,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "61b25c39446e9c758cc11dc04e1e630fd984b02a439bbcc0cf87eb9b0143d6fe"
+        "value": "943f1c45da5997e2110ef5cc638ce981bf6bc743e61515ba54a25706fb23a215"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []

@@ -49,6 +49,117 @@ type QuintVerificationSelection =
       Impacts: QuintImpact list }
 
 [<RequireQualifiedAccess>]
+module QuintSandbox =
+    let contractBytes =
+        Encoding.UTF8.GetBytes
+            "{\"schema\":\"fsgg.quint.os-sandbox/v1\",\"platform\":\"linux-amd64\",\"primitive\":\"user-network-namespace\",\"launcher\":\"/usr/bin/unshare\",\"arguments\":[\"--user\",\"--map-root-user\",\"--net\",\"--\"]}\n"
+
+[<RequireQualifiedAccess>]
+module QuintV1Migration =
+    let private diagnostic id message correction : TypedLifecycleDiagnostic =
+        { Id = id; Message = message; Correction = correction }
+
+    let lower (normalizedModel: byte array) payloadSource baseContract =
+        try
+            let text = UTF8Encoding(false, true).GetString normalizedModel
+            match SpecificationCodec.deserialize RequirementsExtension.contract text with
+            | Error findings ->
+                Error [ diagnostic "typedSdd.v2.migrationModelInvalid" findings.Head.Message "Restore the canonical valid manifest-v1 normalized model." ]
+            | Ok model ->
+                match SpecificationCodec.serialize RequirementsExtension.contract model with
+                | Error findings ->
+                    Error [ diagnostic "typedSdd.v2.migrationModelInvalid" findings.Head.Message "Restore the canonical valid manifest-v1 normalized model." ]
+                | Ok canonical when Encoding.UTF8.GetBytes(canonical + "\n") <> normalizedModel ->
+                    Error [ diagnostic "typedSdd.v2.migrationModelNonCanonical" "The retained manifest-v1 semantic model is not canonical." "Migrate only from a validated manifest-v1 authority." ]
+                | Ok _ ->
+                    let id value = SpecificationId.value value
+                    let entry kind identifier = { Id = id identifier; Kind = kind; Source = payloadSource }
+                    let extension = model.Extension
+                    let supplement =
+                        [ yield entry ExternalSubject model.Identity
+                          yield! extension.Scope |> List.map (fun row -> entry ExternalSubject row.Id)
+                          yield! extension.NonGoals |> List.map (fun row -> entry ExternalSubject row.Id)
+                          yield! extension.Stories |> List.map (fun row -> entry ExternalSubject row.Id)
+                          yield! extension.Requirements |> List.map (fun row -> entry Requirement row.Id)
+                          yield! extension.Acceptance |> List.map (fun row -> entry Invariant row.Id)
+                          yield! extension.Acceptance |> List.map (fun row -> { Id = "Evaluate-" + id row.Id; Kind = QuintCatalogueKind.Action; Source = payloadSource })
+                          yield! extension.Ambiguities |> List.map (fun row -> entry ExternalSubject row.Id)
+                          yield! model.EvidenceObligations |> List.map (fun row -> entry Evidence row.Id) ]
+                    let allEntries = baseContract.Catalogue @ supplement
+                    let duplicates = allEntries |> List.countBy _.Id |> List.filter (fun (_, count) -> count > 1) |> List.map fst
+                    if not (List.isEmpty duplicates) then
+                        let names = String.concat ", " duplicates
+                        Error [ diagnostic "typedSdd.v2.migrationIdentityCollision" ($"Manifest-v1 identities collide with the qualified Quint catalogue: {names}.") "Rename colliding legacy identities before migration." ]
+                    else
+                        let relationship fromId kind toId = { FromId = id fromId; Kind = kind; ToId = id toId }
+                        let relationships =
+                            [ for requirement in extension.Requirements do
+                                  for acceptanceId in requirement.AcceptanceIds do
+                                      yield relationship requirement.Id VerifiedBy acceptanceId
+                                  for evidenceId in requirement.EvidenceObligationIds do
+                                      yield relationship requirement.Id VerifiedBy evidenceId
+                              for acceptance in extension.Acceptance do
+                                  yield { FromId = "Evaluate-" + id acceptance.Id; Kind = Requires; ToId = id acceptance.Id }
+                                  for storyId in acceptance.StoryIds do
+                                      yield relationship acceptance.Id Requires storyId
+                                  for requirementId in acceptance.RequirementIds do
+                                      yield relationship acceptance.Id Requires requirementId ]
+                            |> List.distinct
+                            |> List.sortBy (fun row -> row.FromId, row.Kind, row.ToId)
+                        let migrationEffects =
+                            extension.Acceptance
+                            |> List.map (fun acceptance ->
+                                let subjects =
+                                    (acceptance.StoryIds @ acceptance.RequirementIds)
+                                    |> List.map id
+                                    |> List.distinct
+                                    |> List.sort
+                                { ActionId = "Evaluate-" + id acceptance.Id
+                                  Reads = subjects
+                                  Writes = [ id acceptance.Id ]
+                                  Subjects = subjects })
+                        let compatibility surface requirement detail =
+                            { Surface = surface; Requirement = requirement; Detail = detail }
+                        let state = function | Open -> "open" | Resolved -> "resolved" | Deferred -> "deferred"
+                        let compatibilityRows =
+                            [ yield compatibility "v1/model" (id model.Identity) model.Intent
+                              yield compatibility "v1/user-value" (id model.Identity) extension.UserValue
+                              for row in extension.Scope do yield compatibility "v1/scope" (id row.Id) row.Statement
+                              for row in extension.NonGoals do yield compatibility "v1/non-goal" (id row.Id) row.Statement
+                              for row in extension.Stories do yield compatibility ("v1/story/" + row.Priority) (id row.Id) row.Statement
+                              for row in extension.Requirements do yield compatibility "v1/requirement" (id row.Id) row.Statement
+                              for row in extension.Acceptance do yield compatibility "v1/acceptance" (id row.Id) row.Statement
+                              for row in extension.Ambiguities do
+                                  yield compatibility ("v1/ambiguity/" + state row.State) (id row.Id) (row.Question + "\n" + (row.Decision |> Option.defaultValue ""))
+                              for row in model.EvidenceObligations do yield compatibility ("v1/evidence/" + row.Kind) (id row.Id) row.Description
+                              for index, value in extension.PublicImpact |> List.indexed do yield compatibility "v1/public-impact" ($"index-{index:D4}") value
+                              for index, value in extension.LifecycleNotes |> List.indexed do yield compatibility "v1/lifecycle-note" ($"index-{index:D4}") value ]
+                            |> List.sortBy (fun row -> row.Surface, row.Requirement, row.Detail)
+                        let payloadSha = TypedAuthorityManifest.sha256 normalizedModel
+                        Ok
+                            { baseContract with
+                                Catalogue = allEntries |> List.sortBy (fun row -> row.Id, row.Kind)
+                                ActionEffects = (baseContract.ActionEffects @ migrationEffects) |> List.sortBy _.ActionId
+                                Relationships =
+                                    (baseContract.Relationships @ relationships)
+                                    |> List.distinct
+                                    |> List.sortBy (fun row -> row.FromId, row.Kind, row.ToId)
+                                Impacts =
+                                    ({ SubjectId = id model.Identity
+                                       Category = "manifest-v1-semantic-payload"
+                                       Detail = Convert.ToBase64String normalizedModel }
+                                     :: baseContract.Impacts)
+                                    |> List.sortBy (fun row -> row.SubjectId, row.Category, row.Detail)
+                                Compatibility =
+                                    (baseContract.Compatibility @ compatibilityRows)
+                                    |> List.sortBy (fun row -> row.Surface, row.Requirement, row.Detail)
+                                Digests =
+                                    ({ Name = "requirements-extension-v1"; Sha256 = payloadSha } :: baseContract.Digests)
+                                    |> List.sortBy _.Name }
+        with ex ->
+            Error [ diagnostic "typedSdd.v2.migrationModelInvalid" ex.Message "Restore the canonical valid manifest-v1 normalized model." ]
+
+[<RequireQualifiedAccess>]
 module TypedAuthority =
     let private diagnostic id message correction : TypedLifecycleDiagnostic =
         { Id = id
@@ -62,6 +173,7 @@ module TypedAuthority =
               "generated-modules"
               "source-map"
               "typed-effect"
+              "sandbox-contract"
               "compiled-contract"
               "bindings"
               "compilation-receipt" ]
@@ -133,8 +245,8 @@ module TypedAuthority =
                       yield closure "typedSdd.v2.contractNonCanonical" "The compiled-contract bytes are not the canonical serialization of their meaning." "Regenerate the contract with the qualified compiler."
           | None -> ()
 
-          match text "compilation-receipt", text "compiled-contract", bytes "fence-manifest", text "generated-modules", bytes "source-map", bytes "markdown", text "typed-effect", text "bindings" with
-          | Some receiptText, Some contractText, Some fenceBytes, Some modulesText, Some sourceMapBytes, Some markdownBytes, Some typedEffectText, Some bindingsText ->
+          match text "compilation-receipt", text "compiled-contract", bytes "fence-manifest", text "generated-modules", bytes "source-map", bytes "markdown", text "typed-effect", bytes "sandbox-contract", text "bindings" with
+          | Some receiptText, Some contractText, Some fenceBytes, Some modulesText, Some sourceMapBytes, Some markdownBytes, Some typedEffectText, Some sandboxBytes, Some bindingsText ->
               try
                   use receiptDocument = JsonDocument.Parse receiptText
                   let receipt = receiptDocument.RootElement
@@ -194,11 +306,15 @@ module TypedAuthority =
                                   | ExternalSubject -> "externalSubjectCatalogue"
 
                               let typedObservation =
+                                  let migration = contract.Impacts |> List.exists (fun impact -> impact.Category = "manifest-v1-semantic-payload")
+                                  let q1Ids =
+                                      set [ "REQ-AUDIT-001"; "EV-VERIFY-001"; "ObserveEvidence"; "AcceptRequirement"; "AcceptedOnlyWithEvidence"; "RequirementCanBeAccepted" ]
                                   { Profile = manifest.ProfileIdentity
                                     QuintVersion = QuintProfile.quintVersion
                                     TypedEffectJson = typedEffectText
                                     SourceBindings =
                                       contract.Catalogue
+                                      |> List.filter (fun entry -> not migration || q1Ids.Contains entry.Id)
                                       |> List.map (fun entry ->
                                           { ModuleName = "RequirementsSlice"
                                             CatalogueName = catalogueName entry.Kind
@@ -206,30 +322,45 @@ module TypedAuthority =
                                             Kind = entry.Kind
                                             Source = entry.Source }) }
 
+                              let migrationImpacts =
+                                  contract.Impacts
+                                  |> List.filter (fun impact -> impact.Category = "manifest-v1-semantic-payload")
+                              let mutable adaptedCatalogue = None
                               match QuintProfile.adaptTypedEffectJson typedObservation with
                               | Ok adapted when
                                   adapted.Profile = contract.Profile
-                                  && adapted.Entries = contract.Catalogue
-                                  && adapted.ActionEffects = contract.ActionEffects -> ()
+                                  && ((adapted.Entries = contract.Catalogue && adapted.ActionEffects = contract.ActionEffects)
+                                      || migrationImpacts.Length = 1) ->
+                                  adaptedCatalogue <- Some adapted
                               | _ ->
                                   yield closure "typedSdd.v2.typedEffectClosure" "The retained Quint typed/effect observation does not adapt to the compiled contract catalogue and action effects." "Recompile from the exact qualified Quint observation and source bindings."
 
                               let typedDigest = { Name = "typed-effect"; Sha256 = typedEffectSha }
-                              let migrationImpacts =
-                                  contract.Impacts
-                                  |> List.filter (fun impact -> impact.Category = "manifest-v1-semantic-payload")
+                              let sandboxDigest = { Name = "sandbox-contract"; Sha256 = TypedAuthorityManifest.sha256 sandboxBytes }
+                              if sandboxBytes <> QuintSandbox.contractBytes then
+                                  yield closure "typedSdd.v2.sandboxContract" "The recorded OS sandbox contract is not the qualified Linux user/network namespace contract." "Re-author with the qualified sandbox effect edge."
 
                               match migrationImpacts with
-                              | [] when contract.Impacts = [] && contract.Digests = [ typedDigest ] -> ()
+                              | [] when contract.Impacts = [] && contract.Digests = [ sandboxDigest; typedDigest ] -> ()
                               | [ impact ] when contract.Impacts = [ impact ] ->
                                   try
                                       let payload = Convert.FromBase64String impact.Detail
                                       let payloadSha = TypedAuthorityManifest.sha256 payload
                                       let expectedDigests =
                                           [ { Name = "requirements-extension-v1"; Sha256 = payloadSha }
+                                            sandboxDigest
                                             typedDigest ]
                                       let marker = "fsgg.requirements-extension/v1+base64 " + impact.Detail + "\n"
                                       let markdownText = UTF8Encoding(false, true).GetString markdownBytes
+                                      let markdownLines = markdownText.Split('\n')
+                                      let payloadLine =
+                                          markdownLines
+                                          |> Array.findIndex (fun line -> line = marker.TrimEnd('\n'))
+                                          |> (+) 1
+                                      let payloadRange =
+                                          { Path = artifacts["markdown"].Path
+                                            Start = { Line = payloadLine; Column = 1 }
+                                            End = { Line = payloadLine; Column = markdownLines[payloadLine - 1].Length } }
                                       let rollbackBindsPayload =
                                           match manifest.RollbackManifestPath with
                                           | Some rollbackPath ->
@@ -245,9 +376,26 @@ module TypedAuthority =
                                               | _ -> false
                                           | None -> false
 
+                                      let loweringMatches =
+                                          match adaptedCatalogue with
+                                          | Some adapted ->
+                                              let baseContract =
+                                                  { contract with
+                                                      Catalogue = adapted.Entries
+                                                      ActionEffects = adapted.ActionEffects
+                                                      Relationships = []
+                                                      Impacts = []
+                                                      Compatibility = []
+                                                      Digests = [ sandboxDigest; typedDigest ] }
+                                              match QuintV1Migration.lower payload payloadRange baseContract with
+                                              | Ok expected -> QuintContract.serializeCanonical expected = Ok contractText
+                                              | Error _ -> false
+                                          | None -> false
+
                                       if contract.Digests <> expectedDigests
                                          || not (markdownText.EndsWith(marker, StringComparison.Ordinal))
-                                         || not rollbackBindsPayload then
+                                         || not rollbackBindsPayload
+                                         || not loweringMatches then
                                           yield closure "typedSdd.v2.migrationCorrespondence" "The migrated semantic payload is not identically bound by Markdown, compiled-contract digest, and authenticated rollback inventory." "Re-run migration from the complete canonical manifest-v1 authority."
                                   with _ ->
                                       yield closure "typedSdd.v2.migrationCorrespondence" "The migrated semantic payload is malformed or not authenticated by the rollback inventory." "Re-run migration from the complete canonical manifest-v1 authority."

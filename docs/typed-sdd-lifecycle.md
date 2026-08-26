@@ -92,7 +92,10 @@ reference requires a decision, or `Unsupported` for constructs outside the publi
 report includes locations or a semantic diff and the rollback source digest. Only after reviewing a
 `Migrated` report should the command be repeated with `--accept`. For Quint v2, add the explicit
 backend, cache, agent, and session arguments used by authoring. The qualified migration accepts only
-the closed Q1 requirements/evidence profile; other semantics are `Unsupported`, never approximated.
+the closed requirements/evidence extension. Every v1 identity is lowered into the bounded compiled
+catalogue, references become relationships and acceptance action effects, and semantic text is retained
+as non-executable compatibility metadata. The raw Q1 Quint module remains the fixed executable slice;
+other semantics are `Unsupported`, never approximated.
 Acceptance snapshots every original v1 path and byte under
 `.fsgg/typed-sdd-rollback/v1/<id>/`, authenticates the inventory from manifest v2, then commits.
 Direct v1 replacement through `author --accept` is refused. Restore explicitly with:
@@ -112,7 +115,9 @@ V2 additionally distinguishes absent, unreadable, aliased, noncanonical, stale s
 typed-effect, binding, receipt, tool/cache, transaction, and rollback failures. Unknown change classes
 select the full verification corpus.
 
-Author and rollback commits use the same exclusive authority lock and canonical recovery journal.
+Author, migration, and rollback decisions and commits use the same exclusive authority lock and
+canonical recovery journal. Migration additionally compares the accepted v1 source and normalized
+payload with its preflight observation before it may commit.
 The journal records every target, whether it existed, and its prior bytes before the first live move.
 Inspection takes that lock and recovers an interrupted prepared transaction before reading the
 manifest. A committed journal retains the new tree; a prepared journal restores the old tree.
@@ -135,4 +140,7 @@ One ordered lifecycle and skill corpus avoids two processes drifting apart. A ba
 manifest still allows strong freshness and identity checks. F# v1 requires a compatible compiler;
 Quint v2 requires the exact preseeded cache. Neither backend performs network acquisition.
 The Linux-qualified effect edge clears ambient state, supplies only the environment declared in the
-Q2 process request, and executes the exact retained tools inside a fresh user/network namespace.
+Q2 process request, and executes the exact retained tools inside a fresh user/network namespace. Its
+launcher, platform, arguments, and namespace primitive are recorded as the canonical
+`fsgg.quint.os-sandbox/v1` artifact; inspection requires those exact bytes and binds their digest into
+the compiled contract.
