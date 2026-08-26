@@ -502,19 +502,33 @@ module QuintSource =
             use document = JsonDocument.Parse bytes
             let root = document.RootElement
 
-            match QuintSourceInternal.requireFields "/" (set [ "schema"; "sourcePath"; "sourceSha256"; "fences" ]) root with
+            match
+                QuintSourceInternal.requireFields "/" (set [ "schema"; "sourcePath"; "sourceSha256"; "fences" ]) root
+            with
             | Error finding -> Error [ finding ]
             | Ok() when root.GetProperty("fences").ValueKind <> JsonValueKind.Array ->
-                Error [ QuintSourceInternal.diagnostic "QUINT-FENCE-MANIFEST-VALUE-INVALID" "/fences" "Fence manifest fences must be an array." ]
+                Error
+                    [ QuintSourceInternal.diagnostic
+                          "QUINT-FENCE-MANIFEST-VALUE-INVALID"
+                          "/fences"
+                          "Fence manifest fences must be an array." ]
             | Ok() ->
                 let decoded =
                     root.GetProperty("fences").EnumerateArray()
                     |> Seq.mapi (fun index item ->
                         let path = $"/fences/{index}"
-                        match QuintSourceInternal.requireFields path (set [ "ordinal"; "target"; "moduleName"; "sourceRange"; "contentSha256" ]) item with
+
+                        match
+                            QuintSourceInternal.requireFields
+                                path
+                                (set [ "ordinal"; "target"; "moduleName"; "sourceRange"; "contentSha256" ])
+                                item
+                        with
                         | Error finding -> Error finding
                         | Ok() ->
-                            match QuintSourceInternal.readRange (path + "/sourceRange") (item.GetProperty("sourceRange")) with
+                            match
+                                QuintSourceInternal.readRange (path + "/sourceRange") (item.GetProperty("sourceRange"))
+                            with
                             | Error finding -> Error finding
                             | Ok sourceRange ->
                                 try
@@ -525,16 +539,30 @@ module QuintSource =
                                           SourceRange = sourceRange
                                           ContentSha256 = QuintSourceInternal.readString "contentSha256" item }
                                 with ex ->
-                                    Error(QuintSourceInternal.diagnostic "QUINT-FENCE-MANIFEST-VALUE-INVALID" path ex.Message))
+                                    Error(
+                                        QuintSourceInternal.diagnostic
+                                            "QUINT-FENCE-MANIFEST-VALUE-INVALID"
+                                            path
+                                            ex.Message
+                                    ))
                     |> Seq.toList
 
-                match decoded |> List.choose (function Error finding -> Some finding | _ -> None) with
+                match
+                    decoded
+                    |> List.choose (function
+                        | Error finding -> Some finding
+                        | _ -> None)
+                with
                 | [] ->
                     Ok
                         { Schema = QuintSourceInternal.readString "schema" root
                           SourcePath = QuintSourceInternal.readString "sourcePath" root
                           SourceSha256 = QuintSourceInternal.readString "sourceSha256" root
-                          Fences = decoded |> List.choose (function Ok fence -> Some fence | _ -> None) }
+                          Fences =
+                            decoded
+                            |> List.choose (function
+                                | Ok fence -> Some fence
+                                | _ -> None) }
                 | findings -> Error(QuintSourceInternal.sortDiagnostics findings)
         with ex ->
             Error [ QuintSourceInternal.diagnostic "QUINT-FENCE-MANIFEST-MALFORMED" "/" ex.Message ]

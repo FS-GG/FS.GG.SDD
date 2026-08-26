@@ -667,10 +667,14 @@ nuget-cache/
             model.InterpretedEffects
             |> List.tryPick (fun result ->
                 match result.Effect, result.Snapshot with
-                | ReadFile path, Some snapshot when normalizeRelativePath path = normalizeRelativePath (TypedAuthorityManifest.path workId) -> Some snapshot.Text
+                | ReadFile path, Some snapshot when
+                    normalizeRelativePath path = normalizeRelativePath (TypedAuthorityManifest.path workId)
+                    ->
+                    Some snapshot.Text
                 | _ -> None)
 
-        if not (typedLifecycleSelected model) then []
+        if not (typedLifecycleSelected model) then
+            []
         else
             match manifest |> Option.map TypedAuthority.deserialize with
             | Some(Ok(QuintSpecificationV1 authority)) ->
@@ -787,9 +791,12 @@ nuget-cache/
                                     { Path = path
                                       State =
                                         QuintAuthorityArtifactState.Present(
-                                            snapshot.RawBytes |> Option.defaultValue (Encoding.UTF8.GetBytes snapshot.Text)
+                                            snapshot.RawBytes
+                                            |> Option.defaultValue (Encoding.UTF8.GetBytes snapshot.Text)
                                         ) }
-                                | None -> { Path = path; State = QuintAuthorityArtifactState.Missing }
+                                | None ->
+                                    { Path = path
+                                      State = QuintAuthorityArtifactState.Missing }
 
                             let observations =
                                 [ yield! authority.Artifacts |> List.map (fun artifact -> observation artifact.Path)

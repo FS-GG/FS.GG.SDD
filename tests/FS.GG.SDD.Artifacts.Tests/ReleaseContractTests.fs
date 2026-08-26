@@ -187,7 +187,9 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T017 serialized release matches the locked golden baseline`` () =
-        let normalizeProjection (text: string) = text.Replace("\r\n", "\n").TrimEnd('\n')
+        let normalizeProjection (text: string) =
+            text.Replace("\r\n", "\n").TrimEnd('\n')
+
         let baseline = File.ReadAllText(baselinePath) |> normalizeProjection
         let actual = serialize release |> normalizeProjection
 
@@ -208,7 +210,9 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T017 the published docs artifact matches the contract (projection cannot drift)`` () =
-        let normalizeProjection (text: string) = text.Replace("\r\n", "\n").TrimEnd('\n')
+        let normalizeProjection (text: string) =
+            text.Replace("\r\n", "\n").TrimEnd('\n')
+
         let actual = serialize release |> normalizeProjection
         let published = File.ReadAllText(publishedPath) |> normalizeProjection
 

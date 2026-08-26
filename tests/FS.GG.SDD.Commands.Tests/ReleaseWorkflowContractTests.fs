@@ -64,8 +64,11 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("run: bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
         Assert.Contains("quint-q3-public.junit.xml", publish)
 
-        let orgFeed = publish.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)
-        let publicFeed = publish.IndexOf("https://api.nuget.org/v3/index.json", StringComparison.Ordinal)
+        let orgFeed =
+            publish.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)
+
+        let publicFeed =
+            publish.IndexOf("https://api.nuget.org/v3/index.json", StringComparison.Ordinal)
 
         Assert.True(orgFeed >= 0 && publicFeed > orgFeed, "the org feed must be pushed before nuget.org")
         Assert.Contains("three independently consumable packages", contract)
