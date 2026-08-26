@@ -1,0 +1,62 @@
+{
+  "schema": "fsgg.quint.qualification-manifest/q1",
+  "subject": "FS-GG/FS.GG.SDD#922",
+  "profile": "fsgg-quint-profile/1",
+  "status": "producer-candidate-qualified-cross-repo-acceptance-pending",
+  "environment": {
+    "os": "Linux 7.1.8-arch1-3 x86_64",
+    "architecture": "linux/amd64"
+  },
+  "tools": {
+    "quint": { "version": "0.32.0", "sha256": "939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f", "bytes": 125661253 },
+    "lmt": { "source": "driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c", "sha256": "37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10", "bytes": 2787745 },
+    "go": { "version": "1.24.1", "archiveSha256": "cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073" },
+    "rustEvaluator": { "version": "0.6.0", "archiveSha256": "61755a09d5052d93a4e75e840059edfd0d3674aeda164b9d2464be3d6e21b1c2", "binarySha256": "b2efdeac5713d153e41bf2143b94ed75d888fdd5637f4a5d61a04c695313510a", "bytes": 2628304 },
+    "java": { "distribution": "Eclipse Temurin 21.0.9+10", "archiveSha256": "aeab55d064a1a27a3744b0880b9b414077b4ed2b1790817eea3df60aec946431", "binarySha256": "e865867065e48928c58293f30e7ae26a79c842f8607fa51d7e2e9fb90b602786", "installedBytes": 164841685 },
+    "apalache": { "version": "0.56.1", "archiveSha256": "a61c07569d7195ddc589f01037fa10fafef4fb0796af2f1c9cb45226375dfbfc", "treeReceiptSha256": "3466d07f06d7ac80ee0f171a96383183cee9d91bf1b5995d897d4f15c004569f", "jarSha256": "4753c0ebb2cbb266e2c6ac19ab5ca3827d726cc80fd1fc5d7c1eeb64736cd60b", "installedBytes": 136014794 }
+    ,"node": { "version": "26.7.0", "binarySha256": "d51d79e0e04abfe366345496a8e1379d56493271af4e0d6f27dd6ba76be628ea", "bytes": 62822072 }
+    ,"ajv": { "version": "8.17.1", "packageLockSha256": "8f52d263544de67504b2d103b6321f32a34a821cf9f54170f4f75d77e136f691", "closureSha256": "e14d4bfc96cce335d1d370f844294c8c6eeced38c61da0f5ae224e26f74d5007", "installedBytes": 1289583 }
+  },
+  "guidance": {
+    "source": "quint-co/quint-llm-kit@cc75369f741af7d490936f82002c2d28e3b3d78d",
+    "license": "Apache-2.0",
+    "licenseSha256": "5cc84061e5937535827c4fd3446c7609ad87065b55733b1874b2ddc67df04bf0",
+    "trackedTreeSha256": "68a11d403846de3af26759eef97f4a35eff5e71d561d41ea17d96e535c171556",
+    "skillDocuments": {
+      "quint-lang": "ba2312c2da15be623f8fcce0d256ae4427905ff3592e6d74bac0caa3aff68532",
+      "quint-modeling": "fe595baac9353a4c8ca572ee91b0d516000a17a83697db6244597597ae69c591",
+      "quint-execute-spec": "7bd1dbfddcded796c41bd0019b02f4b47a42e13ffd2d87010448ed86e0f38ab5"
+    }
+  },
+  "slices": [
+    { "id": "requirements-and-evidence", "sourceSha256": "0b0cea55284fa752148e8070076a6757607627d3708e76bff560ce6e5f397d93", "moduleSha256": "5ba6c90ae4b64bbbeda9a73c62343393facc746c3e0f8f883678d1be3012ca4b", "moduleBytes": 2298 },
+    { "id": "sir-damage-rule", "sourceSha256": "51e39cb14a6490313fbf3c7eb35e7e05aeafe1f4df92883bf2183d41ea87c9e0", "moduleSha256": "39b06159db6f0a76b8cc1d7b60eed6155a33539f9c47cb4d4079a915ad4a72d5", "moduleBytes": 1984 },
+    { "id": "coordination-process", "sourceSha256": "e620fb0f73ee292a9c3b17761b103e47644af1da52f8af103f49f0db2c5f2a0b", "moduleSha256": "7c12338b4541c9eea4612b2e1cf94f10ac4034b927517e9c05353f7c4c3fb1b5", "moduleBytes": 6537 }
+  ],
+  "documents": {
+    "profileSha256": "7a693471312f29c07fb3a30535a4e518ed15038d516e5ff95a58d29f7a799300",
+    "contractSchemaSha256": "db078e5bf9a17924e69d8451b7dfca091e8b18600633bf0bcad454b22b4fb185",
+    "contractExampleSha256": "7112b215f266bfec9edc0c4e7fec03f07366adbcc095d9eb52a8ce735b4626f6",
+    "sirReplayEnvelopeSha256": "c569cda621ba7784515d62ced431214c0dc3914c398325530a59b46e73a7a7d3",
+    "normalizedSirItfSha256": "70d1f8343fc212a86b7dacc4a2507a4513bdaadf1ee85b36c5c1d2907a2a4ddf",
+    "qualificationHarnessSha256": "50e05be3f21b0159922f5d300d43b531b701ac9acde87e1efd953c6da102e8c8",
+    "contractValidatorSha256": "a569f15bb5ba1b52a9856802241eff76c58fbd76cdda898b7fc2e923528117c9",
+    "qualificationReportSha256": "c0025131237b0ded9fb34d835f28b007c23ae92440854df0f1b960f2e248b2c2",
+    "workflowComparisonSha256": "191790e4213f0122f211c9ec9c65ff866eeba00e8798d80c2b5b0a1cc437d74b",
+    "guidanceEvaluationSha256": "63d49cc39497b4e15ecdcdf2cb45d1d8ed3d61531df5b81e011760367f62c4ca",
+    "fenceManifestSha256": "3086740d4827c6189e2f7a64338eb9b48d68b0b0a3055e5a7eab7f1d3acf702a",
+    "sourceManifestSha256": "7010930c7e1d1d9e3fe6a21f2fd96fe50c6a6f1a5619c8b241369644c2b5df80"
+  },
+  "qualification": {
+    "positiveCommands": 23,
+    "independentMutations": 19,
+    "fullHarnessObservedMilliseconds": 25900,
+    "timingIsSingleHostObservation": true
+  },
+  "gitBinding": {
+    "method": "successor-commit-receipt",
+    "receiptPath": "docs/experiments/quint-q1/candidate-receipt.json",
+    "note": "The candidate commit cannot include its own hash. A successor commit adds the receipt that binds this manifest and exact candidate commit; S.I.R. dispatch must use that receipt."
+  },
+  "pending": ["EHotwagner/S.I.R.#353 exact interpreter replay", "independent domain/readability acceptance", "independent architecture/tooling acceptance", "post-Q1 ADR-0077 amendment"]
+}

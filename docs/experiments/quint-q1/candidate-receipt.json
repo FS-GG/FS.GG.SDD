@@ -1,0 +1,13 @@
+{
+  "schema": "fsgg.quint.candidate-commit-receipt/q1",
+  "subject": "FS-GG/FS.GG.SDD#922",
+  "pullRequest": "FS-GG/FS.GG.SDD#925",
+  "candidateCommit": "3a0eced13305b146df2febd96698e38335cae99c",
+  "candidateTree": "bf5d69e62d99ba44a9b3db918af2370f4917745d",
+  "manifestPath": "docs/experiments/quint-q1/candidate-manifest.json",
+  "manifestGitBlob": "6080e16a537727a9c04fb6d1f0bcb8a05dca2dfb",
+  "manifestSha256": "0bb0a34f6e93c933b441fd34ebc0bbd521ac792b95955d49ed528cab3c014ddd",
+  "supersedesCandidateCommit": "78294750dfbefb98dfcef6af1b7b53ef7593739a",
+  "authority": "producer-candidate-only",
+  "acceptance": "pending-sir-and-successor-reviews"
+}
