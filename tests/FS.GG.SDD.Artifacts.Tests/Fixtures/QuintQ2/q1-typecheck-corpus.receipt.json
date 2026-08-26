@@ -1,0 +1,49 @@
+{
+  "schema": "fsgg.quint.typecheck-corpus-receipt/v1",
+  "command": "quint typecheck --out=<output> <module.qnt>",
+  "quintVersion": "0.32.0",
+  "quintBinarySha256": "939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f",
+  "lmtCommit": "62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c",
+  "lmtBinarySha256": "37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10",
+  "rootKeys": [
+    "effects",
+    "errors",
+    "modules",
+    "stage",
+    "table",
+    "types",
+    "warnings"
+  ],
+  "stage": "typechecking",
+  "errors": 0,
+  "warnings": 0,
+  "captures": [
+    {
+      "source": "docs/experiments/quint-q1/slices/requirements-and-evidence.md",
+      "sourceSha256": "0b0cea55284fa752148e8070076a6757607627d3708e76bff560ce6e5f397d93",
+      "generatedModule": "requirements.qnt",
+      "generatedModuleBytes": 2298,
+      "generatedModuleSha256": "5ba6c90ae4b64bbbeda9a73c62343393facc746c3e0f8f883678d1be3012ca4b",
+      "outputBytes": 68337,
+      "outputSha256": "6a7c4dd891a2b46753491b71cf3090ccf3449c97756e49055499463042e12af4"
+    },
+    {
+      "source": "docs/experiments/quint-q1/slices/sir-damage-rule.md",
+      "sourceSha256": "51e39cb14a6490313fbf3c7eb35e7e05aeafe1f4df92883bf2183d41ea87c9e0",
+      "generatedModule": "sir-damage.qnt",
+      "generatedModuleBytes": 1984,
+      "generatedModuleSha256": "39b06159db6f0a76b8cc1d7b60eed6155a33539f9c47cb4d4079a915ad4a72d5",
+      "outputBytes": 71921,
+      "outputSha256": "34fa4c442985cb4bd7d29e76e32c55ff0c909c12578623851989d4e64b0fd6de"
+    },
+    {
+      "source": "docs/experiments/quint-q1/slices/coordination-process.md",
+      "sourceSha256": "e620fb0f73ee292a9c3b17761b103e47644af1da52f8af103f49f0db2c5f2a0b",
+      "generatedModule": "coordination.qnt",
+      "generatedModuleBytes": 6537,
+      "generatedModuleSha256": "7c12338b4541c9eea4612b2e1cf94f10ac4034b927517e9c05353f7c4c3fb1b5",
+      "outputBytes": 337352,
+      "outputSha256": "d55b93de59a0b287e87cb9ae60f74d22a9548bb545fc2ba0829c62b75bc588df"
+    }
+  ]
+}

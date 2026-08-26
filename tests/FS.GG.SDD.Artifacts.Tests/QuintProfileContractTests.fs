@@ -50,7 +50,10 @@ module QuintProfileContractTests =
                 Kind = "apalache"
                 SubjectIds = [ "INV-Safe" ]
                 BoundIds = [ "BOUND-Steps" ] } ]
-          Bounds = [ { Id = "BOUND-Steps"; Minimum = 0L; Maximum = 8L } ]
+          Bounds =
+            [ { Id = "BOUND-Steps"
+                Minimum = 0L
+                Maximum = 8L } ]
           Impacts =
             [ { SubjectId = "REQ-Safety"
                 Category = "contract"
@@ -60,14 +63,18 @@ module QuintProfileContractTests =
                 Requirement = "additive"
                 Detail = "Profile 1 identifiers remain stable." } ]
           Digests =
-            [ { Name = "canonicalSource"; Sha256 = digest 'a' }
-              { Name = "generatedModules"; Sha256 = digest 'b' } ] }
+            [ { Name = "canonicalSource"
+                Sha256 = digest 'a' }
+              { Name = "generatedModules"
+                Sha256 = digest 'b' } ] }
 
-    let private expectOk = function
+    let private expectOk =
+        function
         | Ok value -> value
         | Error findings -> failwithf "expected success, got %A" findings
 
-    let private findings = function
+    let private findings =
+        function
         | Ok _ -> failwith "expected refusal"
         | Error values -> values
 
@@ -98,9 +105,9 @@ module QuintProfileContractTests =
                 [ { Id = "bad"
                     Kind = Requirement
                     Source =
-                        { Path = "../escape.md"
-                          Start = { Line = 2; Column = 3 }
-                          End = { Line = 1; Column = 1 } } } ]
+                      { Path = "../escape.md"
+                        Start = { Line = 2; Column = 3 }
+                        End = { Line = 1; Column = 1 } } } ]
               ActionEffects = [] }
 
         let codes = QuintProfile.validate invalid |> List.map _.Code
@@ -135,7 +142,10 @@ module QuintProfileContractTests =
                     [ { FromId = "REQ-Missing"
                         Kind = VerifiedBy
                         ToId = "EV-Check" } ]
-                Bounds = [ { Id = "BOUND-Steps"; Minimum = 9L; Maximum = 2L } ]
+                Bounds =
+                    [ { Id = "BOUND-Steps"
+                        Minimum = 9L
+                        Maximum = 2L } ]
                 Digests = [ { Name = "source"; Sha256 = "latest" } ] }
 
         let codes = QuintContract.validate invalid |> List.map _.Code
@@ -169,6 +179,10 @@ module QuintProfileContractTests =
         | QuintContractDiff.Equivalent -> Assert.Fail("expected an integration-meaning change")
 
         Assert.Contains(
-            findings (QuintContract.fingerprint { inputs with ToolchainSha256 = "moving-latest" }),
+            findings (
+                QuintContract.fingerprint
+                    { inputs with
+                        ToolchainSha256 = "moving-latest" }
+            ),
             fun finding -> finding.Code = "QUINT-FINGERPRINT-DIGEST"
         )

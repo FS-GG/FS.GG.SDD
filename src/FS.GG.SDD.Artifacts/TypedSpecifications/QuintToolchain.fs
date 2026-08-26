@@ -98,7 +98,8 @@ module private QuintToolchainInternal =
         && value <> "."
         && value <> ".."
 
-    let kindText = function
+    let kindText =
+        function
         | File -> "file"
         | Tree -> "tree"
         | Closure -> "closure"
@@ -184,13 +185,21 @@ module private QuintToolchainInternal =
                   "8.17.1"
                   "npm:ajv@8.17.1"
                   [ req "ajv-package-lock" File "8f52d263544de67504b2d103b6321f32a34a821cf9f54170f4f75d77e136f691" None
-                    req "ajv-closure" Closure "e14d4bfc96cce335d1d370f844294c8c6eeced38c61da0f5ae224e26f74d5007" (Some 1289583L) ]
+                    req
+                        "ajv-closure"
+                        Closure
+                        "e14d4bfc96cce335d1d370f844294c8c6eeced38c61da0f5ae224e26f74d5007"
+                        (Some 1289583L) ]
               toolComponent
                   "apalache"
                   "0.56.1"
                   "github:apalache-mc/apalache@v0.56.1"
                   [ req "apalache-archive" File "a61c07569d7195ddc589f01037fa10fafef4fb0796af2f1c9cb45226375dfbfc" None
-                    req "apalache-tree" Tree "3466d07f06d7ac80ee0f171a96383183cee9d91bf1b5995d897d4f15c004569f" (Some 136014794L)
+                    req
+                        "apalache-tree"
+                        Tree
+                        "3466d07f06d7ac80ee0f171a96383183cee9d91bf1b5995d897d4f15c004569f"
+                        (Some 136014794L)
                     req "apalache-jar" File "4753c0ebb2cbb266e2c6ac19ab5ca3827d726cc80fd1fc5d7c1eeb64736cd60b" None ]
               toolComponent
                   "go"
@@ -207,23 +216,43 @@ module private QuintToolchainInternal =
                   "lmt"
                   "62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c"
                   "github:driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c"
-                  [ req "lmt-binary" File "37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10" (Some 2787745L) ]
+                  [ req
+                        "lmt-binary"
+                        File
+                        "37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"
+                        (Some 2787745L) ]
               toolComponent
                   "node"
                   "26.7.0"
                   "nodejs:v26.7.0-linux-x64"
-                  [ req "node-binary" File "d51d79e0e04abfe366345496a8e1379d56493271af4e0d6f27dd6ba76be628ea" (Some 62822072L) ]
+                  [ req
+                        "node-binary"
+                        File
+                        "d51d79e0e04abfe366345496a8e1379d56493271af4e0d6f27dd6ba76be628ea"
+                        (Some 62822072L) ]
               toolComponent
                   "quint"
                   "0.32.0"
                   "github:informalsystems/quint@v0.32.0"
-                  [ req "quint-binary" File "939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f" (Some 125661253L) ]
+                  [ req
+                        "quint-binary"
+                        File
+                        "939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f"
+                        (Some 125661253L) ]
               toolComponent
                   "rust-evaluator"
                   "0.6.0"
                   "github:informalsystems/quint@evaluator-v0.6.0"
-                  [ req "rust-evaluator-archive" File "61755a09d5052d93a4e75e840059edfd0d3674aeda164b9d2464be3d6e21b1c2" None
-                    req "rust-evaluator-binary" File "b2efdeac5713d153e41bf2143b94ed75d888fdd5637f4a5d61a04c695313510a" (Some 2628304L) ] ]
+                  [ req
+                        "rust-evaluator-archive"
+                        File
+                        "61755a09d5052d93a4e75e840059edfd0d3674aeda164b9d2464be3d6e21b1c2"
+                        None
+                    req
+                        "rust-evaluator-binary"
+                        File
+                        "b2efdeac5713d153e41bf2143b94ed75d888fdd5637f4a5d61a04c695313510a"
+                        (Some 2628304L) ] ]
           Guidance =
             Some
                 { Source = "quint-co/quint-llm-kit@cc75369f741af7d490936f82002c2d28e3b3d78d"
@@ -231,14 +260,13 @@ module private QuintToolchainInternal =
                   LicenseSha256 = "5cc84061e5937535827c4fd3446c7609ad87065b55733b1874b2ddc67df04bf0"
                   TrackedTreeSha256 = "68a11d403846de3af26759eef97f4a35eff5e71d561d41ea17d96e535c171556" } }
 
-    let compareRequirements
-        componentIndex
-        (expected: QuintCacheRequirement list)
-        (actual: QuintCacheRequirement list)
-        =
+    let compareRequirements componentIndex (expected: QuintCacheRequirement list) (actual: QuintCacheRequirement list) =
         let basePath = $"/components/%d{componentIndex}/objects"
 
-        [ let duplicateIds = actual |> List.countBy (fun item -> item.Id) |> List.filter (fun (_, count) -> count > 1)
+        [ let duplicateIds =
+              actual
+              |> List.countBy (fun item -> item.Id)
+              |> List.filter (fun (_, count) -> count > 1)
 
           for id, _ in duplicateIds do
               yield diagnostic "QUINT-TOOLCHAIN-OBJECT-DUPLICATE" basePath $"Cache object id '%s{id}' is duplicated."
@@ -290,7 +318,9 @@ module QuintToolchain =
     let profile = "fsgg-quint-profile/1"
     let q1 = QuintToolchainInternal.exact
     let encodeCanonical manifest = QuintToolchainInternal.encode manifest
-    let fingerprint manifest = manifest |> encodeCanonical |> QuintToolchainInternal.sha256
+
+    let fingerprint manifest =
+        manifest |> encodeCanonical |> QuintToolchainInternal.sha256
 
     let validateManifest (manifest: QuintToolchainManifest) =
         let expected = q1
@@ -318,7 +348,10 @@ module QuintToolchain =
                       "/platform"
                       $"Expected '%s{expected.Platform}' but found '%s{manifest.Platform}'."
 
-          for id, _ in components |> List.countBy (fun item -> item.Id) |> List.filter (fun (_, count) -> count > 1) do
+          for id, _ in
+              components
+              |> List.countBy (fun item -> item.Id)
+              |> List.filter (fun (_, count) -> count > 1) do
               yield
                   QuintToolchainInternal.diagnostic
                       "QUINT-TOOLCHAIN-COMPONENT-DUPLICATE"
@@ -341,7 +374,10 @@ module QuintToolchain =
                           "/components"
                           $"Required tool component '%s{expectedComponent.Id}' is missing."
               | Some actual ->
-                  if actual.Version <> expectedComponent.Version || actual.Source <> expectedComponent.Source then
+                  if
+                      actual.Version <> expectedComponent.Version
+                      || actual.Source <> expectedComponent.Source
+                  then
                       yield
                           QuintToolchainInternal.diagnostic
                               "QUINT-TOOLCHAIN-COMPONENT-MISMATCH"
@@ -362,11 +398,15 @@ module QuintToolchain =
         |> QuintToolchainInternal.sortDiagnostics
 
     let validateCache (manifest: QuintToolchainManifest) (observations: QuintCacheObservation list) =
-        let required = manifest.Components |> List.collect (fun toolComponent -> toolComponent.Objects)
+        let required =
+            manifest.Components |> List.collect (fun toolComponent -> toolComponent.Objects)
 
         [ yield! validateManifest manifest
 
-          for id, _ in observations |> List.countBy (fun item -> item.Id) |> List.filter (fun (_, count) -> count > 1) do
+          for id, _ in
+              observations
+              |> List.countBy (fun item -> item.Id)
+              |> List.filter (fun (_, count) -> count > 1) do
               yield
                   QuintToolchainInternal.diagnostic
                       "QUINT-CACHE-OBSERVATION-DUPLICATE"
@@ -443,7 +483,10 @@ module QuintToolchain =
         let cacheDiagnostics = validateCache manifest observations
 
         let requestDiagnostics =
-            [ for id, _ in requests |> List.countBy (fun item -> item.StepId) |> List.filter (fun (_, count) -> count > 1) do
+            [ for id, _ in
+                  requests
+                  |> List.countBy (fun item -> item.StepId)
+                  |> List.filter (fun (_, count) -> count > 1) do
                   yield
                       QuintToolchainInternal.diagnostic
                           "QUINT-PLAN-STEP-DUPLICATE"
@@ -460,7 +503,11 @@ module QuintToolchain =
                   let path = $"/requests/%d{index}"
 
                   if String.IsNullOrWhiteSpace request.StepId then
-                      yield QuintToolchainInternal.diagnostic "QUINT-PLAN-STEP-ID-REQUIRED" (path + "/stepId") "Step id is required."
+                      yield
+                          QuintToolchainInternal.diagnostic
+                              "QUINT-PLAN-STEP-ID-REQUIRED"
+                              (path + "/stepId")
+                              "Step id is required."
 
                   if not (Set.contains request.ExecutableObjectId objectIds) then
                       yield
@@ -503,7 +550,10 @@ module QuintToolchain =
                               (path + "/environment")
                               "Environment bindings must be ordered by name."
 
-                  for name, _ in request.Environment |> List.countBy fst |> List.filter (fun (_, count) -> count > 1) do
+                  for name, _ in
+                      request.Environment
+                      |> List.countBy fst
+                      |> List.filter (fun (_, count) -> count > 1) do
                       yield
                           QuintToolchainInternal.diagnostic
                               "QUINT-PLAN-ENVIRONMENT-DUPLICATE"
@@ -555,7 +605,10 @@ module QuintToolchain =
                       "/endpoint"
                       $"The dedicated local server endpoint is already occupied: %s{detail}"
 
-          for id, _ in observations |> List.countBy (fun item -> item.StepId) |> List.filter (fun (_, count) -> count > 1) do
+          for id, _ in
+              observations
+              |> List.countBy (fun item -> item.StepId)
+              |> List.filter (fun (_, count) -> count > 1) do
               yield
                   QuintToolchainInternal.diagnostic
                       "QUINT-EXECUTION-OBSERVATION-DUPLICATE"

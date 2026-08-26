@@ -94,9 +94,13 @@ deliberately split into a pure plan and a caller-owned local execution edge:
 2. `QuintSource` validates canonical UTF-8 Markdown and an ordered fence
    manifest, accepts only plain `.qnt` targets, and maps generated ranges back to
    stable Markdown line/column ranges without host paths or Quint node IDs.
-3. `QuintProfile` privately reads the exact Quint 0.32.0 typed/effect fixture and
-   exposes only the closed profile catalogue. Unknown constructs, undeclared
-   semantics, bad references, and arbitrary-expression lowering fail closed.
+3. `QuintProfile` privately reads the exact Quint 0.32.0 `typecheck --out`
+   envelope and exposes only the closed profile catalogue. That compiler JSON
+   contains neither its compiler/profile version nor source coordinates, so the
+   adapter requires the verified tool observation and exact `QuintSource` row
+   bindings out of band; it never derives locations from unstable node IDs.
+   Unknown constructs, undeclared semantics, bad references, and
+   arbitrary-expression lowering fail closed.
 4. `QuintContract` emits canonical `compiled-contract-v1` bytes. The schema
    contains integration facts, locations, verification profiles, finite bounds,
    compatibility metadata, and semantic digests—never arbitrary Quint

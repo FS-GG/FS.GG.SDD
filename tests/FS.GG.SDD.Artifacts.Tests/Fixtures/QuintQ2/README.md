@@ -15,6 +15,12 @@ digests come from the sealed Q1 candidate manifest and S.I.R. consumer response
 receipt at the same merge commit. It does not claim additional licenses where
 Q1 recorded none.
 
+`q1-typecheck-corpus.receipt.json` binds each of the three exact Q1 literate
+slices to its generated module and real Quint 0.32.0 `typecheck --out` capture.
+The raw compiler JSON is deliberately not a committed authority; the executable
+adapter harness consumes locally reproduced captures and checks the recorded
+digests plus fail-closed mutations.
+
 These fixtures are immutable compatibility inputs. Q2 implementations should
 produce separate actual outputs and compare them to this corpus rather than
 rewriting the files in place.

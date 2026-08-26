@@ -6,8 +6,7 @@ open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
 
 module QuintToolchainSourceTests =
-    let private codes (findings: SpecificationDiagnostic list) =
-        findings |> List.map _.Code
+    let private codes (findings: SpecificationDiagnostic list) = findings |> List.map _.Code
 
     let private expectCode expected findings =
         Assert.Contains(expected, codes findings)
@@ -85,7 +84,12 @@ module QuintToolchainSourceTests =
 
         Assert.Empty(QuintToolchain.validateManifest QuintToolchain.q1)
         Assert.Empty(QuintToolchain.validateCache QuintToolchain.q1 cache)
-        Assert.Equal<byte array>(QuintToolchain.encodeCanonical QuintToolchain.q1, QuintToolchain.encodeCanonical QuintToolchain.q1)
+
+        Assert.Equal<byte array>(
+            QuintToolchain.encodeCanonical QuintToolchain.q1,
+            QuintToolchain.encodeCanonical QuintToolchain.q1
+        )
+
         Assert.Equal(64, QuintToolchain.fingerprint QuintToolchain.q1 |> String.length)
 
     [<Fact>]
@@ -93,14 +97,33 @@ module QuintToolchainSourceTests =
         let cache = exactCache ()
 
         let absent = cache |> List.filter (fun item -> item.Id <> "quint-binary")
-        let unreadable = replaceCache "quint-binary" (QuintCacheObjectState.Unreadable "permission denied") cache
-        let mismatch = replaceCache "quint-binary" (QuintCacheObjectState.Present(String.replicate 64 "f", Some 125661253L, true)) cache
-        let incomplete = replaceCache "apalache-tree" (QuintCacheObjectState.Present(String.replicate 64 "0", Some 136014794L, false)) cache
 
-        QuintToolchain.validateCache QuintToolchain.q1 absent |> expectCode "QUINT-CACHE-OBJECT-ABSENT"
-        QuintToolchain.validateCache QuintToolchain.q1 unreadable |> expectCode "QUINT-CACHE-OBJECT-UNREADABLE"
-        QuintToolchain.validateCache QuintToolchain.q1 mismatch |> expectCode "QUINT-CACHE-OBJECT-DIGEST-MISMATCH"
-        QuintToolchain.validateCache QuintToolchain.q1 incomplete |> expectCode "QUINT-CACHE-OBJECT-INCOMPLETE"
+        let unreadable =
+            replaceCache "quint-binary" (QuintCacheObjectState.Unreadable "permission denied") cache
+
+        let mismatch =
+            replaceCache
+                "quint-binary"
+                (QuintCacheObjectState.Present(String.replicate 64 "f", Some 125661253L, true))
+                cache
+
+        let incomplete =
+            replaceCache
+                "apalache-tree"
+                (QuintCacheObjectState.Present(String.replicate 64 "0", Some 136014794L, false))
+                cache
+
+        QuintToolchain.validateCache QuintToolchain.q1 absent
+        |> expectCode "QUINT-CACHE-OBJECT-ABSENT"
+
+        QuintToolchain.validateCache QuintToolchain.q1 unreadable
+        |> expectCode "QUINT-CACHE-OBJECT-UNREADABLE"
+
+        QuintToolchain.validateCache QuintToolchain.q1 mismatch
+        |> expectCode "QUINT-CACHE-OBJECT-DIGEST-MISMATCH"
+
+        QuintToolchain.validateCache QuintToolchain.q1 incomplete
+        |> expectCode "QUINT-CACHE-OBJECT-INCOMPLETE"
 
     [<Fact>]
     let ``moving tool and guidance identities are refused`` () =
@@ -132,9 +155,7 @@ module QuintToolchainSourceTests =
     [<Fact>]
     let ``compilation plan cannot express acquisition proxy or network inputs`` () =
         let request =
-            processRequest
-                [ "https://example.invalid/quint"; "quint@latest" ]
-                [ "HTTP_PROXY", "https://proxy.invalid" ]
+            processRequest [ "https://example.invalid/quint"; "quint@latest" ] [ "HTTP_PROXY", "https://proxy.invalid" ]
 
         let findings =
             QuintToolchain.plan QuintToolchain.q1 (exactCache ()) [ request ] |> expectError
@@ -145,10 +166,7 @@ module QuintToolchainSourceTests =
     [<Fact>]
     let ``execution reports occupied endpoint and failed process independently`` () =
         let plan =
-            QuintToolchain.plan
-                QuintToolchain.q1
-                (exactCache ())
-                [ processRequest [ "specs/main.md" ] [] ]
+            QuintToolchain.plan QuintToolchain.q1 (exactCache ()) [ processRequest [ "specs/main.md" ] [] ]
             |> expectOk
 
         let findings =
@@ -166,12 +184,14 @@ module QuintToolchainSourceTests =
         let source = sourceFixture ()
         let manifest = fenceManifest source
         let sourceMap = sourceMap source
+
         let generated =
             [ { Target = "Main.qnt"
                 Sha256 = String.replicate 64 "a"
                 Bytes = 42L } ]
 
         Assert.Empty(QuintSource.validateManifest source manifest)
+
         Assert.Empty(
             QuintSource.validateExtraction
                 source
@@ -180,11 +200,13 @@ module QuintToolchainSourceTests =
                   Second = generated
                   Warnings = [] }
         )
+
         Assert.Empty(QuintSource.validateSourceMap source manifest sourceMap)
 
         let encoded = QuintSource.encodeSourceMap sourceMap
         Assert.Equal(sourceMap, QuintSource.decodeSourceMap encoded |> expectOk)
         Assert.Equal<byte array>(encoded, QuintSource.encodeSourceMap sourceMap)
+
         Assert.Equal(
             Some sourceMap.Entries.Head.Source,
             QuintSource.tryResolve "Main.qnt" { Line = 1; Column = 5 } sourceMap
@@ -200,7 +222,8 @@ module QuintToolchainSourceTests =
         |> expectError
         |> expectCode "QUINT-SOURCE-LINE-ENDINGS-NONCANONICAL"
 
-        let bom = Array.concat [ [| 0xEFuy; 0xBBuy; 0xBFuy |]; Encoding.UTF8.GetBytes("module Main {}\n") ]
+        let bom =
+            Array.concat [ [| 0xEFuy; 0xBBuy; 0xBFuy |]; Encoding.UTF8.GetBytes("module Main {}\n") ]
 
         QuintSource.createMarkdown "specs/main.md" bom
         |> expectError
@@ -208,12 +231,18 @@ module QuintToolchainSourceTests =
 
         let source = sourceFixture ()
         let manifest = fenceManifest source
+
         let unsafeFence =
             { manifest.Fences.Head with
                 Target = "../Main.qnt"
                 ContentSha256 = "moving" }
 
-        let findings = QuintSource.validateManifest source { manifest with Fences = [ unsafeFence ] }
+        let findings =
+            QuintSource.validateManifest
+                source
+                { manifest with
+                    Fences = [ unsafeFence ] }
+
         expectCode "QUINT-FENCE-TARGET-UNSAFE" findings
         expectCode "QUINT-FENCE-CONTENT-DIGEST-INVALID" findings
 
@@ -222,10 +251,12 @@ module QuintToolchainSourceTests =
         let source = sourceFixture ()
         let manifest = fenceManifest source
         let sourceMap = sourceMap source
+
         let first =
             [ { Target = "Main.qnt"
                 Sha256 = String.replicate 64 "a"
                 Bytes = 42L } ]
+
         let second =
             [ { Target = "Main.qnt"
                 Sha256 = String.replicate 64 "b"
@@ -246,14 +277,14 @@ module QuintToolchainSourceTests =
             { sourceMap with
                 SourceSha256 = String.replicate 64 "f"
                 Entries =
-                  [ { sourceMap.Entries.Head with
-                        Target = "Other.qnt"
-                        GeneratedRange =
-                          { sourceMap.Entries.Head.GeneratedRange with
-                              Path = "Main.qnt" }
-                        Source =
-                          { sourceMap.Entries.Head.Source with
-                              FenceOrdinal = 99 } } ] }
+                    [ { sourceMap.Entries.Head with
+                          Target = "Other.qnt"
+                          GeneratedRange =
+                              { sourceMap.Entries.Head.GeneratedRange with
+                                  Path = "Main.qnt" }
+                          Source =
+                              { sourceMap.Entries.Head.Source with
+                                  FenceOrdinal = 99 } } ] }
 
         let mapFindings = QuintSource.validateSourceMap source manifest staleMap
         expectCode "QUINT-SOURCE-MAP-DIGEST-MISMATCH" mapFindings

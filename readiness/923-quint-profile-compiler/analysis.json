@@ -4,7 +4,7 @@
   "workId": "923-quint-profile-compiler",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.2.5",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0-preview.1",
   "sources": [
     {
       "path": ".fsgg/agents.yml",

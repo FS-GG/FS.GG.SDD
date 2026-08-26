@@ -11,7 +11,7 @@ module QuintReplayBindingsTests =
         | Ok value -> value
         | Error findings -> failwithf "expected success, got %A" findings
 
-    let private sourceRange : QuintSourceRange =
+    let private sourceRange: QuintSourceRange =
         { Path = "docs/experiments/quint-q1/slices/login.md"
           Start = { Line = 10; Column = 1 }
           End = { Line = 10; Column = 12 } }
@@ -21,7 +21,7 @@ module QuintReplayBindingsTests =
           Kind = kind
           Source = sourceRange }
 
-    let private contract : QuintCompiledContract =
+    let private contract: QuintCompiledContract =
         { Schema = QuintContract.schema
           Profile = QuintProfile.identity
           Specification = "LoginSpec"
@@ -40,13 +40,13 @@ module QuintReplayBindingsTests =
           Compatibility = []
           Digests = [] }
 
-    let private replaySource : QuintReplaySourceBinding =
+    let private replaySource: QuintReplaySourceBinding =
         { Path = sourceRange.Path
           Line = 10
           Column = 1 }
 
     let private state bindings =
-        let draft : QuintReplayState =
+        let draft: QuintReplayState =
             { Identity = digest
               Bindings = bindings }
 
@@ -98,7 +98,10 @@ module QuintReplayBindingsTests =
     [<Fact>]
     let ``replay accepts the matching fingerprinted observation`` () =
         let bindings = QuintBindings.generate "LoginContract" contract |> expectOk
-        let result = QuintReplay.compare (trace bindings.ContractFingerprint) [ observation expectedState ]
+
+        let result =
+            QuintReplay.compare (trace bindings.ContractFingerprint) [ observation expectedState ]
+
         Assert.Equal(Ok QuintReplayResult.Equivalent, result)
 
     [<Fact>]
@@ -140,8 +143,8 @@ module QuintReplayBindingsTests =
                 Steps =
                     [ { valid.Steps.Head with
                           Expected =
-                            { valid.Steps.Head.Expected with
-                                Identity = digest } } ] }
+                              { valid.Steps.Head.Expected with
+                                  Identity = digest } } ] }
 
         let malformedSource =
             { valid with
@@ -149,7 +152,11 @@ module QuintReplayBindingsTests =
                     [ { valid.Steps.Head with
                           Source = { replaySource with Line = 0 } } ] }
 
-        Assert.Contains("QRP-ENV-FINGERPRINT", malformedEnvironment |> QuintReplay.validateTrace |> replayDiagnosticCodes)
+        Assert.Contains(
+            "QRP-ENV-FINGERPRINT",
+            malformedEnvironment |> QuintReplay.validateTrace |> replayDiagnosticCodes
+        )
+
         Assert.Contains("QRP-STEP-ORDER", malformedOrder |> QuintReplay.validateTrace |> replayDiagnosticCodes)
         Assert.Contains("QRP-STATE-FINGERPRINT", malformedState |> QuintReplay.validateTrace |> replayDiagnosticCodes)
         Assert.Contains("QRP-SOURCE-LINE", malformedSource |> QuintReplay.validateTrace |> replayDiagnosticCodes)
@@ -169,8 +176,13 @@ module QuintReplayBindingsTests =
 
     [<Fact>]
     let ``bindings refuse wrong compiled contract schema and profile`` () =
-        let wrongSchema = { contract with Schema = "fsgg.quint.compiled-contract/v2" }
-        let wrongProfile = { contract with Profile = "fsgg-quint-profile/2" }
+        let wrongSchema =
+            { contract with
+                Schema = "fsgg.quint.compiled-contract/v2" }
+
+        let wrongProfile =
+            { contract with
+                Profile = "fsgg-quint-profile/2" }
 
         let schemaCodes =
             match QuintBindings.generate "LoginContract" wrongSchema with

@@ -59,7 +59,10 @@ module private QuintSourceInternal =
         { Code = code
           Path = path
           Message = message
-          Location = Some { Line = position.Line; Column = position.Column } }
+          Location =
+            Some
+                { Line = position.Line
+                  Column = position.Column } }
 
     let sortDiagnostics (diagnostics: SpecificationDiagnostic list) =
         diagnostics
@@ -89,10 +92,12 @@ module private QuintSourceInternal =
         && comparePosition range.Start range.End <= 0
 
     let contains (position: QuintSourcePosition) (range: QuintSourceRange) =
-        comparePosition range.Start position <= 0 && comparePosition position range.End <= 0
+        comparePosition range.Start position <= 0
+        && comparePosition position range.End <= 0
 
     let positionExists (text: string) (position: QuintSourcePosition) =
         let lines = text.Split('\n')
+
         position.Line > 0
         && position.Line <= lines.Length
         && position.Column > 0
@@ -103,8 +108,7 @@ module private QuintSourceInternal =
         && not (IO.Path.IsPathRooted value)
         && not (value.Contains('\\'))
         && value.Split('/')
-           |> Array.forall (fun segment ->
-               not (String.IsNullOrWhiteSpace segment) && segment <> "." && segment <> "..")
+           |> Array.forall (fun segment -> not (String.IsNullOrWhiteSpace segment) && segment <> "." && segment <> "..")
 
     let isSafeTarget (value: string) =
         isSafeRelativePath value
@@ -187,7 +191,11 @@ module private QuintSourceInternal =
         writer.WriteEndObject()
 
     let requireFields path expected (element: JsonElement) =
-        let names = element.EnumerateObject() |> Seq.map (fun property -> property.Name) |> Seq.toList
+        let names =
+            element.EnumerateObject()
+            |> Seq.map (fun property -> property.Name)
+            |> Seq.toList
+
         let actual = names |> Set.ofList
 
         if actual = expected && names.Length = expected.Count then
@@ -214,14 +222,26 @@ module private QuintSourceInternal =
                     { Line = element.GetProperty("line").GetInt32()
                       Column = element.GetProperty("column").GetInt32() }
             with _ ->
-                Error(diagnostic "QUINT-SOURCE-MAP-VALUE-INVALID" path "Source-map position must contain integer line and column values.")
+                Error(
+                    diagnostic
+                        "QUINT-SOURCE-MAP-VALUE-INVALID"
+                        path
+                        "Source-map position must contain integer line and column values."
+                )
 
     let readRange path (element: JsonElement) =
         match requireFields path (Set.ofList [ "path"; "start"; "end" ]) element with
         | Error error -> Error error
         | Ok() ->
-            match readPosition (path + "/start") (element.GetProperty("start")), readPosition (path + "/end") (element.GetProperty("end")) with
-            | Ok start, Ok finish -> Ok { Path = readString "path" element; Start = start; End = finish }
+            match
+                readPosition (path + "/start") (element.GetProperty("start")),
+                readPosition (path + "/end") (element.GetProperty("end"))
+            with
+            | Ok start, Ok finish ->
+                Ok
+                    { Path = readString "path" element
+                      Start = start
+                      End = finish }
             | Error error, _
             | _, Error error -> Error error
 
@@ -301,9 +321,13 @@ module QuintSource =
                       "/source"
                       "Canonical Markdown must use LF line endings."
 
-          let actualSourceSha = source.Text |> Encoding.UTF8.GetBytes |> QuintSourceInternal.sha256
+          let actualSourceSha =
+              source.Text |> Encoding.UTF8.GetBytes |> QuintSourceInternal.sha256
 
-          if not (QuintSourceInternal.isSha256 source.Sha256) || actualSourceSha <> source.Sha256 then
+          if
+              not (QuintSourceInternal.isSha256 source.Sha256)
+              || actualSourceSha <> source.Sha256
+          then
               yield
                   QuintSourceInternal.diagnostic
                       "QUINT-SOURCE-DIGEST-MISMATCH"
@@ -317,21 +341,30 @@ module QuintSource =
                       "/sourcePath"
                       $"Expected canonical source path '%s{source.Path}' but found '%s{manifest.SourcePath}'."
 
-          if not (QuintSourceInternal.isSha256 manifest.SourceSha256) || manifest.SourceSha256 <> source.Sha256 then
+          if
+              not (QuintSourceInternal.isSha256 manifest.SourceSha256)
+              || manifest.SourceSha256 <> source.Sha256
+          then
               yield
                   QuintSourceInternal.diagnostic
                       "QUINT-FENCE-SOURCE-DIGEST-MISMATCH"
                       "/sourceSha256"
                       $"Fence manifest does not bind canonical source SHA-256 '%s{source.Sha256}'."
 
-          for target, _ in manifest.Fences |> List.countBy (fun item -> item.Target) |> List.filter (fun (_, count) -> count > 1) do
+          for target, _ in
+              manifest.Fences
+              |> List.countBy (fun item -> item.Target)
+              |> List.filter (fun (_, count) -> count > 1) do
               yield
                   QuintSourceInternal.diagnostic
                       "QUINT-FENCE-TARGET-DUPLICATE"
                       "/fences"
                       $"Fence target '%s{target}' is duplicated."
 
-          for moduleName, _ in manifest.Fences |> List.countBy (fun item -> item.ModuleName) |> List.filter (fun (_, count) -> count > 1) do
+          for moduleName, _ in
+              manifest.Fences
+              |> List.countBy (fun item -> item.ModuleName)
+              |> List.filter (fun (_, count) -> count > 1) do
               yield
                   QuintSourceInternal.diagnostic
                       "QUINT-FENCE-MODULE-DUPLICATE"
@@ -416,7 +449,10 @@ module QuintSource =
         let expectedTargets = manifest.Fences |> List.map (fun item -> item.Target)
 
         let validatePass (passName: string) (modules: QuintGeneratedModule list) =
-            [ for target, _ in modules |> List.countBy (fun item -> item.Target) |> List.filter (fun (_, count) -> count > 1) do
+            [ for target, _ in
+                  modules
+                  |> List.countBy (fun item -> item.Target)
+                  |> List.filter (fun (_, count) -> count > 1) do
                   yield
                       QuintSourceInternal.diagnostic
                           "QUINT-EXTRACTION-TARGET-DUPLICATE"
@@ -464,11 +500,15 @@ module QuintSource =
                       "Two clean isolated extractions did not produce byte-identical ordered module receipts." ]
         |> QuintSourceInternal.sortDiagnostics
 
-    let encodeFenceManifest manifest = QuintSourceInternal.encode QuintSourceInternal.writeFenceManifest manifest
-    let fenceManifestFingerprint manifest = manifest |> encodeFenceManifest |> QuintSourceInternal.sha256
+    let encodeFenceManifest manifest =
+        QuintSourceInternal.encode QuintSourceInternal.writeFenceManifest manifest
+
+    let fenceManifestFingerprint manifest =
+        manifest |> encodeFenceManifest |> QuintSourceInternal.sha256
 
     let validateSourceMap source manifest sourceMap =
-        let fences = manifest.Fences |> List.map (fun item -> item.Ordinal, item) |> Map.ofList
+        let fences =
+            manifest.Fences |> List.map (fun item -> item.Ordinal, item) |> Map.ofList
 
         [ yield! validateManifest source manifest
 
@@ -479,14 +519,18 @@ module QuintSource =
                       "/schema"
                       $"Expected '%s{sourceMapSchema}' but found '%s{sourceMap.Schema}'."
 
-          if not (QuintSourceInternal.isSha256 sourceMap.SourceSha256) || sourceMap.SourceSha256 <> source.Sha256 then
+          if
+              not (QuintSourceInternal.isSha256 sourceMap.SourceSha256)
+              || sourceMap.SourceSha256 <> source.Sha256
+          then
               yield
                   QuintSourceInternal.diagnostic
                       "QUINT-SOURCE-MAP-DIGEST-MISMATCH"
                       "/sourceSha256"
                       "Source map does not bind the canonical Markdown digest."
 
-          let canonicalEntries = sourceMap.Entries |> List.sortBy QuintSourceInternal.entrySortKey
+          let canonicalEntries =
+              sourceMap.Entries |> List.sortBy QuintSourceInternal.entrySortKey
 
           if sourceMap.Entries <> canonicalEntries then
               yield
@@ -499,7 +543,10 @@ module QuintSource =
               let ordered = entries |> List.sortBy QuintSourceInternal.entrySortKey
 
               for previous, current in ordered |> List.pairwise do
-                  if QuintSourceInternal.comparePosition current.GeneratedRange.Start previous.GeneratedRange.End <= 0 then
+                  if
+                      QuintSourceInternal.comparePosition current.GeneratedRange.Start previous.GeneratedRange.End
+                      <= 0
+                  then
                       yield
                           QuintSourceInternal.diagnostic
                               "QUINT-SOURCE-MAP-GENERATED-RANGE-OVERLAP"
@@ -571,7 +618,8 @@ module QuintSource =
                               entry.Source.Range.Start ]
         |> QuintSourceInternal.sortDiagnostics
 
-    let encodeSourceMap sourceMap = QuintSourceInternal.encode QuintSourceInternal.writeSourceMap sourceMap
+    let encodeSourceMap sourceMap =
+        QuintSourceInternal.encode QuintSourceInternal.writeSourceMap sourceMap
 
     let decodeSourceMap (bytes: byte array) =
         try
@@ -616,8 +664,12 @@ module QuintSource =
                                             (path + "/source")
                                             (Set.ofList [ "fenceOrdinal"; "range" ])
                                             sourceElement,
-                                        QuintSourceInternal.readRange (path + "/generatedRange") (element.GetProperty("generatedRange")),
-                                        QuintSourceInternal.readRange (path + "/source/range") (sourceElement.GetProperty("range"))
+                                        QuintSourceInternal.readRange
+                                            (path + "/generatedRange")
+                                            (element.GetProperty("generatedRange")),
+                                        QuintSourceInternal.readRange
+                                            (path + "/source/range")
+                                            (sourceElement.GetProperty("range"))
                                     with
                                     | Ok(), Ok generatedRange, Ok sourceRange ->
                                         Some
@@ -673,7 +725,10 @@ module QuintSource =
         sourceMap.Entries
         |> List.sortBy QuintSourceInternal.entrySortKey
         |> List.tryPick (fun entry ->
-            if entry.Target = target && QuintSourceInternal.contains position entry.GeneratedRange then
+            if
+                entry.Target = target
+                && QuintSourceInternal.contains position entry.GeneratedRange
+            then
                 Some entry.Source
             else
                 None)

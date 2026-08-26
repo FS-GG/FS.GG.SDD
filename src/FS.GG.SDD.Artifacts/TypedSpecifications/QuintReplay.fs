@@ -6,9 +6,7 @@ open System.Security.Cryptography
 open System.Text
 
 type QuintReplaySourceBinding =
-    { Path: string
-      Line: int
-      Column: int }
+    { Path: string; Line: int; Column: int }
 
 type QuintReplayValue =
     | Null
@@ -71,7 +69,9 @@ type QuintReplayResult =
 
 module private ReplayInternal =
     let diagnostic code path message : QuintReplayDiagnostic =
-        { Code = code; Path = path; Message = message }
+        { Code = code
+          Path = path
+          Message = message }
 
     let sortDiagnostics diagnostics =
         diagnostics
@@ -83,8 +83,7 @@ module private ReplayInternal =
         && value.Length = 64
         && value
            |> Seq.forall (fun character ->
-               (character >= '0' && character <= '9')
-               || (character >= 'a' && character <= 'f'))
+               (character >= '0' && character <= '9') || (character >= 'a' && character <= 'f'))
 
     let escapeJson (value: string) =
         let builder = StringBuilder(value.Length + 2)
@@ -111,7 +110,14 @@ module private ReplayInternal =
 
         if String.IsNullOrWhiteSpace value then
             None
-        elif System.Numerics.BigInteger.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, &parsed) then
+        elif
+            System.Numerics.BigInteger.TryParse(
+                value,
+                NumberStyles.AllowLeadingSign,
+                CultureInfo.InvariantCulture,
+                &parsed
+            )
+        then
             Some(parsed.ToString(CultureInfo.InvariantCulture))
         else
             None
@@ -138,15 +144,22 @@ module private ReplayInternal =
             |> List.mapi (fun index item -> encodeAt $"%s{path}[%d{index}]" item)
             |> collect path
             |> Result.bind (fun encoded ->
-                let canonical = encoded |> List.sortWith (fun left right -> StringComparer.Ordinal.Compare(left, right))
+                let canonical =
+                    encoded
+                    |> List.sortWith (fun left right -> StringComparer.Ordinal.Compare(left, right))
 
                 if List.distinct canonical |> List.length <> canonical.Length then
-                    Error [ diagnostic "QRP-VALUE-SET-DUPLICATE" path "Set values must be unique after canonical encoding." ]
+                    Error
+                        [ diagnostic
+                              "QRP-VALUE-SET-DUPLICATE"
+                              path
+                              "Set values must be unique after canonical encoding." ]
                 else
                     let body = String.concat "," canonical
                     Ok("{\"#set\":[" + body + "]}"))
         | Record fields ->
             let names = fields |> List.map fst
+
             let duplicates =
                 names
                 |> List.countBy id
@@ -190,8 +203,10 @@ module private ReplayInternal =
                 | Ok _ -> []
                 | Error findings -> findings)
 
-        if diagnostics.IsEmpty then Ok values
-        else Error(sortDiagnostics diagnostics)
+        if diagnostics.IsEmpty then
+            Ok values
+        else
+            Error(sortDiagnostics diagnostics)
 
     let validateSource path (source: QuintReplaySourceBinding) =
         [ if String.IsNullOrWhiteSpace source.Path then
@@ -207,11 +222,17 @@ module private ReplayInternal =
         let structural =
             [ for index, (name, _) in state.Bindings |> List.indexed do
                   if String.IsNullOrWhiteSpace name then
-                      diagnostic "QRP-STATE-BINDING" $"%s{path}.bindings[%d{index}]" "State binding names cannot be blank."
+                      diagnostic
+                          "QRP-STATE-BINDING"
+                          $"%s{path}.bindings[%d{index}]"
+                          "State binding names cannot be blank."
 
               for name, count in bindingNames |> List.countBy id |> List.sortBy fst do
                   if count > 1 then
-                      diagnostic "QRP-STATE-BINDING-DUPLICATE" $"%s{path}.bindings" $"State binding '%s{name}' is duplicated." ]
+                      diagnostic
+                          "QRP-STATE-BINDING-DUPLICATE"
+                          $"%s{path}.bindings"
+                          $"State binding '%s{name}' is duplicated." ]
 
         let valueDiagnostics =
             state.Bindings
@@ -235,7 +256,10 @@ module private ReplayInternal =
 
     let stateFingerprint (state: QuintReplayState) =
         let bytes = Encoding.UTF8.GetBytes(encodeStateUnchecked state)
-        SHA256.HashData bytes |> Convert.ToHexString |> fun value -> value.ToLowerInvariant()
+
+        SHA256.HashData bytes
+        |> Convert.ToHexString
+        |> fun value -> value.ToLowerInvariant()
 
     let validateState path (state: QuintReplayState) =
         let contentDiagnostics = validateStateContent path state
@@ -248,12 +272,17 @@ module private ReplayInternal =
               let expected = stateFingerprint state
 
               if not (String.Equals(state.Identity, expected, StringComparison.Ordinal)) then
-                  diagnostic "QRP-STATE-FINGERPRINT" $"%s{path}.identity" $"State identity does not match canonical state fingerprint '%s{expected}'." ]
+                  diagnostic
+                      "QRP-STATE-FINGERPRINT"
+                      $"%s{path}.identity"
+                      $"State identity does not match canonical state fingerprint '%s{expected}'." ]
         |> sortDiagnostics
 
     let validateFingerprint path value =
-        if isLowerSha256 value then []
-        else [ diagnostic "QRP-ENV-FINGERPRINT" path "Environment fingerprints must be lowercase SHA-256 digests." ]
+        if isLowerSha256 value then
+            []
+        else
+            [ diagnostic "QRP-ENV-FINGERPRINT" path "Environment fingerprints must be lowercase SHA-256 digests." ]
 
 [<RequireQualifiedAccess>]
 module QuintReplay =
@@ -275,20 +304,34 @@ module QuintReplay =
         let boundsDiagnostics =
             [ for index, (name, value) in environment.Bounds |> List.indexed do
                   if String.IsNullOrWhiteSpace name then
-                      ReplayInternal.diagnostic "QRP-BOUND-NAME" $"$.environment.bounds[%d{index}]" "Bound names cannot be blank."
+                      ReplayInternal.diagnostic
+                          "QRP-BOUND-NAME"
+                          $"$.environment.bounds[%d{index}]"
+                          "Bound names cannot be blank."
+
                   if value < 0L then
-                      ReplayInternal.diagnostic "QRP-BOUND-VALUE" $"$.environment.bounds[%d{index}]" "Bound values cannot be negative."
+                      ReplayInternal.diagnostic
+                          "QRP-BOUND-VALUE"
+                          $"$.environment.bounds[%d{index}]"
+                          "Bound values cannot be negative."
 
               for name, count in environment.Bounds |> List.map fst |> List.countBy id |> List.sortBy fst do
                   if count > 1 then
-                      ReplayInternal.diagnostic "QRP-BOUND-DUPLICATE" "$.environment.bounds" $"Bound '%s{name}' is duplicated." ]
+                      ReplayInternal.diagnostic
+                          "QRP-BOUND-DUPLICATE"
+                          "$.environment.bounds"
+                          $"Bound '%s{name}' is duplicated." ]
 
         let stepDiagnostics =
             [ for ordinal, step in trace.Steps |> List.indexed do
                   let expectedIndex = ordinal + 1
 
                   if step.Index <> expectedIndex then
-                      ReplayInternal.diagnostic "QRP-STEP-ORDER" $"$.steps[%d{ordinal}].index" $"Expected step index %d{expectedIndex}."
+                      ReplayInternal.diagnostic
+                          "QRP-STEP-ORDER"
+                          $"$.steps[%d{ordinal}].index"
+                          $"Expected step index %d{expectedIndex}."
+
                   if String.IsNullOrWhiteSpace step.Action then
                       ReplayInternal.diagnostic "QRP-STEP-ACTION" $"$.steps[%d{ordinal}].action" "Action is required."
 
@@ -296,9 +339,15 @@ module QuintReplay =
                   yield! ReplayInternal.validateState $"$.steps[%d{ordinal}].expected" step.Expected ]
 
         [ if trace.SchemaVersion <> 1 then
-              ReplayInternal.diagnostic "QRP-SCHEMA-VERSION" "$.schemaVersion" "Only quint-replay-v1 schema version 1 is supported."
+              ReplayInternal.diagnostic
+                  "QRP-SCHEMA-VERSION"
+                  "$.schemaVersion"
+                  "Only quint-replay-v1 schema version 1 is supported."
           if not (ReplayInternal.isLowerSha256 trace.TraceIdentity) then
-              ReplayInternal.diagnostic "QRP-TRACE-IDENTITY" "$.traceIdentity" "Trace identity must be a lowercase SHA-256 digest."
+              ReplayInternal.diagnostic
+                  "QRP-TRACE-IDENTITY"
+                  "$.traceIdentity"
+                  "Trace identity must be a lowercase SHA-256 digest."
           if String.IsNullOrWhiteSpace environment.Seed then
               ReplayInternal.diagnostic "QRP-SEED" "$.environment.seed" "Replay seed is required."
 
@@ -306,7 +355,10 @@ module QuintReplay =
           yield! ReplayInternal.validateFingerprint "$.environment.profileFingerprint" environment.ProfileFingerprint
           yield! ReplayInternal.validateFingerprint "$.environment.contractFingerprint" environment.ContractFingerprint
           yield! ReplayInternal.validateFingerprint "$.environment.adapterFingerprint" environment.AdapterFingerprint
-          yield! ReplayInternal.validateFingerprint "$.environment.implementationFingerprint" environment.ImplementationFingerprint
+          yield!
+              ReplayInternal.validateFingerprint
+                  "$.environment.implementationFingerprint"
+                  environment.ImplementationFingerprint
           yield! boundsDiagnostics
           yield! ReplayInternal.validateState "$.initial" trace.Initial
           yield! stepDiagnostics ]
@@ -318,15 +370,23 @@ module QuintReplay =
         let observationDiagnostics =
             [ for ordinal, observation in observations |> List.indexed do
                   if observation.Index <> ordinal + 1 then
-                      ReplayInternal.diagnostic "QRP-OBSERVATION-ORDER" $"$.observations[%d{ordinal}].index" $"Expected observation index %d{ordinal + 1}."
+                      ReplayInternal.diagnostic
+                          "QRP-OBSERVATION-ORDER"
+                          $"$.observations[%d{ordinal}].index"
+                          $"Expected observation index %d{ordinal + 1}."
+
                   if String.IsNullOrWhiteSpace observation.Action then
-                      ReplayInternal.diagnostic "QRP-OBSERVATION-ACTION" $"$.observations[%d{ordinal}].action" "Observed action is required."
+                      ReplayInternal.diagnostic
+                          "QRP-OBSERVATION-ACTION"
+                          $"$.observations[%d{ordinal}].action"
+                          "Observed action is required."
 
                   yield! ReplayInternal.validateSource $"$.observations[%d{ordinal}].source" observation.Source
                   yield! ReplayInternal.validateState $"$.observations[%d{ordinal}].actual" observation.Actual ]
             |> ReplayInternal.sortDiagnostics
 
-        let diagnostics = ReplayInternal.sortDiagnostics (traceDiagnostics @ observationDiagnostics)
+        let diagnostics =
+            ReplayInternal.sortDiagnostics (traceDiagnostics @ observationDiagnostics)
 
         if not diagnostics.IsEmpty then
             Error diagnostics
@@ -379,7 +439,9 @@ module QuintReplay =
                               Actual = Some observation.Actual
                               Reason = "source-binding" }
                     elif
-                        not (String.Equals(step.Expected.Identity, observation.Actual.Identity, StringComparison.Ordinal))
+                        not (
+                            String.Equals(step.Expected.Identity, observation.Actual.Identity, StringComparison.Ordinal)
+                        )
                         || not (String.Equals(expectedJson, actualJson, StringComparison.Ordinal))
                     then
                         QuintReplayResult.Diverged
