@@ -18,6 +18,100 @@ let sha256Bytes (bytes: byte array) =
 let sha256Text (text: string) =
     text |> Encoding.UTF8.GetBytes |> sha256Bytes
 
+let replayDigest = String.replicate 64 "a"
+
+let replayReviewedSirWitness contractFingerprint witnessPath outputDirectory =
+    let source: QuintReplaySourceBinding =
+        { Path = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
+          Line = 17
+          Column = 1 }
+
+    let context: QuintItfDecodeContext =
+        { Environment =
+            { Seed = "92220"
+              Bounds = [ "maxSamples", 1L; "transitions", 2L ]
+              ToolFingerprint = replayDigest
+              ProfileFingerprint = replayDigest
+              ContractFingerprint = contractFingerprint
+              AdapterFingerprint = replayDigest
+              ImplementationFingerprint = replayDigest }
+          Steps =
+            [ { Index = 1
+                Action = "ApplyDamage"
+                Source = source }
+              { Index = 2
+                Action = "ApplyDamage"
+                Source = source } ] }
+
+    let trace =
+        File.ReadAllText witnessPath
+        |> QuintReplay.decodeItf context
+        |> expectOk "decode reviewed S.I.R. ITF"
+
+    match QuintReplay.validateTrace trace with
+    | [] -> ()
+    | findings -> fail $"reviewed S.I.R. trace validation: %A{findings}"
+
+    let recomputedTrace =
+        QuintReplay.traceFingerprint trace |> expectOk "trace identity"
+
+    if recomputedTrace <> trace.TraceIdentity then
+        fail "reviewed S.I.R. trace identity did not recompute exactly"
+
+    let observations: QuintReplayObservation list =
+        trace.Steps
+        |> List.map (fun step ->
+            { Index = step.Index
+              Action = step.Action
+              Source = step.Source
+              Actual = step.Expected })
+
+    match QuintReplay.compare trace observations with
+    | Ok QuintReplayResult.Equivalent -> ()
+    | result -> fail $"reviewed S.I.R. positive replay was not equivalent: %A{result}"
+
+    let wrongDraft =
+        { observations[1].Actual with
+            Identity = ""
+            Bindings =
+                observations[1].Actual.Bindings
+                |> List.map (fun (name, value) ->
+                    if name = "hitPoints" then
+                        name, QuintReplayValue.Integer "1"
+                    else
+                        name, value) }
+
+    let wrong =
+        { wrongDraft with
+            Identity = QuintReplay.stateFingerprint wrongDraft |> expectOk "divergent state identity" }
+
+    let divergence =
+        match QuintReplay.compare trace [ observations[0]; { observations[1] with Actual = wrong } ] with
+        | Ok(QuintReplayResult.Diverged value) -> value
+        | result -> fail $"reviewed S.I.R. mutation did not diverge: %A{result}"
+
+    if
+        divergence.Step <> 2
+        || divergence.Action <> "ApplyDamage"
+        || divergence.Source <> source
+        || divergence.Reason <> "state"
+        || divergence.Expected.IsNone
+        || divergence.Actual.IsNone
+    then
+        fail $"reviewed S.I.R. first divergence was not exact: %A{divergence}"
+
+    File.WriteAllText(
+        Path.Combine(outputDirectory, "replay.txt"),
+        String.concat
+            "\n"
+            [ "positive=equivalent"
+              $"trace=%s{trace.TraceIdentity}"
+              $"divergence=%d{divergence.Step}|%s{divergence.Action}|%s{divergence.Source.Path}:%d{divergence.Source.Line}:%d{divergence.Source.Column}|%s{divergence.Reason}"
+              $"expected=%s{divergence.Expected.Value.Identity}"
+              $"actual=%s{divergence.Actual.Value.Identity}" ]
+        + "\n"
+    )
+
 let position line column : QuintSourcePosition = { Line = line; Column = column }
 
 let range path startLine startColumn endLine endColumn : QuintSourceRange =
@@ -165,7 +259,7 @@ let request step objectId arguments =
       WorkingDirectory = "isolated-run" }
 
 match Environment.GetCommandLineArgs() |> Array.skip 1 with
-| [| logicalPath; markdownPath; generatedPath; typedJsonPath; outputDirectory |] ->
+| [| logicalPath; markdownPath; generatedPath; typedJsonPath; witnessPath; outputDirectory |] ->
     let source =
         File.ReadAllBytes markdownPath
         |> QuintSource.createMarkdown logicalPath
@@ -242,5 +336,8 @@ match Environment.GetCommandLineArgs() |> Array.skip 1 with
         + "\n"
     )
 
+    if witnessPath <> "-" then
+        replayReviewedSirWitness output.Bindings.ContractFingerprint witnessPath outputDirectory
+
     printfn "%s %s" specification output.CompilationFingerprint
-| _ -> fail "expected: logical-path markdown generated-qnt typed-json output-directory"
+| _ -> fail "expected: logical-path markdown generated-qnt typed-json witness-or-dash output-directory"

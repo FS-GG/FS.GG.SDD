@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "0700535a0492ca837e276183ef3035db87d0864786c85aa65037b95afe5b781e"
+        "value": "f67dc1ec26b13c9e8de7fa9a45c16ea697ce1cc1a253dfa724523f7602db34b7"
       }
     },
     {
@@ -2125,7 +2125,13 @@
       "artifactRefs": [
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/fixtures/quint-compiler-consumer/Consumer.fsproj",
+        "tests/fixtures/quint-compiler-consumer/NuGet.Config",
         "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/fixtures/quint-compiler-consumer/Provisioning.NuGet.Config",
+        "tests/quint-q1/fixtures/sir-reviewed-witness.itf.json",
         "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
@@ -2520,7 +2526,12 @@
       "artifactRefs": [
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/fixtures/quint-compiler-consumer/Consumer.fsproj",
+        "tests/fixtures/quint-compiler-consumer/NuGet.Config",
         "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/quint-q1/fixtures/sir-reviewed-witness.itf.json",
         "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
@@ -2815,7 +2826,13 @@
       "artifactRefs": [
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs",
         "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi",
+        "tests/fixtures/quint-compiler-consumer/Consumer.fsproj",
+        "tests/fixtures/quint-compiler-consumer/NuGet.Config",
         "tests/fixtures/quint-compiler-consumer/Program.fs",
+        "tests/fixtures/quint-compiler-consumer/Provisioning.NuGet.Config",
+        "tests/quint-q1/fixtures/sir-reviewed-witness.itf.json",
         "tests/quint-q2-compiler-acceptance.sh"
       ],
       "result": "pass",
@@ -3018,7 +3035,7 @@
           "path": "work/923-quint-profile-compiler/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "0700535a0492ca837e276183ef3035db87d0864786c85aa65037b95afe5b781e"
+            "value": "f67dc1ec26b13c9e8de7fa9a45c16ea697ce1cc1a253dfa724523f7602db34b7"
           },
           "schemaVersion": 1
         },
@@ -3049,7 +3066,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "9825b2f76b1e86c1fa59f4c74cb609820ae2beeda024a9b757356b77c447781b"
+        "value": "1b093e22eb3e2f275bc540415d57cf3f0a23fbe193b7d2c2127d330c4d76ada5"
       },
       "currency": "current"
     }

@@ -1,5 +1,3 @@
-#load "../../src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintProfile.fs"
-
 open System
 open System.IO
 open System.Text.Json.Nodes
@@ -8,8 +6,8 @@ open FS.GG.SDD.Artifacts.TypedSpecifications
 let fail message =
     raise (InvalidOperationException message)
 
-let expectCode code =
-    function
+let expectCode code (result: Result<QuintProfileCatalogue, QuintProfileDiagnostic list>) =
+    match result with
     | Error findings when findings |> List.exists (fun finding -> finding.Code = code) -> ()
     | Error findings -> fail $"Expected {code}, got {findings |> List.map _.Code}"
     | Ok _ -> fail $"Expected refusal {code}."
@@ -196,6 +194,24 @@ expectCode
                 root["effects"].AsObject().Remove("40") |> ignore))
     ))
 
+expectCode
+    "QUINT-IR-SEMANTIC-DIGEST"
+    (QuintProfile.adaptTypedEffectJson (
+        observation
+            requirementsBindings
+            (mutate (fun root ->
+                let types = root["types"].AsObject()
+                types["40"] <- types["22"].DeepClone()))
+    ))
+
+expectCode
+    "QUINT-IR-SEMANTIC-DIGEST"
+    (QuintProfile.adaptTypedEffectJson (
+        observation
+            requirementsBindings
+            (mutate (fun root -> (catalogueExpression "init" root)["opcode"] <- "actionAny"))
+    ))
+
 if fsi.CommandLineArgs.Length = 4 then
     let sirPath = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
 
@@ -242,4 +258,4 @@ if fsi.CommandLineArgs.Length = 4 then
     assertCorpus "S.I.R." 5 sirBindings fsi.CommandLineArgs[2]
     assertCorpus "coordination" 15 coordinationBindings fsi.CommandLineArgs[3]
 
-printfn "Exact Quint 0.32.0 Q1 IR corpus and 15 fail-closed mutations passed."
+printfn "Exact Quint 0.32.0 Q1 IR corpus and 17 fail-closed mutations passed."

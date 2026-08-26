@@ -54,10 +54,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -81,7 +81,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -108,13 +108,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
-      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
+      digest: "sha256:dc36ac0b757c71ceb81863c40b8438ea86e90cf04a045ebc0866caec012fa24d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 18
+      passed: 20
       failed: 0
       skipped: 0
-    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 17 independent closed-profile mutations, including wrong type relation and hidden initialization semantics.]
   - id: EV004
     kind: verification
     subject:
@@ -135,7 +135,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -162,7 +162,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -189,10 +189,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -216,7 +216,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -243,13 +243,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
-      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
+      digest: "sha256:dc36ac0b757c71ceb81863c40b8438ea86e90cf04a045ebc0866caec012fa24d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 18
+      passed: 20
       failed: 0
       skipped: 0
-    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 17 independent closed-profile mutations, including wrong type relation and hidden initialization semantics.]
   - id: EV009
     kind: verification
     subject:
@@ -270,7 +270,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -297,10 +297,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -324,7 +324,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -351,7 +351,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -378,7 +378,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -397,7 +397,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV014]
-    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q2-compiler-acceptance.sh]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi, tests/fixtures/quint-compiler-consumer/Consumer.fsproj, tests/fixtures/quint-compiler-consumer/NuGet.Config, tests/fixtures/quint-compiler-consumer/Provisioning.NuGet.Config, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q1/fixtures/sir-reviewed-witness.itf.json, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -405,13 +405,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
-    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
+    notes: ["A fresh package cache restored only from the complete preseeded local feed after network poisoning; the installed package compiled all three exact Q1 slices twice, replayed the reviewed S.I.R. witness with exact positive and first-divergence controls, emitted byte-identical output, and passed native/Fable parity plus independent IR/Fable mutations without a source load."]
   - id: EV015
     kind: verification
     subject:
@@ -432,13 +432,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
-      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
+      digest: "sha256:dc36ac0b757c71ceb81863c40b8438ea86e90cf04a045ebc0866caec012fa24d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 18
+      passed: 20
       failed: 0
       skipped: 0
-    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 17 independent closed-profile mutations, including wrong type relation and hidden initialization semantics.]
   - id: EV016
     kind: verification
     subject:
@@ -459,7 +459,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -486,10 +486,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -513,7 +513,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -540,7 +540,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -567,7 +567,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -594,7 +594,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -621,7 +621,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -648,10 +648,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -675,10 +675,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -702,13 +702,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
-      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
+      digest: "sha256:dc36ac0b757c71ceb81863c40b8438ea86e90cf04a045ebc0866caec012fa24d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 18
+      passed: 20
       failed: 0
       skipped: 0
-    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 17 independent closed-profile mutations, including wrong type relation and hidden initialization semantics.]
   - id: EV026
     kind: verification
     subject:
@@ -729,7 +729,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -756,10 +756,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -775,7 +775,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-008]
     obligationRefs: [EV028]
-    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q2-compiler-acceptance.sh]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi, tests/fixtures/quint-compiler-consumer/Consumer.fsproj, tests/fixtures/quint-compiler-consumer/NuGet.Config, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q1/fixtures/sir-reviewed-witness.itf.json, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -783,13 +783,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
-    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
+    notes: ["A fresh package cache restored only from the complete preseeded local feed after network poisoning; the installed package compiled all three exact Q1 slices twice, replayed the reviewed S.I.R. witness with exact positive and first-divergence controls, emitted byte-identical output, and passed native/Fable parity plus independent IR/Fable mutations without a source load."]
   - id: EV029
     kind: verification
     subject:
@@ -810,7 +810,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -837,7 +837,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -864,7 +864,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -891,10 +891,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -918,7 +918,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -945,10 +945,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -972,7 +972,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -999,7 +999,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -1026,10 +1026,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -1053,7 +1053,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -1072,7 +1072,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-008]
     obligationRefs: [EV039]
-    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q2-compiler-acceptance.sh]
+    artifacts: [src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintCompiler.fsi, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintReplay.fsi, tests/fixtures/quint-compiler-consumer/Consumer.fsproj, tests/fixtures/quint-compiler-consumer/NuGet.Config, tests/fixtures/quint-compiler-consumer/Provisioning.NuGet.Config, tests/fixtures/quint-compiler-consumer/Program.fs, tests/quint-q1/fixtures/sir-reviewed-witness.itf.json, tests/quint-q2-compiler-acceptance.sh]
     sourceRefs:
       - kind: verification
         path: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj
@@ -1080,13 +1080,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
-    notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
+    notes: ["A fresh package cache restored only from the complete preseeded local feed after network poisoning; the installed package compiled all three exact Q1 slices twice, replayed the reviewed S.I.R. witness with exact positive and first-divergence controls, emitted byte-identical output, and passed native/Fable parity plus independent IR/Fable mutations without a source load."]
   - id: EV040
     kind: verification
     subject:
@@ -1107,13 +1107,13 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-exact-ir.junit.xml
-      digest: "sha256:5b86e2bf834708941afde797d2cb13d98e215f7999504494b67b1022f0963c8d"
+      digest: "sha256:dc36ac0b757c71ceb81863c40b8438ea86e90cf04a045ebc0866caec012fa24d"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 18
+      passed: 20
       failed: 0
       skipped: 0
-    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 15 independent closed-profile mutations.]
+    notes: [Exact Quint 0.32.0 typed/effect output for all three Q1 slices passed with 17 independent closed-profile mutations, including wrong type relation and hidden initialization semantics.]
   - id: EV041
     kind: verification
     subject:
@@ -1134,10 +1134,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/quint-q2-compiler-acceptance.junit.xml
-      digest: "sha256:0b381620e927126802960af2a449ede02cd748ad9e4146c6176b4afbf07d09ca"
+      digest: "sha256:26a81e07a94c364fbb89085d23eeba78eac9b87f55b62f3863d84fd705591577"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 8
+      passed: 10
       failed: 0
       skipped: 0
     notes: ["The installed-package compiler accepted all three exact Q1 slices twice in isolated roots with byte-identical outputs, offline tool enforcement, native/Fable parity, and an independent Fable mutation."]
@@ -1161,7 +1161,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -1188,7 +1188,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609
@@ -1215,7 +1215,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/923-quint-profile-compiler/test-results/FS.GG.SDD.Artifacts.Tests.trx
-      digest: "sha256:723e3f9b643255faabd808c1c97877d3438521eeac1d8b7b686152f5f683a1b8"
+      digest: "sha256:c719d5bab0ed974d88111779cbaa659174dd2a0e87d03177299b024c2c3ff5df"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 609

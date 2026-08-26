@@ -26,11 +26,10 @@ consumer="$scratch/consumer"
 mkdir -p "$feed"
 cp -R "$repo_root/tests/fixtures/quint-compiler-consumer" "$consumer"
 
-# Preparation may restore packages. Everything after the marker uses only these local objects.
+# Provision the complete package closure into a local feed. The proof below starts from a
+# different, empty global-packages folder and has no network source available.
 dotnet pack "$repo_root/src/FS.GG.Contracts/FS.GG.Contracts.fsproj" -c Release -o "$feed" >/dev/null
 dotnet pack "$repo_root/src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" -c Release -o "$feed" >/dev/null
-export NUGET_PACKAGES="$scratch/packages"
-dotnet restore "$consumer/Consumer.fsproj" --configfile "$consumer/NuGet.Config" >/dev/null
 
 fable_probe="$scratch/fable-probe"
 mkdir -p "$fable_probe"
@@ -41,14 +40,29 @@ printf '%s\n' \
   '</Project>' >"$fable_probe/FableProbe.fsproj"
 printf '%s\n' 'module Placeholder' 'let Value = "prepared"' >"$fable_probe/Bindings.fs"
 printf '%s\n' 'open Placeholder' 'printfn "%s" Value' >"$fable_probe/Program.fs"
-dotnet restore "$fable_probe/FableProbe.fsproj" >/dev/null
+
+provisioning_packages="$scratch/provisioning-packages"
+NUGET_PACKAGES="$provisioning_packages" dotnet restore "$consumer/Consumer.fsproj" \
+  --configfile "$consumer/Provisioning.NuGet.Config" --no-http-cache >/dev/null
+NUGET_PACKAGES="$provisioning_packages" dotnet restore "$fable_probe/FableProbe.fsproj" \
+  --configfile "$consumer/Provisioning.NuGet.Config" --no-http-cache >/dev/null
+find "$provisioning_packages" -type f -name '*.nupkg' -exec cp -f '{}' "$feed/" \;
 
 export HTTP_PROXY='http://127.0.0.1:1'
 export HTTPS_PROXY='http://127.0.0.1:1'
 export ALL_PROXY='http://127.0.0.1:1'
 export NO_PROXY='127.0.0.1,localhost'
 export QUINT_HOME="$scratch/quint-home"
+export NUGET_PACKAGES="$scratch/packages"
+export NUGET_HTTP_CACHE_PATH="$scratch/http-cache"
 mkdir -p "$QUINT_HOME"
+
+# This is the installed-package boundary: fresh cache, local preseed only, and network already
+# unavailable. Both restores must resolve the complete closure without consulting nuget.org.
+dotnet restore "$consumer/Consumer.fsproj" --configfile "$consumer/NuGet.Config" \
+  --no-http-cache --force-evaluate >/dev/null
+dotnet restore "$fable_probe/FableProbe.fsproj" --source "$feed" \
+  --no-http-cache --force-evaluate >/dev/null
 
 for run in a b; do
   mkdir -p "$scratch/$run"
@@ -69,18 +83,22 @@ for artifact in requirements.qnt sir-damage.qnt coordination.qnt \
     || fail "isolated compilation is not byte-identical: $artifact"
 done
 
-dotnet fsi --exec "$repo_root/tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx" \
+artifact_assembly="$(find "$NUGET_PACKAGES/fs.gg.sdd.artifacts" -path '*/lib/net10.0/FS.GG.SDD.Artifacts.dll' -print -quit)"
+[[ -n "$artifact_assembly" && -f "$artifact_assembly" ]] \
+  || fail 'installed FS.GG.SDD.Artifacts assembly is absent from the fresh offline cache'
+dotnet fsi --reference:"$artifact_assembly" --exec \
+  "$repo_root/tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx" \
   "$scratch/a/requirements.qnt.typed.json" \
   "$scratch/a/sir-damage.qnt.typed.json" \
   "$scratch/a/coordination.qnt.typed.json" >"$scratch/exact-ir.log"
-grep -F 'Exact Quint 0.32.0 Q1 IR corpus and 15 fail-closed mutations passed.' "$scratch/exact-ir.log" >/dev/null \
+grep -F 'Exact Quint 0.32.0 Q1 IR corpus and 17 fail-closed mutations passed.' "$scratch/exact-ir.log" >/dev/null \
   || fail 'exact IR adapter did not complete its independent mutation corpus'
 
 if [[ -n "${Q2_EXACT_IR_JUNIT_OUT:-}" ]]; then
   mkdir -p "$(dirname "$Q2_EXACT_IR_JUNIT_OUT")"
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
-    '<testsuite name="FS.GG.SDD.QuintQ2ExactIr" tests="18" failures="0">' \
+    '<testsuite name="FS.GG.SDD.QuintQ2ExactIr" tests="20" failures="0">' \
     '  <testcase classname="QuintQ2ExactIr" name="requirements-exact-quint-0.32-ir" />' \
     '  <testcase classname="QuintQ2ExactIr" name="sir-exact-quint-0.32-ir" />' \
     '  <testcase classname="QuintQ2ExactIr" name="coordination-exact-quint-0.32-ir" />' \
@@ -99,6 +117,8 @@ if [[ -n "${Q2_EXACT_IR_JUNIT_OUT:-}" ]]; then
     '  <testcase classname="QuintQ2ExactIr" name="mutation-empty-tables" />' \
     '  <testcase classname="QuintQ2ExactIr" name="mutation-type-effect-mismatch" />' \
     '  <testcase classname="QuintQ2ExactIr" name="mutation-catalogue-evidence" />' \
+    '  <testcase classname="QuintQ2ExactIr" name="mutation-wrong-type-relation" />' \
+    '  <testcase classname="QuintQ2ExactIr" name="mutation-hidden-init-semantics" />' \
     '</testsuite>' >"$Q2_EXACT_IR_JUNIT_OUT"
 fi
 
@@ -111,12 +131,16 @@ declare -a rows=(
 for row in "${rows[@]}"; do
   read -r markdown module label <<<"$row"
   logical="docs/experiments/quint-q1/slices/$markdown"
+  witness='-'
+  if [[ "$label" == 'sir' ]]; then
+    witness="$repo_root/tests/quint-q1/fixtures/sir-reviewed-witness.itf.json"
+  fi
   out_a="$scratch/output-a/$label"
   out_b="$scratch/output-b/$label"
   dotnet run --project "$consumer/Consumer.fsproj" -c Release --no-restore -- \
-    "$logical" "$scratch/a/$markdown" "$scratch/a/$module" "$scratch/a/$module.typed.json" "$out_a"
+    "$logical" "$scratch/a/$markdown" "$scratch/a/$module" "$scratch/a/$module.typed.json" "$witness" "$out_a"
   dotnet run --project "$consumer/Consumer.fsproj" -c Release --no-restore -- \
-    "$logical" "$scratch/b/$markdown" "$scratch/b/$module" "$scratch/b/$module.typed.json" "$out_b"
+    "$logical" "$scratch/b/$markdown" "$scratch/b/$module" "$scratch/b/$module.typed.json" "$witness" "$out_b"
   diff -ru "$out_a" "$out_b" >/dev/null || fail "package compiler output drifted across isolated runs: $label"
 
   cp "$out_a/bindings.fable.fs" "$fable_probe/Bindings.fs"
@@ -146,16 +170,18 @@ if [[ -n "${Q2_JUNIT_OUT:-}" ]]; then
   mkdir -p "$(dirname "$Q2_JUNIT_OUT")"
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
-    '<testsuite name="FS.GG.SDD.QuintQ2CompilerAcceptance" tests="8" failures="0">' \
+    '<testsuite name="FS.GG.SDD.QuintQ2CompilerAcceptance" tests="10" failures="0">' \
     '  <testcase classname="QuintQ2" name="preseeded-exact-tool-identity" />' \
+    '  <testcase classname="QuintQ2" name="fresh-cache-offline-package-restore" />' \
     '  <testcase classname="QuintQ2" name="three-q1-slices" />' \
     '  <testcase classname="QuintQ2" name="two-isolated-extractions" />' \
     '  <testcase classname="QuintQ2" name="two-isolated-typechecks" />' \
     '  <testcase classname="QuintQ2" name="package-only-public-compiler" />' \
+    '  <testcase classname="QuintQ2" name="installed-package-sir-replay" />' \
     '  <testcase classname="QuintQ2" name="canonical-receipt-parity" />' \
     '  <testcase classname="QuintQ2" name="fable-runtime-parity" />' \
     '  <testcase classname="QuintQ2" name="fable-independent-mutation" />' \
     '</testsuite>' >"$Q2_JUNIT_OUT"
 fi
 
-printf 'Q2-COMPILER-ACCEPTED: package-only compiler, 3 slices, 2 isolated runs, Fable parity, 1 Fable mutation\n'
+printf 'Q2-COMPILER-ACCEPTED: offline package compiler/replay, 3 slices, 2 isolated runs, Fable parity, 17 IR and 1 Fable mutations\n'

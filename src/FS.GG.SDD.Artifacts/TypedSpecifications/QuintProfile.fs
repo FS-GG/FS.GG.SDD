@@ -2,6 +2,8 @@ namespace FS.GG.SDD.Artifacts.TypedSpecifications
 
 open System
 open System.Globalization
+open System.Security.Cryptography
+open System.Text
 open System.Text.Json
 open System.Text.RegularExpressions
 
@@ -63,6 +65,24 @@ type QuintTypedEffectObservation =
 module private ProfileCore =
     let profile = "fsgg-quint-profile/1"
     let version = "0.32.0"
+
+    // Quint's node identities are deliberately not projected into the public contract, but
+    // the internal adapter still has to bind every compiler-owned relation and hidden
+    // declaration to the exact Q1-qualified program. These are the byte identities emitted
+    // by pinned Quint 0.32.0 for the three accepted Q1 slices; accepting a merely
+    // shape-compatible types/effects table would make those relations decorative.
+    let admittedTypedEffectDigests =
+        Map.ofList
+            [ "RequirementsSlice", "6a7c4dd891a2b46753491b71cf3090ccf3449c97756e49055499463042e12af4"
+              "SirDamageSlice", "34fa4c442985cb4bd7d29e76e32c55ff0c909c12578623851989d4e64b0fd6de"
+              "CoordinationSlice", "d55b93de59a0b287e87cb9ae60f74d22a9548bb545fc2ba0829c62b75bc588df" ]
+
+    let sha256Text (text: string) =
+        text
+        |> Encoding.UTF8.GetBytes
+        |> SHA256.HashData
+        |> Convert.ToHexString
+        |> _.ToLowerInvariant()
 
     let diagnostic code path message correction source : QuintProfileDiagnostic =
         { Code = code
@@ -1172,6 +1192,35 @@ module QuintProfile =
                           QuintVersion = observation.QuintVersion
                           Entries = entries
                           ActionEffects = effects }
+
+                    let bindingModules =
+                        observation.SourceBindings |> List.map _.ModuleName |> List.distinct
+
+                    match bindingModules with
+                    | [ moduleName ] ->
+                        let actual = ProfileCore.sha256Text observation.TypedEffectJson
+
+                        match Map.tryFind moduleName ProfileCore.admittedTypedEffectDigests with
+                        | Some expected when actual = expected -> ()
+                        | Some expected ->
+                            findings <-
+                                ProfileCore.diagnostic
+                                    "QUINT-IR-SEMANTIC-DIGEST"
+                                    "/"
+                                    $"Typed/effect semantics for '%s{moduleName}' do not match the exact Q1-qualified Quint 0.32.0 observation (expected %s{expected}, actual %s{actual})."
+                                    "Regenerate this exact Q1 slice with the content-addressed Quint 0.32.0 toolchain; do not substitute type/effect relations or hidden declarations."
+                                    (observation.SourceBindings |> List.tryHead |> Option.map _.Source)
+                                :: findings
+                        | None ->
+                            findings <-
+                                ProfileCore.diagnostic
+                                    "QUINT-IR-SEMANTIC-PROGRAM"
+                                    "/sourceBindings"
+                                    $"Module '%s{moduleName}' is not one of the three Q1-qualified semantic programs."
+                                    "Use RequirementsSlice, SirDamageSlice, or CoordinationSlice from the accepted Q1 corpus."
+                                    (observation.SourceBindings |> List.tryHead |> Option.map _.Source)
+                                :: findings
+                    | _ -> ()
 
                     let all = ProfileCore.sorted (findings @ ProfileCore.validate catalogue)
                     if List.isEmpty all then Ok catalogue else Error all

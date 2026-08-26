@@ -270,9 +270,11 @@ jobs:
           printf '%s  %s\n' \
             '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' \
             "$RUNNER_TEMP/quint-q2-tools/quint" | sha256sum --check --strict
-          GO111MODULE=off go build -trimpath \
-            -o "$RUNNER_TEMP/quint-q2-tools/lmt" \
-            src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/lmt/main.go
+          (
+            cd src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/lmt
+            GO111MODULE=off go build -trimpath \
+              -o "$RUNNER_TEMP/quint-q2-tools/lmt" main.go
+          )
           printf '%s  %s\n' \
             '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' \
             "$RUNNER_TEMP/quint-q2-tools/lmt" | sha256sum --check --strict

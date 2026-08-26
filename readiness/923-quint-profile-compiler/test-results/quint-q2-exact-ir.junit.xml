@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<testsuite name="FS.GG.SDD.QuintQ2ExactIr" tests="18" failures="0">
+<testsuite name="FS.GG.SDD.QuintQ2ExactIr" tests="20" failures="0">
   <testcase classname="QuintQ2ExactIr" name="requirements-exact-quint-0.32-ir" />
   <testcase classname="QuintQ2ExactIr" name="sir-exact-quint-0.32-ir" />
   <testcase classname="QuintQ2ExactIr" name="coordination-exact-quint-0.32-ir" />
@@ -18,4 +18,6 @@
   <testcase classname="QuintQ2ExactIr" name="mutation-empty-tables" />
   <testcase classname="QuintQ2ExactIr" name="mutation-type-effect-mismatch" />
   <testcase classname="QuintQ2ExactIr" name="mutation-catalogue-evidence" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-wrong-type-relation" />
+  <testcase classname="QuintQ2ExactIr" name="mutation-hidden-init-semantics" />
 </testsuite>

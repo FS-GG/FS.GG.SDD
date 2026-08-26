@@ -99,8 +99,10 @@ deliberately split into a pure plan and a caller-owned local execution edge:
    contains neither its compiler/profile version nor source coordinates, so the
    adapter requires the verified tool observation and exact `QuintSource` row
    bindings out of band; it never derives locations from unstable node IDs.
-   Unknown constructs, undeclared semantics, bad references, and
-   arbitrary-expression lowering fail closed.
+   The complete compiler-owned envelope is byte-bound to the three
+   Q1-qualified observations, so wrong-but-present type/effect relations and
+   allowlisted changes to hidden declarations fail closed alongside unknown
+   constructs, bad references, and arbitrary-expression lowering.
 4. `QuintContract` emits canonical `compiled-contract-v1` bytes. The schema
    contains integration facts, locations, verification profiles, finite bounds,
    compatibility metadata, and semantic digests—never arbitrary Quint
@@ -118,13 +120,16 @@ deliberately split into a pure plan and a caller-owned local execution edge:
    content-addressed compilation receipt, or one deterministically ordered
    diagnostic set. It performs no I/O.
 
-The required acceptance packs `FS.GG.SDD.Artifacts`, restores a clean consumer
-with no project reference, and compiles all three exact Q1 slices in two isolated
-directories using only pre-provisioned exact tools. It compares generated Quint,
-typed/effect IR, contracts, bindings, and receipts byte-for-byte, then compiles
+The required acceptance packs `FS.GG.SDD.Artifacts`, provisions the complete
+package closure into a local feed, then restores a clean consumer into a fresh
+cache after network access is unavailable. With no project/source load, that
+installed consumer compiles all three exact Q1 slices in two isolated
+directories and replays the reviewed S.I.R. ITF witness through both matching
+and first-divergence controls. It compares generated Quint, typed/effect IR,
+contracts, bindings, receipts, and replay output byte-for-byte, then compiles
 and runs the generated bindings under Fable/Node and compares their contract
-fingerprint, catalogue identities, and canonical JSON with native .NET. A
-separate invalid Fable consumer must fail compilation.
+fingerprint, catalogue identities, and canonical JSON with native .NET.
+Separate invalid IR and Fable consumers must fail.
 
 The qualified `lmt` source/license identity and optional Apache-2.0 guidance
 identity remain separately content-addressed package assets. Guidance is not a
