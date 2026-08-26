@@ -79,3 +79,40 @@ adoption: its package metadata points at a nonexistent Contracts preview and can
 restore only by falling forward with `NU1603`. Preview.2 preserves the package's
 independent `FS.GG.Contracts` 7.5.2 dependency and is the first downstream-eligible
 typed-kernel preview.
+
+## Hermetic Quint compiler boundary
+
+Q2 adds the library contracts for `fsgg-quint-profile/1`; it does not add a
+lifecycle backend or change the Standard SDD default. The compiler boundary is
+deliberately split into a pure plan and a caller-owned local execution edge:
+
+1. `QuintToolchain` describes the exact Q1-qualified tools and content-addressed
+   cache objects. Validation distinguishes missing, unreadable, incomplete,
+   mismatched, occupied-endpoint, and failed-process observations. Compilation
+   never installs, downloads, resolves a branch, or treats unavailable model
+   checking as a pass.
+2. `QuintSource` validates canonical UTF-8 Markdown and an ordered fence
+   manifest, accepts only plain `.qnt` targets, and maps generated ranges back to
+   stable Markdown line/column ranges without host paths or Quint node IDs.
+3. `QuintProfile` privately reads the exact Quint 0.32.0 typed/effect fixture and
+   exposes only the closed profile catalogue. Unknown constructs, undeclared
+   semantics, bad references, and arbitrary-expression lowering fail closed.
+4. `QuintContract` emits canonical `compiled-contract-v1` bytes. The schema
+   contains integration facts, locations, verification profiles, finite bounds,
+   compatibility metadata, and semantic digests—never arbitrary Quint
+   expressions or raw compiler IR.
+5. Generated F# and Fable-compatible bindings derive only from that contract.
+   Identifier collisions are errors, and both projections must emit identical
+   canonical JSON and ordering.
+6. `QuintReplay` carries generic fingerprinted ITF traces and implementation
+   observations. It reports the first divergent step, action, binding, expected
+   state, and observed state without embedding a product transition function.
+
+The qualified `lmt` source/license identity and optional Apache-2.0 guidance
+identity remain separately content-addressed package assets. Guidance is not a
+runtime dependency or compiler authority.
+
+Q2 produces an implementation-ready package boundary only. The
+`quint-specification-v1` author/inspect/migrate/rollback commands, manifest
+authority, registry/provider floors, publication, consumer pins, and workspace
+default belong to Q3 and later roadmap gates.

@@ -93,9 +93,9 @@ module QuintToolchainSourceTests =
         let cache = exactCache ()
 
         let absent = cache |> List.filter (fun item -> item.Id <> "quint-binary")
-        let unreadable = replaceCache "quint-binary" (Unreadable "permission denied") cache
-        let mismatch = replaceCache "quint-binary" (Present(String.replicate 64 "f", Some 125661253L, true)) cache
-        let incomplete = replaceCache "apalache-tree" (Present(String.replicate 64 "0", Some 136014794L, false)) cache
+        let unreadable = replaceCache "quint-binary" (QuintCacheObjectState.Unreadable "permission denied") cache
+        let mismatch = replaceCache "quint-binary" (QuintCacheObjectState.Present(String.replicate 64 "f", Some 125661253L, true)) cache
+        let incomplete = replaceCache "apalache-tree" (QuintCacheObjectState.Present(String.replicate 64 "0", Some 136014794L, false)) cache
 
         QuintToolchain.validateCache QuintToolchain.q1 absent |> expectCode "QUINT-CACHE-OBJECT-ABSENT"
         QuintToolchain.validateCache QuintToolchain.q1 unreadable |> expectCode "QUINT-CACHE-OBJECT-UNREADABLE"

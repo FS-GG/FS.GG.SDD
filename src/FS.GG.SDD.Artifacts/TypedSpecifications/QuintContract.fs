@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Artifacts.TypedSpecifications
 
 open System
+open System.Buffers.Binary
 open System.Globalization
 open System.IO
 open System.Security.Cryptography
@@ -74,7 +75,7 @@ module private ContractCore =
         SHA256.HashData bytes |> Array.map (fun value -> value.ToString("x2", CultureInfo.InvariantCulture)) |> String.concat ""
 
     let sha256Text (value: string) = value |> Encoding.UTF8.GetBytes |> sha256
-    let normalizeDigest (value: string) = if isNull value then "" elif value.StartsWith("sha256:", StringComparison.Ordinal) then value.Substring(7) else value
+    let normalizeDigest (value: string) = if value.StartsWith("sha256:", StringComparison.Ordinal) then value.Substring(7) else value
     let validDigest value = digestPattern.IsMatch(normalizeDigest value)
 
     let validate contract =
@@ -151,10 +152,23 @@ module private ContractCore =
         match names |> List.tryFind (fun name -> not (Set.contains name allowed)) with Some name -> raise(JsonException($"%s{path}/%s{name}: unknown or expression-bearing field.")) | None -> ()
 
     let prop (name: string) (element: JsonElement) = match element.TryGetProperty name with true, value -> value | _ -> raise(JsonException($"Missing required field '%s{name}'."))
-    let str (name: string) (element: JsonElement) = let value = prop name element in if value.ValueKind <> JsonValueKind.String then raise(JsonException($"Field '%s{name}' must be a string.")) else value.GetString()
+    let str (name: string) (element: JsonElement) =
+        let value = prop name element
+        if value.ValueKind <> JsonValueKind.String then
+            raise(JsonException($"Field '%s{name}' must be a string."))
+        match value.GetString() with
+        | null -> raise(JsonException($"Field '%s{name}' must be a non-null string."))
+        | text -> text
     let int64 (name: string) (element: JsonElement) = let value = prop name element in match value.TryGetInt64() with true, number -> number | _ -> raise(JsonException($"Field '%s{name}' must be an integer."))
     let array (name: string) (element: JsonElement) = let value = prop name element in if value.ValueKind <> JsonValueKind.Array then raise(JsonException($"Field '%s{name}' must be an array.")) else value.EnumerateArray() |> Seq.toList
-    let strings (name: string) (element: JsonElement) = array name element |> List.map (fun value -> if value.ValueKind <> JsonValueKind.String then raise(JsonException($"Field '%s{name}' must contain strings.")) else value.GetString())
+    let strings (name: string) (element: JsonElement) =
+        array name element
+        |> List.map (fun value ->
+            if value.ValueKind <> JsonValueKind.String then
+                raise(JsonException($"Field '%s{name}' must contain strings."))
+            match value.GetString() with
+            | null -> raise(JsonException($"Field '%s{name}' must contain non-null strings."))
+            | text -> text)
     let range (path: string) (element: JsonElement) =
         let source = prop "source" element
         checkFields (path + "/source") (Set.ofList [ "path"; "startLine"; "startColumn"; "endLine"; "endColumn" ]) source
@@ -173,8 +187,6 @@ module private ContractCore =
         let compatibility = array "compatibility" root |> List.mapi (fun i row -> checkFields $"/compatibility/%d{i}" (Set.ofList [ "surface"; "requirement"; "detail" ]) row; { Surface = str "surface" row; Requirement = str "requirement" row; Detail = str "detail" row })
         let digests = array "digests" root |> List.mapi (fun i row -> checkFields $"/digests/%d{i}" (Set.ofList [ "name"; "sha256" ]) row; { Name = str "name" row; Sha256 = str "sha256" row })
         { Schema = str "schema" root; Profile = str "profile" root; Specification = str "specification" root; Catalogue = catalogue; ActionEffects = effects; Relationships = relationships; VerificationProfiles = profiles; Bounds = bounds; Impacts = impacts; Compatibility = compatibility; Digests = digests }
-
-    let componentHash value = sha256Text (sprintf "%A" value)
 
 [<RequireQualifiedAccess>]
 module QuintContract =
@@ -199,7 +211,12 @@ module QuintContract =
         let findings = named |> List.choose (fun (path, value) -> if ContractCore.validDigest value then None else Some(ContractCore.diagnostic "QUINT-FINGERPRINT-DIGEST" path "Fingerprint input is not lowercase SHA-256." "Bind the exact content-addressed input digest."))
         match findings, serializeCanonical inputs.Contract with
         | [], Ok contract ->
-            let frame (value: string) = let bytes = Encoding.UTF8.GetBytes value in BitConverter.GetBytes(bytes.Length) |> Array.append bytes
+            let frame (value: string) =
+                let bytes = Encoding.UTF8.GetBytes value
+                let length = Array.zeroCreate<byte> 4
+                BinaryPrimitives.WriteInt32BigEndian(length, bytes.Length)
+                Array.append length bytes
+
             [ "fsgg.quint.compilation-fingerprint/v1"; ContractCore.normalizeDigest inputs.SourceSha256; ContractCore.normalizeDigest inputs.FenceManifestSha256; ContractCore.normalizeDigest inputs.GeneratedModulesSha256; ContractCore.normalizeDigest inputs.ToolchainSha256; contract ]
             |> List.collect (frame >> Array.toList) |> List.toArray |> ContractCore.sha256 |> Ok
         | _, Error contractFindings -> Error(ContractCore.sorted (findings @ contractFindings))
@@ -213,14 +230,22 @@ module QuintContract =
         else
             match validate before, validate after with
             | [], [] ->
-                let components : (string * obj * obj) list =
-                    [ "/specification", box before.Specification, box after.Specification; "/catalogue", box before.Catalogue, box after.Catalogue; "/actionEffects", box before.ActionEffects, box after.ActionEffects; "/relationships", box before.Relationships, box after.Relationships; "/verificationProfiles", box before.VerificationProfiles, box after.VerificationProfiles; "/bounds", box before.Bounds, box after.Bounds; "/impacts", box before.Impacts, box after.Impacts; "/compatibility", box before.Compatibility, box after.Compatibility; "/digests", box before.Digests, box after.Digests ]
+                let beforeHash = ContractCore.serializeUnchecked before |> ContractCore.sha256Text
+                let afterHash = ContractCore.serializeUnchecked after |> ContractCore.sha256Text
+                let components =
+                    [ "/specification", before.Specification <> after.Specification
+                      "/catalogue", before.Catalogue <> after.Catalogue
+                      "/actionEffects", before.ActionEffects <> after.ActionEffects
+                      "/relationships", before.Relationships <> after.Relationships
+                      "/verificationProfiles", before.VerificationProfiles <> after.VerificationProfiles
+                      "/bounds", before.Bounds <> after.Bounds
+                      "/impacts", before.Impacts <> after.Impacts
+                      "/compatibility", before.Compatibility <> after.Compatibility
+                      "/digests", before.Digests <> after.Digests ]
                 let changes =
                     components
-                    |> List.choose (fun (path, oldValue, newValue) ->
-                        let oldHash = ContractCore.componentHash oldValue
-                        let newHash = ContractCore.componentHash newValue
-                        if oldHash = newHash then None
-                        else Some { Path = path; BeforeSha256 = oldHash; AfterSha256 = newHash })
+                    |> List.choose (fun (path, changed) ->
+                        if changed then Some { Path = path; BeforeSha256 = beforeHash; AfterSha256 = afterHash }
+                        else None)
                 if List.isEmpty changes then Ok Equivalent else Ok(Changed changes)
             | beforeFindings, afterFindings -> Error(ContractCore.sorted (beforeFindings @ afterFindings))

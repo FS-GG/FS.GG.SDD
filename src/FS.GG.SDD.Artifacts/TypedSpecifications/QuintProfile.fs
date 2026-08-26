@@ -144,7 +144,10 @@ module private ProfileCore =
 
     let stringAt path name element =
         match tryProperty name element with
-        | Some value when value.ValueKind = JsonValueKind.String -> Ok(value.GetString())
+        | Some value when value.ValueKind = JsonValueKind.String ->
+            match value.GetString() with
+            | null -> Error(diagnostic "QUINT-IR-TYPE" (path + "/" + name) "Expected a non-null string." "Emit the exact Quint 0.32 adapter field type." None)
+            | text -> Ok text
         | Some _ -> Error(diagnostic "QUINT-IR-TYPE" (path + "/" + name) "Expected a string." "Emit the exact Quint 0.32 adapter field type." None)
         | None -> Error(diagnostic "QUINT-IR-REQUIRED" (path + "/" + name) $"Required field '%s{name}' is absent." "Emit the complete typed/effect record." None)
 
@@ -161,8 +164,16 @@ module private ProfileCore =
         match tryProperty name element with
         | Some value when value.ValueKind = JsonValueKind.Array ->
             let values = value.EnumerateArray() |> Seq.toList
-            if values |> List.forall (fun item -> item.ValueKind = JsonValueKind.String) then Ok(values |> List.map _.GetString())
-            else Error(diagnostic "QUINT-IR-TYPE" (path + "/" + name) "Expected an array of strings." "Emit stable catalogue identities only." None)
+            let strings =
+                values
+                |> List.map (fun item ->
+                    if item.ValueKind <> JsonValueKind.String then None
+                    else item.GetString() |> Option.ofObj)
+
+            if strings |> List.forall Option.isSome then
+                Ok(strings |> List.choose id)
+            else
+                Error(diagnostic "QUINT-IR-TYPE" (path + "/" + name) "Expected an array of non-null strings." "Emit stable catalogue identities only." None)
         | Some _ -> Error(diagnostic "QUINT-IR-TYPE" (path + "/" + name) "Expected an array." "Emit a semantic identity set." None)
         | None -> Ok []
 

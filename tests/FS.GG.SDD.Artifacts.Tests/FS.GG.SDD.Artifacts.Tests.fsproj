@@ -8,6 +8,9 @@
     <Compile Include="TestSupport.fs" />
     <Compile Include="TypedSpecificationKernelTests.fs" />
     <Compile Include="TypedLifecycleTests.fs" />
+    <Compile Include="QuintProfileContractTests.fs" />
+    <Compile Include="QuintToolchainSourceTests.fs" />
+    <Compile Include="QuintReplayBindingsTests.fs" />
     <Compile Include="PackedDependencyContractTests.fs" />
     <Compile Include="IdentifierTests.fs" />
     <Compile Include="DriverManifestTests.fs" />

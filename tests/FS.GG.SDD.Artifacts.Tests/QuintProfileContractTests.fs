@@ -1,0 +1,188 @@
+namespace FS.GG.SDD.Artifacts.Tests
+
+open FS.GG.SDD.Artifacts.TypedSpecifications
+open Xunit
+
+module QuintProfileContractTests =
+    let private digest character = System.String(character, 64)
+
+    let private source line =
+        { Path = "docs/specifications/example.md"
+          Start = { Line = line; Column = 1 }
+          End = { Line = line; Column = 20 } }
+
+    let private catalogue =
+        [ { Id = "ACT-Apply"
+            Kind = Action
+            Source = source 12 }
+          { Id = "STATE-Value"
+            Kind = StateVariable
+            Source = source 8 }
+          { Id = "REQ-Safety"
+            Kind = Requirement
+            Source = source 4 }
+          { Id = "INV-Safe"
+            Kind = Invariant
+            Source = source 20 }
+          { Id = "EV-Check"
+            Kind = Evidence
+            Source = source 24 } ]
+
+    let private contract () =
+        { Schema = QuintContract.schema
+          Profile = QuintProfile.identity
+          Specification = "ExampleSpecification"
+          Catalogue = catalogue
+          ActionEffects =
+            [ { ActionId = "ACT-Apply"
+                Reads = [ "STATE-Value" ]
+                Writes = [ "STATE-Value" ]
+                Subjects = [ "REQ-Safety" ] } ]
+          Relationships =
+            [ { FromId = "REQ-Safety"
+                Kind = VerifiedBy
+                ToId = "EV-Check" }
+              { FromId = "INV-Safe"
+                Kind = Requires
+                ToId = "REQ-Safety" } ]
+          VerificationProfiles =
+            [ { Id = "VERIFY-Bounded"
+                Kind = "apalache"
+                SubjectIds = [ "INV-Safe" ]
+                BoundIds = [ "BOUND-Steps" ] } ]
+          Bounds = [ { Id = "BOUND-Steps"; Minimum = 0L; Maximum = 8L } ]
+          Impacts =
+            [ { SubjectId = "REQ-Safety"
+                Category = "contract"
+                Detail = "The safety obligation is externally visible." } ]
+          Compatibility =
+            [ { Surface = "generated-bindings"
+                Requirement = "additive"
+                Detail = "Profile 1 identifiers remain stable." } ]
+          Digests =
+            [ { Name = "canonicalSource"; Sha256 = digest 'a' }
+              { Name = "generatedModules"; Sha256 = digest 'b' } ] }
+
+    let private expectOk = function
+        | Ok value -> value
+        | Error findings -> failwithf "expected success, got %A" findings
+
+    let private findings = function
+        | Ok _ -> failwith "expected refusal"
+        | Error values -> values
+
+    [<Fact>]
+    let ``exact Quint adapter projects only closed stable catalogue facts`` () =
+        let typedEffectJson =
+            """{"quintVersion":"0.32.0","profile":"fsgg-quint-profile/1","declarations":[{"id":"STATE-Value","kind":"stateVariable","source":{"startLine":8,"startColumn":1,"endLine":8,"endColumn":10}},{"id":"ACT-Apply","kind":"action","source":{"startLine":12,"startColumn":1,"endLine":14,"endColumn":2},"reads":["STATE-Value"],"writes":["STATE-Value"],"subjects":[]}]}"""
+
+        let adapted =
+            QuintProfile.adaptTypedEffectJson "docs/specifications/example.md" typedEffectJson
+            |> expectOk
+
+        Assert.Equal(QuintProfile.identity, adapted.Profile)
+        Assert.Equal(QuintProfile.quintVersion, adapted.QuintVersion)
+        Assert.Equal<string list>([ "ACT-Apply"; "STATE-Value" ], adapted.Entries |> List.map _.Id)
+        Assert.Equal<string list>([ "STATE-Value" ], adapted.ActionEffects.Head.Writes)
+
+    [<Fact>]
+    let ``adapter refuses expression escape hatches and wrong exact versions distinctly`` () =
+        let expression =
+            """{"quintVersion":"0.32.0","profile":"fsgg-quint-profile/1","declarations":[{"id":"ACT-Apply","kind":"action","source":{"startLine":1,"startColumn":1,"endLine":1,"endColumn":2},"reads":[],"writes":[],"subjects":[],"expression":{"opcode":"assign"}}]}"""
+
+        let wrongVersion =
+            """{"quintVersion":"0.33.0","profile":"fsgg-quint-profile/1","declarations":[]}"""
+
+        Assert.Contains(
+            findings (QuintProfile.adaptTypedEffectJson "docs/spec.md" expression),
+            fun finding -> finding.Code = "QUINT-IR-UNSUPPORTED-FIELD" && finding.Path.EndsWith("/expression")
+        )
+
+        Assert.Contains(
+            findings (QuintProfile.adaptTypedEffectJson "docs/spec.md" wrongVersion),
+            fun finding -> finding.Code = "QUINT-PROFILE-VERSION"
+        )
+
+    [<Fact>]
+    let ``profile diagnostics retain safe literate paths and ordered source ranges`` () =
+        let invalid =
+            { Profile = QuintProfile.identity
+              QuintVersion = QuintProfile.quintVersion
+              Entries =
+                [ { Id = "bad"
+                    Kind = Requirement
+                    Source =
+                        { Path = "../escape.md"
+                          Start = { Line = 2; Column = 3 }
+                          End = { Line = 1; Column = 1 } } } ]
+              ActionEffects = [] }
+
+        let codes = QuintProfile.validate invalid |> List.map _.Code
+        Assert.Contains("QUINT-PROFILE-ID", codes)
+        Assert.Contains("QUINT-PROFILE-SOURCE-PATH", codes)
+        Assert.Contains("QUINT-PROFILE-SOURCE-RANGE", codes)
+
+    [<Fact>]
+    let ``compiled contract codec is canonical strict and byte stable`` () =
+        let expected = contract ()
+        let first = QuintContract.serializeCanonical expected |> expectOk
+        let second = QuintContract.serializeCanonical expected |> expectOk
+        let roundTrip = QuintContract.deserialize first |> expectOk
+
+        Assert.Equal(first, second)
+        Assert.Equal(first, QuintContract.serializeCanonical roundTrip |> expectOk)
+        Assert.EndsWith("\n", first)
+
+        let injectedExpression =
+            first.Replace("\"specification\":", "\"expression\":{},\"specification\":")
+
+        Assert.Contains(
+            findings (QuintContract.deserialize injectedExpression),
+            fun finding -> finding.Code = "QUINT-CONTRACT-MALFORMED"
+        )
+
+    [<Fact>]
+    let ``contract refuses unresolved facts reversed bounds and malformed digests together`` () =
+        let invalid =
+            { contract () with
+                Relationships =
+                    [ { FromId = "REQ-Missing"
+                        Kind = VerifiedBy
+                        ToId = "EV-Check" } ]
+                Bounds = [ { Id = "BOUND-Steps"; Minimum = 9L; Maximum = 2L } ]
+                Digests = [ { Name = "source"; Sha256 = "latest" } ] }
+
+        let codes = QuintContract.validate invalid |> List.map _.Code
+        Assert.Contains("QUINT-CONTRACT-REFERENCE", codes)
+        Assert.Contains("QUINT-CONTRACT-BOUND", codes)
+        Assert.Contains("QUINT-CONTRACT-DIGEST", codes)
+
+    [<Fact>]
+    let ``compilation fingerprint binds every semantic input and diff names changed component`` () =
+        let inputs =
+            { SourceSha256 = digest '1'
+              FenceManifestSha256 = digest '2'
+              GeneratedModulesSha256 = digest '3'
+              ToolchainSha256 = digest '4'
+              Contract = contract () }
+
+        let first = QuintContract.fingerprint inputs |> expectOk
+        let second = QuintContract.fingerprint inputs |> expectOk
+        Assert.Equal(64, first.Length)
+        Assert.Equal(first, second)
+
+        let changed =
+            { contract () with
+                Impacts =
+                    [ { SubjectId = "REQ-Safety"
+                        Category = "contract"
+                        Detail = "Changed integration meaning." } ] }
+
+        match QuintContract.semanticDiff (contract ()) changed |> expectOk with
+        | QuintContractDiff.Changed changes -> Assert.Contains(changes, fun change -> change.Path = "/impacts")
+        | QuintContractDiff.Equivalent -> Assert.Fail("expected an integration-meaning change")
+
+        Assert.Contains(
+            findings (QuintContract.fingerprint { inputs with ToolchainSha256 = "moving-latest" }),
+            fun finding -> finding.Code = "QUINT-FINGERPRINT-DIGEST"
+        )
