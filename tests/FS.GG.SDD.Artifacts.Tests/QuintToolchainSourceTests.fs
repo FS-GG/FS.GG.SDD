@@ -93,6 +93,18 @@ module QuintToolchainSourceTests =
         Assert.Equal(64, QuintToolchain.fingerprint QuintToolchain.q1 |> String.length)
 
     [<Fact>]
+    let ``general profile binds the same immutable closure under a distinct manifest identity`` () =
+        Assert.Equal(QuintGeneralProfile.identity, QuintToolchain.general.Profile)
+        Assert.Equal<QuintToolComponent list>(QuintToolchain.q1.Components, QuintToolchain.general.Components)
+        Assert.Equal(QuintToolchain.q1.Guidance, QuintToolchain.general.Guidance)
+        Assert.Empty(QuintToolchain.validateManifest QuintToolchain.general)
+
+        Assert.NotEqual<string>(
+            QuintToolchain.fingerprint QuintToolchain.q1,
+            QuintToolchain.fingerprint QuintToolchain.general
+        )
+
+    [<Fact>]
     let ``cache absence unreadability mismatch and incompleteness stay distinct`` () =
         let cache = exactCache ()
 

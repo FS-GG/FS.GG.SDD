@@ -82,3 +82,88 @@ module QuintProfile =
     /// compiler payload contains none of those facts. Missing or mismatched bindings fail closed.
     val adaptTypedEffectJson:
         observation: QuintTypedEffectObservation -> Result<QuintProfileCatalogue, QuintProfileDiagnostic list>
+
+/// Closed, recursively canonical value vocabulary exported by fsgg-quint-profile/2.
+/// Function bodies and raw compiler expressions are deliberately unrepresentable.
+type QuintModelValue =
+    | QuintBool of bool
+    | QuintInt of int64
+    | QuintString of string
+    | QuintTuple of QuintModelValue list
+    | QuintRecord of (string * QuintModelValue) list
+    | QuintVariant of tag: string * value: QuintModelValue option
+    | QuintList of QuintModelValue list
+    | QuintSet of QuintModelValue list
+    | QuintMap of (QuintModelValue * QuintModelValue) list
+
+/// One source-bound declaration selected for export; semantic values remain in Quint.
+type QuintGeneralExportBinding =
+    { Id: string
+      ModuleName: string
+      DeclarationName: string
+      PromoteCatalogueRows: bool
+      Source: QuintSourceRange }
+
+/// One stable catalogue row promoted from an exported record carrying `id` and `kind`.
+type QuintModelCatalogueEntry =
+    { Id: string
+      Kind: string
+      ExportId: string
+      Value: QuintModelValue
+      Source: QuintSourceRange }
+
+/// One accepted exported declaration and its canonical value.
+type QuintGeneralExport =
+    { Id: string
+      ModuleName: string
+      DeclarationName: string
+      Value: QuintModelValue
+      Source: QuintSourceRange }
+
+/// Stable public facts projected from a consumer-defined Quint program.
+type QuintGeneralProfileCatalogue =
+    { Profile: string
+      QuintVersion: string
+      Exports: QuintGeneralExport list
+      Catalogue: QuintModelCatalogueEntry list
+      ActionEffects: QuintActionEffect list }
+
+/// Exact typed/effect observation plus source-owned export and action bindings.
+type QuintGeneralTypedEffectObservation =
+    { Profile: string
+      QuintVersion: string
+      TypedEffectJson: string
+      ExportBindings: QuintGeneralExportBinding list
+      ActionBindings: QuintCatalogueSourceBinding list }
+
+/// Canonical retained host facts that select exports and actions without carrying semantic values.
+type QuintGeneralBindingManifest =
+    { Schema: string
+      Profile: string
+      ModuleName: string
+      Exports: QuintGeneralExportBinding list
+      Actions: QuintCatalogueSourceBinding list }
+
+[<RequireQualifiedAccess>]
+module QuintGeneralBindingManifest =
+    /// Stable schema for retained profile-2 selector facts.
+    val schema: string
+
+    /// Emit strict canonical JSON after validating identities and source ranges.
+    val serializeCanonical: manifest: QuintGeneralBindingManifest -> Result<string, QuintProfileDiagnostic list>
+
+    /// Decode strict canonical JSON; unknown fields and malformed selectors fail closed.
+    val deserialize: text: string -> Result<QuintGeneralBindingManifest, QuintProfileDiagnostic list>
+
+[<RequireQualifiedAccess>]
+module QuintGeneralProfile =
+    /// Explicit identity of the general profile; profile 1 remains frozen.
+    val identity: string
+
+    /// Exact compiler version admitted by the general profile.
+    val quintVersion: string
+
+    /// Adapt bounded exact Quint output into domain-neutral exports and effects.
+    val adaptTypedEffectJson:
+        observation: QuintGeneralTypedEffectObservation ->
+            Result<QuintGeneralProfileCatalogue, QuintProfileDiagnostic list>

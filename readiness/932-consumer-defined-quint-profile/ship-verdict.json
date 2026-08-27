@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "932-consumer-defined-quint-profile",
+  "stage": "ship",
+  "status": "shipReady",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0",
+  "sourcesDigest": {
+    "algorithm": "sha256",
+    "value": "676863f94af47742c417257d22ebcc9d035abee0c21feb1674a18fecff97f127"
+  },
+  "verificationReadiness": {
+    "status": "verificationReady",
+    "evidenceSupportedCount": 43,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 43
+  },
+  "disposition": {
+    "state": "shipReady",
+    "blockingFindingIds": []
+  },
+  "readiness": "shipReady"
+}

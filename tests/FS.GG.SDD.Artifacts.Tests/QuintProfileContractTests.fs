@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
+open System.IO
 open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
 
@@ -219,3 +220,173 @@ module QuintProfileContractTests =
         )
 
         Assert.Equal(QuintContractDiff.Equivalent, QuintContract.semanticDiff original reordered |> expectOk)
+
+    let private generalTypedEffect =
+        """{"stage":"typechecking","modules":[{"id":100,"name":"Consumer","declarations":[{"id":1,"kind":"var","name":"state","typeAnnotation":{"id":2,"kind":"int"},"depth":0},{"id":20,"kind":"def","name":"rules","qualifier":"pureval","expr":{"id":19,"kind":"app","opcode":"Set","args":[{"id":18,"kind":"app","opcode":"Rec","args":[{"id":11,"kind":"str","value":"id"},{"id":12,"kind":"str","value":"RULE-B"},{"id":13,"kind":"str","value":"kind"},{"id":14,"kind":"str","value":"formula"},{"id":15,"kind":"str","value":"dependencies"},{"id":16,"kind":"app","opcode":"Set","args":[{"id":17,"kind":"str","value":"RULE-A"}]}]},{"id":10,"kind":"app","opcode":"Rec","args":[{"id":3,"kind":"str","value":"id"},{"id":4,"kind":"str","value":"RULE-A"},{"id":5,"kind":"str","value":"kind"},{"id":6,"kind":"str","value":"fact"},{"id":7,"kind":"str","value":"dependencies"},{"id":8,"kind":"app","opcode":"Set","args":[]}]}]},"depth":0},{"id":30,"kind":"def","name":"step","qualifier":"action","expr":{"id":29,"kind":"app","opcode":"assign","args":[{"id":27,"kind":"name","name":"state"},{"id":28,"kind":"int","value":1}]},"depth":0}]}],"table":{"30":{"id":30,"kind":"def","name":"step","qualifier":"action","expr":{"id":29,"kind":"app","opcode":"assign","args":[{"id":27,"kind":"name","name":"state"},{"id":28,"kind":"int","value":1}]}}},"types":{"30":{"kind":"bool"}},"effects":{"30":{"effect":{"kind":"concrete","components":[{"kind":"read","entity":{"kind":"concrete","stateVariables":[{"name":"state","reference":1}]}},{"kind":"update","entity":{"kind":"concrete","stateVariables":[{"name":"state","reference":1}]}}]},"effectVariables":[],"entityVariables":[]}},"errors":[],"warnings":[]}"""
+
+    let private generalObservation profile =
+        { Profile = profile
+          QuintVersion = QuintGeneralProfile.quintVersion
+          TypedEffectJson = generalTypedEffect
+          ExportBindings =
+            [ { Id = "EXPORT-Rules"
+                ModuleName = "Consumer"
+                DeclarationName = "rules"
+                PromoteCatalogueRows = true
+                Source = source 30 } ]
+          ActionBindings =
+            [ { ModuleName = "Consumer"
+                CatalogueName = "step"
+                Id = "ACT-Step"
+                Kind = Action
+                Source = source 40 } ] }
+
+    [<Fact>]
+    let ``general profile accepts consumer exports without a program digest`` () =
+        let adapted =
+            generalObservation QuintGeneralProfile.identity
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> expectOk
+
+        Assert.Equal([ "EXPORT-Rules" ], adapted.Exports |> List.map _.Id)
+        Assert.Equal([ "RULE-A"; "RULE-B" ], adapted.Catalogue |> List.map _.Id)
+
+        let effect = Assert.Single adapted.ActionEffects
+        Assert.Equal("ACT-Step", effect.ActionId)
+        Assert.Equal<string list>([ "state" ], effect.Reads)
+        Assert.Equal<string list>([ "state" ], effect.Writes)
+        Assert.Equal<string list>([ "state" ], effect.Subjects)
+
+    [<Fact>]
+    let ``general profile refuses substitution and nonconstant exports distinctly`` () =
+        let substitution =
+            generalObservation QuintProfile.identity
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings
+
+        Assert.Contains(substitution, fun item -> item.Code = "QUINT-PROFILE-IDENTITY")
+
+        let nonconstant =
+            { generalObservation QuintGeneralProfile.identity with
+                ExportBindings =
+                    [ { Id = "EXPORT-Step"
+                        ModuleName = "Consumer"
+                        DeclarationName = "step"
+                        PromoteCatalogueRows = false
+                        Source = source 40 } ] }
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings
+
+        Assert.Contains(nonconstant, fun item -> item.Code = "QUINT-GENERAL-EXPORT-EXPRESSION")
+
+    [<Fact>]
+    let ``general profile reports structural warning source and action mutations together`` () =
+        let baseline = generalObservation QuintGeneralProfile.identity
+
+        let invalid =
+            { baseline with
+                TypedEffectJson =
+                    baseline.TypedEffectJson
+                        .Replace("\"stage\":", "\"future\":{},\"stage\":")
+                        .Replace("\"warnings\":[]", "\"warnings\":[{\"message\":\"mutant\"}]")
+                ExportBindings =
+                    baseline.ExportBindings
+                    |> List.map (fun binding ->
+                        { binding with
+                            Source =
+                                { binding.Source with
+                                    Path = "../escape.md"
+                                    End = { Line = 1; Column = 1 } } })
+                ActionBindings =
+                    baseline.ActionBindings
+                    |> List.map (fun binding -> { binding with Kind = Requirement }) }
+
+        let codes =
+            QuintGeneralProfile.adaptTypedEffectJson invalid |> findings |> List.map _.Code
+
+        Assert.Contains("QUINT-IR-UNSUPPORTED-FIELD", codes)
+        Assert.Contains("QUINT-GENERAL-COMPILER-WARNINGS", codes)
+        Assert.Contains("QUINT-GENERAL-SOURCE-PATH", codes)
+        Assert.Contains("QUINT-GENERAL-SOURCE-RANGE", codes)
+        Assert.Contains("QUINT-GENERAL-ACTION-BINDING", codes)
+
+    [<Fact>]
+    let ``general binding manifest is canonical strict and carries no semantic values`` () =
+        let observation = generalObservation QuintGeneralProfile.identity
+
+        let manifest =
+            { Schema = QuintGeneralBindingManifest.schema
+              Profile = observation.Profile
+              ModuleName = "ConsumerRules"
+              Exports = observation.ExportBindings
+              Actions = observation.ActionBindings }
+
+        let canonical = QuintGeneralBindingManifest.serializeCanonical manifest |> expectOk
+        let roundTrip = QuintGeneralBindingManifest.deserialize canonical |> expectOk
+        Assert.Equal(canonical, QuintGeneralBindingManifest.serializeCanonical roundTrip |> expectOk)
+        Assert.DoesNotContain("RULE-A", canonical)
+        Assert.DoesNotContain("formula", canonical)
+
+        let injected = canonical.Replace("\"profile\":", "\"value\":{},\"profile\":")
+
+        Assert.Contains(
+            findings (QuintGeneralBindingManifest.deserialize injected),
+            fun item -> item.Code = "QUINT-GENERAL-BINDINGS-MALFORMED"
+        )
+
+    [<Fact>]
+    let ``complete SIR fixture selectors remain canonical and source bound`` () =
+        let path =
+            Path.Combine(System.AppContext.BaseDirectory, "Fixtures", "QuintGeneralSir", "profile-bindings.json")
+
+        let canonical = File.ReadAllText path
+        let manifest = QuintGeneralBindingManifest.deserialize canonical |> expectOk
+
+        Assert.Equal(8, manifest.Exports.Length)
+        Assert.Equal(5, manifest.Actions.Length)
+
+        let sourcePaths: string list =
+            (manifest.Exports |> List.map _.Source.Path)
+            @ (manifest.Actions |> List.map _.Source.Path)
+
+        Assert.All(
+            sourcePaths,
+            fun sourcePath -> Assert.Equal("tests/fixtures/quint-general-sir/sir-combat.md", sourcePath)
+        )
+
+        Assert.Equal(canonical, QuintGeneralBindingManifest.serializeCanonical manifest |> expectOk)
+
+    let private contractV2 () =
+        let adapted =
+            generalObservation QuintGeneralProfile.identity
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> expectOk
+
+        { Schema = QuintContractV2.schema
+          Profile = QuintGeneralProfile.identity
+          Specification = "Consumer"
+          Exports = adapted.Exports
+          Catalogue = adapted.Catalogue
+          ActionEffects = adapted.ActionEffects
+          Relationships = []
+          VerificationProfiles = []
+          Bounds = []
+          Impacts = []
+          Compatibility = []
+          Digests = [ { Name = "source"; Sha256 = digest 'c' } ] }
+
+    [<Fact>]
+    let ``contract v2 and generic bindings preserve rich Quint values canonically`` () =
+        let expected = contractV2 ()
+        let first = QuintContractV2.serializeCanonical expected |> expectOk
+        let second = QuintContractV2.serializeCanonical expected |> expectOk
+        let roundTrip = QuintContractV2.deserialize first |> expectOk
+
+        Assert.Equal(first, second)
+        Assert.Equal(first, QuintContractV2.serializeCanonical roundTrip |> expectOk)
+
+        let bindings = QuintBindingsV2.generate "ConsumerRules" expected |> expectOk
+        Assert.Equal(bindings.FSharpSource, bindings.FableSource)
+        Assert.Contains("type QuintValue =", bindings.FSharpSource)
+        Assert.Contains("RULE-A", bindings.FSharpSource)
+        Assert.Contains("dependencies", bindings.FSharpSource)

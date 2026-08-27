@@ -53,6 +53,13 @@ canonical Markdown, the fence manifest, generated `.qnt`, exact typed-effect JSO
 compiled contract, generated bindings, and compilation receipt. Inspection recomputes semantic
 closure; matching manifest hashes alone are insufficient.
 
+Two explicit Quint profiles share the same pinned binaries. `fsgg-quint-profile/1` remains the
+digest-qualified requirements slice. `fsgg-quint-profile/2` admits consumer-defined bounded models
+through structural Quint 0.32.0 validation and a retained `fsgg.quint.general-bindings/v1` selector
+manifest. That manifest names exports and actions plus their literate ranges; it carries no semantic
+values. All exported values are authored in Quint and cross the boundary only as bool, signed int64,
+string, tuple, record, variant, list, set, or map values.
+
 ## Installed operations
 
 ```console
@@ -63,7 +70,20 @@ fsgg-sdd typed-sdd inspect --work demo
 fsgg-sdd typed-sdd author --work demo --title "Demo" \
   --agent tern-001 --session session-1 \
   --backend quint-specification-v1 --cache /preseeded/quint-cache
+
+# Consumer-defined profile: both paths are contained, project-relative inputs.
+fsgg-sdd typed-sdd author --work combat --title "Combat model" \
+  --agent tern-001 --session session-2 \
+  --backend quint-specification-v1 --profile fsgg-quint-profile/2 \
+  --source docs/rules/combat.md --bindings docs/rules/combat.bindings.json \
+  --cache /preseeded/quint-cache
 ```
+
+Profile 2 is deliberately bounded: typed/effect JSON is limited to 16 MiB; declarations, effect
+rows, and bindings to 4,096; exports to 256; exported values to 100,000 aggregate nodes, depth 32,
+and 64 KiB per string. Tests, seeded simulation, and optional model checking remain explicit evidence
+rungs. A registered external algorithm is modeled as inert catalogue data plus an implementation
+correspondence test—the generic host never executes a domain algorithm hidden inside a value export.
 
 After editing an existing `specification.fsx`, repeat `author` with `--accept` and a fresh agent/session
 receipt. The command compiles the edited authority before atomically replacing its projections and

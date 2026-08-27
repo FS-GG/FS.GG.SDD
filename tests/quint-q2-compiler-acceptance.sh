@@ -78,18 +78,20 @@ dotnet restore "$fable_probe/FableProbe.fsproj" --source "$feed" \
 for run in a b; do
   mkdir -p "$scratch/$run"
   cp "$repo_root/docs/experiments/quint-q1/slices/"*.md "$scratch/$run/"
-  (cd "$scratch/$run" && "$LMT_BIN" requirements-and-evidence.md sir-damage-rule.md coordination-process.md) \
+  cp "$repo_root/tests/fixtures/quint-general-sir/sir-combat.md" "$scratch/$run/"
+  (cd "$scratch/$run" && "$LMT_BIN" requirements-and-evidence.md sir-damage-rule.md coordination-process.md sir-combat.md) \
     >"$scratch/$run/lmt.stdout" 2>"$scratch/$run/lmt.stderr"
   [[ ! -s "$scratch/$run/lmt.stdout" && ! -s "$scratch/$run/lmt.stderr" ]] \
     || fail "lmt emitted output in isolated run $run"
 
-  for module in requirements.qnt sir-damage.qnt coordination.qnt; do
+  for module in requirements.qnt sir-damage.qnt coordination.qnt sir-combat.qnt; do
     "$QUINT_BIN" typecheck --out="$scratch/$run/$module.typed.json" "$scratch/$run/$module"
   done
 done
 
 for artifact in requirements.qnt sir-damage.qnt coordination.qnt \
-  requirements.qnt.typed.json sir-damage.qnt.typed.json coordination.qnt.typed.json; do
+  sir-combat.qnt requirements.qnt.typed.json sir-damage.qnt.typed.json coordination.qnt.typed.json \
+  sir-combat.qnt.typed.json; do
   cmp "$scratch/a/$artifact" "$scratch/b/$artifact" >/dev/null \
     || fail "isolated compilation is not byte-identical: $artifact"
 done
@@ -97,6 +99,32 @@ done
 artifact_assembly="$(find "$NUGET_PACKAGES/fs.gg.sdd.artifacts" -path '*/lib/net10.0/FS.GG.SDD.Artifacts.dll' -print -quit)"
 [[ -n "$artifact_assembly" && -f "$artifact_assembly" ]] \
   || fail 'installed FS.GG.SDD.Artifacts assembly is absent from the fresh offline cache'
+
+for run in a b; do
+  dotnet fsi --reference:"$artifact_assembly" --exec \
+    "$repo_root/tests/FS.GG.SDD.Artifacts.Tests/QuintGeneralSirAcceptance.fsx" \
+    "$scratch/$run/sir-combat.qnt.typed.json" \
+    "$repo_root/tests/fixtures/quint-general-sir/profile-bindings.json" \
+    "$repo_root/tests/fixtures/quint-general-sir/sir-combat.md" \
+    "$scratch/$run/sir-combat.qnt" \
+    "$scratch/profile2-$run" >"$scratch/profile2-$run.log"
+  grep -F 'PROFILE-2-SIR-ACCEPTED: rules=16 properties=7 relationships=14 bounds=4 verifications=3 impacts=1 compatibility=1 actions=5' "$scratch/profile2-$run.log" >/dev/null \
+    || fail "general S.I.R. profile did not accept isolated run $run"
+done
+diff -ru "$scratch/profile2-a" "$scratch/profile2-b" >/dev/null \
+  || fail 'general S.I.R. contract and bindings drifted across isolated runs'
+
+cp "$scratch/profile2-a/bindings.fable.fs" "$fable_probe/Bindings.fs"
+printf '%s\n' \
+  'open SirCombatGenerated' \
+  'printfn "%s" ContractFingerprint' \
+  'Catalogue |> List.filter (fun row -> row.ExportId = "EXPORT-Rules") |> List.map _.Id |> String.concat "," |> printfn "%s"' \
+  'printfn "%s" CanonicalContractJson' >"$fable_probe/Program.fs"
+"$FABLE_BIN" "$fable_probe/FableProbe.fsproj" --outDir "$scratch/fable-profile2" --noRestore --noCache --silent
+node "$scratch/fable-profile2/Program.js" >"$scratch/fable-profile2.txt"
+diff -u "$scratch/profile2-a/native.txt" "$scratch/fable-profile2.txt" >/dev/null \
+  || fail 'general S.I.R. native and Fable bindings diverged'
+
 dotnet fsi --reference:"$artifact_assembly" --exec \
   "$repo_root/tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx" \
   "$scratch/a/requirements.qnt.typed.json" \
@@ -201,7 +229,7 @@ if [[ -n "${Q2_JUNIT_OUT:-}" ]]; then
   mkdir -p "$(dirname "$Q2_JUNIT_OUT")"
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
-    '<testsuite name="FS.GG.SDD.QuintQ2CompilerAcceptance" tests="10" failures="0">' \
+    '<testsuite name="FS.GG.SDD.QuintQ2CompilerAcceptance" tests="13" failures="0">' \
     '  <testcase classname="QuintQ2" name="preseeded-exact-tool-identity" />' \
     '  <testcase classname="QuintQ2" name="fresh-cache-offline-package-restore" />' \
     '  <testcase classname="QuintQ2" name="three-q1-slices" />' \
@@ -212,7 +240,10 @@ if [[ -n "${Q2_JUNIT_OUT:-}" ]]; then
     '  <testcase classname="QuintQ2" name="canonical-receipt-parity" />' \
     '  <testcase classname="QuintQ2" name="fable-runtime-parity" />' \
     '  <testcase classname="QuintQ2" name="fable-independent-mutation" />' \
+    '  <testcase classname="QuintQ2" name="general-sir-two-isolated-compilations" />' \
+    '  <testcase classname="QuintQ2" name="general-sir-sixteen-rules-seven-properties-five-actions" />' \
+    '  <testcase classname="QuintQ2" name="general-sir-native-fable-parity" />' \
     '</testsuite>' >"$Q2_JUNIT_OUT"
 fi
 
-printf 'Q2-COMPILER-ACCEPTED: offline package compiler/replay, 3 slices, 2 isolated runs, Fable parity, 17 IR and 1 Fable mutations\n'
+printf 'Q2-COMPILER-ACCEPTED: offline package compiler/replay, 3 frozen slices + complete S.I.R. profile 2, 2 isolated runs, Fable parity, 17 IR and 1 Fable mutations\n'

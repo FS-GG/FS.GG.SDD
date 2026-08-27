@@ -61,7 +61,7 @@ module QuintV1Migration =
           Message = message
           Correction = correction }
 
-    let lower (normalizedModel: byte array) payloadSource baseContract =
+    let lower (normalizedModel: byte array) (payloadSource: QuintSourceRange) (baseContract: QuintCompiledContract) =
         try
             let text = UTF8Encoding(false, true).GetString normalizedModel
 
@@ -246,7 +246,7 @@ module TypedAuthority =
           Message = message
           Correction = correction }
 
-    let private requiredArtifactIds =
+    let private profile1ArtifactIds =
         set
             [ "markdown"
               "fence-manifest"
@@ -257,6 +257,12 @@ module TypedAuthority =
               "compiled-contract"
               "bindings"
               "compilation-receipt" ]
+
+    let private requiredArtifactIds profile =
+        if profile = QuintGeneralProfile.identity then
+            Set.add "profile-bindings" profile1ArtifactIds
+        else
+            profile1ArtifactIds
 
     let private duplicatePropertyNames (element: JsonElement) =
         element.EnumerateObject()
@@ -301,7 +307,7 @@ module TypedAuthority =
         |> List.toArray
         |> TypedAuthorityManifest.sha256
 
-    let private semanticClosure observations (manifest: QuintAuthorityManifest) =
+    let private semanticClosureV1 observations (manifest: QuintAuthorityManifest) =
         let artifacts =
             manifest.Artifacts
             |> List.map (fun artifact -> artifact.Id, artifact)
@@ -586,7 +592,7 @@ module TypedAuthority =
                                       let loweringMatches =
                                           match adaptedCatalogue with
                                           | Some adapted ->
-                                              let baseContract =
+                                              let baseContract: QuintCompiledContract =
                                                   { contract with
                                                       Catalogue = adapted.Entries
                                                       ActionEffects = adapted.ActionEffects
@@ -733,6 +739,208 @@ module TypedAuthority =
                           "The compilation receipt is not valid closed-schema JSON."
                           "Regenerate the receipt with the qualified compiler."
           | _ -> () ]
+
+    let private semanticClosureGeneral observations (manifest: QuintAuthorityManifest) =
+        let artifacts =
+            manifest.Artifacts |> List.map (fun item -> item.Id, item) |> Map.ofList
+
+        let states =
+            observations |> List.map (fun item -> item.Path, item.State) |> Map.ofList
+
+        let bytes id =
+            artifacts
+            |> Map.tryFind id
+            |> Option.bind (fun artifact ->
+                match Map.tryFind artifact.Path states with
+                | Some(Present value) when TypedAuthorityManifest.sha256 value = artifact.Sha256 -> Some value
+                | _ -> None)
+
+        let text id =
+            bytes id |> Option.bind (utf8Strict >> Result.toOption)
+
+        let fingerprint sourceSha fenceSha modulesSha toolchainSha contractText =
+            let frame (value: string) =
+                let valueBytes = Encoding.UTF8.GetBytes value
+
+                Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
+                |> fun prefix -> Array.append prefix valueBytes
+
+            [ "fsgg.quint.compilation-fingerprint/v2"
+              sourceSha
+              fenceSha
+              modulesSha
+              toolchainSha
+              contractText ]
+            |> List.map frame
+            |> Array.concat
+            |> TypedAuthorityManifest.sha256
+
+        [ match text "compiled-contract", text "profile-bindings", text "typed-effect", text "bindings" with
+          | Some contractText, Some selectorText, Some typedEffectText, Some bindingText ->
+              match QuintContractV2.deserialize contractText, QuintGeneralBindingManifest.deserialize selectorText with
+              | Ok contract, Ok selectors ->
+                  if QuintContractV2.serializeCanonical contract <> Ok contractText then
+                      yield
+                          diagnostic
+                              "typedSdd.v2.contractNonCanonical"
+                              "The profile-2 compiled contract is not canonical."
+                              "Regenerate it with the qualified compiler."
+
+                  let observation =
+                      { Profile = manifest.ProfileIdentity
+                        QuintVersion = QuintGeneralProfile.quintVersion
+                        TypedEffectJson = typedEffectText
+                        ExportBindings = selectors.Exports
+                        ActionBindings = selectors.Actions }
+
+                  match QuintGeneralProfile.adaptTypedEffectJson observation with
+                  | Ok adapted when
+                      adapted.Profile = contract.Profile
+                      && adapted.Exports = contract.Exports
+                      && adapted.Catalogue = contract.Catalogue
+                      && adapted.ActionEffects = contract.ActionEffects
+                      ->
+                      ()
+                  | _ ->
+                      yield
+                          diagnostic
+                              "typedSdd.v2.typedEffectClosure"
+                              "The retained profile-2 selectors and typed/effect observation do not reproduce the compiled contract."
+                              "Recompile the contract and selector artifact from the same Quint source."
+
+                  match QuintBindingsV2.generate selectors.ModuleName contract with
+                  | Ok generated when generated.FSharpSource = bindingText -> ()
+                  | _ ->
+                      yield
+                          diagnostic
+                              "typedSdd.v2.bindingsClosure"
+                              "Generated profile-2 bindings do not reproduce the retained bindings artifact."
+                              "Regenerate bindings from the same compiled contract."
+              | _ ->
+                  yield
+                      diagnostic
+                          "typedSdd.v2.contractMalformed"
+                          "The profile-2 contract or selector manifest is malformed."
+                          "Regenerate both artifacts with the qualified compiler."
+          | _ -> ()
+
+          match
+              text "compilation-receipt",
+              text "compiled-contract",
+              bytes "markdown",
+              bytes "fence-manifest",
+              bytes "source-map",
+              text "generated-modules",
+              text "typed-effect"
+          with
+          | Some receiptText,
+            Some contractText,
+            Some markdownBytes,
+            Some fenceBytes,
+            Some sourceMapBytes,
+            Some modulesText,
+            Some typedEffectText ->
+              try
+                  use document = JsonDocument.Parse receiptText
+                  let root = document.RootElement
+
+                  let read (name: string) =
+                      root.GetProperty(name).GetString() |> Option.ofObj |> Option.defaultValue ""
+
+                  let sourceSha = read "sourceSha256"
+                  let fenceSha = read "fenceManifestSha256"
+                  let modulesSha = read "generatedModulesSha256"
+                  let toolchainSha = read "toolchainSha256"
+                  let typedSha = read "typedEffectSha256"
+                  let contractSha = read "contractSha256"
+                  let compilationSha = read "compilationFingerprint"
+
+                  if
+                      read "schema" <> QuintCompiler.generalReceiptSchema
+                      || sourceSha <> TypedAuthorityManifest.sha256 markdownBytes
+                      || fenceSha <> TypedAuthorityManifest.sha256 fenceBytes
+                      || toolchainSha <> manifest.ToolchainIdentity
+                      || typedSha
+                         <> TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes typedEffectText)
+                      || contractSha
+                         <> TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes contractText)
+                      || compilationSha
+                         <> fingerprint sourceSha fenceSha modulesSha toolchainSha contractText
+                  then
+                      yield
+                          diagnostic
+                              "typedSdd.v2.receiptClosure"
+                              "The profile-2 receipt does not close over its source, toolchain, typed effects, and contract."
+                              "Re-author all profile-2 artifacts atomically."
+
+                  match
+                      QuintSource.createMarkdown artifacts["markdown"].Path markdownBytes,
+                      QuintSource.decodeFenceManifest fenceBytes,
+                      QuintSource.decodeSourceMap sourceMapBytes
+                  with
+                  | Ok source, Ok fenceManifest, Ok sourceMap ->
+                      let targets = fenceManifest.Fences |> List.map _.Target |> List.distinct
+
+                      let sourceFindings =
+                          QuintSource.validateManifest source fenceManifest
+                          @ QuintSource.validateSourceMap source fenceManifest sourceMap
+
+                      let sourceLines = source.Text.Split('\n')
+
+                      let extracted =
+                          try
+                              fenceManifest.Fences
+                              |> List.sortBy _.Ordinal
+                              |> List.map (fun fence ->
+                                  sourceLines[fence.SourceRange.Start.Line .. fence.SourceRange.End.Line - 2]
+                                  |> fun lines -> String.Join("\n", lines) + "\n")
+                              |> String.concat ""
+                              |> Ok
+                          with ex ->
+                              Error ex.Message
+
+                      if
+                          not sourceFindings.IsEmpty
+                          || QuintSource.encodeFenceManifest fenceManifest <> fenceBytes
+                          || QuintSource.encodeSourceMap sourceMap <> sourceMapBytes
+                          || targets.Length <> 1
+                          || extracted <> Ok modulesText
+                          || generatedModuleDigest targets.Head (Encoding.UTF8.GetBytes modulesText)
+                             <> modulesSha
+                      then
+                          yield
+                              diagnostic
+                                  "typedSdd.v2.modulesClosure"
+                                  "The generated profile-2 module bytes do not bind the compilation receipt."
+                                  "Regenerate source maps, modules, and receipt together."
+                  | _ ->
+                      yield
+                          diagnostic
+                              "typedSdd.v2.sourceMapClosure"
+                              "The profile-2 fence manifest is malformed."
+                              "Regenerate the source projections."
+              with _ ->
+                  yield
+                      diagnostic
+                          "typedSdd.v2.receiptMalformed"
+                          "The profile-2 compilation receipt is malformed."
+                          "Regenerate it with the qualified compiler."
+          | _ -> ()
+
+          match bytes "sandbox-contract" with
+          | Some value when value <> QuintSandbox.contractBytes ->
+              yield
+                  diagnostic
+                      "typedSdd.v2.sandboxContract"
+                      "The retained sandbox contract is not the qualified contract."
+                      "Re-author with the qualified sandbox edge."
+          | _ -> () ]
+
+    let private semanticClosure observations manifest =
+        if manifest.ProfileIdentity = QuintGeneralProfile.identity then
+            semanticClosureGeneral observations manifest
+        else
+            semanticClosureV1 observations manifest
 
     let serializeQuintV2 manifest =
         use stream = new MemoryStream()
@@ -1082,24 +1290,35 @@ module TypedAuthority =
                       "typedSdd.v2.wrongAuthority"
                       "Manifest does not select typed-sdd/quint-specification-v1 schema v2."
                       "Use the explicit manifest-v2 Quint backend."
-          if manifest.ProfileIdentity <> QuintProfile.identity then
+          if
+              manifest.ProfileIdentity <> QuintProfile.identity
+              && manifest.ProfileIdentity <> QuintGeneralProfile.identity
+          then
               yield
                   diagnostic
                       "typedSdd.v2.profileIdentityMismatch"
                       $"Profile identity '{manifest.ProfileIdentity}' is unsupported."
-                      $"Use {QuintProfile.identity}."
-          if manifest.ToolchainIdentity <> QuintToolchain.fingerprint QuintToolchain.q1 then
+                      $"Use {QuintProfile.identity} or {QuintGeneralProfile.identity}."
+          let expectedToolchain =
+              if manifest.ProfileIdentity = QuintGeneralProfile.identity then
+                  QuintToolchain.general
+              else
+                  QuintToolchain.q1
+
+          if manifest.ToolchainIdentity <> QuintToolchain.fingerprint expectedToolchain then
               yield
                   diagnostic
                       "typedSdd.v2.toolchainIdentityMismatch"
                       "Toolchain identity differs from the Q1-qualified manifest."
                       "Provision and select the exact Q1/Q2 toolchain cache."
+
           if manifest.PackageIdentity <> expectedPackageIdentity then
               yield
                   diagnostic
                       "typedSdd.v2.packageIdentityMismatch"
                       "Authority package identity differs from the installed producer."
                       "Install the exact recorded coherent package set."
+
           if
               String.IsNullOrWhiteSpace manifest.AuthoringAgent
               || String.IsNullOrWhiteSpace manifest.AuthoringSession
@@ -1109,6 +1328,7 @@ module TypedAuthority =
                       "typedSdd.v2.authoringReceiptMissing"
                       "Manifest-v2 lacks a complete authoring receipt."
                       "Re-author with --agent and --session."
+
           if not (List.isEmpty duplicates) then
               let names = String.concat ", " duplicates
 
@@ -1117,18 +1337,23 @@ module TypedAuthority =
                       "typedSdd.v2.artifactDuplicate"
                       $"Duplicate artifact ids: {names}."
                       "Keep exactly one entry for each required artifact."
+
           if not (List.isEmpty duplicatePaths) then
               yield
                   diagnostic
                       "typedSdd.v2.artifactPathAlias"
                       "Distinct artifact roles share a path."
                       "Give every required artifact one distinct canonical path."
+
           if not (List.isEmpty duplicateObservations) then
               yield
                   diagnostic
                       "typedSdd.v2.observationDuplicate"
                       "The effect edge supplied duplicate path observations."
                       "Observe every declared path exactly once."
+
+          let requiredArtifactIds = requiredArtifactIds manifest.ProfileIdentity
+
           if offered <> requiredArtifactIds then
               let missing = Set.difference requiredArtifactIds offered |> String.concat ", "
               let extra = Set.difference offered requiredArtifactIds |> String.concat ", "
@@ -1138,6 +1363,7 @@ module TypedAuthority =
                       "typedSdd.v2.artifactInventory"
                       $"Artifact inventory differs (missing: {missing}; extra: {extra})."
                       "Regenerate the complete closed manifest-v2 inventory."
+
           for artifact in manifest.Artifacts |> List.sortBy _.Id do
               if not (safeRelativePath artifact.Path) then
                   yield
@@ -1173,6 +1399,7 @@ module TypedAuthority =
                               $"Artifact '{artifact.Id}' differs from its manifest digest."
                               "Re-author instead of editing generated authority artifacts."
                   | _ -> ()
+
           match manifest.RollbackManifestPath, manifest.RollbackManifestSha256 with
           | None, None -> ()
           | Some path, Some sha when safeRelativePath path && isSha256 sha ->
@@ -1202,6 +1429,7 @@ module TypedAuthority =
                       "typedSdd.v2.rollbackBinding"
                       "Rollback path and digest must both be present or both be null."
                       "Regenerate the migration receipt."
+
           yield! semanticClosure observations manifest ]
 
 [<RequireQualifiedAccess>]

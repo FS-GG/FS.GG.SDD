@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Artifacts.TypedSpecifications
 
-/// Stable contract metadata supplied by the integration domain; catalogue and effects always come from Quint.
+/// Stable compilation identity. Profile 1 accepts integration facts here; profile 2 derives every
+/// semantic section from promoted Quint catalogue rows and accepts only specification/provenance digests.
 type QuintContractMetadata =
     { Specification: string
       Relationships: QuintRelationship list
@@ -9,6 +10,21 @@ type QuintContractMetadata =
       Impacts: QuintImpact list
       Compatibility: QuintCompatibility list
       Digests: QuintSemanticDigest list }
+
+/// Complete pure observation for the explicit general profile.
+type QuintGeneralObservedCompilation =
+    { ModuleName: string
+      Toolchain: QuintToolchainManifest
+      Cache: QuintCacheObservation list
+      ProcessRequests: QuintProcessRequest list
+      Endpoint: QuintEndpointState
+      ProcessObservations: QuintProcessObservation list
+      Source: QuintMarkdownSource
+      FenceManifest: QuintFenceManifest
+      Extraction: QuintExtractionObservation
+      SourceMap: QuintSourceMap
+      TypedEffect: QuintGeneralTypedEffectObservation
+      Metadata: QuintContractMetadata }
 
 /// Complete pure observation offered after a host executes already-resolved local tools.
 type QuintObservedCompilation =
@@ -47,13 +63,34 @@ type QuintCompilationOutput =
       Receipt: QuintCompilationReceipt
       CanonicalReceipt: string }
 
+/// Stable profile-2 outputs from the pure compiler composition.
+type QuintGeneralCompilationOutput =
+    { Plan: QuintCompilationPlan
+      Contract: QuintCompiledContractV2
+      CanonicalContract: string
+      CompilationFingerprint: string
+      BindingManifest: QuintGeneralBindingManifest
+      CanonicalBindingManifest: string
+      Bindings: QuintGeneratedBindings
+      Receipt: QuintCompilationReceipt
+      CanonicalReceipt: string }
+
 [<RequireQualifiedAccess>]
 module QuintCompiler =
     /// Stable schema identity for observed-compilation receipts.
     val receiptSchema: string
 
+    /// Stable receipt schema for profile-2 observed compilations.
+    val generalReceiptSchema: string
+
     /// Validate and compose tool, source, profile, contract, binding, and receipt boundaries without performing IO.
     val compileObserved: input: QuintObservedCompilation -> Result<QuintCompilationOutput, SpecificationDiagnostic list>
+
+    /// Compose the general profile through the same source/toolchain effect observations. Relationship,
+    /// verification, bound, impact, and compatibility facts are derived from promoted Quint rows; a
+    /// semantic metadata sidecar is refused.
+    val compileGeneralObserved:
+        input: QuintGeneralObservedCompilation -> Result<QuintGeneralCompilationOutput, SpecificationDiagnostic list>
 
     /// Emit deterministic receipt JSON with one trailing newline.
     val encodeReceipt: receipt: QuintCompilationReceipt -> string

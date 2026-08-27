@@ -442,7 +442,7 @@ example are all explicit in the embedded Quint source.
                                 Sha256 = sha256 generated
                                 Bytes = int64 generated.Length } ]
 
-                        let input =
+                        let input: QuintObservedCompilation =
                             { ModuleName = "RequirementsBindings"
                               Toolchain = QuintToolchain.q1
                               Cache = cache
@@ -664,3 +664,257 @@ example are all explicit in the embedded Quint source.
                       "typedSdd.v2.cacheInvalid"
                       "The exact cache objects could not be retained for isolated execution."
                       "Restore the complete readable content-addressed cache." ]
+
+    let authorGeneral
+        packageIdentity
+        workId
+        title
+        agent
+        session
+        cacheRoot
+        logicalPath
+        (markdownBytes: byte array)
+        (selectors: QuintGeneralBindingManifest)
+        (rollback: Rollback option)
+        =
+        let lmtObservation, lmtBytes = observeCache cacheRoot "lmt-binary"
+        let quintObservation, quintBytes = observeCache cacheRoot "quint-binary"
+        let cache = [ lmtObservation; quintObservation ]
+
+        match QuintSource.createMarkdown logicalPath markdownBytes with
+        | Error findings ->
+            findings
+            |> List.map (fun finding ->
+                diagnostic "typedSdd.v2.sourceInvalid" finding.Message "Use canonical LF UTF-8 Markdown.")
+            |> Error
+        | Ok source ->
+            let fences, sourceMaps = parseFences source
+            let targets = fences |> List.map _.Target |> List.distinct
+
+            let selectorSources =
+                [ yield! selectors.Exports |> List.map _.Source.Path
+                  yield! selectors.Actions |> List.map _.Source.Path ]
+                |> List.distinct
+
+            if fences.IsEmpty || targets.Length <> 1 then
+                Error
+                    [ diagnostic
+                          "typedSdd.v2.fenceTargets"
+                          "A general Quint authority must contain one or more fences for exactly one generated target."
+                          "Append all literate Quint fences to one .qnt target." ]
+            elif selectors.Profile <> QuintGeneralProfile.identity then
+                Error
+                    [ diagnostic
+                          "typedSdd.v2.profileIdentityMismatch"
+                          $"Selector profile '{selectors.Profile}' is unsupported."
+                          $"Use {QuintGeneralProfile.identity}." ]
+            elif selectorSources <> [ logicalPath ] then
+                Error
+                    [ diagnostic
+                          "typedSdd.v2.selectorSourceMismatch"
+                          "Every selector source range must name the selected literate Markdown authority."
+                          "Bind all selectors to the exact --source project-relative path." ]
+            else
+                let target = targets.Head
+
+                let requests: QuintProcessRequest list =
+                    [ request "extract" "lmt-binary" [ logicalPath ]
+                      request "typecheck" "quint-binary" [ "typecheck"; target; "--out=typed.json" ] ]
+
+                match QuintToolchain.plan QuintToolchain.general cache requests, lmtBytes, quintBytes with
+                | Error findings, _, _ ->
+                    findings
+                    |> List.map (fun finding ->
+                        diagnostic
+                            "typedSdd.v2.cacheInvalid"
+                            finding.Message
+                            "Preseed --cache/objects with the exact profile-2 lmt and Quint objects.")
+                    |> Error
+                | Ok _, Some lmtObject, Some quintObject ->
+                    let temporary =
+                        Path.Combine(Path.GetTempPath(), "fsgg-quint-general-author-" + Guid.NewGuid().ToString("N"))
+
+                    try
+                        match
+                            runOnce
+                                lmtObject
+                                quintObject
+                                logicalPath
+                                target
+                                requests
+                                markdownBytes
+                                (Path.Combine(temporary, "first")),
+                            runOnce
+                                lmtObject
+                                quintObject
+                                logicalPath
+                                target
+                                requests
+                                markdownBytes
+                                (Path.Combine(temporary, "second"))
+                        with
+                        | Error(step, code, detail), _
+                        | _, Error(step, code, detail) ->
+                            Error
+                                [ diagnostic
+                                      $"typedSdd.v2.{step}Failed"
+                                      $"Exact tool step '{step}' failed ({code}): {detail}"
+                                      "Correct the exact cache object or authored Quint input." ]
+                        | Ok(firstGenerated, firstTyped, firstWarnings),
+                          Ok(secondGenerated, secondTyped, secondWarnings) when
+                            firstGenerated <> secondGenerated || firstTyped <> secondTyped
+                            ->
+                            Error
+                                [ diagnostic
+                                      "typedSdd.v2.nondeterministicTool"
+                                      "Two isolated exact-tool runs produced different bytes."
+                                      "Refuse the toolchain and restore the qualified cache." ]
+                        | Ok(_, _, firstWarnings), Ok(_, _, secondWarnings) when firstWarnings @ secondWarnings <> [] ->
+                            Error
+                                [ diagnostic
+                                      "typedSdd.v2.toolWarning"
+                                      "The exact tool emitted unexpected output or warnings."
+                                      "Resolve all extractor and Quint output before authoring." ]
+                        | Ok(generated, typed, _), Ok(_, _, _) ->
+                            let generatedObservation =
+                                [ { Target = target
+                                    Sha256 = sha256 generated
+                                    Bytes = int64 generated.Length } ]
+
+                            let input: QuintGeneralObservedCompilation =
+                                { ModuleName = selectors.ModuleName
+                                  Toolchain = QuintToolchain.general
+                                  Cache = cache
+                                  ProcessRequests = requests
+                                  Endpoint = QuintEndpointState.Available
+                                  ProcessObservations =
+                                    [ { StepId = "extract"
+                                        Outcome = QuintProcessOutcome.Succeeded }
+                                      { StepId = "typecheck"
+                                        Outcome = QuintProcessOutcome.Succeeded } ]
+                                  Source = source
+                                  FenceManifest =
+                                    { Schema = QuintSource.fenceManifestSchema
+                                      SourcePath = source.Path
+                                      SourceSha256 = source.Sha256
+                                      Fences = fences }
+                                  Extraction =
+                                    { First = generatedObservation
+                                      Second = generatedObservation
+                                      Warnings = [] }
+                                  SourceMap =
+                                    { Schema = QuintSource.sourceMapSchema
+                                      SourceSha256 = source.Sha256
+                                      Entries = sourceMaps }
+                                  TypedEffect =
+                                    { Profile = selectors.Profile
+                                      QuintVersion = QuintGeneralProfile.quintVersion
+                                      TypedEffectJson = Encoding.UTF8.GetString typed
+                                      ExportBindings = selectors.Exports
+                                      ActionBindings = selectors.Actions }
+                                  Metadata =
+                                    // The human-facing lifecycle title is deliberately free text. The
+                                    // compiled contract needs the selector's stable generated-module
+                                    // identity so valid titles cannot invalidate profile-2 authoring.
+                                    { Specification = selectors.ModuleName
+                                      Relationships = []
+                                      VerificationProfiles = []
+                                      Bounds = []
+                                      Impacts = []
+                                      Compatibility = []
+                                      Digests =
+                                        [ { Name = "sandbox-contract"
+                                            Sha256 = sha256 QuintSandbox.contractBytes }
+                                          { Name = "typed-effect"
+                                            Sha256 = sha256 typed } ] } }
+
+                            match QuintCompiler.compileGeneralObserved input with
+                            | Error findings ->
+                                findings
+                                |> List.map (fun finding ->
+                                    diagnostic
+                                        "typedSdd.v2.compilationFailed"
+                                        finding.Message
+                                        "Correct the authored source, selectors, or exact tool observations.")
+                                |> Error
+                            | Ok output ->
+                                let fenceBytes = QuintSource.encodeFenceManifest input.FenceManifest
+                                let sourceMapBytes = QuintSource.encodeSourceMap input.SourceMap
+
+                                let relative =
+                                    [ "markdown", logicalPath, markdownBytes
+                                      "fence-manifest", $"readiness/{workId}/quint/fences.json", fenceBytes
+                                      "generated-modules", $"readiness/{workId}/quint/{target}", generated
+                                      "source-map", $"readiness/{workId}/quint/source-map.json", sourceMapBytes
+                                      "typed-effect", $"readiness/{workId}/quint/typed-effect.json", typed
+                                      "profile-bindings",
+                                      $"readiness/{workId}/quint/profile-bindings.json",
+                                      Encoding.UTF8.GetBytes output.CanonicalBindingManifest
+                                      "sandbox-contract",
+                                      $"readiness/{workId}/quint/sandbox-contract.json",
+                                      QuintSandbox.contractBytes
+                                      "compiled-contract",
+                                      $"readiness/{workId}/quint/contract.json",
+                                      Encoding.UTF8.GetBytes output.CanonicalContract
+                                      "bindings",
+                                      $"readiness/{workId}/quint/bindings.fs",
+                                      Encoding.UTF8.GetBytes output.Bindings.FSharpSource
+                                      "compilation-receipt",
+                                      $"readiness/{workId}/quint/receipt.json",
+                                      Encoding.UTF8.GetBytes output.CanonicalReceipt ]
+
+                                let artifacts =
+                                    relative
+                                    |> List.map (fun (id, path, bytes) ->
+                                        { Id = id
+                                          Path = path
+                                          Sha256 = sha256 bytes })
+
+                                let manifest =
+                                    { SchemaVersion = 2
+                                      Lifecycle = "typed-sdd"
+                                      Backend = "quint-specification-v1"
+                                      ProfileIdentity = QuintGeneralProfile.identity
+                                      ToolchainIdentity = QuintToolchain.fingerprint QuintToolchain.general
+                                      PackageIdentity = packageIdentity
+                                      Artifacts = artifacts
+                                      AuthoringAgent = agent
+                                      AuthoringSession = session
+                                      RollbackManifestPath = rollback |> Option.map _.ManifestPath
+                                      RollbackManifestSha256 = rollback |> Option.map (_.ManifestBytes >> sha256) }
+
+                                let observations =
+                                    [ yield!
+                                          relative
+                                          |> List.map (fun (_, path, bytes) ->
+                                              { Path = path
+                                                State = QuintAuthorityArtifactState.Present bytes })
+                                      match rollback with
+                                      | Some value ->
+                                          yield
+                                              { Path = value.ManifestPath
+                                                State = QuintAuthorityArtifactState.Present value.ManifestBytes }
+                                      | None -> () ]
+
+                                match TypedAuthority.validateQuintV2 packageIdentity observations manifest with
+                                | [] ->
+                                    let manifestPath = $"readiness/{workId}/typed-authority.json"
+                                    let rollbackWrites = rollback |> Option.map _.Writes |> Option.defaultValue []
+
+                                    Ok
+                                        { Manifest = manifest
+                                          Writes =
+                                            rollbackWrites
+                                            @ (relative |> List.map (fun (_, path, bytes) -> path, bytes))
+                                            @ [ manifestPath,
+                                                Encoding.UTF8.GetBytes(TypedAuthority.serializeQuintV2 manifest) ] }
+                                | findings -> Error findings
+                    finally
+                        if Directory.Exists temporary then
+                            Directory.Delete(temporary, true)
+                | _ ->
+                    Error
+                        [ diagnostic
+                              "typedSdd.v2.cacheInvalid"
+                              "The exact cache objects could not be retained for isolated execution."
+                              "Restore the complete readable content-addressed cache." ]

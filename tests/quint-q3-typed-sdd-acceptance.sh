@@ -95,6 +95,41 @@ done
 diff -ru "$scratch/author-a" "$scratch/author-b" >/dev/null || fail 'two installed author roots differ'
 cmp "$scratch/author-a.json" "$scratch/author-b.json" >/dev/null || fail 'two installed author reports differ'
 
+# Profile 2 proves that an installed consumer can supply a complete, literate Quint model rather
+# than selecting a package-known whole-program digest. The selector document identifies only the
+# declarations and source ranges to retain; all semantic values come from Quint's typed output.
+current_stage='general-profile-installed-authority'
+general_root="$scratch/general-profile"
+general_fixture='tests/fixtures/quint-general-sir'
+mkdir -p "$general_root/$general_fixture"
+cp "$repo_root/$general_fixture/sir-combat.md" "$general_root/$general_fixture/sir-combat.md"
+cp "$repo_root/$general_fixture/profile-bindings.json" "$general_root/$general_fixture/profile-bindings.json"
+"$cli" typed-sdd author --root "$general_root" --work sir --title 'S.I.R. combat registry' \
+  --agent acceptance --session general --backend quint-specification-v1 --cache "$scratch/cache" \
+  --profile fsgg-quint-profile/2 --source "$general_fixture/sir-combat.md" \
+  --bindings "$general_fixture/profile-bindings.json" >"$scratch/general-author.json"
+grep -F '"outcome": "succeeded"' "$scratch/general-author.json" >/dev/null \
+  || fail 'installed profile-2 author failed'
+"$cli" typed-sdd inspect --root "$general_root" --work sir >"$scratch/general-inspect.json"
+grep -F '"outcome": "succeeded"' "$scratch/general-inspect.json" >/dev/null \
+  || fail 'installed profile-2 authority did not inspect'
+grep -F 'fsgg-quint-profile/2' "$general_root/readiness/sir/typed-authority.json" >/dev/null \
+  || fail 'profile-2 authority identity is absent'
+grep -F 'COMBAT-ATTACK-RESOLUTION-001' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
+  || fail 'complete S.I.R. rule catalogue was not retained'
+grep -F '"relationships":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
+  || fail 'Quint relationship declarations were not projected'
+grep -F '"verificationProfiles":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
+  || fail 'Quint verification declarations were not projected'
+grep -F '"bounds":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
+  || fail 'Quint finite bounds were not projected'
+grep -F '"impacts":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
+  || fail 'Quint impact declarations were not projected'
+grep -F '"compatibility":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
+  || fail 'Quint compatibility declarations were not projected'
+grep -F 'ACT-Consequences' "$general_root/readiness/sir/quint/bindings.fs" >/dev/null \
+  || fail 'profile-2 action binding was not generated'
+
 # Hard process death at every live-author move must recover before another operation reads authority.
 for boundary in $(seq 1 10); do
   current_stage="author-crash-boundary-$boundary"
@@ -232,10 +267,11 @@ if [[ -n "${Q3_JUNIT_OUT:-}" ]]; then
   mkdir -p "$(dirname "$Q3_JUNIT_OUT")"
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
-    '<testsuite name="FS.GG.SDD.QuintQ3TypedSddAcceptance" tests="13" failures="0">' \
+    '<testsuite name="FS.GG.SDD.QuintQ3TypedSddAcceptance" tests="14" failures="0">' \
     '  <testcase classname="QuintQ3" name="fresh-cache-offline-tool-install" />' \
     '  <testcase classname="QuintQ3" name="exact-content-addressed-tools" />' \
     '  <testcase classname="QuintQ3" name="two-isolated-author-runs" />' \
+    '  <testcase classname="QuintQ3" name="installed-general-profile-authority" />' \
     '  <testcase classname="QuintQ3" name="crash-recovery-every-author-boundary" />' \
     '  <testcase classname="QuintQ3" name="concurrent-inspect-transaction-lock" />' \
     '  <testcase classname="QuintQ3" name="manifest-v2-inspect" />' \

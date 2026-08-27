@@ -316,14 +316,20 @@ module private QuintToolchainInternal =
 module QuintToolchain =
     let schema = "fsgg.quint.toolchain-manifest/v1"
     let profile = "fsgg-quint-profile/1"
+    let generalProfile = "fsgg-quint-profile/2"
     let q1 = QuintToolchainInternal.exact
+
+    let general =
+        { QuintToolchainInternal.exact with
+            Profile = generalProfile }
+
     let encodeCanonical manifest = QuintToolchainInternal.encode manifest
 
     let fingerprint manifest =
         manifest |> encodeCanonical |> QuintToolchainInternal.sha256
 
     let validateManifest (manifest: QuintToolchainManifest) =
-        let expected = q1
+        let expected = if manifest.Profile = generalProfile then general else q1
         let components = manifest.Components |> List.sortBy (fun item -> item.Id)
         let expectedComponents = expected.Components |> List.sortBy (fun item -> item.Id)
 
