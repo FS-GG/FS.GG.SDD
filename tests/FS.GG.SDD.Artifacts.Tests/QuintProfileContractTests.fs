@@ -270,6 +270,29 @@ module QuintProfileContractTests =
 
         Assert.Contains(nonconstant, fun item -> item.Code = "QUINT-GENERAL-EXPORT-EXPRESSION")
 
+    [<Fact>]
+    let ``general binding manifest is canonical strict and carries no semantic values`` () =
+        let observation = generalObservation QuintGeneralProfile.identity
+
+        let manifest =
+            { Schema = QuintGeneralBindingManifest.schema
+              Profile = observation.Profile
+              ModuleName = "ConsumerRules"
+              Exports = observation.ExportBindings
+              Actions = observation.ActionBindings }
+
+        let canonical = QuintGeneralBindingManifest.serializeCanonical manifest |> expectOk
+        let roundTrip = QuintGeneralBindingManifest.deserialize canonical |> expectOk
+        Assert.Equal(canonical, QuintGeneralBindingManifest.serializeCanonical roundTrip |> expectOk)
+        Assert.DoesNotContain("RULE-A", canonical)
+        Assert.DoesNotContain("formula", canonical)
+
+        let injected = canonical.Replace("\"profile\":", "\"value\":{},\"profile\":")
+        Assert.Contains(
+            findings (QuintGeneralBindingManifest.deserialize injected),
+            fun item -> item.Code = "QUINT-GENERAL-BINDINGS-MALFORMED"
+        )
+
     let private contractV2 () =
         let adapted = generalObservation QuintGeneralProfile.identity |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk
 

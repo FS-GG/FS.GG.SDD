@@ -69,6 +69,8 @@ type QuintGeneralCompilationOutput =
       Contract: QuintCompiledContractV2
       CanonicalContract: string
       CompilationFingerprint: string
+      BindingManifest: QuintGeneralBindingManifest
+      CanonicalBindingManifest: string
       Bindings: QuintGeneratedBindings
       Receipt: QuintCompilationReceipt
       CanonicalReceipt: string }
@@ -329,13 +331,28 @@ module QuintCompiler =
                         toolchainSha256
                         canonicalContract
 
-                match QuintBindingsV2.generate input.ModuleName contract with
-                | Error findings ->
+                let bindingManifest =
+                    { Schema = QuintGeneralBindingManifest.schema
+                      Profile = input.TypedEffect.Profile
+                      ModuleName = input.ModuleName
+                      Exports = input.TypedEffect.ExportBindings
+                      Actions = input.TypedEffect.ActionBindings }
+
+                match
+                    QuintGeneralBindingManifest.serializeCanonical bindingManifest,
+                    QuintBindingsV2.generate input.ModuleName contract
+                with
+                | Error findings, _ ->
+                    findings
+                    |> List.map CompilerInternal.profileDiagnostic
+                    |> CompilerInternal.sorted
+                    |> Error
+                | _, Error findings ->
                     findings
                     |> List.map CompilerInternal.bindingDiagnostic
                     |> CompilerInternal.sorted
                     |> Error
-                | Ok generatedBindings ->
+                | Ok canonicalBindingManifest, Ok generatedBindings ->
                     let receipt: QuintCompilationReceipt =
                         { Schema = generalReceiptSchema
                           SourceSha256 = input.Source.Sha256
@@ -352,6 +369,8 @@ module QuintCompiler =
                           Contract = contract
                           CanonicalContract = canonicalContract
                           CompilationFingerprint = compilationFingerprint
+                          BindingManifest = bindingManifest
+                          CanonicalBindingManifest = canonicalBindingManifest
                           Bindings = generatedBindings
                           Receipt = receipt
                           CanonicalReceipt = encodeReceipt receipt }

@@ -68,6 +68,8 @@ type QuintGeneralCompilationOutput =
       Contract: QuintCompiledContractV2
       CanonicalContract: string
       CompilationFingerprint: string
+      BindingManifest: QuintGeneralBindingManifest
+      CanonicalBindingManifest: string
       Bindings: QuintGeneratedBindings
       Receipt: QuintCompilationReceipt
       CanonicalReceipt: string }

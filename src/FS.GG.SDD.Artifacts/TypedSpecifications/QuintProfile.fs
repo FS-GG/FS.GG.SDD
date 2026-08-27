@@ -108,6 +108,13 @@ type QuintGeneralTypedEffectObservation =
       ExportBindings: QuintGeneralExportBinding list
       ActionBindings: QuintCatalogueSourceBinding list }
 
+type QuintGeneralBindingManifest =
+    { Schema: string
+      Profile: string
+      ModuleName: string
+      Exports: QuintGeneralExportBinding list
+      Actions: QuintCatalogueSourceBinding list }
+
 module private ProfileCore =
     let profile = "fsgg-quint-profile/1"
     let version = "0.32.0"
@@ -2207,3 +2214,208 @@ module QuintGeneralProfile =
                       ex.Message
                       "Use valid exact typecheck --out JSON."
                       None ]
+
+[<RequireQualifiedAccess>]
+module QuintGeneralBindingManifest =
+    let schema = "fsgg.quint.general-bindings/v1"
+
+    let private findings (manifest: QuintGeneralBindingManifest) =
+        [ if manifest.Schema <> schema then
+              yield
+                  ProfileCore.diagnostic
+                      "QUINT-GENERAL-BINDINGS-SCHEMA"
+                      "/schema"
+                      $"Expected '%s{schema}', got '%s{manifest.Schema}'."
+                      "Use the profile-2 binding manifest schema."
+                      None
+          if manifest.Profile <> QuintGeneralProfile.identity then
+              yield
+                  ProfileCore.diagnostic
+                      "QUINT-PROFILE-IDENTITY"
+                      "/profile"
+                      $"Expected '%s{QuintGeneralProfile.identity}', got '%s{manifest.Profile}'."
+                      "Select the explicit general profile."
+                      None
+          if String.IsNullOrWhiteSpace manifest.ModuleName then
+              yield
+                  ProfileCore.diagnostic
+                      "QUINT-GENERAL-BINDINGS-MODULE"
+                      "/moduleName"
+                      "Generated binding module name is absent."
+                      "Retain the exact generated module name."
+                      None
+          yield!
+              manifest.Exports
+              |> List.indexed
+              |> List.collect (fun (index, binding) ->
+                  GeneralProfileCore.sourceFindings $"/exports/%d{index}" binding.Id binding.Source)
+          yield!
+              manifest.Actions
+              |> List.indexed
+              |> List.collect (fun (index, binding) ->
+                  GeneralProfileCore.sourceFindings $"/actions/%d{index}" binding.Id binding.Source)
+          for id, rows in manifest.Exports |> List.groupBy _.Id do
+              if rows.Length > 1 then
+                  yield
+                      ProfileCore.diagnostic
+                          "QUINT-GENERAL-EXPORT-DUPLICATE"
+                          "/exports"
+                          $"Export '%s{id}' is duplicated."
+                          "Declare each export once."
+                          None
+          for id, rows in manifest.Actions |> List.groupBy _.Id do
+              if rows.Length > 1 then
+                  yield
+                      ProfileCore.diagnostic
+                          "QUINT-GENERAL-ACTION-DUPLICATE"
+                          "/actions"
+                          $"Action '%s{id}' is duplicated."
+                          "Declare each action once."
+                          None
+          for binding in manifest.Actions do
+              if binding.Kind <> Action then
+                  yield
+                      ProfileCore.diagnostic
+                          "QUINT-GENERAL-ACTION-BINDING"
+                          "/actions"
+                          $"Binding '%s{binding.Id}' is not an action."
+                          "Use Action kind for action bindings."
+                          (Some binding.Source) ]
+        |> ProfileCore.sorted
+
+    let private writePosition (writer: Utf8JsonWriter) (name: string) (position: QuintSourcePosition) =
+        writer.WriteStartObject(name)
+        writer.WriteNumber("line", position.Line)
+        writer.WriteNumber("column", position.Column)
+        writer.WriteEndObject()
+
+    let private writeSource (writer: Utf8JsonWriter) (source: QuintSourceRange) =
+        writer.WriteStartObject("source")
+        writer.WriteString("path", source.Path)
+        writePosition writer "start" source.Start
+        writePosition writer "end" source.End
+        writer.WriteEndObject()
+
+    let serializeCanonical manifest =
+        match findings manifest with
+        | errors when not (List.isEmpty errors) -> Error errors
+        | _ ->
+            use stream = new IO.MemoryStream()
+            use writer = new Utf8JsonWriter(stream)
+            writer.WriteStartObject()
+            writer.WriteString("schema", manifest.Schema)
+            writer.WriteString("profile", manifest.Profile)
+            writer.WriteString("moduleName", manifest.ModuleName)
+            writer.WriteStartArray("exports")
+
+            manifest.Exports
+            |> List.sortBy _.Id
+            |> List.iter (fun binding ->
+                writer.WriteStartObject()
+                writer.WriteString("id", binding.Id)
+                writer.WriteString("module", binding.ModuleName)
+                writer.WriteString("declaration", binding.DeclarationName)
+                writer.WriteBoolean("promoteCatalogueRows", binding.PromoteCatalogueRows)
+                writeSource writer binding.Source
+                writer.WriteEndObject())
+
+            writer.WriteEndArray()
+            writer.WriteStartArray("actions")
+
+            manifest.Actions
+            |> List.sortBy _.Id
+            |> List.iter (fun binding ->
+                writer.WriteStartObject()
+                writer.WriteString("id", binding.Id)
+                writer.WriteString("module", binding.ModuleName)
+                writer.WriteString("declaration", binding.CatalogueName)
+                writeSource writer binding.Source
+                writer.WriteEndObject())
+
+            writer.WriteEndArray()
+            writer.WriteEndObject()
+            writer.Flush()
+            Ok(Encoding.UTF8.GetString(stream.ToArray()) + "\n")
+
+    let deserialize (text: string) =
+        let malformed message =
+            Error
+                [ ProfileCore.diagnostic
+                      "QUINT-GENERAL-BINDINGS-MALFORMED"
+                      "/"
+                      message
+                      "Use canonical profile-2 binding manifest JSON."
+                      None ]
+
+        try
+            use document = JsonDocument.Parse text
+            let root = document.RootElement
+
+            let exact path expected (element: JsonElement) =
+                if element.ValueKind <> JsonValueKind.Object then
+                    raise (JsonException($"%s{path}: expected object."))
+
+                let actual = element.EnumerateObject() |> Seq.map _.Name |> Set.ofSeq
+                if actual <> expected then raise (JsonException($"%s{path}: fields do not match schema."))
+
+            let string (name: string) (element: JsonElement) =
+                let value = element.GetProperty(name)
+                if value.ValueKind <> JsonValueKind.String then raise (JsonException($"/%s{name}: expected string."))
+                value.GetString() |> Option.ofObj |> Option.defaultWith (fun () -> raise (JsonException("null string")))
+
+            let position path (element: JsonElement) =
+                exact path (Set.ofList [ "line"; "column" ]) element
+                { Line = element.GetProperty("line").GetInt32()
+                  Column = element.GetProperty("column").GetInt32() }
+
+            let source path (element: JsonElement) =
+                exact path (Set.ofList [ "path"; "start"; "end" ]) element
+                { Path = string "path" element
+                  Start = position (path + "/start") (element.GetProperty("start"))
+                  End = position (path + "/end") (element.GetProperty("end")) }
+
+            let array (name: string) (element: JsonElement) =
+                let value = element.GetProperty(name)
+                if value.ValueKind <> JsonValueKind.Array then raise (JsonException($"/%s{name}: expected array."))
+                value.EnumerateArray() |> Seq.toList
+
+            exact "/" (Set.ofList [ "schema"; "profile"; "moduleName"; "exports"; "actions" ]) root
+
+            let exports =
+                array "exports" root
+                |> List.mapi (fun index element ->
+                    let path = $"/exports/%d{index}"
+                    exact path (Set.ofList [ "id"; "module"; "declaration"; "promoteCatalogueRows"; "source" ]) element
+                    let promote = element.GetProperty("promoteCatalogueRows")
+                    if promote.ValueKind <> JsonValueKind.True && promote.ValueKind <> JsonValueKind.False then
+                        raise (JsonException(path + "/promoteCatalogueRows: expected boolean."))
+                    { Id = string "id" element
+                      ModuleName = string "module" element
+                      DeclarationName = string "declaration" element
+                      PromoteCatalogueRows = promote.GetBoolean()
+                      Source = source (path + "/source") (element.GetProperty("source")) })
+
+            let actions =
+                array "actions" root
+                |> List.mapi (fun index element ->
+                    let path = $"/actions/%d{index}"
+                    exact path (Set.ofList [ "id"; "module"; "declaration"; "source" ]) element
+                    { ModuleName = string "module" element
+                      CatalogueName = string "declaration" element
+                      Id = string "id" element
+                      Kind = Action
+                      Source = source (path + "/source") (element.GetProperty("source")) })
+
+            let manifest =
+                { Schema = string "schema" root
+                  Profile = string "profile" root
+                  ModuleName = string "moduleName" root
+                  Exports = exports
+                  Actions = actions }
+
+            match findings manifest with
+            | [] -> Ok manifest
+            | errors -> Error errors
+        with
+        | :? JsonException as ex -> malformed ex.Message
+        | :? InvalidOperationException as ex -> malformed ex.Message

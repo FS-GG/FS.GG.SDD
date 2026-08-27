@@ -136,6 +136,26 @@ type QuintGeneralTypedEffectObservation =
       ExportBindings: QuintGeneralExportBinding list
       ActionBindings: QuintCatalogueSourceBinding list }
 
+/// Canonical retained host facts that select exports and actions without carrying semantic values.
+type QuintGeneralBindingManifest =
+    { Schema: string
+      Profile: string
+      ModuleName: string
+      Exports: QuintGeneralExportBinding list
+      Actions: QuintCatalogueSourceBinding list }
+
+[<RequireQualifiedAccess>]
+module QuintGeneralBindingManifest =
+    /// Stable schema for retained profile-2 selector facts.
+    val schema: string
+
+    /// Emit strict canonical JSON after validating identities and source ranges.
+    val serializeCanonical:
+        manifest: QuintGeneralBindingManifest -> Result<string, QuintProfileDiagnostic list>
+
+    /// Decode strict canonical JSON; unknown fields and malformed selectors fail closed.
+    val deserialize: text: string -> Result<QuintGeneralBindingManifest, QuintProfileDiagnostic list>
+
 [<RequireQualifiedAccess>]
 module QuintGeneralProfile =
     /// Explicit identity of the general profile; profile 1 remains frozen.
