@@ -799,27 +799,44 @@ module private ContractV2Core =
     let rec valueKey =
         function
         | QuintBool value -> if value then "b:1" else "b:0"
-        | QuintInt value -> "i:" + value.ToString("+0000000000000000000;-0000000000000000000", CultureInfo.InvariantCulture)
+        | QuintInt value ->
+            "i:"
+            + value.ToString("+0000000000000000000;-0000000000000000000", CultureInfo.InvariantCulture)
         | QuintString value -> "s:" + value
         | QuintTuple values -> "t:[" + (values |> List.map valueKey |> String.concat ",") + "]"
         | QuintRecord fields ->
-            "r:{" + (fields |> List.map (fun (name, value) -> name + "=" + valueKey value) |> String.concat ",") + "}"
+            "r:{"
+            + (fields
+               |> List.map (fun (name, value) -> name + "=" + valueKey value)
+               |> String.concat ",")
+            + "}"
         | QuintVariant(tag, value) -> "v:" + tag + ":" + (value |> Option.map valueKey |> Option.defaultValue "")
         | QuintList values -> "l:[" + (values |> List.map valueKey |> String.concat ",") + "]"
         | QuintSet values -> "e:[" + (values |> List.map valueKey |> String.concat ",") + "]"
         | QuintMap entries ->
-            "m:[" + (entries |> List.map (fun (key, value) -> valueKey key + "=" + valueKey value) |> String.concat ",") + "]"
+            "m:["
+            + (entries
+               |> List.map (fun (key, value) -> valueKey key + "=" + valueKey value)
+               |> String.concat ",")
+            + "]"
 
     let normalizeValue =
         let rec normalize =
             function
             | QuintTuple values -> QuintTuple(List.map normalize values)
             | QuintRecord fields ->
-                fields |> List.map (fun (name, value) -> name, normalize value) |> List.sortBy fst |> QuintRecord
+                fields
+                |> List.map (fun (name, value) -> name, normalize value)
+                |> List.sortBy fst
+                |> QuintRecord
             | QuintVariant(tag, value) -> QuintVariant(tag, Option.map normalize value)
             | QuintList values -> QuintList(List.map normalize values)
             | QuintSet values ->
-                values |> List.map normalize |> List.sortBy valueKey |> List.distinct |> QuintSet
+                values
+                |> List.map normalize
+                |> List.sortBy valueKey
+                |> List.distinct
+                |> QuintSet
             | QuintMap entries ->
                 entries
                 |> List.map (fun (key, value) -> normalize key, normalize value)
@@ -829,8 +846,7 @@ module private ContractV2Core =
 
         normalize
 
-    let writeRange (writer: Utf8JsonWriter) (source: QuintSourceRange) =
-        ContractCore.writeRange writer source
+    let writeRange (writer: Utf8JsonWriter) (source: QuintSourceRange) = ContractCore.writeRange writer source
 
     let rec writeValue (writer: Utf8JsonWriter) value =
         writer.WriteStartObject()
@@ -948,7 +964,10 @@ module private ContractV2Core =
 
                 QuintVariant(
                     ContractCore.str "tag" element,
-                    if value.ValueKind = JsonValueKind.Null then None else Some(read (path + "/value") value)
+                    if value.ValueKind = JsonValueKind.Null then
+                        None
+                    else
+                        Some(read (path + "/value") value)
                 )
             | "map" ->
                 ContractCore.checkFields path (Set.ofList [ "kind"; "entries" ]) element
@@ -957,6 +976,7 @@ module private ContractV2Core =
                 |> List.mapi (fun index entry ->
                     let entryPath = $"%s{path}/entries/%d{index}"
                     ContractCore.checkFields entryPath (Set.ofList [ "key"; "value" ]) entry
+
                     read (entryPath + "/key") (ContractCore.prop "key" entry),
                     read (entryPath + "/value") (ContractCore.prop "value" entry))
                 |> List.sortBy (fst >> valueKey)
@@ -1115,32 +1135,81 @@ module private ContractV2Core =
                       $"Expected '%s{QuintGeneralProfile.identity}', got '%s{contract.Profile}'."
                       "Compile with the general profile adapter."
           if not (ContractCore.idPattern.IsMatch contract.Specification) then
-              yield ContractCore.diagnostic "QUINT-CONTRACT-ID" "/specification" "Specification is invalid." "Use a stable identity."
+              yield
+                  ContractCore.diagnostic
+                      "QUINT-CONTRACT-ID"
+                      "/specification"
+                      "Specification is invalid."
+                      "Use a stable identity."
           for id, rows in contract.Exports |> List.groupBy _.Id do
               if rows.Length > 1 then
-                  yield ContractCore.diagnostic "QUINT-CONTRACT-EXPORT-DUPLICATE" "/exports" $"Export '%s{id}' is duplicated." "Keep one export."
+                  yield
+                      ContractCore.diagnostic
+                          "QUINT-CONTRACT-EXPORT-DUPLICATE"
+                          "/exports"
+                          $"Export '%s{id}' is duplicated."
+                          "Keep one export."
           for id, rows in contract.Catalogue |> List.groupBy _.Id do
               if rows.Length > 1 then
-                  yield ContractCore.diagnostic "QUINT-CONTRACT-CATALOGUE-DUPLICATE" "/catalogue" $"Catalogue identity '%s{id}' is duplicated." "Keep one row."
+                  yield
+                      ContractCore.diagnostic
+                          "QUINT-CONTRACT-CATALOGUE-DUPLICATE"
+                          "/catalogue"
+                          $"Catalogue identity '%s{id}' is duplicated."
+                          "Keep one row."
           for index, row in contract.Catalogue |> List.indexed do
               if not (exportIds.Contains row.ExportId) then
-                  yield ContractCore.diagnostic "QUINT-CONTRACT-REFERENCE" $"/catalogue/%d{index}/exportId" $"'%s{row.ExportId}' is not exported." "Reference an export."
+                  yield
+                      ContractCore.diagnostic
+                          "QUINT-CONTRACT-REFERENCE"
+                          $"/catalogue/%d{index}/exportId"
+                          $"'%s{row.ExportId}' is not exported."
+                          "Reference an export."
           for index, relation in contract.Relationships |> List.indexed do
-              if not (subjectIds.Contains relation.FromId) || not (subjectIds.Contains relation.ToId) then
-                  yield ContractCore.diagnostic "QUINT-CONTRACT-REFERENCE" $"/relationships/%d{index}" "Relationship reference is not declared." "Reference an export or catalogue identity."
+              if
+                  not (subjectIds.Contains relation.FromId)
+                  || not (subjectIds.Contains relation.ToId)
+              then
+                  yield
+                      ContractCore.diagnostic
+                          "QUINT-CONTRACT-REFERENCE"
+                          $"/relationships/%d{index}"
+                          "Relationship reference is not declared."
+                          "Reference an export or catalogue identity."
           for index, profile in contract.VerificationProfiles |> List.indexed do
               for subject in profile.SubjectIds do
                   if not (subjectIds.Contains subject) then
-                      yield ContractCore.diagnostic "QUINT-CONTRACT-REFERENCE" $"/verificationProfiles/%d{index}/subjectIds" $"'%s{subject}' is not declared." "Reference an export or catalogue identity."
+                      yield
+                          ContractCore.diagnostic
+                              "QUINT-CONTRACT-REFERENCE"
+                              $"/verificationProfiles/%d{index}/subjectIds"
+                              $"'%s{subject}' is not declared."
+                              "Reference an export or catalogue identity."
+
               for bound in profile.BoundIds do
                   if not (boundIds.Contains bound) then
-                      yield ContractCore.diagnostic "QUINT-CONTRACT-BOUND-REFERENCE" $"/verificationProfiles/%d{index}/boundIds" $"'%s{bound}' is not declared." "Reference a finite bound."
+                      yield
+                          ContractCore.diagnostic
+                              "QUINT-CONTRACT-BOUND-REFERENCE"
+                              $"/verificationProfiles/%d{index}/boundIds"
+                              $"'%s{bound}' is not declared."
+                              "Reference a finite bound."
           for index, bound in contract.Bounds |> List.indexed do
               if bound.Minimum < 0L || bound.Maximum < bound.Minimum then
-                  yield ContractCore.diagnostic "QUINT-CONTRACT-BOUND" $"/bounds/%d{index}" "Finite bound is negative or reversed." "Use 0 <= minimum <= maximum."
+                  yield
+                      ContractCore.diagnostic
+                          "QUINT-CONTRACT-BOUND"
+                          $"/bounds/%d{index}"
+                          "Finite bound is negative or reversed."
+                          "Use 0 <= minimum <= maximum."
           for index, digest in contract.Digests |> List.indexed do
               if not (ContractCore.validDigest digest.Sha256) then
-                  yield ContractCore.diagnostic "QUINT-CONTRACT-DIGEST" $"/digests/%d{index}/sha256" "Digest is not lowercase SHA-256." "Provide 64 lowercase hexadecimal characters." ]
+                  yield
+                      ContractCore.diagnostic
+                          "QUINT-CONTRACT-DIGEST"
+                          $"/digests/%d{index}/sha256"
+                          "Digest is not lowercase SHA-256."
+                          "Provide 64 lowercase hexadecimal characters." ]
         |> ContractCore.sorted
 
     let decode (text: string) =
@@ -1150,8 +1219,18 @@ module private ContractV2Core =
         ContractCore.checkFields
             ""
             (Set.ofList
-                [ "schema"; "profile"; "specification"; "exports"; "catalogue"; "actionEffects"; "relationships"
-                  "verificationProfiles"; "bounds"; "impacts"; "compatibility"; "digests" ])
+                [ "schema"
+                  "profile"
+                  "specification"
+                  "exports"
+                  "catalogue"
+                  "actionEffects"
+                  "relationships"
+                  "verificationProfiles"
+                  "bounds"
+                  "impacts"
+                  "compatibility"
+                  "digests" ])
             root
 
         let exports =
@@ -1181,7 +1260,11 @@ module private ContractV2Core =
         let effects =
             ContractCore.array "actionEffects" root
             |> List.mapi (fun index row ->
-                ContractCore.checkFields $"/actionEffects/%d{index}" (Set.ofList [ "actionId"; "reads"; "writes"; "subjects" ]) row
+                ContractCore.checkFields
+                    $"/actionEffects/%d{index}"
+                    (Set.ofList [ "actionId"; "reads"; "writes"; "subjects" ])
+                    row
+
                 { ActionId = ContractCore.str "actionId" row
                   Reads = ContractCore.strings "reads" row
                   Writes = ContractCore.strings "writes" row
@@ -1192,6 +1275,7 @@ module private ContractV2Core =
             |> List.mapi (fun index row ->
                 let path = $"/relationships/%d{index}"
                 ContractCore.checkFields path (Set.ofList [ "from"; "kind"; "to" ]) row
+
                 { FromId = ContractCore.str "from" row
                   Kind = ContractCore.parseRelation (path + "/kind") (ContractCore.str "kind" row)
                   ToId = ContractCore.str "to" row })
@@ -1199,7 +1283,11 @@ module private ContractV2Core =
         let profiles =
             ContractCore.array "verificationProfiles" root
             |> List.mapi (fun index row ->
-                ContractCore.checkFields $"/verificationProfiles/%d{index}" (Set.ofList [ "id"; "kind"; "subjectIds"; "boundIds" ]) row
+                ContractCore.checkFields
+                    $"/verificationProfiles/%d{index}"
+                    (Set.ofList [ "id"; "kind"; "subjectIds"; "boundIds" ])
+                    row
+
                 { Id = ContractCore.str "id" row
                   Kind = ContractCore.str "kind" row
                   SubjectIds = ContractCore.strings "subjectIds" row
@@ -1209,6 +1297,7 @@ module private ContractV2Core =
             ContractCore.array "bounds" root
             |> List.mapi (fun index row ->
                 ContractCore.checkFields $"/bounds/%d{index}" (Set.ofList [ "id"; "minimum"; "maximum" ]) row
+
                 { Id = ContractCore.str "id" row
                   Minimum = ContractCore.int64 "minimum" row
                   Maximum = ContractCore.int64 "maximum" row })
@@ -1217,6 +1306,7 @@ module private ContractV2Core =
             ContractCore.array "impacts" root
             |> List.mapi (fun index row ->
                 ContractCore.checkFields $"/impacts/%d{index}" (Set.ofList [ "subjectId"; "category"; "detail" ]) row
+
                 { SubjectId = ContractCore.str "subjectId" row
                   Category = ContractCore.str "category" row
                   Detail = ContractCore.str "detail" row })
@@ -1224,7 +1314,11 @@ module private ContractV2Core =
         let compatibility =
             ContractCore.array "compatibility" root
             |> List.mapi (fun index row ->
-                ContractCore.checkFields $"/compatibility/%d{index}" (Set.ofList [ "surface"; "requirement"; "detail" ]) row
+                ContractCore.checkFields
+                    $"/compatibility/%d{index}"
+                    (Set.ofList [ "surface"; "requirement"; "detail" ])
+                    row
+
                 { Surface = ContractCore.str "surface" row
                   Requirement = ContractCore.str "requirement" row
                   Detail = ContractCore.str "detail" row })
@@ -1233,6 +1327,7 @@ module private ContractV2Core =
             ContractCore.array "digests" root
             |> List.mapi (fun index row ->
                 ContractCore.checkFields $"/digests/%d{index}" (Set.ofList [ "name"; "sha256" ]) row
+
                 { Name = ContractCore.str "name" row
                   Sha256 = ContractCore.str "sha256" row })
 
@@ -1262,7 +1357,10 @@ module QuintContractV2 =
     let deserialize text =
         try
             let contract = ContractV2Core.decode text
-            match validate contract with [] -> Ok contract | findings -> Error findings
+
+            match validate contract with
+            | [] -> Ok contract
+            | findings -> Error findings
         with :? JsonException as ex ->
             Error
                 [ ContractCore.diagnostic
@@ -1273,9 +1371,19 @@ module QuintContractV2 =
 
     let semanticDiff before after =
         if before.Schema <> after.Schema then
-            Error [ ContractCore.diagnostic "QUINT-DIFF-SCHEMA" "/schema" "Contracts use incompatible schemas." "Compare contract v2 values." ]
+            Error
+                [ ContractCore.diagnostic
+                      "QUINT-DIFF-SCHEMA"
+                      "/schema"
+                      "Contracts use incompatible schemas."
+                      "Compare contract v2 values." ]
         elif before.Profile <> after.Profile then
-            Error [ ContractCore.diagnostic "QUINT-DIFF-PROFILE" "/profile" "Contracts use incompatible profiles." "Compare the same explicit profile." ]
+            Error
+                [ ContractCore.diagnostic
+                      "QUINT-DIFF-PROFILE"
+                      "/profile"
+                      "Contracts use incompatible profiles."
+                      "Compare the same explicit profile." ]
         else
             match serializeCanonical before, serializeCanonical after with
             | Ok left, Ok right when left = right -> Ok Equivalent

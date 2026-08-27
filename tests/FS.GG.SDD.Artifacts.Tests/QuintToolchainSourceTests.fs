@@ -98,7 +98,11 @@ module QuintToolchainSourceTests =
         Assert.Equal<QuintToolComponent list>(QuintToolchain.q1.Components, QuintToolchain.general.Components)
         Assert.Equal(QuintToolchain.q1.Guidance, QuintToolchain.general.Guidance)
         Assert.Empty(QuintToolchain.validateManifest QuintToolchain.general)
-        Assert.NotEqual(QuintToolchain.fingerprint QuintToolchain.q1, QuintToolchain.fingerprint QuintToolchain.general)
+
+        Assert.NotEqual<string>(
+            QuintToolchain.fingerprint QuintToolchain.q1,
+            QuintToolchain.fingerprint QuintToolchain.general
+        )
 
     [<Fact>]
     let ``cache absence unreadability mismatch and incompleteness stay distinct`` () =
