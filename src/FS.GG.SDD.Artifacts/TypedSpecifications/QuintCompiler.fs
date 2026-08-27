@@ -206,47 +206,80 @@ module private CompilerInternal =
               "export "
               "instance " ]
 
-        let exactDeclarationRange prefix declarationName =
-            let declarationPrefix = $"%s{prefix}%s{declarationName}"
+        let exactDeclarationRange moduleName prefixes declarationName =
+            let moduleLine = $"module %s{moduleName} {{"
 
-            let starts =
+            let modules =
                 lines
                 |> Array.indexed
                 |> Array.choose (fun (index, line) ->
-                    if line.TrimStart().StartsWith(declarationPrefix, StringComparison.Ordinal) then
+                    if line.Trim() = moduleLine then
                         Some(index, line.Length - line.TrimStart().Length)
                     else
                         None)
 
-            match starts with
-            | [| startIndex, indentation |] ->
-                let nextDeclaration =
+            match modules with
+            | [| moduleStart, moduleIndentation |] ->
+                let moduleEnd =
                     lines
                     |> Array.indexed
                     |> Array.tryFind (fun (index, line) ->
-                        if index <= startIndex then
-                            false
-                        else
+                        let suffix = line.TrimStart()
+
+                        index > moduleStart
+                        && suffix = "}"
+                        && line.Length - suffix.Length = moduleIndentation)
+
+                match moduleEnd with
+                | Some(moduleEndIndex, _) ->
+                    let starts =
+                        lines
+                        |> Array.indexed
+                        |> Array.choose (fun (index, line) ->
                             let suffix = line.TrimStart()
-                            let nextIndentation = line.Length - suffix.Length
 
-                            not (String.IsNullOrWhiteSpace suffix)
-                            && ((nextIndentation = indentation
-                                 && (declarationPrefixes
-                                     |> List.exists (fun candidate ->
-                                         suffix.StartsWith(candidate, StringComparison.Ordinal))))
-                                || (nextIndentation < indentation && suffix = "}")))
+                            if
+                                index > moduleStart
+                                && index < moduleEndIndex
+                                && (prefixes
+                                    |> List.exists (fun prefix ->
+                                        suffix.StartsWith($"%s{prefix}%s{declarationName}", StringComparison.Ordinal)))
+                            then
+                                Some(index, line.Length - suffix.Length)
+                            else
+                                None)
 
-                nextDeclaration
-                |> Option.map (fun (nextIndex, _) ->
-                    { Path = source.Path
-                      Start = { Line = startIndex + 1; Column = 1 }
-                      End =
-                        { Line = nextIndex
-                          Column = indentation + 2 } })
+                    match starts with
+                    | [| startIndex, indentation |] ->
+                        let nextDeclaration =
+                            lines
+                            |> Array.indexed
+                            |> Array.tryFind (fun (index, line) ->
+                                if index <= startIndex || index > moduleEndIndex then
+                                    false
+                                else
+                                    let suffix = line.TrimStart()
+                                    let nextIndentation = line.Length - suffix.Length
+
+                                    not (String.IsNullOrWhiteSpace suffix)
+                                    && ((nextIndentation = indentation
+                                         && (declarationPrefixes
+                                             |> List.exists (fun candidate ->
+                                                 suffix.StartsWith(candidate, StringComparison.Ordinal))))
+                                        || index = moduleEndIndex))
+
+                        nextDeclaration
+                        |> Option.map (fun (nextIndex, _) ->
+                            { Path = source.Path
+                              Start = { Line = startIndex + 1; Column = 1 }
+                              End =
+                                { Line = nextIndex
+                                  Column = indentation + 2 } })
+                    | _ -> None
+                | None -> None
             | _ -> None
 
-        let finding path id declarationName prefix (candidate: QuintSourceRange) =
+        let finding path id moduleName declarationName prefixes (candidate: QuintSourceRange) =
             [ if not (isContained candidate) then
                   yield
                       diagnostic
@@ -256,7 +289,7 @@ module private CompilerInternal =
                           (Some
                               { Line = candidate.Start.Line
                                 Column = candidate.Start.Column })
-              elif exactDeclarationRange prefix declarationName <> Some candidate then
+              elif exactDeclarationRange moduleName prefixes declarationName <> Some candidate then
                   yield
                       diagnostic
                           "QUINT-COMPILER-SOURCE-BINDING"
@@ -273,8 +306,9 @@ module private CompilerInternal =
                   finding
                       $"/typedEffect/exportBindings/%d{index}/source"
                       binding.Id
+                      binding.ModuleName
                       binding.DeclarationName
-                      "pure val "
+                      [ "pure val "; "val " ]
                       binding.Source)
           yield!
               actions
@@ -283,8 +317,9 @@ module private CompilerInternal =
                   finding
                       $"/typedEffect/actionBindings/%d{index}/source"
                       binding.Id
+                      binding.ModuleName
                       binding.CatalogueName
-                      "action "
+                      [ "action " ]
                       binding.Source) ]
         |> sorted
 

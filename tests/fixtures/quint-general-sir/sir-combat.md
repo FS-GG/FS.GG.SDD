@@ -91,7 +91,7 @@ module SirCombat {
   pure val humanArmorRetentionRaw = SCALE
   pure val rangeSlopeRaw = 1000
 
-  pure val ruleCatalogue = Set(
+  val ruleCatalogue = Set(
     { id: "CONTENT-WEAPON-RIFLE-001", kind: "fact", dependencies: Set(), reads: Set(), effects: Set(), events: List() },
     { id: "CONTENT-BODY-HUMAN-001", kind: "fact", dependencies: Set(), reads: Set(), effects: Set(), events: List() },
     { id: "COMBAT-ENGAGEMENT-001", kind: "formula", dependencies: Set(), reads: Set("range"), effects: Set(), events: List() },
@@ -524,6 +524,10 @@ module SirCombatTests {
         factionNeutralCollateral,
       })
   }
+}
+
+module DuplicateNames {
+  action step = true
 }
 ```
 
