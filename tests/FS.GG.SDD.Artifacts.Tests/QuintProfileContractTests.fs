@@ -255,6 +255,7 @@ module QuintProfileContractTests =
         Assert.Equal("ACT-Step", effect.ActionId)
         Assert.Equal<string list>([ "state" ], effect.Reads)
         Assert.Equal<string list>([ "state" ], effect.Writes)
+        Assert.Equal<string list>([ "state" ], effect.Subjects)
 
     [<Fact>]
     let ``general profile refuses substitution and nonconstant exports distinctly`` () =

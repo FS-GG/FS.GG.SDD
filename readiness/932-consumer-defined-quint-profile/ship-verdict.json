@@ -4,10 +4,10 @@
   "workId": "932-consumer-defined-quint-profile",
   "stage": "ship",
   "status": "shipReady",
-  "generator": "FS.GG.SDD.Artifacts/1.5.0",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "c5fd63587a7e88afaf32ded9a2e30ee3a9610dcb7af6432ab856158bf63a4110"
+    "value": "676863f94af47742c417257d22ebcc9d035abee0c21feb1674a18fecff97f127"
   },
   "verificationReadiness": {
     "status": "verificationReady",

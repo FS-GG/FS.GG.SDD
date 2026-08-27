@@ -1863,7 +1863,7 @@ module private GeneralProfileCore =
                 { ActionId = binding.Id
                   Reads = reads
                   Writes = writes
-                  Subjects = [] }
+                  Subjects = Set.union (Set.ofList reads) (Set.ofList writes) |> Set.toList }
 
 [<RequireQualifiedAccess>]
 module QuintGeneralProfile =

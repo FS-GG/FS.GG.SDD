@@ -11,7 +11,7 @@ sourceAnalysis: readiness/932-consumer-defined-quint-profile/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/932-consumer-defined-quint-profile/analysis.json
-    digest: 554b210ead79d681664a1d3786707d955ca1262a294ea3cf5e44b0434d6abfa5
+    digest: 79c3434b2e3d4174f3ea9c9806a4a6138ef1677ae46e7d9b6ef810ad217fbbb8
     schemaVersion: 1
   - label: checklist
     path: work/932-consumer-defined-quint-profile/checklist.md

@@ -162,6 +162,81 @@ module private CompilerInternal =
         |> Array.concat
         |> sha256Bytes
 
+    let generalBindingSourceFindings
+        (source: QuintMarkdownSource)
+        (sourceMap: QuintSourceMap)
+        (exports: QuintGeneralExportBinding list)
+        (actions: QuintCatalogueSourceBinding list)
+        =
+        let contentRanges = sourceMap.Entries |> List.map (fun entry -> entry.Source.Range)
+        let lines = source.Text.Split('\n')
+
+        let positionAtOrAfter (left: QuintSourcePosition) (right: QuintSourcePosition) =
+            left.Line > right.Line
+            || (left.Line = right.Line && left.Column >= right.Column)
+
+        let positionAtOrBefore (left: QuintSourcePosition) (right: QuintSourcePosition) =
+            left.Line < right.Line
+            || (left.Line = right.Line && left.Column <= right.Column)
+
+        let isContained (candidate: QuintSourceRange) =
+            contentRanges
+            |> List.exists (fun content ->
+                candidate.Path = source.Path
+                && content.Path = source.Path
+                && positionAtOrAfter candidate.Start content.Start
+                && positionAtOrBefore candidate.End content.End)
+
+        let namesDeclaration prefix declarationName (candidate: QuintSourceRange) =
+            if candidate.Start.Line > lines.Length || candidate.End.Line > lines.Length then
+                false
+            else
+                lines[candidate.Start.Line - 1 .. candidate.End.Line - 1]
+                |> Array.exists (fun line ->
+                    line.TrimStart().StartsWith($"%s{prefix}%s{declarationName}", StringComparison.Ordinal))
+
+        let finding path id declarationName prefix (candidate: QuintSourceRange) =
+            [ if not (isContained candidate) then
+                  yield
+                      diagnostic
+                          "QUINT-COMPILER-SOURCE-BINDING"
+                          path
+                          $"Binding '%s{id}' does not lie inside the selected canonical Quint fence."
+                          (Some
+                              { Line = candidate.Start.Line
+                                Column = candidate.Start.Column })
+              elif not (namesDeclaration prefix declarationName candidate) then
+                  yield
+                      diagnostic
+                          "QUINT-COMPILER-SOURCE-BINDING"
+                          path
+                          $"Binding '%s{id}' does not contain its declared Quint definition '%s{declarationName}'."
+                          (Some
+                              { Line = candidate.Start.Line
+                                Column = candidate.Start.Column }) ]
+
+        [ yield!
+              exports
+              |> List.indexed
+              |> List.collect (fun (index, binding) ->
+                  finding
+                      $"/typedEffect/exportBindings/%d{index}/source"
+                      binding.Id
+                      binding.DeclarationName
+                      "pure val "
+                      binding.Source)
+          yield!
+              actions
+              |> List.indexed
+              |> List.collect (fun (index, binding) ->
+                  finding
+                      $"/typedEffect/actionBindings/%d{index}/source"
+                      binding.Id
+                      binding.CatalogueName
+                      "action "
+                      binding.Source) ]
+        |> sorted
+
     let private fields =
         function
         | QuintRecord values -> values |> Map.ofList |> Some
@@ -452,6 +527,11 @@ module QuintCompiler =
             QuintSource.validateManifest input.Source input.FenceManifest
             @ QuintSource.validateExtraction input.Source input.FenceManifest input.Extraction
             @ QuintSource.validateSourceMap input.Source input.FenceManifest input.SourceMap
+            @ CompilerInternal.generalBindingSourceFindings
+                input.Source
+                input.SourceMap
+                input.TypedEffect.ExportBindings
+                input.TypedEffect.ActionBindings
 
         let profileBindingFindings =
             [ if input.Toolchain.Profile <> input.TypedEffect.Profile then

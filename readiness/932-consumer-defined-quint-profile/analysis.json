@@ -4,7 +4,7 @@
   "workId": "932-consumer-defined-quint-profile",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.5.0",
+  "generator": "FS.GG.SDD.Artifacts/1.4.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -41,7 +41,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "9dc2fcd325cff0d14df8b1d947bd0df2b8b57f825f0243236ef61f6a23244328"
+        "value": "01b2f3e845de1e88a66e749f2f765023a641ad0da8bdd63b001e945362076979"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
