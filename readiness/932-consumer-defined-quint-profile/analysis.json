@@ -4,7 +4,7 @@
   "workId": "932-consumer-defined-quint-profile",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.4.0",
+  "generator": "FS.GG.SDD.Artifacts/1.5.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -37,6 +37,16 @@
       "schemaStatus": "current"
     },
     {
+      "path": "readiness/932-consumer-defined-quint-profile/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "9dc2fcd325cff0d14df8b1d947bd0df2b8b57f825f0243236ef61f6a23244328"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
       "path": "work/932-consumer-defined-quint-profile/checklist.md",
       "kind": "checklist",
       "digest": {
@@ -51,7 +61,7 @@
       "kind": "clarification",
       "digest": {
         "algorithm": "sha256",
-        "value": "8d50112a4851eab3d33f2293232a56771c0b1d5aa93ab3a919619776c627adfd"
+        "value": "96fdc058311330e3d136f998141b76d30707e22fbfb6fe1d23b5c5a878f1a56e"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -61,7 +71,7 @@
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "a940bb6995514417aa7de52898e421adbf1a29bab54b78a677ede0f2a94d113f"
+        "value": "d984422f1ff389e1d4c2b52b73bb613f9a4469fcaa9933722776cd7fb6516bff"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "2e8ceadce2d0504370277f1e37d22502083ff5b3f40627df33f00e2a1aa7ac55"
+        "value": "d5193a188a3089705e7fca0e3d01975ecc6474612aad32f6119220aac417d09b"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -1026,7 +1036,7 @@
     {
       "path": "readiness/932-consumer-defined-quint-profile/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],

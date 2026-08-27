@@ -1,0 +1,1199 @@
+schemaVersion: 1
+workId: 932-consumer-defined-quint-profile
+stage: evidence
+status: evidenceReady
+sourceSpec: work/932-consumer-defined-quint-profile/spec.md
+sourceClarifications: work/932-consumer-defined-quint-profile/clarifications.md
+sourceChecklist: work/932-consumer-defined-quint-profile/checklist.md
+sourcePlan: work/932-consumer-defined-quint-profile/plan.md
+sourceTasks: work/932-consumer-defined-quint-profile/tasks.yml
+sourceAnalysis: readiness/932-consumer-defined-quint-profile/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/932-consumer-defined-quint-profile/analysis.json
+    digest: 554b210ead79d681664a1d3786707d955ca1262a294ea3cf5e44b0434d6abfa5
+    schemaVersion: 1
+  - label: checklist
+    path: work/932-consumer-defined-quint-profile/checklist.md
+    digest: 8ca82dcec78b6cc2ada4b2728ff7f91129411045b1af3f3a9f363e9b421f5995
+    schemaVersion: 1
+  - label: clarifications
+    path: work/932-consumer-defined-quint-profile/clarifications.md
+    digest: 96fdc058311330e3d136f998141b76d30707e22fbfb6fe1d23b5c5a878f1a56e
+    schemaVersion: 1
+  - label: plan
+    path: work/932-consumer-defined-quint-profile/plan.md
+    digest: d984422f1ff389e1d4c2b52b73bb613f9a4469fcaa9933722776cd7fb6516bff
+    schemaVersion: 1
+  - label: spec
+    path: work/932-consumer-defined-quint-profile/spec.md
+    digest: e263837c915da8a6745f61b18b8f2a8a02d3c0225a46da5cf17443f3c02fa962
+    schemaVersion: 1
+  - label: tasks
+    path: work/932-consumer-defined-quint-profile/tasks.yml
+    digest: d5193a188a3089705e7fca0e3d01975ecc6474612aad32f6119220aac417d09b
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV001]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV002]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV003]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV004]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV005]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: [FR-006]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV006]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: [FR-007]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV007]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: [FR-008]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV008]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: [FR-009]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV009]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: [FR-010]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV010]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV011
+    kind: verification
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV011]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV012
+    kind: verification
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV012]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV013
+    kind: verification
+    subject:
+      type: task
+      id: T013
+    taskRefs: [T013]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV013]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV014
+    kind: verification
+    subject:
+      type: task
+      id: T014
+    taskRefs: [T014]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV014]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV015
+    kind: verification
+    subject:
+      type: task
+      id: T015
+    taskRefs: [T015]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV015]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV016
+    kind: verification
+    subject:
+      type: task
+      id: T016
+    taskRefs: [T016]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV016]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV017
+    kind: verification
+    subject:
+      type: task
+      id: T017
+    taskRefs: [T017]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV017]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV018
+    kind: verification
+    subject:
+      type: task
+      id: T018
+    taskRefs: [T018]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV018]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV019
+    kind: verification
+    subject:
+      type: task
+      id: T019
+    taskRefs: [T019]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV019]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV020
+    kind: verification
+    subject:
+      type: task
+      id: T020
+    taskRefs: [T020]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV020]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV021
+    kind: verification
+    subject:
+      type: task
+      id: T021
+    taskRefs: [T021]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV021]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV022
+    kind: verification
+    subject:
+      type: task
+      id: T022
+    taskRefs: [T022]
+    requirementRefs: [FR-006]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-006]
+    obligationRefs: [EV022]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV023
+    kind: verification
+    subject:
+      type: task
+      id: T023
+    taskRefs: [T023]
+    requirementRefs: [FR-007]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-007]
+    obligationRefs: [EV023]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV024
+    kind: verification
+    subject:
+      type: task
+      id: T024
+    taskRefs: [T024]
+    requirementRefs: [FR-008]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-008]
+    obligationRefs: [EV024]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV025
+    kind: verification
+    subject:
+      type: task
+      id: T025
+    taskRefs: [T025]
+    requirementRefs: [FR-009]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-009]
+    obligationRefs: [EV025]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV026
+    kind: verification
+    subject:
+      type: task
+      id: T026
+    taskRefs: [T026]
+    requirementRefs: [FR-010]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-010]
+    obligationRefs: [EV026]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV027
+    kind: verification
+    subject:
+      type: task
+      id: T027
+    taskRefs: [T027]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002]
+    obligationRefs: [EV027]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV028
+    kind: verification
+    subject:
+      type: task
+      id: T028
+    taskRefs: [T028]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003, PD-004]
+    obligationRefs: [EV028]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV029
+    kind: verification
+    subject:
+      type: task
+      id: T029
+    taskRefs: [T029]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-006]
+    obligationRefs: [EV029]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV030
+    kind: verification
+    subject:
+      type: task
+      id: T030
+    taskRefs: [T030]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-008, PD-010]
+    obligationRefs: [EV030]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV031
+    kind: verification
+    subject:
+      type: task
+      id: T031
+    taskRefs: [T031]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-007]
+    obligationRefs: [EV031]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV032
+    kind: verification
+    subject:
+      type: task
+      id: T032
+    taskRefs: [T032]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002, PD-003, PD-005]
+    obligationRefs: [EV032]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV033
+    kind: verification
+    subject:
+      type: task
+      id: T033
+    taskRefs: [T033]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV033]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV034
+    kind: verification
+    subject:
+      type: task
+      id: T034
+    taskRefs: [T034]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-006]
+    obligationRefs: [EV034]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV035
+    kind: verification
+    subject:
+      type: task
+      id: T035
+    taskRefs: [T035]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-008, PD-009]
+    obligationRefs: [EV035]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV036
+    kind: verification
+    subject:
+      type: task
+      id: T036
+    taskRefs: [T036]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-010]
+    obligationRefs: [EV036]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV037
+    kind: verification
+    subject:
+      type: task
+      id: T037
+    taskRefs: [T037]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV037]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV038
+    kind: verification
+    subject:
+      type: task
+      id: T038
+    taskRefs: [T038]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV038]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV039
+    kind: verification
+    subject:
+      type: task
+      id: T039
+    taskRefs: [T039]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-010]
+    obligationRefs: [EV039]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV040
+    kind: verification
+    subject:
+      type: task
+      id: T040
+    taskRefs: [T040]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004, PD-006]
+    obligationRefs: [EV040]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV041
+    kind: verification
+    subject:
+      type: task
+      id: T041
+    taskRefs: [T041]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-010]
+    obligationRefs: [EV041]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV042
+    kind: verification
+    subject:
+      type: task
+      id: T042
+    taskRefs: [T042]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-010]
+    obligationRefs: [EV042]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV043
+    kind: verification
+    subject:
+      type: task
+      id: T043
+    taskRefs: [T043]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV043]
+    artifacts: []
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/QuintProfileContractTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/932-consumer-defined-quint-profile/test-results/full-suite.trx
+      digest: "sha256:f65a3e76b111674a0c877106fd1b5f693d265c1f8333d8c904dffb22b3be5a3f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1333
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+lifecycleNotes:
+  - "Next lifecycle action: verify."

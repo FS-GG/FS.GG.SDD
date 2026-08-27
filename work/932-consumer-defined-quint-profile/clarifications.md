@@ -4,7 +4,7 @@ workId: 932-consumer-defined-quint-profile
 title: Consumer Defined Quint Profile
 stage: clarify
 changeTier: tier1
-status: needsAnswers
+status: clarified
 sourceSpec: work/932-consumer-defined-quint-profile/spec.md
 publicOrToolFacingImpact: true
 ---

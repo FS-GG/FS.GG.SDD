@@ -17,7 +17,7 @@ Prose status: planned
 
 ## Source Snapshot
 - spec: work/932-consumer-defined-quint-profile/spec.md sha256:e263837c915da8a6745f61b18b8f2a8a02d3c0225a46da5cf17443f3c02fa962 schemaVersion:1
-- clarifications: work/932-consumer-defined-quint-profile/clarifications.md sha256:8d50112a4851eab3d33f2293232a56771c0b1d5aa93ab3a919619776c627adfd schemaVersion:1
+- clarifications: work/932-consumer-defined-quint-profile/clarifications.md sha256:96fdc058311330e3d136f998141b76d30707e22fbfb6fe1d23b5c5a878f1a56e schemaVersion:1
 - checklist: work/932-consumer-defined-quint-profile/checklist.md sha256:8ca82dcec78b6cc2ada4b2728ff7f91129411045b1af3f3a9f363e9b421f5995 schemaVersion:1
 
 ## Plan Scope

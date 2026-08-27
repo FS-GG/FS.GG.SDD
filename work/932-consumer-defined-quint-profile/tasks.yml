@@ -17,7 +17,7 @@ sources:
     schemaVersion: 1
   - label: clarifications
     path: work/932-consumer-defined-quint-profile/clarifications.md
-    digest: 8d50112a4851eab3d33f2293232a56771c0b1d5aa93ab3a919619776c627adfd
+    digest: 96fdc058311330e3d136f998141b76d30707e22fbfb6fe1d23b5c5a878f1a56e
     schemaVersion: 1
   - label: checklist
     path: work/932-consumer-defined-quint-profile/checklist.md
@@ -25,7 +25,7 @@ sources:
     schemaVersion: 1
   - label: plan
     path: work/932-consumer-defined-quint-profile/plan.md
-    digest: a940bb6995514417aa7de52898e421adbf1a29bab54b78a677ede0f2a94d113f
+    digest: d984422f1ff389e1d4c2b52b73bb613f9a4469fcaa9933722776cd7fb6516bff
     schemaVersion: 1
 tasks:
   - id: T001
