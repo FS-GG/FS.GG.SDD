@@ -429,13 +429,6 @@ module SirCombat {
     last' = recoveryObservation(combat, eventId),
   }
 
-  action step = any {
-    resolveConsequences(representativeAttack),
-    resolveConsequences(missedAttack),
-    resolveCoverImpact(25, true, true, "cover:sample"),
-    resolveRecovery("recovery:sample"),
-  }
-
   val sixteenRulesDeclared = ruleCatalogue.size() == 16
   val boundedCombatState = and {
     combat.health >= 0, combat.health <= 100,
@@ -450,6 +443,13 @@ module SirCombat {
     (last.lastAction == "ResolveConsequences" and last.damage <= 0) implies last.suppressionDelta == 0
   val factionNeutralCollateral =
     nextConsequences(initialCombat, alliedAttack) == nextConsequences(initialCombat, representativeAttack)
+
+  action step = any {
+    resolveConsequences(representativeAttack),
+    resolveConsequences(missedAttack),
+    resolveCoverImpact(25, true, true, "cover:sample"),
+    resolveRecovery("recovery:sample"),
+  }
 }
 ```
 

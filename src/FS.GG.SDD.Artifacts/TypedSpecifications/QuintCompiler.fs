@@ -220,24 +220,22 @@ module private CompilerInternal =
 
             match starts with
             | [| startIndex, indentation |] ->
-                let indentationText = String(' ', indentation)
-
                 let nextDeclaration =
                     lines
                     |> Array.indexed
                     |> Array.tryFind (fun (index, line) ->
-                        if
-                            index <= startIndex
-                            || not (line.StartsWith(indentationText, StringComparison.Ordinal))
-                        then
+                        if index <= startIndex then
                             false
                         else
-                            let suffix = line.Substring(indentation)
+                            let suffix = line.TrimStart()
+                            let nextIndentation = line.Length - suffix.Length
 
                             not (String.IsNullOrWhiteSpace suffix)
-                            && (declarationPrefixes
-                                |> List.exists (fun candidate ->
-                                    suffix.StartsWith(candidate, StringComparison.Ordinal))))
+                            && ((nextIndentation = indentation
+                                 && (declarationPrefixes
+                                     |> List.exists (fun candidate ->
+                                         suffix.StartsWith(candidate, StringComparison.Ordinal))))
+                                || (nextIndentation < indentation && suffix = "}")))
 
                 nextDeclaration
                 |> Option.map (fun (nextIndex, _) ->
