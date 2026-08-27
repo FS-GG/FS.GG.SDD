@@ -829,6 +829,7 @@ module TypedAuthority =
               text "compiled-contract",
               bytes "markdown",
               bytes "fence-manifest",
+              bytes "source-map",
               text "generated-modules",
               text "typed-effect"
           with
@@ -836,6 +837,7 @@ module TypedAuthority =
             Some contractText,
             Some markdownBytes,
             Some fenceBytes,
+            Some sourceMapBytes,
             Some modulesText,
             Some typedEffectText ->
               try
@@ -871,12 +873,38 @@ module TypedAuthority =
                               "The profile-2 receipt does not close over its source, toolchain, typed effects, and contract."
                               "Re-author all profile-2 artifacts atomically."
 
-                  match QuintSource.decodeFenceManifest fenceBytes with
-                  | Ok fenceManifest ->
+                  match
+                      QuintSource.createMarkdown artifacts["markdown"].Path markdownBytes,
+                      QuintSource.decodeFenceManifest fenceBytes,
+                      QuintSource.decodeSourceMap sourceMapBytes
+                  with
+                  | Ok source, Ok fenceManifest, Ok sourceMap ->
                       let targets = fenceManifest.Fences |> List.map _.Target |> List.distinct
 
+                      let sourceFindings =
+                          QuintSource.validateManifest source fenceManifest
+                          @ QuintSource.validateSourceMap source fenceManifest sourceMap
+
+                      let sourceLines = source.Text.Split('\n')
+
+                      let extracted =
+                          try
+                              fenceManifest.Fences
+                              |> List.sortBy _.Ordinal
+                              |> List.map (fun fence ->
+                                  sourceLines[fence.SourceRange.Start.Line .. fence.SourceRange.End.Line - 2]
+                                  |> fun lines -> String.Join("\n", lines) + "\n")
+                              |> String.concat ""
+                              |> Ok
+                          with ex ->
+                              Error ex.Message
+
                       if
-                          targets.Length <> 1
+                          not sourceFindings.IsEmpty
+                          || QuintSource.encodeFenceManifest fenceManifest <> fenceBytes
+                          || QuintSource.encodeSourceMap sourceMap <> sourceMapBytes
+                          || targets.Length <> 1
+                          || extracted <> Ok modulesText
                           || generatedModuleDigest targets.Head (Encoding.UTF8.GetBytes modulesText)
                              <> modulesSha
                       then
@@ -884,8 +912,8 @@ module TypedAuthority =
                               diagnostic
                                   "typedSdd.v2.modulesClosure"
                                   "The generated profile-2 module bytes do not bind the compilation receipt."
-                                  "Regenerate modules and receipt together."
-                  | Error _ ->
+                                  "Regenerate source maps, modules, and receipt together."
+                  | _ ->
                       yield
                           diagnostic
                               "typedSdd.v2.sourceMapClosure"

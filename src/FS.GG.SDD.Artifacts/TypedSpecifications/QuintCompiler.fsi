@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Artifacts.TypedSpecifications
 
-/// Stable contract metadata supplied by the integration domain; catalogue and effects always come from Quint.
+/// Stable compilation identity. Profile 1 accepts integration facts here; profile 2 derives every
+/// semantic section from promoted Quint catalogue rows and accepts only specification/provenance digests.
 type QuintContractMetadata =
     { Specification: string
       Relationships: QuintRelationship list
@@ -85,7 +86,9 @@ module QuintCompiler =
     /// Validate and compose tool, source, profile, contract, binding, and receipt boundaries without performing IO.
     val compileObserved: input: QuintObservedCompilation -> Result<QuintCompilationOutput, SpecificationDiagnostic list>
 
-    /// Compose the general profile through the same source/toolchain effect observations.
+    /// Compose the general profile through the same source/toolchain effect observations. Relationship,
+    /// verification, bound, impact, and compatibility facts are derived from promoted Quint rows; a
+    /// semantic metadata sidecar is refused.
     val compileGeneralObserved:
         input: QuintGeneralObservedCompilation -> Result<QuintGeneralCompilationOutput, SpecificationDiagnostic list>
 

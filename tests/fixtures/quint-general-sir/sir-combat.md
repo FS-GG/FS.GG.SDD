@@ -33,6 +33,17 @@ module SirCombat {
     explanationFields: List[str],
   }
   type PropertyEntry = { id: str, kind: str, subjects: Set[str] }
+  type RelationshipEntry = { id: str, kind: str, fromId: str, toId: str }
+  type VerificationEntry = {
+    id: str,
+    kind: str,
+    verificationKind: str,
+    subjectIds: Set[str],
+    boundIds: Set[str],
+  }
+  type BoundEntry = { id: str, kind: str, minimum: int, maximum: int }
+  type ImpactEntry = { id: str, kind: str, subjectId: str, category: str, detail: str }
+  type CompatibilityEntry = { id: str, kind: str, surface: str, requirement: str, detail: str }
   type Wound = NoWound | MinorWound | MajorWound
   type CombatState = {
     health: int,
@@ -107,6 +118,44 @@ module SirCombat {
     result: "fixedPoint:ratio",
     explanationFields: List("visibleSamples", "totalSamples", "lineMode"),
   }
+
+  pure val relationshipCatalogue = Set(
+    { id: "REL-DAMAGE-WEAPON", kind: "requires", fromId: "COMBAT-DAMAGE-001", toId: "CONTENT-WEAPON-RIFLE-001" },
+    { id: "REL-DAMAGE-TRACE", kind: "requires", fromId: "COMBAT-DAMAGE-001", toId: "COMBAT-TRACE-002" },
+    { id: "REL-DAMAGE-ARMOR", kind: "requires", fromId: "COMBAT-DAMAGE-001", toId: "COMBAT-ARMOR-004" },
+    { id: "REL-COLLISION-TRACE", kind: "requires", fromId: "COMBAT-COLLISION-001", toId: "COMBAT-TRACE-002" },
+    { id: "REL-COVER-COLLISION", kind: "requires", fromId: "COMBAT-COVER-003", toId: "COMBAT-COLLISION-001" },
+    { id: "REL-PENETRATION-COVER", kind: "requires", fromId: "COMBAT-PENETRATION-001", toId: "COMBAT-COVER-003" },
+    { id: "REL-PENETRATION-ARMOR", kind: "requires", fromId: "COMBAT-PENETRATION-001", toId: "COMBAT-ARMOR-004" },
+    { id: "REL-HEALTH-DAMAGE", kind: "requires", fromId: "COMBAT-HEALTH-001", toId: "COMBAT-DAMAGE-001" },
+    { id: "REL-WOUND-HEALTH", kind: "requires", fromId: "COMBAT-WOUND-001", toId: "COMBAT-HEALTH-001" },
+    { id: "REL-SUPPRESSION-COLLISION", kind: "requires", fromId: "COMBAT-SUPPRESSION-001", toId: "COMBAT-COLLISION-001" },
+    { id: "REL-RECOVERY-SUPPRESSION", kind: "requires", fromId: "COMBAT-SUPPRESSION-RECOVERY-001", toId: "COMBAT-SUPPRESSION-001" },
+    { id: "REL-COLLATERAL-COLLISION", kind: "requires", fromId: "COMBAT-COLLATERAL-001", toId: "COMBAT-COLLISION-001" },
+    { id: "REL-DESTRUCTION-COVER", kind: "requires", fromId: "COMBAT-COVER-DESTRUCTION-001", toId: "COMBAT-COVER-003" },
+    { id: "REL-ATTACK-DAMAGE", kind: "requires", fromId: "COMBAT-ATTACK-RESOLUTION-001", toId: "COMBAT-DAMAGE-001" }
+  )
+
+  pure val boundCatalogue = Set(
+    { id: "BOUND-Health", kind: "bound", minimum: 0, maximum: 100 },
+    { id: "BOUND-Suppression", kind: "bound", minimum: 0, maximum: 100 },
+    { id: "BOUND-CoverIntegrity", kind: "bound", minimum: 0, maximum: 100 },
+    { id: "BOUND-TraceRaw", kind: "bound", minimum: 0, maximum: 10000 }
+  )
+
+  pure val verificationCatalogue = Set(
+    { id: "VERIFY-RuleRegistry", kind: "verification", verificationKind: "invariant", subjectIds: Set("COMBAT-ATTACK-RESOLUTION-001"), boundIds: Set() },
+    { id: "VERIFY-CombatState", kind: "verification", verificationKind: "bounded-simulation", subjectIds: Set("COMBAT-HEALTH-001", "COMBAT-SUPPRESSION-001", "COMBAT-COVER-003"), boundIds: Set("BOUND-Health", "BOUND-Suppression", "BOUND-CoverIntegrity") },
+    { id: "VERIFY-Trace", kind: "verification", verificationKind: "invariant", subjectIds: Set("COMBAT-TRACE-002"), boundIds: Set("BOUND-TraceRaw") }
+  )
+
+  pure val impactCatalogue = Set(
+    { id: "IMPACT-TraceImplementation", kind: "impact", subjectId: "COMBAT-TRACE-002", category: "registered-external-algorithm", detail: "Production line-of-sight remains an implementation seam checked by correspondence evidence." }
+  )
+
+  pure val compatibilityCatalogue = Set(
+    { id: "COMPAT-Profile1", kind: "compatibility", surface: "fsgg-quint-profile/1", requirement: "byte-compatible", detail: "The frozen whole-program profile remains unchanged." }
+  )
 
   pure def saturateInt32(value: int): int =
     if (value < INT32_MIN) INT32_MIN

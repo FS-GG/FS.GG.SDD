@@ -105,8 +105,10 @@ for run in a b; do
     "$repo_root/tests/FS.GG.SDD.Artifacts.Tests/QuintGeneralSirAcceptance.fsx" \
     "$scratch/$run/sir-combat.qnt.typed.json" \
     "$repo_root/tests/fixtures/quint-general-sir/profile-bindings.json" \
+    "$repo_root/tests/fixtures/quint-general-sir/sir-combat.md" \
+    "$scratch/$run/sir-combat.qnt" \
     "$scratch/profile2-$run" >"$scratch/profile2-$run.log"
-  grep -F 'PROFILE-2-SIR-ACCEPTED: rules=16 properties=7 actions=5' "$scratch/profile2-$run.log" >/dev/null \
+  grep -F 'PROFILE-2-SIR-ACCEPTED: rules=16 properties=7 relationships=14 bounds=4 verifications=3 impacts=1 compatibility=1 actions=5' "$scratch/profile2-$run.log" >/dev/null \
     || fail "general S.I.R. profile did not accept isolated run $run"
 done
 diff -ru "$scratch/profile2-a" "$scratch/profile2-b" >/dev/null \

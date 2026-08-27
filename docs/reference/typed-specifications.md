@@ -8,7 +8,7 @@ description: The typed specification kernel, requirements extension, canonical m
 
 # Typed Specifications
 
-`FS.GG.SDD.Artifacts` 1.4.0 provides the namespace
+`FS.GG.SDD.Artifacts` 1.5.0 provides the namespace
 `FS.GG.SDD.Artifacts.TypedSpecifications`. It is an additive package API; existing
 Standard SDD Markdown, commands, schemas, defaults, and exit codes are unchanged.
 
@@ -159,3 +159,10 @@ the generated module name. Inspection re-applies those selectors to retained
 typed/effect output, reproduces the exported values and action effects, and then
 regenerates the contract and bindings. An edited contract, selector, typed-effect
 file, profile identity, or generated binding therefore fails semantic closure.
+Promoted record rows with `kind` values `requires`, `verifiedBy`, `implementedBy`,
+`reads`, `writes`, `verification`, `bound`, `impact`, and `compatibility` populate
+the corresponding compiled-contract sections. Their required fields remain ordinary
+typed Quint record fields; profile 2 refuses semantic metadata supplied by the host,
+so those facts cannot quietly migrate into a sidecar. Specification display identity
+and provenance digests remain host-derived because hashing the compilation that
+contains its own digest would be circular.

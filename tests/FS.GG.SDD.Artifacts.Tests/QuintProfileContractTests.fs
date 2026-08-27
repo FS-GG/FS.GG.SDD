@@ -279,6 +279,37 @@ module QuintProfileContractTests =
         Assert.Contains(nonconstant, fun item -> item.Code = "QUINT-GENERAL-EXPORT-EXPRESSION")
 
     [<Fact>]
+    let ``general profile reports structural warning source and action mutations together`` () =
+        let baseline = generalObservation QuintGeneralProfile.identity
+
+        let invalid =
+            { baseline with
+                TypedEffectJson =
+                    baseline.TypedEffectJson
+                        .Replace("\"stage\":", "\"future\":{},\"stage\":")
+                        .Replace("\"warnings\":[]", "\"warnings\":[{\"message\":\"mutant\"}]")
+                ExportBindings =
+                    baseline.ExportBindings
+                    |> List.map (fun binding ->
+                        { binding with
+                            Source =
+                                { binding.Source with
+                                    Path = "../escape.md"
+                                    End = { Line = 1; Column = 1 } } })
+                ActionBindings =
+                    baseline.ActionBindings
+                    |> List.map (fun binding -> { binding with Kind = Requirement }) }
+
+        let codes =
+            QuintGeneralProfile.adaptTypedEffectJson invalid |> findings |> List.map _.Code
+
+        Assert.Contains("QUINT-IR-UNSUPPORTED-FIELD", codes)
+        Assert.Contains("QUINT-GENERAL-COMPILER-WARNINGS", codes)
+        Assert.Contains("QUINT-GENERAL-SOURCE-PATH", codes)
+        Assert.Contains("QUINT-GENERAL-SOURCE-RANGE", codes)
+        Assert.Contains("QUINT-GENERAL-ACTION-BINDING", codes)
+
+    [<Fact>]
     let ``general binding manifest is canonical strict and carries no semantic values`` () =
         let observation = generalObservation QuintGeneralProfile.identity
 
@@ -310,7 +341,7 @@ module QuintProfileContractTests =
         let canonical = File.ReadAllText path
         let manifest = QuintGeneralBindingManifest.deserialize canonical |> expectOk
 
-        Assert.Equal(3, manifest.Exports.Length)
+        Assert.Equal(8, manifest.Exports.Length)
         Assert.Equal(5, manifest.Actions.Length)
 
         let sourcePaths: string list =

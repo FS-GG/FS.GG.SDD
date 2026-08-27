@@ -162,6 +162,183 @@ module private CompilerInternal =
         |> Array.concat
         |> sha256Bytes
 
+    let private fields =
+        function
+        | QuintRecord values -> values |> Map.ofList |> Some
+        | _ -> None
+
+    let private stringField name values =
+        match Map.tryFind name values with
+        | Some(QuintString value) -> Some value
+        | _ -> None
+
+    let private intField name values =
+        match Map.tryFind name values with
+        | Some(QuintInt value) -> Some value
+        | _ -> None
+
+    let private stringsField name values =
+        match Map.tryFind name values with
+        | Some(QuintList entries)
+        | Some(QuintSet entries) ->
+            entries
+            |> List.map (function
+                | QuintString value -> Some value
+                | _ -> None)
+            |> function
+                | entries when List.forall Option.isSome entries -> entries |> List.choose id |> List.sort |> Some
+                | _ -> None
+        | _ -> None
+
+    type GeneralContractFacts =
+        { Relationships: QuintRelationship list
+          VerificationProfiles: QuintVerificationProfile list
+          Bounds: QuintFiniteBound list
+          Impacts: QuintImpact list
+          Compatibility: QuintCompatibility list }
+
+    let deriveGeneralContractFacts (catalogue: QuintModelCatalogueEntry list) =
+        let mutable diagnostics = []
+
+        let malformed (row: QuintModelCatalogueEntry) expected =
+            diagnostics <-
+                diagnostic
+                    "QUINT-COMPILER-CONTRACT-FACT"
+                    ($"/catalogue/%s{row.Id}")
+                    ($"Quint catalogue row '%s{row.Id}' with kind '%s{row.Kind}' is not a valid %s{expected} declaration.")
+                    (Some
+                        { Line = row.Source.Start.Line
+                          Column = row.Source.Start.Column })
+                :: diagnostics
+
+        let relationships =
+            catalogue
+            |> List.choose (fun row ->
+                let relationKind =
+                    match row.Kind with
+                    | "requires" -> Some Requires
+                    | "verifiedBy" -> Some VerifiedBy
+                    | "implementedBy" -> Some ImplementedBy
+                    | "reads" -> Some Reads
+                    | "writes" -> Some Writes
+                    | _ -> None
+
+                match relationKind, fields row.Value with
+                | Some kind, Some values ->
+                    match stringField "fromId" values, stringField "toId" values with
+                    | Some fromId, Some toId ->
+                        Some
+                            { FromId = fromId
+                              Kind = kind
+                              ToId = toId }
+                    | _ ->
+                        malformed row "relationship"
+                        None
+                | Some _, None ->
+                    malformed row "relationship"
+                    None
+                | None, _ -> None)
+
+        let verificationProfiles =
+            catalogue
+            |> List.choose (fun row ->
+                if row.Kind <> "verification" then
+                    None
+                else
+                    match fields row.Value with
+                    | Some values ->
+                        match
+                            stringField "verificationKind" values,
+                            stringsField "subjectIds" values,
+                            stringsField "boundIds" values
+                        with
+                        | Some kind, Some subjectIds, Some boundIds ->
+                            Some
+                                { Id = row.Id
+                                  Kind = kind
+                                  SubjectIds = subjectIds
+                                  BoundIds = boundIds }
+                        | _ ->
+                            malformed row "verification"
+                            None
+                    | None ->
+                        malformed row "verification"
+                        None)
+
+        let bounds =
+            catalogue
+            |> List.choose (fun row ->
+                if row.Kind <> "bound" then
+                    None
+                else
+                    match fields row.Value with
+                    | Some values ->
+                        match intField "minimum" values, intField "maximum" values with
+                        | Some minimum, Some maximum ->
+                            Some
+                                { Id = row.Id
+                                  Minimum = minimum
+                                  Maximum = maximum }
+                        | _ ->
+                            malformed row "finite-bound"
+                            None
+                    | None ->
+                        malformed row "finite-bound"
+                        None)
+
+        let impacts =
+            catalogue
+            |> List.choose (fun row ->
+                if row.Kind <> "impact" then
+                    None
+                else
+                    match fields row.Value with
+                    | Some values ->
+                        match
+                            stringField "subjectId" values, stringField "category" values, stringField "detail" values
+                        with
+                        | Some subjectId, Some category, Some detail ->
+                            Some
+                                { SubjectId = subjectId
+                                  Category = category
+                                  Detail = detail }
+                        | _ ->
+                            malformed row "impact"
+                            None
+                    | None ->
+                        malformed row "impact"
+                        None)
+
+        let compatibility =
+            catalogue
+            |> List.choose (fun row ->
+                if row.Kind <> "compatibility" then
+                    None
+                else
+                    match fields row.Value with
+                    | Some values ->
+                        match
+                            stringField "surface" values, stringField "requirement" values, stringField "detail" values
+                        with
+                        | Some surface, Some requirement, Some detail ->
+                            Some
+                                { Surface = surface
+                                  Requirement = requirement
+                                  Detail = detail }
+                        | _ ->
+                            malformed row "compatibility"
+                            None
+                    | None ->
+                        malformed row "compatibility"
+                        None)
+
+        { Relationships = relationships
+          VerificationProfiles = verificationProfiles
+          Bounds = bounds
+          Impacts = impacts
+          Compatibility = compatibility },
+        diagnostics |> sorted
+
 [<RequireQualifiedAccess>]
 module QuintCompiler =
     let receiptSchema = "fsgg.quint.observed-compilation-receipt/v1"
@@ -296,11 +473,34 @@ module QuintCompiler =
             | Ok value -> [], Some value
             | Error findings -> findings |> List.map CompilerInternal.profileDiagnostic, None
 
+        let metadataFindings =
+            [ if
+                  not input.Metadata.Relationships.IsEmpty
+                  || not input.Metadata.VerificationProfiles.IsEmpty
+                  || not input.Metadata.Bounds.IsEmpty
+                  || not input.Metadata.Impacts.IsEmpty
+                  || not input.Metadata.Compatibility.IsEmpty
+              then
+                  CompilerInternal.diagnostic
+                      "QUINT-COMPILER-SEMANTIC-SIDECAR"
+                      "/metadata"
+                      "Profile-2 semantic contract facts must originate in promoted Quint catalogue rows."
+                      None ]
+
         let initial =
-            CompilerInternal.sorted (sourceFindings @ profileBindingFindings @ planFindings @ profileFindings)
+            CompilerInternal.sorted (
+                sourceFindings
+                @ profileBindingFindings
+                @ planFindings
+                @ profileFindings
+                @ metadataFindings
+            )
 
         match initial, planValue, catalogue with
         | [], Some acceptedPlan, Some acceptedCatalogue ->
+            let derivedFacts, factFindings =
+                CompilerInternal.deriveGeneralContractFacts acceptedCatalogue.Catalogue
+
             let contract: QuintCompiledContractV2 =
                 { Schema = QuintContractV2.schema
                   Profile = acceptedCatalogue.Profile
@@ -308,20 +508,21 @@ module QuintCompiler =
                   Exports = acceptedCatalogue.Exports
                   Catalogue = acceptedCatalogue.Catalogue
                   ActionEffects = acceptedCatalogue.ActionEffects
-                  Relationships = input.Metadata.Relationships
-                  VerificationProfiles = input.Metadata.VerificationProfiles
-                  Bounds = input.Metadata.Bounds
-                  Impacts = input.Metadata.Impacts
-                  Compatibility = input.Metadata.Compatibility
+                  Relationships = derivedFacts.Relationships
+                  VerificationProfiles = derivedFacts.VerificationProfiles
+                  Bounds = derivedFacts.Bounds
+                  Impacts = derivedFacts.Impacts
+                  Compatibility = derivedFacts.Compatibility
                   Digests = input.Metadata.Digests }
 
-            match QuintContractV2.serializeCanonical contract with
-            | Error findings ->
+            match factFindings, QuintContractV2.serializeCanonical contract with
+            | findings, _ when not findings.IsEmpty -> Error findings
+            | _, Error findings ->
                 findings
                 |> List.map CompilerInternal.contractDiagnostic
                 |> CompilerInternal.sorted
                 |> Error
-            | Ok canonicalContract ->
+            | _, Ok canonicalContract ->
                 let generatedModulesSha256 = CompilerInternal.generatedDigest input.Extraction.First
                 let fenceManifestSha256 = QuintSource.fenceManifestFingerprint input.FenceManifest
                 let toolchainSha256 = QuintToolchain.fingerprint input.Toolchain
