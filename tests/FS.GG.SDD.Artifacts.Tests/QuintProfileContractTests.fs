@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
+open System.IO
 open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
 
@@ -242,7 +243,10 @@ module QuintProfileContractTests =
 
     [<Fact>]
     let ``general profile accepts consumer exports without a program digest`` () =
-        let adapted = generalObservation QuintGeneralProfile.identity |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk
+        let adapted =
+            generalObservation QuintGeneralProfile.identity
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> expectOk
 
         Assert.Equal([ "EXPORT-Rules" ], adapted.Exports |> List.map _.Id)
         Assert.Equal([ "RULE-A"; "RULE-B" ], adapted.Catalogue |> List.map _.Id)
@@ -254,7 +258,11 @@ module QuintProfileContractTests =
 
     [<Fact>]
     let ``general profile refuses substitution and nonconstant exports distinctly`` () =
-        let substitution = generalObservation QuintProfile.identity |> QuintGeneralProfile.adaptTypedEffectJson |> findings
+        let substitution =
+            generalObservation QuintProfile.identity
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings
+
         Assert.Contains(substitution, fun item -> item.Code = "QUINT-PROFILE-IDENTITY")
 
         let nonconstant =
@@ -288,13 +296,39 @@ module QuintProfileContractTests =
         Assert.DoesNotContain("formula", canonical)
 
         let injected = canonical.Replace("\"profile\":", "\"value\":{},\"profile\":")
+
         Assert.Contains(
             findings (QuintGeneralBindingManifest.deserialize injected),
             fun item -> item.Code = "QUINT-GENERAL-BINDINGS-MALFORMED"
         )
 
+    [<Fact>]
+    let ``complete SIR fixture selectors remain canonical and source bound`` () =
+        let path =
+            Path.Combine(System.AppContext.BaseDirectory, "Fixtures", "QuintGeneralSir", "profile-bindings.json")
+
+        let canonical = File.ReadAllText path
+        let manifest = QuintGeneralBindingManifest.deserialize canonical |> expectOk
+
+        Assert.Equal(3, manifest.Exports.Length)
+        Assert.Equal(5, manifest.Actions.Length)
+
+        let sourcePaths: string list =
+            (manifest.Exports |> List.map _.Source.Path)
+            @ (manifest.Actions |> List.map _.Source.Path)
+
+        Assert.All(
+            sourcePaths,
+            fun sourcePath -> Assert.Equal("tests/fixtures/quint-general-sir/sir-combat.md", sourcePath)
+        )
+
+        Assert.Equal(canonical, QuintGeneralBindingManifest.serializeCanonical manifest |> expectOk)
+
     let private contractV2 () =
-        let adapted = generalObservation QuintGeneralProfile.identity |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk
+        let adapted =
+            generalObservation QuintGeneralProfile.identity
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> expectOk
 
         { Schema = QuintContractV2.schema
           Profile = QuintGeneralProfile.identity

@@ -741,8 +741,11 @@ module TypedAuthority =
           | _ -> () ]
 
     let private semanticClosureGeneral observations (manifest: QuintAuthorityManifest) =
-        let artifacts = manifest.Artifacts |> List.map (fun item -> item.Id, item) |> Map.ofList
-        let states = observations |> List.map (fun item -> item.Path, item.State) |> Map.ofList
+        let artifacts =
+            manifest.Artifacts |> List.map (fun item -> item.Id, item) |> Map.ofList
+
+        let states =
+            observations |> List.map (fun item -> item.Path, item.State) |> Map.ofList
 
         let bytes id =
             artifacts
@@ -752,11 +755,13 @@ module TypedAuthority =
                 | Some(Present value) when TypedAuthorityManifest.sha256 value = artifact.Sha256 -> Some value
                 | _ -> None)
 
-        let text id = bytes id |> Option.bind (utf8Strict >> Result.toOption)
+        let text id =
+            bytes id |> Option.bind (utf8Strict >> Result.toOption)
 
         let fingerprint sourceSha fenceSha modulesSha toolchainSha contractText =
             let frame (value: string) =
                 let valueBytes = Encoding.UTF8.GetBytes value
+
                 Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
                 |> fun prefix -> Array.append prefix valueBytes
 
@@ -794,7 +799,8 @@ module TypedAuthority =
                       && adapted.Exports = contract.Exports
                       && adapted.Catalogue = contract.Catalogue
                       && adapted.ActionEffects = contract.ActionEffects
-                      -> ()
+                      ->
+                      ()
                   | _ ->
                       yield
                           diagnostic
@@ -818,13 +824,27 @@ module TypedAuthority =
                           "Regenerate both artifacts with the qualified compiler."
           | _ -> ()
 
-          match text "compilation-receipt", text "compiled-contract", bytes "markdown", bytes "fence-manifest", text "generated-modules", text "typed-effect" with
-          | Some receiptText, Some contractText, Some markdownBytes, Some fenceBytes, Some modulesText, Some typedEffectText ->
+          match
+              text "compilation-receipt",
+              text "compiled-contract",
+              bytes "markdown",
+              bytes "fence-manifest",
+              text "generated-modules",
+              text "typed-effect"
+          with
+          | Some receiptText,
+            Some contractText,
+            Some markdownBytes,
+            Some fenceBytes,
+            Some modulesText,
+            Some typedEffectText ->
               try
                   use document = JsonDocument.Parse receiptText
                   let root = document.RootElement
+
                   let read (name: string) =
                       root.GetProperty(name).GetString() |> Option.ofObj |> Option.defaultValue ""
+
                   let sourceSha = read "sourceSha256"
                   let fenceSha = read "fenceManifestSha256"
                   let modulesSha = read "generatedModulesSha256"
@@ -838,9 +858,12 @@ module TypedAuthority =
                       || sourceSha <> TypedAuthorityManifest.sha256 markdownBytes
                       || fenceSha <> TypedAuthorityManifest.sha256 fenceBytes
                       || toolchainSha <> manifest.ToolchainIdentity
-                      || typedSha <> TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes typedEffectText)
-                      || contractSha <> TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes contractText)
-                      || compilationSha <> fingerprint sourceSha fenceSha modulesSha toolchainSha contractText
+                      || typedSha
+                         <> TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes typedEffectText)
+                      || contractSha
+                         <> TypedAuthorityManifest.sha256 (Encoding.UTF8.GetBytes contractText)
+                      || compilationSha
+                         <> fingerprint sourceSha fenceSha modulesSha toolchainSha contractText
                   then
                       yield
                           diagnostic
@@ -851,7 +874,12 @@ module TypedAuthority =
                   match QuintSource.decodeFenceManifest fenceBytes with
                   | Ok fenceManifest ->
                       let targets = fenceManifest.Fences |> List.map _.Target |> List.distinct
-                      if targets.Length <> 1 || generatedModuleDigest targets.Head (Encoding.UTF8.GetBytes modulesText) <> modulesSha then
+
+                      if
+                          targets.Length <> 1
+                          || generatedModuleDigest targets.Head (Encoding.UTF8.GetBytes modulesText)
+                             <> modulesSha
+                      then
                           yield
                               diagnostic
                                   "typedSdd.v2.modulesClosure"
@@ -1248,18 +1276,21 @@ module TypedAuthority =
                   QuintToolchain.general
               else
                   QuintToolchain.q1
+
           if manifest.ToolchainIdentity <> QuintToolchain.fingerprint expectedToolchain then
               yield
                   diagnostic
                       "typedSdd.v2.toolchainIdentityMismatch"
                       "Toolchain identity differs from the Q1-qualified manifest."
                       "Provision and select the exact Q1/Q2 toolchain cache."
+
           if manifest.PackageIdentity <> expectedPackageIdentity then
               yield
                   diagnostic
                       "typedSdd.v2.packageIdentityMismatch"
                       "Authority package identity differs from the installed producer."
                       "Install the exact recorded coherent package set."
+
           if
               String.IsNullOrWhiteSpace manifest.AuthoringAgent
               || String.IsNullOrWhiteSpace manifest.AuthoringSession
@@ -1269,6 +1300,7 @@ module TypedAuthority =
                       "typedSdd.v2.authoringReceiptMissing"
                       "Manifest-v2 lacks a complete authoring receipt."
                       "Re-author with --agent and --session."
+
           if not (List.isEmpty duplicates) then
               let names = String.concat ", " duplicates
 
@@ -1277,19 +1309,23 @@ module TypedAuthority =
                       "typedSdd.v2.artifactDuplicate"
                       $"Duplicate artifact ids: {names}."
                       "Keep exactly one entry for each required artifact."
+
           if not (List.isEmpty duplicatePaths) then
               yield
                   diagnostic
                       "typedSdd.v2.artifactPathAlias"
                       "Distinct artifact roles share a path."
                       "Give every required artifact one distinct canonical path."
+
           if not (List.isEmpty duplicateObservations) then
               yield
                   diagnostic
                       "typedSdd.v2.observationDuplicate"
                       "The effect edge supplied duplicate path observations."
                       "Observe every declared path exactly once."
+
           let requiredArtifactIds = requiredArtifactIds manifest.ProfileIdentity
+
           if offered <> requiredArtifactIds then
               let missing = Set.difference requiredArtifactIds offered |> String.concat ", "
               let extra = Set.difference offered requiredArtifactIds |> String.concat ", "
@@ -1299,6 +1335,7 @@ module TypedAuthority =
                       "typedSdd.v2.artifactInventory"
                       $"Artifact inventory differs (missing: {missing}; extra: {extra})."
                       "Regenerate the complete closed manifest-v2 inventory."
+
           for artifact in manifest.Artifacts |> List.sortBy _.Id do
               if not (safeRelativePath artifact.Path) then
                   yield
@@ -1334,6 +1371,7 @@ module TypedAuthority =
                               $"Artifact '{artifact.Id}' differs from its manifest digest."
                               "Re-author instead of editing generated authority artifacts."
                   | _ -> ()
+
           match manifest.RollbackManifestPath, manifest.RollbackManifestSha256 with
           | None, None -> ()
           | Some path, Some sha when safeRelativePath path && isSha256 sha ->
@@ -1363,6 +1401,7 @@ module TypedAuthority =
                       "typedSdd.v2.rollbackBinding"
                       "Rollback path and digest must both be present or both be null."
                       "Regenerate the migration receipt."
+
           yield! semanticClosure observations manifest ]
 
 [<RequireQualifiedAccess>]

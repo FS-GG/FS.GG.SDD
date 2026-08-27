@@ -690,6 +690,7 @@ example are all explicit in the embedded Quint source.
         | Ok source ->
             let fences, sourceMaps = parseFences source
             let targets = fences |> List.map _.Target |> List.distinct
+
             let selectorSources =
                 [ yield! selectors.Exports |> List.map _.Source.Path
                   yield! selectors.Actions |> List.map _.Source.Path ]
@@ -715,6 +716,7 @@ example are all explicit in the embedded Quint source.
                           "Bind all selectors to the exact --source project-relative path." ]
             else
                 let target = targets.Head
+
                 let requests: QuintProcessRequest list =
                     [ request "extract" "lmt-binary" [ logicalPath ]
                       request "typecheck" "quint-binary" [ "typecheck"; target; "--out=typed.json" ] ]
@@ -758,8 +760,10 @@ example are all explicit in the embedded Quint source.
                                       $"typedSdd.v2.{step}Failed"
                                       $"Exact tool step '{step}' failed ({code}): {detail}"
                                       "Correct the exact cache object or authored Quint input." ]
-                        | Ok(firstGenerated, firstTyped, firstWarnings), Ok(secondGenerated, secondTyped, secondWarnings)
-                            when firstGenerated <> secondGenerated || firstTyped <> secondTyped ->
+                        | Ok(firstGenerated, firstTyped, firstWarnings),
+                          Ok(secondGenerated, secondTyped, secondWarnings) when
+                            firstGenerated <> secondGenerated || firstTyped <> secondTyped
+                            ->
                             Error
                                 [ diagnostic
                                       "typedSdd.v2.nondeterministicTool"
@@ -833,6 +837,7 @@ example are all explicit in the embedded Quint source.
                             | Ok output ->
                                 let fenceBytes = QuintSource.encodeFenceManifest input.FenceManifest
                                 let sourceMapBytes = QuintSource.encodeSourceMap input.SourceMap
+
                                 let relative =
                                     [ "markdown", logicalPath, markdownBytes
                                       "fence-manifest", $"readiness/{workId}/quint/fences.json", fenceBytes
@@ -892,6 +897,7 @@ example are all explicit in the embedded Quint source.
                                 | [] ->
                                     let manifestPath = $"readiness/{workId}/typed-authority.json"
                                     let rollbackWrites = rollback |> Option.map _.Writes |> Option.defaultValue []
+
                                     Ok
                                         { Manifest = manifest
                                           Writes =
@@ -901,7 +907,8 @@ example are all explicit in the embedded Quint source.
                                                 Encoding.UTF8.GetBytes(TypedAuthority.serializeQuintV2 manifest) ] }
                                 | findings -> Error findings
                     finally
-                        if Directory.Exists temporary then Directory.Delete(temporary, true)
+                        if Directory.Exists temporary then
+                            Directory.Delete(temporary, true)
                 | _ ->
                     Error
                         [ diagnostic

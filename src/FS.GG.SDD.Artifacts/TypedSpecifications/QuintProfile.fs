@@ -1463,16 +1463,26 @@ module private GeneralProfileCore =
         let rec loop =
             function
             | QuintBool value -> if value then "b:1" else "b:0"
-            | QuintInt value -> "i:" + value.ToString("+0000000000000000000;-0000000000000000000", CultureInfo.InvariantCulture)
+            | QuintInt value ->
+                "i:"
+                + value.ToString("+0000000000000000000;-0000000000000000000", CultureInfo.InvariantCulture)
             | QuintString value -> "s:" + value
             | QuintTuple values -> "t:[" + (values |> List.map loop |> String.concat ",") + "]"
             | QuintRecord fields ->
-                "r:{" + (fields |> List.map (fun (name, item) -> name + "=" + loop item) |> String.concat ",") + "}"
+                "r:{"
+                + (fields
+                   |> List.map (fun (name, item) -> name + "=" + loop item)
+                   |> String.concat ",")
+                + "}"
             | QuintVariant(tag, value) -> "v:" + tag + ":" + (value |> Option.map loop |> Option.defaultValue "")
             | QuintList values -> "l:[" + (values |> List.map loop |> String.concat ",") + "]"
             | QuintSet values -> "e:[" + (values |> List.map loop |> String.concat ",") + "]"
             | QuintMap entries ->
-                "m:[" + (entries |> List.map (fun (key, value) -> loop key + "=" + loop value) |> String.concat ",") + "]"
+                "m:["
+                + (entries
+                   |> List.map (fun (key, value) -> loop key + "=" + loop value)
+                   |> String.concat ",")
+                + "]"
 
         loop value
 
@@ -1587,7 +1597,8 @@ module private GeneralProfileCore =
 
                                 let parseAll offset items =
                                     items
-                                    |> List.mapi (fun index item -> parse (depth + 1) ($"%s{path}/args/%d{index + offset}") item)
+                                    |> List.mapi (fun index item ->
+                                        parse (depth + 1) ($"%s{path}/args/%d{index + offset}") item)
                                     |> List.fold
                                         (fun state item ->
                                             match state, item with
@@ -1601,8 +1612,7 @@ module private GeneralProfileCore =
                                 match opcode with
                                 | "List" -> parseAll 0 args |> Result.map QuintList
                                 | "Set" ->
-                                    parseAll 0 args
-                                    |> Result.map (List.sortBy sortKey >> List.distinct >> QuintSet)
+                                    parseAll 0 args |> Result.map (List.sortBy sortKey >> List.distinct >> QuintSet)
                                 | "Tup" -> parseAll 0 args |> Result.map QuintTuple
                                 | "Rec" when args.Length % 2 = 0 ->
                                     args
@@ -2068,7 +2078,10 @@ module QuintGeneralProfile =
                 |> List.map (fun binding ->
                     resolve (GeneralProfileCore.sourceOfExport binding) (binding.ModuleName, binding.DeclarationName)
                     |> Result.bind (fun declaration ->
-                        match ProfileCore.tryProperty "qualifier" declaration, ProfileCore.tryProperty "expr" declaration with
+                        match
+                            ProfileCore.tryProperty "qualifier" declaration,
+                            ProfileCore.tryProperty "expr" declaration
+                        with
                         | Some qualifier, Some expression ->
                             match GeneralProfileCore.stringValue "/modules/declarations/qualifier" qualifier with
                             | Ok("pureval" | "val") ->
@@ -2097,10 +2110,22 @@ module QuintGeneralProfile =
                                       (GeneralProfileCore.sourceOfExport binding) ]))
 
             let acceptedExports: QuintGeneralExport list =
-                exports |> List.choose (function Ok value -> Some value | _ -> None) |> List.sortBy _.Id
-            findings <- exports |> List.collect (function Error errors -> errors | _ -> []) |> (@) findings
+                exports
+                |> List.choose (function
+                    | Ok value -> Some value
+                    | _ -> None)
+                |> List.sortBy _.Id
 
-            if (acceptedExports |> List.sumBy (_.Value >> GeneralProfileCore.valueNodeCount)) > GeneralProfileCore.maxValueNodes then
+            findings <-
+                exports
+                |> List.collect (function
+                    | Error errors -> errors
+                    | _ -> [])
+                |> (@) findings
+
+            if
+                (acceptedExports |> List.sumBy (_.Value >> GeneralProfileCore.valueNodeCount)) > GeneralProfileCore.maxValueNodes
+            then
                 findings <-
                     ProfileCore.diagnostic
                         "QUINT-GENERAL-RESOURCE-NODES"
@@ -2121,9 +2146,18 @@ module QuintGeneralProfile =
                         None)
 
             let acceptedCatalogue =
-                catalogue |> List.collect (function Ok values -> values | _ -> []) |> List.sortBy _.Id
+                catalogue
+                |> List.collect (function
+                    | Ok values -> values
+                    | _ -> [])
+                |> List.sortBy _.Id
 
-            findings <- catalogue |> List.collect (function Error errors -> errors | _ -> []) |> (@) findings
+            findings <-
+                catalogue
+                |> List.collect (function
+                    | Error errors -> errors
+                    | _ -> [])
+                |> (@) findings
 
             let effectsElement = ProfileCore.tryProperty "effects" root
 
@@ -2147,7 +2181,10 @@ module QuintGeneralProfile =
                                 effectsElement
                             with
                             | Some qualifier, Some id, Some effects ->
-                                match GeneralProfileCore.stringValue "/modules/declarations/qualifier" qualifier, id.TryGetInt64() with
+                                match
+                                    GeneralProfileCore.stringValue "/modules/declarations/qualifier" qualifier,
+                                    id.TryGetInt64()
+                                with
                                 | Ok "action", (true, declarationId) ->
                                     GeneralProfileCore.actionEffect effects binding declarationId
                                 | Ok _, _ ->
@@ -2176,23 +2213,47 @@ module QuintGeneralProfile =
                                           (GeneralProfileCore.sourceOfAction binding) ]))
 
             let acceptedEffects =
-                actionEffects |> List.choose (function Ok value -> Some value | _ -> None) |> List.sortBy _.ActionId
+                actionEffects
+                |> List.choose (function
+                    | Ok value -> Some value
+                    | _ -> None)
+                |> List.sortBy _.ActionId
 
-            findings <- actionEffects |> List.collect (function Error errors -> errors | _ -> []) |> (@) findings
+            findings <-
+                actionEffects
+                |> List.collect (function
+                    | Error errors -> errors
+                    | _ -> [])
+                |> (@) findings
 
             let duplicate ids code path label =
                 ids
                 |> List.groupBy id
                 |> List.choose (fun (id, rows) ->
                     if rows.Length > 1 then
-                        Some(ProfileCore.diagnostic code path $"%s{label} '%s{id}' is duplicated." "Use each identity once." None)
+                        Some(
+                            ProfileCore.diagnostic
+                                code
+                                path
+                                $"%s{label} '%s{id}' is duplicated."
+                                "Use each identity once."
+                                None
+                        )
                     else
                         None)
 
             findings <-
                 duplicate (acceptedExports |> List.map _.Id) "QUINT-GENERAL-EXPORT-DUPLICATE" "/exports" "Export"
-                @ duplicate (acceptedCatalogue |> List.map _.Id) "QUINT-GENERAL-CATALOGUE-DUPLICATE" "/catalogue" "Catalogue identity"
-                @ duplicate (acceptedEffects |> List.map _.ActionId) "QUINT-GENERAL-ACTION-DUPLICATE" "/actionEffects" "Action"
+                @ duplicate
+                    (acceptedCatalogue |> List.map _.Id)
+                    "QUINT-GENERAL-CATALOGUE-DUPLICATE"
+                    "/catalogue"
+                    "Catalogue identity"
+                @ duplicate
+                    (acceptedEffects |> List.map _.ActionId)
+                    "QUINT-GENERAL-ACTION-DUPLICATE"
+                    "/actionEffects"
+                    "Action"
                 @ findings
 
             let all = ProfileCore.sorted findings
@@ -2356,27 +2417,39 @@ module QuintGeneralBindingManifest =
                     raise (JsonException($"%s{path}: expected object."))
 
                 let actual = element.EnumerateObject() |> Seq.map _.Name |> Set.ofSeq
-                if actual <> expected then raise (JsonException($"%s{path}: fields do not match schema."))
+
+                if actual <> expected then
+                    raise (JsonException($"%s{path}: fields do not match schema."))
 
             let string (name: string) (element: JsonElement) =
                 let value = element.GetProperty(name)
-                if value.ValueKind <> JsonValueKind.String then raise (JsonException($"/%s{name}: expected string."))
-                value.GetString() |> Option.ofObj |> Option.defaultWith (fun () -> raise (JsonException("null string")))
+
+                if value.ValueKind <> JsonValueKind.String then
+                    raise (JsonException($"/%s{name}: expected string."))
+
+                value.GetString()
+                |> Option.ofObj
+                |> Option.defaultWith (fun () -> raise (JsonException("null string")))
 
             let position path (element: JsonElement) =
                 exact path (Set.ofList [ "line"; "column" ]) element
+
                 { Line = element.GetProperty("line").GetInt32()
                   Column = element.GetProperty("column").GetInt32() }
 
             let source path (element: JsonElement) =
                 exact path (Set.ofList [ "path"; "start"; "end" ]) element
+
                 { Path = string "path" element
                   Start = position (path + "/start") (element.GetProperty("start"))
                   End = position (path + "/end") (element.GetProperty("end")) }
 
             let array (name: string) (element: JsonElement) =
                 let value = element.GetProperty(name)
-                if value.ValueKind <> JsonValueKind.Array then raise (JsonException($"/%s{name}: expected array."))
+
+                if value.ValueKind <> JsonValueKind.Array then
+                    raise (JsonException($"/%s{name}: expected array."))
+
                 value.EnumerateArray() |> Seq.toList
 
             exact "/" (Set.ofList [ "schema"; "profile"; "moduleName"; "exports"; "actions" ]) root
@@ -2387,8 +2460,13 @@ module QuintGeneralBindingManifest =
                     let path = $"/exports/%d{index}"
                     exact path (Set.ofList [ "id"; "module"; "declaration"; "promoteCatalogueRows"; "source" ]) element
                     let promote = element.GetProperty("promoteCatalogueRows")
-                    if promote.ValueKind <> JsonValueKind.True && promote.ValueKind <> JsonValueKind.False then
+
+                    if
+                        promote.ValueKind <> JsonValueKind.True
+                        && promote.ValueKind <> JsonValueKind.False
+                    then
                         raise (JsonException(path + "/promoteCatalogueRows: expected boolean."))
+
                     { Id = string "id" element
                       ModuleName = string "module" element
                       DeclarationName = string "declaration" element
@@ -2400,6 +2478,7 @@ module QuintGeneralBindingManifest =
                 |> List.mapi (fun index element ->
                     let path = $"/actions/%d{index}"
                     exact path (Set.ofList [ "id"; "module"; "declaration"; "source" ]) element
+
                     { ModuleName = string "module" element
                       CatalogueName = string "declaration" element
                       Id = string "id" element

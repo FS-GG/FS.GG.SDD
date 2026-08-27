@@ -57,6 +57,8 @@
 
   <ItemGroup>
     <None Include="Fixtures/QuintQ2/q1-sir-reviewed-witness.itf.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../fixtures/quint-general-sir/profile-bindings.json" Link="Fixtures/QuintGeneralSir/profile-bindings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../fixtures/quint-general-sir/sir-combat.md" Link="Fixtures/QuintGeneralSir/sir-combat.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

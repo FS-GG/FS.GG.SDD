@@ -318,7 +318,11 @@ module QuintToolchain =
     let profile = "fsgg-quint-profile/1"
     let generalProfile = "fsgg-quint-profile/2"
     let q1 = QuintToolchainInternal.exact
-    let general = { QuintToolchainInternal.exact with Profile = generalProfile }
+
+    let general =
+        { QuintToolchainInternal.exact with
+            Profile = generalProfile }
+
     let encodeCanonical manifest = QuintToolchainInternal.encode manifest
 
     let fingerprint manifest =

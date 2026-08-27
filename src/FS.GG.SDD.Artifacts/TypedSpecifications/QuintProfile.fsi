@@ -150,8 +150,7 @@ module QuintGeneralBindingManifest =
     val schema: string
 
     /// Emit strict canonical JSON after validating identities and source ranges.
-    val serializeCanonical:
-        manifest: QuintGeneralBindingManifest -> Result<string, QuintProfileDiagnostic list>
+    val serializeCanonical: manifest: QuintGeneralBindingManifest -> Result<string, QuintProfileDiagnostic list>
 
     /// Decode strict canonical JSON; unknown fields and malformed selectors fail closed.
     val deserialize: text: string -> Result<QuintGeneralBindingManifest, QuintProfileDiagnostic list>

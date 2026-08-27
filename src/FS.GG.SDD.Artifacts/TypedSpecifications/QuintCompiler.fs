@@ -148,6 +148,7 @@ module private CompilerInternal =
     let fingerprintV2 sourceSha256 fenceManifestSha256 generatedModulesSha256 toolchainSha256 contract =
         let frame (value: string) =
             let bytes = Encoding.UTF8.GetBytes value
+
             Encoding.ASCII.GetBytes(bytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
             |> fun prefix -> Array.append prefix bytes
 
@@ -167,7 +168,9 @@ module QuintCompiler =
     let generalReceiptSchema = "fsgg.quint.observed-compilation-receipt/v2"
     let encodeReceipt receipt = CompilerInternal.encodeReceipt receipt
 
-    let compileObserved (input: QuintObservedCompilation) : Result<QuintCompilationOutput, SpecificationDiagnostic list> =
+    let compileObserved
+        (input: QuintObservedCompilation)
+        : Result<QuintCompilationOutput, SpecificationDiagnostic list> =
         let sourceFindings =
             QuintSource.validateManifest input.Source input.FenceManifest
             @ QuintSource.validateExtraction input.Source input.FenceManifest input.Extraction

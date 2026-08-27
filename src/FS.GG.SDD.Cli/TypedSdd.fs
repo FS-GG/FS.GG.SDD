@@ -541,7 +541,9 @@ module TypedSdd =
     let private authorQuint args workId agent session =
         let rootPath = root args
         let manifestPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
-        let profile = optionValue "--profile" args |> Option.defaultValue QuintProfile.identity
+
+        let profile =
+            optionValue "--profile" args |> Option.defaultValue QuintProfile.identity
 
         match optionValue "--cache" args with
         | None ->
@@ -623,12 +625,13 @@ module TypedSdd =
                         elif profile = QuintGeneralProfile.identity then
                             match optionValue "--source" args, optionValue "--bindings" args with
                             | Some sourceRelative, Some bindingsRelative ->
-                                match containedPath rootPath sourceRelative, containedPath rootPath bindingsRelative with
-                                | Some sourcePath, Some bindingsPath when File.Exists sourcePath && File.Exists bindingsPath ->
-                                    match
-                                        File.ReadAllText bindingsPath
-                                        |> QuintGeneralBindingManifest.deserialize
-                                    with
+                                match
+                                    containedPath rootPath sourceRelative, containedPath rootPath bindingsRelative
+                                with
+                                | Some sourcePath, Some bindingsPath when
+                                    File.Exists sourcePath && File.Exists bindingsPath
+                                    ->
+                                    match File.ReadAllText bindingsPath |> QuintGeneralBindingManifest.deserialize with
                                     | Error findings ->
                                         findings
                                         |> List.map (fun finding ->
