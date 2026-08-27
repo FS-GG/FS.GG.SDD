@@ -541,6 +541,7 @@ module TypedSdd =
     let private authorQuint args workId agent session =
         let rootPath = root args
         let manifestPath = Path.Combine(rootPath, TypedAuthorityManifest.path workId)
+        let profile = optionValue "--profile" args |> Option.defaultValue QuintProfile.identity
 
         match optionValue "--cache" args with
         | None ->
@@ -582,6 +583,12 @@ module TypedSdd =
                           "A manifest-v1 authority cannot be replaced by author --accept."
                           "Use typed-sdd migrate so the exact v1 rollback inventory is retained." ]
             | Some(Error finding) -> Error [ finding ]
+            | Some(Ok(QuintSpecificationV1 authority)) when authority.ProfileIdentity <> profile ->
+                Error
+                    [ diagnostic
+                          "typedSdd.v2.profileMigrationRequired"
+                          $"Existing authority selects '{authority.ProfileIdentity}', not requested '{profile}'."
+                          "Use typed-sdd migrate so profile replacement retains an authenticated rollback." ]
             | Some(Ok(QuintSpecificationV1 _)) when not (has "--accept" args) ->
                 Error
                     [ diagnostic
@@ -602,17 +609,63 @@ module TypedSdd =
                               "Quint authority titles must be one printable line."
                               "Remove line breaks and control characters from --title." ]
                 else
-                    match
-                        QuintTypedSddHost.author
-                            (packageIdentity ())
-                            workId
-                            title
-                            agent
-                            session
-                            (Path.GetFullPath cache)
-                            None
-                            None
-                    with
+                    let hostResult =
+                        if profile = QuintProfile.identity then
+                            QuintTypedSddHost.author
+                                (packageIdentity ())
+                                workId
+                                title
+                                agent
+                                session
+                                (Path.GetFullPath cache)
+                                None
+                                None
+                        elif profile = QuintGeneralProfile.identity then
+                            match optionValue "--source" args, optionValue "--bindings" args with
+                            | Some sourceRelative, Some bindingsRelative ->
+                                match containedPath rootPath sourceRelative, containedPath rootPath bindingsRelative with
+                                | Some sourcePath, Some bindingsPath when File.Exists sourcePath && File.Exists bindingsPath ->
+                                    match
+                                        File.ReadAllText bindingsPath
+                                        |> QuintGeneralBindingManifest.deserialize
+                                    with
+                                    | Error findings ->
+                                        findings
+                                        |> List.map (fun finding ->
+                                            diagnostic finding.Code finding.Message finding.Correction)
+                                        |> Error
+                                    | Ok selectors ->
+                                        QuintTypedSddHost.authorGeneral
+                                            (packageIdentity ())
+                                            workId
+                                            title
+                                            agent
+                                            session
+                                            (Path.GetFullPath cache)
+                                            sourceRelative
+                                            (File.ReadAllBytes sourcePath)
+                                            selectors
+                                            None
+                                | _ ->
+                                    Error
+                                        [ diagnostic
+                                              "typedSdd.v2.generalInputMissing"
+                                              "The selected profile-2 source or binding manifest is absent or unsafe."
+                                              "Pass contained project-relative --source and --bindings paths." ]
+                            | _ ->
+                                Error
+                                    [ diagnostic
+                                          "typedSdd.v2.generalInputRequired"
+                                          "Profile 2 requires an authored literate source and selector manifest."
+                                          "Pass --source <markdown> --bindings <selector-json>." ]
+                        else
+                            Error
+                                [ diagnostic
+                                      "typedSdd.v2.profileIdentityMismatch"
+                                      $"Profile identity '{profile}' is unsupported."
+                                      $"Use {QuintProfile.identity} or {QuintGeneralProfile.identity}." ]
+
+                    match hostResult with
                     | Error findings -> Error findings
                     | Ok output ->
                         try
@@ -1430,7 +1483,10 @@ module TypedSdd =
                       "--agent"
                       "--session"
                       "--backend"
-                      "--cache" ],
+                      "--cache"
+                      "--profile"
+                      "--source"
+                      "--bindings" ],
                 set [ "--accept" ]
             | "inspect" -> set [ "--root"; "--work" ], Set.empty
             | "migrate" ->

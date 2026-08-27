@@ -150,3 +150,12 @@ model is also retained as a base64 payload bound by the literate Markdown, a
 Inspection reconstructs the lowering and proves that correspondence. Direct v1
 replacement is forbidden. Shared lifecycle commands dispatch v1/v2 explicitly; no provider, registry,
 consumer, workspace, or omitted-lifecycle default is changed by this release.
+
+The additive general path is `QuintCompiler.compileGeneralObserved`. It binds
+`fsgg-quint-profile/2`, the profile-2 toolchain manifest, compiled-contract v2,
+generic native/Fable bindings, and receipt v2. A canonical
+`QuintGeneralBindingManifest` retains only source-bound declaration selectors and
+the generated module name. Inspection re-applies those selectors to retained
+typed/effect output, reproduces the exported values and action effects, and then
+regenerates the contract and bindings. An edited contract, selector, typed-effect
+file, profile identity, or generated binding therefore fails semantic closure.

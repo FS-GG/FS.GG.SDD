@@ -61,6 +61,36 @@ module TypedSddCommandTests =
             Assert.False(Directory.Exists(Path.Combine(root, "work"))))
 
     [<Fact>]
+    let ``general Quint authoring requires explicit source and selector inputs`` () =
+        inTemp (fun root ->
+            let cache = Path.Combine(root, "cache")
+            Directory.CreateDirectory cache |> ignore
+
+            let code, stdout, _ =
+                run
+                    root
+                    [ "typed-sdd"
+                      "author"
+                      "--root"
+                      root
+                      "--work"
+                      "demo"
+                      "--agent"
+                      "tern"
+                      "--session"
+                      "general-1"
+                      "--backend"
+                      "quint-specification-v1"
+                      "--cache"
+                      cache
+                      "--profile"
+                      QuintGeneralProfile.identity ]
+
+            Assert.Equal(1, code)
+            Assert.Contains("typedSdd.v2.generalInputRequired", stdout)
+            Assert.False(File.Exists(Path.Combine(root, TypedAuthorityManifest.path "demo"))))
+
+    [<Fact>]
     let ``author inspect and direct-edit diagnostic form one stable authority flow`` () =
         inTemp (fun root ->
             let code, _, _ =
