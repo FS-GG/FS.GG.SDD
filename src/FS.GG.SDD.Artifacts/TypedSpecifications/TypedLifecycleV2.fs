@@ -61,7 +61,7 @@ module QuintV1Migration =
           Message = message
           Correction = correction }
 
-    let lower (normalizedModel: byte array) payloadSource baseContract =
+    let lower (normalizedModel: byte array) (payloadSource: QuintSourceRange) (baseContract: QuintCompiledContract) =
         try
             let text = UTF8Encoding(false, true).GetString normalizedModel
 
@@ -586,7 +586,7 @@ module TypedAuthority =
                                       let loweringMatches =
                                           match adaptedCatalogue with
                                           | Some adapted ->
-                                              let baseContract =
+                                              let baseContract: QuintCompiledContract =
                                                   { contract with
                                                       Catalogue = adapted.Entries
                                                       ActionEffects = adapted.ActionEffects

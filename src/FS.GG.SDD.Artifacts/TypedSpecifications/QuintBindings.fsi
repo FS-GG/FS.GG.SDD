@@ -21,3 +21,11 @@ module QuintBindings =
         moduleName: string ->
         contract: QuintCompiledContract ->
             Result<QuintGeneratedBindings, QuintBindingDiagnostic list>
+
+[<RequireQualifiedAccess>]
+module QuintBindingsV2 =
+    /// Generate collision-refusing, ordinally ordered generic value bindings from contract v2.
+    val generate:
+        moduleName: string ->
+        contract: QuintCompiledContractV2 ->
+            Result<QuintGeneratedBindings, QuintBindingDiagnostic list>

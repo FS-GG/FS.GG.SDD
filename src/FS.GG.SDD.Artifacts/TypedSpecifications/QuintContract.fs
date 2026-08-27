@@ -778,3 +778,514 @@ module QuintContract =
                 else
                     Ok(Changed changes)
             | beforeFindings, afterFindings -> Error(ContractCore.sorted (beforeFindings @ afterFindings))
+
+type QuintCompiledContractV2 =
+    { Schema: string
+      Profile: string
+      Specification: string
+      Exports: QuintGeneralExport list
+      Catalogue: QuintModelCatalogueEntry list
+      ActionEffects: QuintActionEffect list
+      Relationships: QuintRelationship list
+      VerificationProfiles: QuintVerificationProfile list
+      Bounds: QuintFiniteBound list
+      Impacts: QuintImpact list
+      Compatibility: QuintCompatibility list
+      Digests: QuintSemanticDigest list }
+
+module private ContractV2Core =
+    let schema = "fsgg.quint.compiled-contract/v2"
+
+    let rec valueKey =
+        function
+        | QuintBool value -> if value then "b:1" else "b:0"
+        | QuintInt value -> "i:" + value.ToString("+0000000000000000000;-0000000000000000000", CultureInfo.InvariantCulture)
+        | QuintString value -> "s:" + value
+        | QuintTuple values -> "t:[" + (values |> List.map valueKey |> String.concat ",") + "]"
+        | QuintRecord fields ->
+            "r:{" + (fields |> List.map (fun (name, value) -> name + "=" + valueKey value) |> String.concat ",") + "}"
+        | QuintVariant(tag, value) -> "v:" + tag + ":" + (value |> Option.map valueKey |> Option.defaultValue "")
+        | QuintList values -> "l:[" + (values |> List.map valueKey |> String.concat ",") + "]"
+        | QuintSet values -> "e:[" + (values |> List.map valueKey |> String.concat ",") + "]"
+        | QuintMap entries ->
+            "m:[" + (entries |> List.map (fun (key, value) -> valueKey key + "=" + valueKey value) |> String.concat ",") + "]"
+
+    let normalizeValue =
+        let rec normalize =
+            function
+            | QuintTuple values -> QuintTuple(List.map normalize values)
+            | QuintRecord fields ->
+                fields |> List.map (fun (name, value) -> name, normalize value) |> List.sortBy fst |> QuintRecord
+            | QuintVariant(tag, value) -> QuintVariant(tag, Option.map normalize value)
+            | QuintList values -> QuintList(List.map normalize values)
+            | QuintSet values ->
+                values |> List.map normalize |> List.sortBy valueKey |> List.distinct |> QuintSet
+            | QuintMap entries ->
+                entries
+                |> List.map (fun (key, value) -> normalize key, normalize value)
+                |> List.sortBy (fst >> valueKey)
+                |> QuintMap
+            | value -> value
+
+        normalize
+
+    let writeRange (writer: Utf8JsonWriter) (source: QuintSourceRange) =
+        ContractCore.writeRange writer source
+
+    let rec writeValue (writer: Utf8JsonWriter) value =
+        writer.WriteStartObject()
+
+        match normalizeValue value with
+        | QuintBool value ->
+            writer.WriteString("kind", "bool")
+            writer.WriteBoolean("value", value)
+        | QuintInt value ->
+            writer.WriteString("kind", "int")
+            writer.WriteNumber("value", value)
+        | QuintString value ->
+            writer.WriteString("kind", "string")
+            writer.WriteString("value", value)
+        | QuintTuple values
+        | QuintList values
+        | QuintSet values as collection ->
+            let kind =
+                match collection with
+                | QuintTuple _ -> "tuple"
+                | QuintList _ -> "list"
+                | _ -> "set"
+
+            writer.WriteString("kind", kind)
+            writer.WriteStartArray("items")
+            values |> List.iter (writeValue writer)
+            writer.WriteEndArray()
+        | QuintRecord fields ->
+            writer.WriteString("kind", "record")
+            writer.WriteStartArray("fields")
+
+            fields
+            |> List.sortBy fst
+            |> List.iter (fun (name, value) ->
+                writer.WriteStartObject()
+                writer.WriteString("name", name)
+                writer.WritePropertyName("value")
+                writeValue writer value
+                writer.WriteEndObject())
+
+            writer.WriteEndArray()
+        | QuintVariant(tag, value) ->
+            writer.WriteString("kind", "variant")
+            writer.WriteString("tag", tag)
+
+            match value with
+            | Some value ->
+                writer.WritePropertyName("value")
+                writeValue writer value
+            | None -> writer.WriteNull("value")
+        | QuintMap entries ->
+            writer.WriteString("kind", "map")
+            writer.WriteStartArray("entries")
+
+            entries
+            |> List.sortBy (fst >> valueKey)
+            |> List.iter (fun (key, value) ->
+                writer.WriteStartObject()
+                writer.WritePropertyName("key")
+                writeValue writer key
+                writer.WritePropertyName("value")
+                writeValue writer value
+                writer.WriteEndObject())
+
+            writer.WriteEndArray()
+
+        writer.WriteEndObject()
+
+    let readValue =
+        let rec read path (element: JsonElement) =
+            ContractCore.requireObject path element
+            let kind = ContractCore.str "kind" element
+
+            match kind with
+            | "bool" ->
+                ContractCore.checkFields path (Set.ofList [ "kind"; "value" ]) element
+                let value = ContractCore.prop "value" element
+
+                match value.ValueKind with
+                | JsonValueKind.True -> QuintBool true
+                | JsonValueKind.False -> QuintBool false
+                | _ -> raise (JsonException($"%s{path}/value: expected boolean."))
+            | "int" ->
+                ContractCore.checkFields path (Set.ofList [ "kind"; "value" ]) element
+                QuintInt(ContractCore.int64 "value" element)
+            | "string" ->
+                ContractCore.checkFields path (Set.ofList [ "kind"; "value" ]) element
+                QuintString(ContractCore.str "value" element)
+            | "tuple"
+            | "list"
+            | "set" ->
+                ContractCore.checkFields path (Set.ofList [ "kind"; "items" ]) element
+
+                let values =
+                    ContractCore.array "items" element
+                    |> List.mapi (fun index item -> read ($"%s{path}/items/%d{index}") item)
+
+                match kind with
+                | "tuple" -> QuintTuple values
+                | "list" -> QuintList values
+                | _ -> values |> List.sortBy valueKey |> List.distinct |> QuintSet
+            | "record" ->
+                ContractCore.checkFields path (Set.ofList [ "kind"; "fields" ]) element
+
+                ContractCore.array "fields" element
+                |> List.mapi (fun index field ->
+                    let fieldPath = $"%s{path}/fields/%d{index}"
+                    ContractCore.checkFields fieldPath (Set.ofList [ "name"; "value" ]) field
+                    ContractCore.str "name" field, read (fieldPath + "/value") (ContractCore.prop "value" field))
+                |> List.sortBy fst
+                |> QuintRecord
+            | "variant" ->
+                ContractCore.checkFields path (Set.ofList [ "kind"; "tag"; "value" ]) element
+                let value = ContractCore.prop "value" element
+
+                QuintVariant(
+                    ContractCore.str "tag" element,
+                    if value.ValueKind = JsonValueKind.Null then None else Some(read (path + "/value") value)
+                )
+            | "map" ->
+                ContractCore.checkFields path (Set.ofList [ "kind"; "entries" ]) element
+
+                ContractCore.array "entries" element
+                |> List.mapi (fun index entry ->
+                    let entryPath = $"%s{path}/entries/%d{index}"
+                    ContractCore.checkFields entryPath (Set.ofList [ "key"; "value" ]) entry
+                    read (entryPath + "/key") (ContractCore.prop "key" entry),
+                    read (entryPath + "/value") (ContractCore.prop "value" entry))
+                |> List.sortBy (fst >> valueKey)
+                |> QuintMap
+            | other -> raise (JsonException($"%s{path}/kind: unsupported value kind '%s{other}'."))
+
+        read
+
+    let writeCommon (writer: Utf8JsonWriter) (contract: QuintCompiledContractV2) =
+        writer.WriteStartArray("actionEffects")
+
+        contract.ActionEffects
+        |> List.sortBy _.ActionId
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("actionId", row.ActionId)
+            ContractCore.writeStrings writer "reads" row.Reads
+            ContractCore.writeStrings writer "writes" row.Writes
+            ContractCore.writeStrings writer "subjects" row.Subjects
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writer.WriteStartArray("relationships")
+
+        contract.Relationships
+        |> List.sortBy (fun row -> row.FromId, ContractCore.relationText row.Kind, row.ToId)
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("from", row.FromId)
+            writer.WriteString("kind", ContractCore.relationText row.Kind)
+            writer.WriteString("to", row.ToId)
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writer.WriteStartArray("verificationProfiles")
+
+        contract.VerificationProfiles
+        |> List.sortBy _.Id
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("id", row.Id)
+            writer.WriteString("kind", row.Kind)
+            ContractCore.writeStrings writer "subjectIds" row.SubjectIds
+            ContractCore.writeStrings writer "boundIds" row.BoundIds
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writer.WriteStartArray("bounds")
+
+        contract.Bounds
+        |> List.sortBy _.Id
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("id", row.Id)
+            writer.WriteNumber("minimum", row.Minimum)
+            writer.WriteNumber("maximum", row.Maximum)
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writer.WriteStartArray("impacts")
+
+        contract.Impacts
+        |> List.sortBy (fun row -> row.SubjectId, row.Category, row.Detail)
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("subjectId", row.SubjectId)
+            writer.WriteString("category", row.Category)
+            writer.WriteString("detail", row.Detail)
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writer.WriteStartArray("compatibility")
+
+        contract.Compatibility
+        |> List.sortBy (fun row -> row.Surface, row.Requirement, row.Detail)
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("surface", row.Surface)
+            writer.WriteString("requirement", row.Requirement)
+            writer.WriteString("detail", row.Detail)
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writer.WriteStartArray("digests")
+
+        contract.Digests
+        |> List.sortBy _.Name
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("name", row.Name)
+            writer.WriteString("sha256", ContractCore.normalizeDigest row.Sha256)
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+
+    let serializeUnchecked (contract: QuintCompiledContractV2) =
+        use stream = new MemoryStream()
+        use writer = new Utf8JsonWriter(stream)
+        writer.WriteStartObject()
+        writer.WriteString("schema", contract.Schema)
+        writer.WriteString("profile", contract.Profile)
+        writer.WriteString("specification", contract.Specification)
+        writer.WriteStartArray("exports")
+
+        contract.Exports
+        |> List.sortBy _.Id
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("id", row.Id)
+            writer.WriteString("module", row.ModuleName)
+            writer.WriteString("declaration", row.DeclarationName)
+            writer.WritePropertyName("value")
+            writeValue writer row.Value
+            writeRange writer row.Source
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writer.WriteStartArray("catalogue")
+
+        contract.Catalogue
+        |> List.sortBy _.Id
+        |> List.iter (fun row ->
+            writer.WriteStartObject()
+            writer.WriteString("id", row.Id)
+            writer.WriteString("kind", row.Kind)
+            writer.WriteString("exportId", row.ExportId)
+            writer.WritePropertyName("value")
+            writeValue writer row.Value
+            writeRange writer row.Source
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+        writeCommon writer contract
+        writer.WriteEndObject()
+        writer.Flush()
+        Encoding.UTF8.GetString(stream.ToArray()) + "\n"
+
+    let validate (contract: QuintCompiledContractV2) =
+        let catalogueIds = contract.Catalogue |> List.map _.Id |> Set.ofList
+        let exportIds = contract.Exports |> List.map _.Id |> Set.ofList
+        let subjectIds = Set.union catalogueIds exportIds
+        let boundIds = contract.Bounds |> List.map _.Id |> Set.ofList
+
+        [ if contract.Schema <> schema then
+              yield
+                  ContractCore.diagnostic
+                      "QUINT-CONTRACT-SCHEMA"
+                      "/schema"
+                      $"Expected '%s{schema}', got '%s{contract.Schema}'."
+                      "Use compiled-contract v2."
+          if contract.Profile <> QuintGeneralProfile.identity then
+              yield
+                  ContractCore.diagnostic
+                      "QUINT-CONTRACT-PROFILE"
+                      "/profile"
+                      $"Expected '%s{QuintGeneralProfile.identity}', got '%s{contract.Profile}'."
+                      "Compile with the general profile adapter."
+          if not (ContractCore.idPattern.IsMatch contract.Specification) then
+              yield ContractCore.diagnostic "QUINT-CONTRACT-ID" "/specification" "Specification is invalid." "Use a stable identity."
+          for id, rows in contract.Exports |> List.groupBy _.Id do
+              if rows.Length > 1 then
+                  yield ContractCore.diagnostic "QUINT-CONTRACT-EXPORT-DUPLICATE" "/exports" $"Export '%s{id}' is duplicated." "Keep one export."
+          for id, rows in contract.Catalogue |> List.groupBy _.Id do
+              if rows.Length > 1 then
+                  yield ContractCore.diagnostic "QUINT-CONTRACT-CATALOGUE-DUPLICATE" "/catalogue" $"Catalogue identity '%s{id}' is duplicated." "Keep one row."
+          for index, row in contract.Catalogue |> List.indexed do
+              if not (exportIds.Contains row.ExportId) then
+                  yield ContractCore.diagnostic "QUINT-CONTRACT-REFERENCE" $"/catalogue/%d{index}/exportId" $"'%s{row.ExportId}' is not exported." "Reference an export."
+          for index, relation in contract.Relationships |> List.indexed do
+              if not (subjectIds.Contains relation.FromId) || not (subjectIds.Contains relation.ToId) then
+                  yield ContractCore.diagnostic "QUINT-CONTRACT-REFERENCE" $"/relationships/%d{index}" "Relationship reference is not declared." "Reference an export or catalogue identity."
+          for index, profile in contract.VerificationProfiles |> List.indexed do
+              for subject in profile.SubjectIds do
+                  if not (subjectIds.Contains subject) then
+                      yield ContractCore.diagnostic "QUINT-CONTRACT-REFERENCE" $"/verificationProfiles/%d{index}/subjectIds" $"'%s{subject}' is not declared." "Reference an export or catalogue identity."
+              for bound in profile.BoundIds do
+                  if not (boundIds.Contains bound) then
+                      yield ContractCore.diagnostic "QUINT-CONTRACT-BOUND-REFERENCE" $"/verificationProfiles/%d{index}/boundIds" $"'%s{bound}' is not declared." "Reference a finite bound."
+          for index, bound in contract.Bounds |> List.indexed do
+              if bound.Minimum < 0L || bound.Maximum < bound.Minimum then
+                  yield ContractCore.diagnostic "QUINT-CONTRACT-BOUND" $"/bounds/%d{index}" "Finite bound is negative or reversed." "Use 0 <= minimum <= maximum."
+          for index, digest in contract.Digests |> List.indexed do
+              if not (ContractCore.validDigest digest.Sha256) then
+                  yield ContractCore.diagnostic "QUINT-CONTRACT-DIGEST" $"/digests/%d{index}/sha256" "Digest is not lowercase SHA-256." "Provide 64 lowercase hexadecimal characters." ]
+        |> ContractCore.sorted
+
+    let decode (text: string) =
+        use document = JsonDocument.Parse text
+        let root = document.RootElement
+
+        ContractCore.checkFields
+            ""
+            (Set.ofList
+                [ "schema"; "profile"; "specification"; "exports"; "catalogue"; "actionEffects"; "relationships"
+                  "verificationProfiles"; "bounds"; "impacts"; "compatibility"; "digests" ])
+            root
+
+        let exports =
+            ContractCore.array "exports" root
+            |> List.mapi (fun index row ->
+                let path = $"/exports/%d{index}"
+                ContractCore.checkFields path (Set.ofList [ "id"; "module"; "declaration"; "value"; "source" ]) row
+
+                { Id = ContractCore.str "id" row
+                  ModuleName = ContractCore.str "module" row
+                  DeclarationName = ContractCore.str "declaration" row
+                  Value = readValue (path + "/value") (ContractCore.prop "value" row)
+                  Source = ContractCore.range path row })
+
+        let catalogue =
+            ContractCore.array "catalogue" root
+            |> List.mapi (fun index row ->
+                let path = $"/catalogue/%d{index}"
+                ContractCore.checkFields path (Set.ofList [ "id"; "kind"; "exportId"; "value"; "source" ]) row
+
+                { Id = ContractCore.str "id" row
+                  Kind = ContractCore.str "kind" row
+                  ExportId = ContractCore.str "exportId" row
+                  Value = readValue (path + "/value") (ContractCore.prop "value" row)
+                  Source = ContractCore.range path row })
+
+        let effects =
+            ContractCore.array "actionEffects" root
+            |> List.mapi (fun index row ->
+                ContractCore.checkFields $"/actionEffects/%d{index}" (Set.ofList [ "actionId"; "reads"; "writes"; "subjects" ]) row
+                { ActionId = ContractCore.str "actionId" row
+                  Reads = ContractCore.strings "reads" row
+                  Writes = ContractCore.strings "writes" row
+                  Subjects = ContractCore.strings "subjects" row })
+
+        let relationships =
+            ContractCore.array "relationships" root
+            |> List.mapi (fun index row ->
+                let path = $"/relationships/%d{index}"
+                ContractCore.checkFields path (Set.ofList [ "from"; "kind"; "to" ]) row
+                { FromId = ContractCore.str "from" row
+                  Kind = ContractCore.parseRelation (path + "/kind") (ContractCore.str "kind" row)
+                  ToId = ContractCore.str "to" row })
+
+        let profiles =
+            ContractCore.array "verificationProfiles" root
+            |> List.mapi (fun index row ->
+                ContractCore.checkFields $"/verificationProfiles/%d{index}" (Set.ofList [ "id"; "kind"; "subjectIds"; "boundIds" ]) row
+                { Id = ContractCore.str "id" row
+                  Kind = ContractCore.str "kind" row
+                  SubjectIds = ContractCore.strings "subjectIds" row
+                  BoundIds = ContractCore.strings "boundIds" row })
+
+        let bounds =
+            ContractCore.array "bounds" root
+            |> List.mapi (fun index row ->
+                ContractCore.checkFields $"/bounds/%d{index}" (Set.ofList [ "id"; "minimum"; "maximum" ]) row
+                { Id = ContractCore.str "id" row
+                  Minimum = ContractCore.int64 "minimum" row
+                  Maximum = ContractCore.int64 "maximum" row })
+
+        let impacts =
+            ContractCore.array "impacts" root
+            |> List.mapi (fun index row ->
+                ContractCore.checkFields $"/impacts/%d{index}" (Set.ofList [ "subjectId"; "category"; "detail" ]) row
+                { SubjectId = ContractCore.str "subjectId" row
+                  Category = ContractCore.str "category" row
+                  Detail = ContractCore.str "detail" row })
+
+        let compatibility =
+            ContractCore.array "compatibility" root
+            |> List.mapi (fun index row ->
+                ContractCore.checkFields $"/compatibility/%d{index}" (Set.ofList [ "surface"; "requirement"; "detail" ]) row
+                { Surface = ContractCore.str "surface" row
+                  Requirement = ContractCore.str "requirement" row
+                  Detail = ContractCore.str "detail" row })
+
+        let digests =
+            ContractCore.array "digests" root
+            |> List.mapi (fun index row ->
+                ContractCore.checkFields $"/digests/%d{index}" (Set.ofList [ "name"; "sha256" ]) row
+                { Name = ContractCore.str "name" row
+                  Sha256 = ContractCore.str "sha256" row })
+
+        { Schema = ContractCore.str "schema" root
+          Profile = ContractCore.str "profile" root
+          Specification = ContractCore.str "specification" root
+          Exports = exports
+          Catalogue = catalogue
+          ActionEffects = effects
+          Relationships = relationships
+          VerificationProfiles = profiles
+          Bounds = bounds
+          Impacts = impacts
+          Compatibility = compatibility
+          Digests = digests }
+
+[<RequireQualifiedAccess>]
+module QuintContractV2 =
+    let schema = ContractV2Core.schema
+    let validate contract = ContractV2Core.validate contract
+
+    let serializeCanonical contract =
+        match validate contract with
+        | [] -> Ok(ContractV2Core.serializeUnchecked contract)
+        | findings -> Error findings
+
+    let deserialize text =
+        try
+            let contract = ContractV2Core.decode text
+            match validate contract with [] -> Ok contract | findings -> Error findings
+        with :? JsonException as ex ->
+            Error
+                [ ContractCore.diagnostic
+                      "QUINT-CONTRACT-MALFORMED"
+                      "/"
+                      ex.Message
+                      "Emit exact compiled-contract v2 JSON with no unknown, duplicate, IR, or expression fields." ]
+
+    let semanticDiff before after =
+        if before.Schema <> after.Schema then
+            Error [ ContractCore.diagnostic "QUINT-DIFF-SCHEMA" "/schema" "Contracts use incompatible schemas." "Compare contract v2 values." ]
+        elif before.Profile <> after.Profile then
+            Error [ ContractCore.diagnostic "QUINT-DIFF-PROFILE" "/profile" "Contracts use incompatible profiles." "Compare the same explicit profile." ]
+        else
+            match serializeCanonical before, serializeCanonical after with
+            | Ok left, Ok right when left = right -> Ok Equivalent
+            | Ok left, Ok right ->
+                Ok(
+                    Changed
+                        [ { Path = "/"
+                            BeforeSha256 = ContractCore.sha256Text left
+                            AfterSha256 = ContractCore.sha256Text right } ]
+                )
+            | Error left, Error right -> Error(ContractCore.sorted (left @ right))
+            | Error errors, _
+            | _, Error errors -> Error errors

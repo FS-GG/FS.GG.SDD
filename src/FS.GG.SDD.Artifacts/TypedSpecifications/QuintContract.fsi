@@ -98,3 +98,38 @@ module QuintContract =
         before: QuintCompiledContract ->
         after: QuintCompiledContract ->
             Result<QuintContractDiff, QuintContractDiagnostic list>
+
+/// Language-neutral compiled-contract v2 for consumer-defined Quint models.
+type QuintCompiledContractV2 =
+    { Schema: string
+      Profile: string
+      Specification: string
+      Exports: QuintGeneralExport list
+      Catalogue: QuintModelCatalogueEntry list
+      ActionEffects: QuintActionEffect list
+      Relationships: QuintRelationship list
+      VerificationProfiles: QuintVerificationProfile list
+      Bounds: QuintFiniteBound list
+      Impacts: QuintImpact list
+      Compatibility: QuintCompatibility list
+      Digests: QuintSemanticDigest list }
+
+[<RequireQualifiedAccess>]
+module QuintContractV2 =
+    /// Explicit compiled-contract schema paired with fsgg-quint-profile/2.
+    val schema: string
+
+    /// Validate profile identity, exported values, references, bounds, and digests.
+    val validate: contract: QuintCompiledContractV2 -> QuintContractDiagnostic list
+
+    /// Emit deterministic UTF-8 canonical JSON with one trailing newline.
+    val serializeCanonical: contract: QuintCompiledContractV2 -> Result<string, QuintContractDiagnostic list>
+
+    /// Decode only compiled-contract v2; unknown or expression-bearing fields fail closed.
+    val deserialize: text: string -> Result<QuintCompiledContractV2, QuintContractDiagnostic list>
+
+    /// Compare stable integration meaning after canonical normalization.
+    val semanticDiff:
+        before: QuintCompiledContractV2 ->
+        after: QuintCompiledContractV2 ->
+            Result<QuintContractDiff, QuintContractDiagnostic list>
