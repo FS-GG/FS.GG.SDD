@@ -11,21 +11,6 @@ type QuintContractMetadata =
       Compatibility: QuintCompatibility list
       Digests: QuintSemanticDigest list }
 
-/// Complete pure observation offered after a host executes already-resolved local tools.
-type QuintObservedCompilation =
-    { ModuleName: string
-      Toolchain: QuintToolchainManifest
-      Cache: QuintCacheObservation list
-      ProcessRequests: QuintProcessRequest list
-      Endpoint: QuintEndpointState
-      ProcessObservations: QuintProcessObservation list
-      Source: QuintMarkdownSource
-      FenceManifest: QuintFenceManifest
-      Extraction: QuintExtractionObservation
-      SourceMap: QuintSourceMap
-      TypedEffect: QuintTypedEffectObservation
-      Metadata: QuintContractMetadata }
-
 /// Complete pure observation for the explicit general profile.
 type QuintGeneralObservedCompilation =
     { ModuleName: string
@@ -39,6 +24,21 @@ type QuintGeneralObservedCompilation =
       Extraction: QuintExtractionObservation
       SourceMap: QuintSourceMap
       TypedEffect: QuintGeneralTypedEffectObservation
+      Metadata: QuintContractMetadata }
+
+/// Complete pure observation offered after a host executes already-resolved local tools.
+type QuintObservedCompilation =
+    { ModuleName: string
+      Toolchain: QuintToolchainManifest
+      Cache: QuintCacheObservation list
+      ProcessRequests: QuintProcessRequest list
+      Endpoint: QuintEndpointState
+      ProcessObservations: QuintProcessObservation list
+      Source: QuintMarkdownSource
+      FenceManifest: QuintFenceManifest
+      Extraction: QuintExtractionObservation
+      SourceMap: QuintSourceMap
+      TypedEffect: QuintTypedEffectObservation
       Metadata: QuintContractMetadata }
 
 /// Content-addressed receipt for one accepted observed compilation.

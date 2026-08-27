@@ -115,7 +115,7 @@ grep -F '"outcome": "succeeded"' "$scratch/general-inspect.json" >/dev/null \
   || fail 'installed profile-2 authority did not inspect'
 grep -F 'fsgg-quint-profile/2' "$general_root/readiness/sir/typed-authority.json" >/dev/null \
   || fail 'profile-2 authority identity is absent'
-grep -F 'SIR-001' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
+grep -F 'COMBAT-ATTACK-RESOLUTION-001' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
   || fail 'complete S.I.R. rule catalogue was not retained'
 grep -F '"relationships":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
   || fail 'Quint relationship declarations were not projected'
@@ -127,7 +127,7 @@ grep -F '"impacts":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/n
   || fail 'Quint impact declarations were not projected'
 grep -F '"compatibility":[{' "$general_root/readiness/sir/quint/contract.json" >/dev/null \
   || fail 'Quint compatibility declarations were not projected'
-grep -F 'resolveConsequences' "$general_root/readiness/sir/quint/bindings.fs" >/dev/null \
+grep -F 'ACT-Consequences' "$general_root/readiness/sir/quint/bindings.fs" >/dev/null \
   || fail 'profile-2 action binding was not generated'
 
 # Hard process death at every live-author move must recover before another operation reads authority.

@@ -813,7 +813,10 @@ example are all explicit in the embedded Quint source.
                                       ExportBindings = selectors.Exports
                                       ActionBindings = selectors.Actions }
                                   Metadata =
-                                    { Specification = title
+                                    // The human-facing lifecycle title is deliberately free text. The
+                                    // compiled contract needs the selector's stable generated-module
+                                    // identity so valid titles cannot invalidate profile-2 authoring.
+                                    { Specification = selectors.ModuleName
                                       Relationships = []
                                       VerificationProfiles = []
                                       Bounds = []

@@ -287,6 +287,25 @@ match fsi.CommandLineArgs |> Array.skip 1 with
         ()
     | other -> fail (sprintf "forged selector range was not refused: %A" other)
 
+    let overbroadSelectorRange =
+        let first = compilationInput.TypedEffect.ExportBindings.Head
+
+        { compilationInput with
+            TypedEffect =
+                { compilationInput.TypedEffect with
+                    ExportBindings =
+                        { first with
+                            Source = compilationInput.SourceMap.Entries.Head.Source.Range }
+                        :: compilationInput.TypedEffect.ExportBindings.Tail } }
+
+    match QuintCompiler.compileGeneralObserved overbroadSelectorRange with
+    | Error findings when
+        findings
+        |> List.exists (fun finding -> finding.Code = "QUINT-COMPILER-SOURCE-BINDING")
+        ->
+        ()
+    | other -> fail (sprintf "overbroad selector range was not refused: %A" other)
+
     let canonical = compiled.CanonicalContract
     let bindings = compiled.Bindings
 

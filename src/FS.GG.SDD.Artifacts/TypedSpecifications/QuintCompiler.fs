@@ -16,20 +16,6 @@ type QuintContractMetadata =
       Compatibility: QuintCompatibility list
       Digests: QuintSemanticDigest list }
 
-type QuintObservedCompilation =
-    { ModuleName: string
-      Toolchain: QuintToolchainManifest
-      Cache: QuintCacheObservation list
-      ProcessRequests: QuintProcessRequest list
-      Endpoint: QuintEndpointState
-      ProcessObservations: QuintProcessObservation list
-      Source: QuintMarkdownSource
-      FenceManifest: QuintFenceManifest
-      Extraction: QuintExtractionObservation
-      SourceMap: QuintSourceMap
-      TypedEffect: QuintTypedEffectObservation
-      Metadata: QuintContractMetadata }
-
 type QuintGeneralObservedCompilation =
     { ModuleName: string
       Toolchain: QuintToolchainManifest
@@ -42,6 +28,23 @@ type QuintGeneralObservedCompilation =
       Extraction: QuintExtractionObservation
       SourceMap: QuintSourceMap
       TypedEffect: QuintGeneralTypedEffectObservation
+      Metadata: QuintContractMetadata }
+
+// Keep the original profile-1 record last among records sharing these labels. F# resolves an
+// otherwise-unannotated record expression to the most recently declared matching shape, so this
+// ordering preserves source compatibility for existing consumers while profile 2 remains explicit.
+type QuintObservedCompilation =
+    { ModuleName: string
+      Toolchain: QuintToolchainManifest
+      Cache: QuintCacheObservation list
+      ProcessRequests: QuintProcessRequest list
+      Endpoint: QuintEndpointState
+      ProcessObservations: QuintProcessObservation list
+      Source: QuintMarkdownSource
+      FenceManifest: QuintFenceManifest
+      Extraction: QuintExtractionObservation
+      SourceMap: QuintSourceMap
+      TypedEffect: QuintTypedEffectObservation
       Metadata: QuintContractMetadata }
 
 type QuintCompilationReceipt =
@@ -187,13 +190,63 @@ module private CompilerInternal =
                 && positionAtOrAfter candidate.Start content.Start
                 && positionAtOrBefore candidate.End content.End)
 
-        let namesDeclaration prefix declarationName (candidate: QuintSourceRange) =
-            if candidate.Start.Line > lines.Length || candidate.End.Line > lines.Length then
-                false
-            else
-                lines[candidate.Start.Line - 1 .. candidate.End.Line - 1]
-                |> Array.exists (fun line ->
-                    line.TrimStart().StartsWith($"%s{prefix}%s{declarationName}", StringComparison.Ordinal))
+        let declarationPrefixes =
+            [ "type "
+              "const "
+              "var "
+              "val "
+              "pure val "
+              "def "
+              "pure def "
+              "nondet "
+              "action "
+              "assume "
+              "run "
+              "import "
+              "export "
+              "instance " ]
+
+        let exactDeclarationRange prefix declarationName =
+            let declarationPrefix = $"%s{prefix}%s{declarationName}"
+
+            let starts =
+                lines
+                |> Array.indexed
+                |> Array.choose (fun (index, line) ->
+                    if line.TrimStart().StartsWith(declarationPrefix, StringComparison.Ordinal) then
+                        Some(index, line.Length - line.TrimStart().Length)
+                    else
+                        None)
+
+            match starts with
+            | [| startIndex, indentation |] ->
+                let indentationText = String(' ', indentation)
+
+                let nextDeclaration =
+                    lines
+                    |> Array.indexed
+                    |> Array.tryFind (fun (index, line) ->
+                        if
+                            index <= startIndex
+                            || not (line.StartsWith(indentationText, StringComparison.Ordinal))
+                        then
+                            false
+                        else
+                            let suffix = line.Substring(indentation)
+
+                            not (String.IsNullOrWhiteSpace suffix)
+                            && (declarationPrefixes
+                                |> List.exists (fun candidate ->
+                                    suffix.StartsWith(candidate, StringComparison.Ordinal))))
+
+                nextDeclaration
+                |> Option.map (fun (nextIndex, _) ->
+                    { Path = source.Path
+                      Start = { Line = startIndex + 1; Column = 1 }
+                      End =
+                        { Line = nextIndex
+                          Column = indentation + 2 } })
+            | _ -> None
 
         let finding path id declarationName prefix (candidate: QuintSourceRange) =
             [ if not (isContained candidate) then
@@ -205,12 +258,12 @@ module private CompilerInternal =
                           (Some
                               { Line = candidate.Start.Line
                                 Column = candidate.Start.Column })
-              elif not (namesDeclaration prefix declarationName candidate) then
+              elif exactDeclarationRange prefix declarationName <> Some candidate then
                   yield
                       diagnostic
                           "QUINT-COMPILER-SOURCE-BINDING"
                           path
-                          $"Binding '%s{id}' does not contain its declared Quint definition '%s{declarationName}'."
+                          $"Binding '%s{id}' is not the exact canonical source range of Quint declaration '%s{declarationName}'."
                           (Some
                               { Line = candidate.Start.Line
                                 Column = candidate.Start.Column }) ]

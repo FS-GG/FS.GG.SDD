@@ -275,7 +275,7 @@ match Environment.GetCommandLineArgs() |> Array.skip 1 with
 
     let sourceBindings, moduleName, specification = bindings logicalPath
 
-    let input: QuintObservedCompilation =
+    let input =
         { ModuleName = moduleName
           Toolchain = QuintToolchain.q1
           Cache = [ cacheObservation "lmt-binary"; cacheObservation "quint-binary" ]
