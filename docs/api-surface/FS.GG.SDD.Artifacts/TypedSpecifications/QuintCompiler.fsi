@@ -25,6 +25,21 @@ type QuintObservedCompilation =
       TypedEffect: QuintTypedEffectObservation
       Metadata: QuintContractMetadata }
 
+/// Complete pure observation for the explicit general profile.
+type QuintGeneralObservedCompilation =
+    { ModuleName: string
+      Toolchain: QuintToolchainManifest
+      Cache: QuintCacheObservation list
+      ProcessRequests: QuintProcessRequest list
+      Endpoint: QuintEndpointState
+      ProcessObservations: QuintProcessObservation list
+      Source: QuintMarkdownSource
+      FenceManifest: QuintFenceManifest
+      Extraction: QuintExtractionObservation
+      SourceMap: QuintSourceMap
+      TypedEffect: QuintGeneralTypedEffectObservation
+      Metadata: QuintContractMetadata }
+
 /// Content-addressed receipt for one accepted observed compilation.
 type QuintCompilationReceipt =
     { Schema: string
@@ -47,13 +62,30 @@ type QuintCompilationOutput =
       Receipt: QuintCompilationReceipt
       CanonicalReceipt: string }
 
+/// Stable profile-2 outputs from the pure compiler composition.
+type QuintGeneralCompilationOutput =
+    { Plan: QuintCompilationPlan
+      Contract: QuintCompiledContractV2
+      CanonicalContract: string
+      CompilationFingerprint: string
+      Bindings: QuintGeneratedBindings
+      Receipt: QuintCompilationReceipt
+      CanonicalReceipt: string }
+
 [<RequireQualifiedAccess>]
 module QuintCompiler =
     /// Stable schema identity for observed-compilation receipts.
     val receiptSchema: string
 
+    /// Stable receipt schema for profile-2 observed compilations.
+    val generalReceiptSchema: string
+
     /// Validate and compose tool, source, profile, contract, binding, and receipt boundaries without performing IO.
     val compileObserved: input: QuintObservedCompilation -> Result<QuintCompilationOutput, SpecificationDiagnostic list>
+
+    /// Compose the general profile through the same source/toolchain effect observations.
+    val compileGeneralObserved:
+        input: QuintGeneralObservedCompilation -> Result<QuintGeneralCompilationOutput, SpecificationDiagnostic list>
 
     /// Emit deterministic receipt JSON with one trailing newline.
     val encodeReceipt: receipt: QuintCompilationReceipt -> string

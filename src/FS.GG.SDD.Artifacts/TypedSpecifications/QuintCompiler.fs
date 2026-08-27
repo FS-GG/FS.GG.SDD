@@ -171,6 +171,14 @@ module QuintCompiler =
             @ QuintSource.validateExtraction input.Source input.FenceManifest input.Extraction
             @ QuintSource.validateSourceMap input.Source input.FenceManifest input.SourceMap
 
+        let profileBindingFindings =
+            [ if input.Toolchain.Profile <> input.TypedEffect.Profile then
+                  CompilerInternal.diagnostic
+                      "QUINT-COMPILER-PROFILE-BINDING"
+                      "/toolchain/profile"
+                      "Toolchain and typed/effect observations select different profiles."
+                      None ]
+
         let plan = QuintToolchain.plan input.Toolchain input.Cache input.ProcessRequests
 
         let planFindings, planValue =
@@ -186,7 +194,7 @@ module QuintCompiler =
             | Error findings -> findings |> List.map CompilerInternal.profileDiagnostic, None
 
         let initial =
-            CompilerInternal.sorted (sourceFindings @ planFindings @ profileFindings)
+            CompilerInternal.sorted (sourceFindings @ profileBindingFindings @ planFindings @ profileFindings)
 
         match initial, planValue, catalogue with
         | [], Some acceptedPlan, Some acceptedCatalogue ->
@@ -263,6 +271,14 @@ module QuintCompiler =
             @ QuintSource.validateExtraction input.Source input.FenceManifest input.Extraction
             @ QuintSource.validateSourceMap input.Source input.FenceManifest input.SourceMap
 
+        let profileBindingFindings =
+            [ if input.Toolchain.Profile <> input.TypedEffect.Profile then
+                  CompilerInternal.diagnostic
+                      "QUINT-COMPILER-PROFILE-BINDING"
+                      "/toolchain/profile"
+                      "Toolchain and typed/effect observations select different profiles."
+                      None ]
+
         let plan = QuintToolchain.plan input.Toolchain input.Cache input.ProcessRequests
 
         let planFindings, planValue =
@@ -275,7 +291,8 @@ module QuintCompiler =
             | Ok value -> [], Some value
             | Error findings -> findings |> List.map CompilerInternal.profileDiagnostic, None
 
-        let initial = CompilerInternal.sorted (sourceFindings @ planFindings @ profileFindings)
+        let initial =
+            CompilerInternal.sorted (sourceFindings @ profileBindingFindings @ planFindings @ profileFindings)
 
         match initial, planValue, catalogue with
         | [], Some acceptedPlan, Some acceptedCatalogue ->

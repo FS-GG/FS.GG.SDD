@@ -85,8 +85,14 @@ module QuintToolchain =
     /// Exact Q1-qualified profile identity.
     val profile: string
 
+    /// Explicit profile identity for the same exact tool closure under the general adapter.
+    val generalProfile: string
+
     /// Exact Q1-qualified Linux amd64 manifest, including optional guidance identity.
     val q1: QuintToolchainManifest
+
+    /// Exact Linux amd64 tool closure explicitly bound to fsgg-quint-profile/2.
+    val general: QuintToolchainManifest
 
     /// Validate an offered manifest against the exact Q1-qualified identity.
     val validateManifest: manifest: QuintToolchainManifest -> SpecificationDiagnostic list

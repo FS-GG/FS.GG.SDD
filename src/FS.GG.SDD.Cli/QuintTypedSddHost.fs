@@ -442,7 +442,7 @@ example are all explicit in the embedded Quint source.
                                 Sha256 = sha256 generated
                                 Bytes = int64 generated.Length } ]
 
-                        let input =
+                        let input: QuintObservedCompilation =
                             { ModuleName = "RequirementsBindings"
                               Toolchain = QuintToolchain.q1
                               Cache = cache
