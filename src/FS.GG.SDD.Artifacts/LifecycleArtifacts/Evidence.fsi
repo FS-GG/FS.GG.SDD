@@ -403,12 +403,12 @@ module Evidence =
 
     /// The visual-inspection artifact rule, stated once for the `evidence` gate, the `ED-`
     /// disposition, and the `TD-` mirror: a `pass` that names no rendered
-    /// artifact. A synthetic pass and a deferral both fall outside it.
+    /// artifact. Provenance does not exempt a pass; a deferral falls outside the rule.
     val passesWithoutRenderedArtifact: declaration: EvidenceDeclaration -> bool
 
     /// The classified-FR (`{gameplay}`) required-evidence-kind rule (ADR-0048, WI-4), stated once for
     /// the `ED-` disposition and its `TD-` mirror: a `pass` whose kind is one of
-    /// `requiredKinds`. A synthetic pass and a non-test kind both fall outside it.
+    /// `requiredKinds`. Provenance does not change the result or kind; a non-test kind falls outside it.
     val satisfiesRequiredEvidenceKinds: requiredKinds: string list -> declaration: EvidenceDeclaration -> bool
 
     /// Every locally-resolvable path this declaration cites: `artifactRefs` ∪ `sourceRefs[].path` ∪
@@ -426,8 +426,8 @@ module Evidence =
     /// declaration that `exists` reports absent, sorted.
     ///
     /// Every `result: pass` claim is held to this regardless of provenance metadata. A
-    /// deferral, a disclosed synthetic pass, and any non-pass result may legitimately cite an
-    /// artifact that does not exist yet, and yield `[]` (FR-006).
+    /// deferral or any non-pass result may legitimately cite an artifact that does not exist yet,
+    /// and yield `[]` (FR-006).
     ///
     /// `exists` is injected so that `Artifacts` performs no I/O: the probe is a `ReadFile` effect
     /// interpreted at the edge, and this fold reads its result (Constitution V, FR-003).

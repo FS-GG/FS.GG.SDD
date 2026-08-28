@@ -227,7 +227,7 @@ and its `verificationReadiness` carries the three counts that say what its green
 
 | Field | Meaning |
 |---|---|
-| `evidenceSupportedCount` | Obligations discharged by a passing, non-synthetic declaration. |
+| `evidenceSupportedCount` | Obligations discharged by a passing declaration; provenance metadata does not change the verdict. |
 | `evidenceSelfAttestedCount` | …of those, the ones resting on the **author's word**. |
 | `evidenceObservedCount` | …of those, the ones resting on a run the tool **observed**. |
 
@@ -302,8 +302,9 @@ do not become an unrecognized-option error. See
 
 Under the default, a test obligation whose `result: pass` carries no `observedRun` receipt reaches the
 non-satisfying disposition **`unobserved`** (`verify.unobservedRequiredTest`) instead of `satisfied`,
-and `ship` refuses the merge boundary (`ship.unobservedEvidence`). A disclosed `synthetic` pass and an
-honest deferral are untouched — neither claims a run, so neither can fail to evidence one.
+and `ship` refuses the merge boundary (`ship.unobservedEvidence`). The `synthetic` field is unchanged
+provenance metadata: it neither supplies a missing receipt nor invalidates a coherent observed pass.
+An honest deferral makes no run claim and remains a first-class non-pass outcome.
 
 **Both stages assert it, and that is not redundancy.** A blocked `verify` writes nothing (an incomplete
 run never reports complete), so it leaves the *previous*, green, still-digest-current `verify.json` on

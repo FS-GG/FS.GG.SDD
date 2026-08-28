@@ -636,17 +636,32 @@ module internal HandlersEvidence =
                    receipt.ObservedReportDigest.Equals($"sha256:{digest.Value}", StringComparison.OrdinalIgnoreCase))
            | _ -> false
 
-    /// A normal observed-run receipt remains evidence only while it names the exact bytes currently
-    /// at its contained source path. The receipt contract is checked explicitly so an older
-    /// normalized-text digest can never be reinterpreted as byte-exact merely because the values
-    /// happen to coincide for an LF/no-BOM report.
+    /// A normal observed-run receipt remains evidence only while it names a parseable report whose
+    /// exact bytes and derived outcome/counts still match the receipt. The receipt contract is checked
+    /// explicitly so an older normalized-text digest can never be reinterpreted as byte-exact merely
+    /// because the values happen to coincide for an LF/no-BOM report. Re-parsing is load-bearing: a
+    /// matching digest proves identity, not that arbitrary bytes are a runner report.
     let observedRunIsCurrent (artifactBytes: string -> byte array option) declaration =
         match declaration.ObservedRun with
         | Some run when run.DigestContract = "exact-bytes-v1" && citedPathIsContained run.Source ->
             artifactBytes run.Source
             |> Option.exists (fun bytes ->
-                let digest = SchemaVersionModule.sha256Bytes bytes
-                run.Digest.Equals($"sha256:{digest.Value}", StringComparison.OrdinalIgnoreCase))
+                let decoded = Encoding.UTF8.GetString bytes
+
+                let reportText =
+                    if decoded.StartsWith("\uFEFF", StringComparison.Ordinal) then
+                        decoded.Substring(1)
+                    else
+                        decoded
+
+                match TestReport.parseBytes run.Source bytes reportText with
+                | Error _ -> false
+                | Ok parsed ->
+                    run.Digest.Equals(parsed.Digest, StringComparison.OrdinalIgnoreCase)
+                    && run.Outcome.Equals(parsed.Outcome, StringComparison.OrdinalIgnoreCase)
+                    && run.Passed = parsed.Passed
+                    && run.Failed = parsed.Failed
+                    && run.Skipped = parsed.Skipped)
         | _ -> false
 
     /// FS.GG.SDD#865, the byte-currency twin of `observedRunIsCurrent` for a repository-local record.

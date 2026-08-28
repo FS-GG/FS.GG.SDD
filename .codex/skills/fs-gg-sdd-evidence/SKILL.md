@@ -176,9 +176,9 @@ a receipt, so the observed rule lands differently per kind:
   (e.g. `kind: implementation`). Same trap: there is no receipt a suite run can attach
   to it, so it stays `unobserved`. Either back the work with a `verification` obligation
   that a real run discharges, or **defer** the non-test obligation honestly.
-- **`review`, disclosed `synthetic`, `deferral`.** These make no real-pass claim (or
-  disclose a stand-in), so they never reach the `unobserved` arm and are never punished
-  for a run they did not assert.
+- **`review` and `deferral`.** These make no test-pass claim, so they do not require a
+  runner receipt. `synthetic` is provenance metadata, not a separate readiness outcome;
+  it may accompany an observed pass without changing that pass.
 
 The rule of thumb: if an obligation's proof is a **test that runs**, it is a
 `verification` pass with a receipt; if its proof is anything a run cannot observe
@@ -264,21 +264,21 @@ scaffolds emit that merely echoes it folds into this entry rather than fanning o
 #646), and `PD-004` (the plan's mirror of that echo). A plan decision or checklist review that
 carries real content, by contrast, keeps its own task and obligation.
 
-## Example: declarations that DO NOT satisfy
+## Example: declarations that still need action
 
 ```yaml
 schemaVersion: 1
 evidence:
   - id: EV001
-    kind: synthetic
+    kind: verification
     subject: { type: task, id: T001 }
     result: pass
-    synthetic: true       # discloses a stand-in → disposition synthetic, NOT satisfied
+    synthetic: true       # provenance only; without observedRun this remains unobserved at verify
   - id: EV002
     kind: verification
     subject: { type: task, id: T002 }
     result: fail
-    synthetic: false      # not satisfied
+    synthetic: false      # the failing result is what blocks
 ```
 
 A subject may be a `task` or a `requirement` (e.g.
@@ -331,7 +331,7 @@ affordances the tool already gives you, then keep each classification honest:
   grouping the sweep above uses — instead of matching on task title.
 - **Then classify honestly, per obligation.** Bulk authoring speeds the typing, not
   the judgement: every obligation still needs an individual, truthful
-  `result`/`synthetic` (a real `pass` only where the proof exists; a `deferred`
+  `result`/`synthetic` (`pass` only where the proof exists; a `deferred`
   otherwise). A blanket `pass` across the set is exactly the dishonesty `verify` and
   the satisfaction rule are built to catch.
 
@@ -384,8 +384,8 @@ self-contradicting spec once shipped an invisible ball:
   but a passing claim still names what was inspected and carries observation.
 
 If you cannot render and look in this cut, **defer it** with the four deferral fields.
-A declared deferral is a first-class outcome (above); a synthetic pass is not a
-shortcut to one.
+A declared deferral is a first-class outcome (above). The `synthetic` label neither
+waives a missing visual artifact nor downgrades a coherent observed pass.
 
 SDD owns the obligation, never the renderer. It does not know what your visual
 surface is, does not check that the named file is an image, and ships no `render`

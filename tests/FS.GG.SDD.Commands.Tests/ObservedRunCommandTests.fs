@@ -1077,6 +1077,57 @@ module ObservedRunCommandTests =
         $"sha256:{(SchemaVersion.sha256Text text).Value}"
 
     [<Fact>]
+    let ``matching digest cannot turn malformed bytes into an observed run`` () =
+        let root = evidencedProjectClaimingPass ()
+        let readinessReport = $"readiness/{workId}/test-results/commands.trx"
+        let original = trxWith 5 0
+        TestSupport.writeRelative root readinessReport original
+
+        let exitCode, _ = TestShared.ChildProcess.git root [ "add"; "-A" ]
+        Assert.Equal(0, exitCode)
+
+        let exitCode, _ =
+            TestShared.ChildProcess.git root [ "commit"; "-qm"; "tested candidate" ]
+
+        Assert.Equal(0, exitCode)
+
+        { TestSupport.evidenceRequest root workId title with
+            FromTestReport = Some readinessReport }
+        |> TestSupport.runRequest
+        |> fun report ->
+            Assert.DoesNotContain(
+                report.Diagnostics,
+                fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticError
+            )
+
+        let malformed = "this is not a test report\n"
+        TestSupport.writeRelative root readinessReport malformed
+
+        TestSupport.readRelative root evidencePath
+        |> fun text -> text.Replace(digestOf original, digestOf malformed)
+        |> TestSupport.writeRelative root evidencePath
+
+        let forged = (parsedEvidence root).Evidence |> List.head
+
+        Assert.False(
+            FS.GG.SDD.Commands.Internal.HandlersEvidence.observedRunIsCurrent
+                (fun _ -> Some(Encoding.UTF8.GetBytes malformed))
+                forged
+        )
+
+        let verified = runVerifyRequiringObserved root
+
+        match verified.Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+
+        match shipped.Ship with
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
+
+    [<Fact>]
     let ``sync recomputes the digest and counts in place after a TRX is regenerated`` () =
         // The M5 scenario, exactly: a receipt recorded against a five-test run, then the suite grows a
         // sixth test and the TRX is regenerated. Every receipt is now stale — and one command reconciles
