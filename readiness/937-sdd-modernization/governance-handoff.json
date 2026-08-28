@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/937-sdd-modernization/ship.json",
-      "digest": "sha256:9178f72c41b7e453edb73159fa08730a4732010d2aa7150af0a412794a4fdf06",
+      "digest": "sha256:ece0e650e5fc06029c633728c920554f7f40e7ff990cc5dd1921e9556dfb9081",
       "schemaVersion": 1
     },
     {
       "path": "readiness/937-sdd-modernization/verify.json",
-      "digest": "sha256:463ff7ed650bbada9141a027c8e9d2b1a40e3859b0c434ae46e14395ce4431b0",
+      "digest": "sha256:4c8ae10dbec9be21820dd38a62d53890c6ffea34ca872b353ff86d2c323f800b",
       "schemaVersion": 1
     },
     {
       "path": "readiness/937-sdd-modernization/work-model.json",
-      "digest": "sha256:cc83fff946dfbfc55e03b655ff79c1ecd9fee958b47be566b6d8fa6675200d93",
+      "digest": "sha256:f03c1cb62d7586b6cc2ca794f807d46a7a31df2b1307136ef42e95bb33d063be",
       "schemaVersion": 1
     }
   ],
@@ -69,47 +69,47 @@
       },
       {
         "id": "task:T001",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T002",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T003",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T004",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T005",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T006",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T007",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T008",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T009",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       }
     ],

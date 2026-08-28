@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "2584f94363e516a2ff7a9e35c5de9033e8b39ed655646e10ae3a78da3a8f08fa"
+        "value": "513cfe39c5c6ac317309800f592d55e5e5af8388b6f01a473c9f5fbf9c4ac282"
       }
     },
     {
@@ -745,7 +745,7 @@
           "path": "work/937-sdd-modernization/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "2584f94363e516a2ff7a9e35c5de9033e8b39ed655646e10ae3a78da3a8f08fa"
+            "value": "513cfe39c5c6ac317309800f592d55e5e5af8388b6f01a473c9f5fbf9c4ac282"
           },
           "schemaVersion": 1
         },
@@ -776,7 +776,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "690c1da5fa7f9ac8c2833a3e9d6544930373ee77be27dd25f843a7da104598c2"
+        "value": "6c65e1b8e7df28aa9c42182c56559e70af3e4e83e99d0e43aa78e0a3c4a11953"
       },
       "currency": "current"
     }
