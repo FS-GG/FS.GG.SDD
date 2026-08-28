@@ -32,7 +32,7 @@ release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
 The `channel` is derived from the version: a major of `0` is `preRelease`; a
-major of `>=1` is `stable`. The current release is `preRelease`.
+major of `>=1` is `stable`. The current release is `stable`.
 
 ## Change class to bump rule
 

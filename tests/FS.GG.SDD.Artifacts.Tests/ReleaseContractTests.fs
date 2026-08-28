@@ -164,6 +164,9 @@ module ReleaseContractTests =
         for token in [ "breaking"; "additive"; "clarifying"; "major"; "minor"; "patch" ] do
             Assert.Contains(token, doc)
 
+        let expectedChannel = releaseChannelValue release.Identity.Channel
+        Assert.Contains($"the current release is `{expectedChannel}`.", doc)
+
     // ===== US2 — schema reference doc agrees with the contract (T016) =====
 
     [<Fact>]

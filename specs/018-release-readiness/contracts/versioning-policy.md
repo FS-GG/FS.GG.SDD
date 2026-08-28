@@ -8,7 +8,7 @@ constitution Change Classification).
 ## Single version source
 
 All packages (`FS.GG.SDD.Artifacts`, `FS.GG.SDD.Commands`, `FS.GG.SDD.Cli`) and
-the CLI share **one** semantic version sourced from `Directory.Build.props`
+the CLI share **one** semantic version sourced from `Directory.Build.local.props`
 `<Version>`. The generator version (`currentGeneratorVersion`) is reconciled to
 the same number. A consumer determines the release version deterministically from
 package metadata or `release-readiness.json` without reading source (FR-003).
@@ -24,11 +24,10 @@ A "public contract" is any public schema, generated-view shape, command-output
 | Add an optional field; add a generated-view kind; add a command/flag; add an optional report field | **Additive** | minor | none |
 | Docs, internal refactor, comment, no public-contract change | **Clarifying** | patch | none |
 
-### Pre-1.0 semantics (current `0.x` line)
+### Pre-1.0 semantics (historical `0.x` lines)
 Under SemVer a `0.y.z` line MAY introduce a breaking change on a **minor** bump.
-This is stated so early adopters are not surprised (spec edge case). A migration
-note is **still required** for any breaking change, pre-1.0 included. The first
-`1.0.0` line freezes the surfaces currently classed `stable`.
+Those lines are historical. The current line is stable, so a breaking public
+contract change requires a major bump and a migration note.
 
 ### Schema-version vs contract-version divergence
 A generated view's internal `schemaVersion` and a cross-repo `contractVersion`
