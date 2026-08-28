@@ -262,7 +262,12 @@ evidence:
         let report = TestSupport.runRequest request
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence")
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence"
+        )
+
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
         Assert.Equal(before, TestSupport.readRelative root evidencePath)
 
@@ -763,7 +768,12 @@ evidence:
         let report = TestSupport.runRequest request
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence")
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence"
+        )
+
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
         Assert.Equal(before, TestSupport.readRelative root evidencePath)
 

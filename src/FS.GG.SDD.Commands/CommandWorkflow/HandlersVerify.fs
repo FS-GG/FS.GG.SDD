@@ -452,8 +452,7 @@ module internal HandlersVerify =
                 elif
                     isProductionJourneyTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
                     && matches
-                       |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass")
+                       |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
                     && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactBytes))
                 then
                     if matches |> List.exists hasValidJourneyReceipt then
@@ -463,8 +462,7 @@ module internal HandlersVerify =
                 elif
                     isGameplayTestTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
                     && matches
-                       |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass")
+                       |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
                     && not (matches |> List.exists (satisfiesRequiredEvidenceKinds realTestEvidenceKinds))
                 then
                     "invalid", [ "evidence.classifiedRequirementTestObligationUnmet" ]

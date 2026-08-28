@@ -1280,8 +1280,7 @@ module internal HandlersEvidence =
                 elif
                     isProductionJourneyTagged obligation.RequiredSkillOrCapabilityTags
                     && matches
-                       |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass")
+                       |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
                     && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactBytes))
                 then
                     if matches |> List.exists hasValidJourneyReceipt then
@@ -1291,8 +1290,7 @@ module internal HandlersEvidence =
                 elif
                     not (List.isEmpty obligation.RequiredEvidenceKinds)
                     && matches
-                       |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass")
+                       |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
                     && not (
                         matches
                         |> List.exists (satisfiesRequiredEvidenceKinds obligation.RequiredEvidenceKinds)

@@ -179,8 +179,7 @@ module AuthoringDocsContractTests =
         | Ok declarations -> declarations
         | Error diagnostics -> failwith $"Documented evidence block did not parse:\n{text}\n{diagnostics}"
 
-    let private claimsPass (declaration: Evidence.EvidenceDeclaration) =
-        Evidence.claimsRealPass declaration
+    let private claimsPass (declaration: Evidence.EvidenceDeclaration) = Evidence.claimsRealPass declaration
 
     [<Fact>]
     let ``Documented pass evidence blocks claim pass under the live parser`` () =
