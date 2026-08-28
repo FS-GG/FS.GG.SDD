@@ -3,7 +3,7 @@
   "viewVersion": "1.0",
   "workId": "937-sdd-modernization",
   "targetId": "codex",
-  "generator": "FS.GG.SDD.Artifacts/1.5.0",
+  "generator": "FS.GG.SDD.Artifacts/2.0.0",
   "generated": true,
   "sources": [
     {
@@ -11,7 +11,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "dfc38cd290688330e462e0d74af306e8a35dfd62cc4cdde04180e7cd6e9c1653"
+        "value": "22ad6d8db71a9404c492344460a31ab4f7962a30362eb7b94decfb9971561d0e"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -19,14 +19,14 @@
   ],
   "behaviorModelDigest": {
     "algorithm": "sha256",
-    "value": "038dc35a8ee2e0d10b39702dd600a778f2e18039f208c8764827db14ebb871eb"
+    "value": "89862f6a6fde2a96a4565eef67689b54e6f4a223ed10eeea8edfdba19b9a1643"
   },
   "commands": [
     {
       "id": "T001",
       "title": "Implement requirement FR-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T001 (pending) covering AC-001, FR-001, PD-001.",
+      "purpose": "Carry out lifecycle task T001 (done) covering AC-001, FR-001, PD-001.",
       "relatedIds": [
         "AC-001",
         "FR-001",
@@ -37,7 +37,7 @@
       "id": "T002",
       "title": "Implement requirement FR-002",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T002 (pending) covering AC-001, FR-002, PD-002.",
+      "purpose": "Carry out lifecycle task T002 (done) covering AC-001, FR-002, PD-002.",
       "relatedIds": [
         "AC-001",
         "FR-002",
@@ -48,7 +48,7 @@
       "id": "T003",
       "title": "Implement requirement FR-003",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T003 (pending) covering AC-001, FR-003, PD-003.",
+      "purpose": "Carry out lifecycle task T003 (done) covering AC-001, FR-003, PD-003.",
       "relatedIds": [
         "AC-001",
         "FR-003",
@@ -59,7 +59,7 @@
       "id": "T004",
       "title": "Implement requirement FR-004",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T004 (pending) covering AC-001, FR-004, PD-004.",
+      "purpose": "Carry out lifecycle task T004 (done) covering AC-001, FR-004, PD-004.",
       "relatedIds": [
         "AC-001",
         "FR-004",
@@ -70,7 +70,7 @@
       "id": "T005",
       "title": "Implement requirement FR-005",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T005 (pending) covering AC-001, FR-005, PD-005.",
+      "purpose": "Carry out lifecycle task T005 (done) covering AC-001, FR-005, PD-005.",
       "relatedIds": [
         "AC-001",
         "FR-005",
@@ -81,7 +81,7 @@
       "id": "T006",
       "title": "Update contract surface PC-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T006 (pending) covering PC-001, PD-001.",
+      "purpose": "Carry out lifecycle task T006 (done) covering PC-001, PD-001.",
       "relatedIds": [
         "PC-001",
         "PD-001"
@@ -91,7 +91,7 @@
       "id": "T007",
       "title": "Record verification evidence VO-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T007 (pending) covering PC-001, PD-001, VO-001.",
+      "purpose": "Carry out lifecycle task T007 (done) covering PC-001, PD-001, VO-001.",
       "relatedIds": [
         "PC-001",
         "PD-001",
@@ -102,7 +102,7 @@
       "id": "T008",
       "title": "Handle migration posture PM-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T008 (pending) covering PC-001, PM-001.",
+      "purpose": "Carry out lifecycle task T008 (done) covering PC-001, PM-001.",
       "relatedIds": [
         "PC-001",
         "PM-001"
@@ -112,7 +112,7 @@
       "id": "T009",
       "title": "Refresh generated view impact GV-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T009 (pending) covering GV-001, PD-001.",
+      "purpose": "Carry out lifecycle task T009 (done) covering GV-001, PD-001.",
       "relatedIds": [
         "GV-001",
         "PD-001"

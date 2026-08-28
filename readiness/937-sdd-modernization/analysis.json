@@ -4,7 +4,7 @@
   "workId": "937-sdd-modernization",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.5.0",
+  "generator": "FS.GG.SDD.Artifacts/2.0.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -32,6 +32,16 @@
       "digest": {
         "algorithm": "sha256",
         "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": "readiness/937-sdd-modernization/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "22ad6d8db71a9404c492344460a31ab4f7962a30362eb7b94decfb9971561d0e"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "bc30094f6816bcc4ca5bb4f9b85a3715263e7fa2a887ce2f88c5434a936e01c4"
+        "value": "ca8a0385cd9e2e10c6d30365b84bacac0341d3be48d6671b777ce48f8ef527cc"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -396,7 +406,7 @@
     {
       "path": "readiness/937-sdd-modernization/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],
