@@ -11,7 +11,7 @@ sourceAnalysis: readiness/937-sdd-modernization/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/937-sdd-modernization/analysis.json
-    digest: ef668695f470d8f7e948f293a85dfcfd16aa470c49fcd583c15b20964e634a3d
+    digest: e6ef8e3b43133d04f7b58c2f96eea7d37a26641e7a5091e4ec21673f3ea79361
     schemaVersion: 1
   - label: checklist
     path: work/937-sdd-modernization/checklist.md
@@ -31,7 +31,7 @@ sourceSnapshots:
     schemaVersion: 1
   - label: tasks
     path: work/937-sdd-modernization/tasks.yml
-    digest: bc30094f6816bcc4ca5bb4f9b85a3715263e7fa2a887ce2f88c5434a936e01c4
+    digest: ca8a0385cd9e2e10c6d30365b84bacac0341d3be48d6671b777ce48f8ef527cc
     schemaVersion: 1
 evidence:
   - id: EV001
@@ -52,15 +52,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: ["Generated test fixtures are provenance metadata; the observed-run receipt binds the candidate execution."]
   - id: EV002
     kind: verification
@@ -80,15 +71,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [Classifier behavior is exercised by independently authored mutation cases.]
   - id: EV003
     kind: verification
@@ -108,15 +90,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [Protected-control wiring is asserted structurally and exercised in CI.]
   - id: EV004
     kind: verification
@@ -136,15 +109,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [Stable required contexts and classified skips are pinned by classifier tests.]
   - id: EV005
     kind: verification
@@ -164,15 +128,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [Exact-candidate independent critic review is a merge-boundary obligation.]
   - id: EV006
     kind: verification
@@ -192,15 +147,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [Public compatibility fields remain parseable and API baselines are current.]
   - id: EV007
     kind: verification
@@ -220,15 +166,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [The full command test report is recorded as observed execution.]
   - id: EV008
     kind: verification
@@ -248,15 +185,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [A legacy work package parses in dry-run mode without source rewrites.]
   - id: EV009
     kind: verification
@@ -276,15 +204,6 @@ evidence:
         path: tests/FS.GG.SDD.Commands.Tests/ObservedRunCommandTests.fs
     result: pass
     synthetic: true
-    observedRun:
-      source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:5b63da067ab9991699ba92a48cf4992af12b977cd6bed0339035d2dce3fbac24"
-      digestContract: exact-bytes-v1
-      candidateCommit: 9ae5020bb06920f71c760d43c1bc8e9d6afd967b
-      outcome: passed
-      passed: 1342
-      failed: 0
-      skipped: 0
     notes: [Generated guidance and manifests are regenerated from the candidate.]
 lifecycleNotes:
   - "Next lifecycle action: verify."
