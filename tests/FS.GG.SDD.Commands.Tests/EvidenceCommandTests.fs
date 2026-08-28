@@ -167,6 +167,15 @@ evidence:
 
         TestSupport.writeRelative root testReport (passingTrx 1)
 
+        for args in
+            [ [ "init"; "-q" ]
+              [ "config"; "user.email"; "evidence@example.invalid" ]
+              [ "config"; "user.name"; "evidence" ]
+              [ "add"; "-A" ]
+              [ "commit"; "-qm"; "tested candidate" ] ] do
+            let exitCode, _ = TestShared.ChildProcess.git root args
+            Assert.Equal(0, exitCode)
+
         let receiptReport =
             { TestSupport.evidenceRequest root workId title with
                 FromTestReport = Some testReport }

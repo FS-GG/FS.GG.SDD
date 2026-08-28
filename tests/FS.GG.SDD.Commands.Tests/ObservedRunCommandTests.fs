@@ -27,6 +27,19 @@ module ObservedRunCommandTests =
     let private initializedAnalyzedProject () =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeAnalyzedProject root workId title
+
+        let git args =
+            let exitCode, output = TestShared.ChildProcess.git root args
+            let rendered = String.concat " " args
+
+            if exitCode <> 0 then
+                failwith $"git {rendered} failed: {output}"
+
+        git [ "init"; "-q" ]
+        git [ "config"; "user.email"; "observed-run@example.invalid" ]
+        git [ "config"; "user.name"; "observed-run" ]
+        git [ "add"; "-A" ]
+        git [ "commit"; "-qm"; "fixture candidate" ]
         root
 
     let private trxWith passed failed =
@@ -67,6 +80,16 @@ module ObservedRunCommandTests =
         root
 
     let private runWithReport root report =
+        let git args =
+            let exitCode, output = TestShared.ChildProcess.git root args
+            let rendered = String.concat " " args
+
+            if exitCode <> 0 then
+                failwith $"git {rendered} failed: {output}"
+
+        git [ "add"; "-A" ]
+        git [ "commit"; "--allow-empty"; "-qm"; "tested candidate" ]
+
         { TestSupport.evidenceRequest root workId title with
             FromTestReport = report }
         |> TestSupport.runRequest
@@ -729,6 +752,51 @@ module ObservedRunCommandTests =
         match shipped.Ship with
         | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
         | None -> failwith "ship produced no summary"
+
+    [<Fact>]
+    let ``a source commit after the observed run invalidates verify and ship`` () =
+        let root = evidencedProjectClaimingPass ()
+        TestSupport.writeRelative root "src/App/Code.fs" "module App.Code\nlet value = 1\n"
+        TestSupport.writeRelative root reportPath (trxWith 5 0)
+        runWithReport root (Some reportPath) |> ignore
+
+        TestSupport.writeRelative root "src/App/Code.fs" "module App.Code\nlet value = 2\n"
+
+        let exitCode, output =
+            TestShared.ChildProcess.git root [ "commit"; "-am"; "source successor" ]
+
+        Assert.Equal(0, exitCode)
+        Assert.True(System.String.IsNullOrWhiteSpace output || output.Contains("source successor"))
+
+        let verified = runVerifyRequiringObserved root
+        Assert.Contains(verified.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match verified.Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+        Assert.Contains(shipped.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match shipped.Ship with
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
+
+    [<Fact>]
+    let ``a receipt-only descendant preserves the tested candidate binding`` () =
+        let root = evidencedProjectClaimingPass ()
+        TestSupport.writeRelative root reportPath (trxWith 5 0)
+        runWithReport root (Some reportPath) |> ignore
+
+        let exitCode, _ = TestShared.ChildProcess.git root [ "commit"; "-am"; "record receipt" ]
+        Assert.Equal(0, exitCode)
+
+        let verified = runVerifyRequiringObserved root
+        Assert.DoesNotContain(verified.Diagnostics, fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticError)
+
+        match verified.Verification with
+        | Some verification -> Assert.Equal("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
 
     /// **The FS.GG.SDD#350 failure leg, committed.** This is the boilerplate probe from the issue —
     /// a lifecycle walked on pure scaffolding, `result: pass` / `synthetic: false` on every

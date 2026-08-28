@@ -136,6 +136,13 @@ module CommandWorkflow =
                         @ (match model.Request.Command with
                            | Evidence -> syncReportReadEffects model
                            | _ -> [])
+                        // #937: stamp observed execution with the tested Git commit, then
+                        // re-check that only the receipt/readiness projection differs from it.
+                        @ (match model.Request.Command with
+                           | Evidence
+                           | Verify
+                           | Ship -> observedRunCandidateEffects workId model
+                           | _ -> [])
                         // Feature 105, Phase 3: the committed captures the framework-reference check
                         // resolves against. `Analyze` only — the paths become known once plan.md is
                         // read, so they join the same second wave as the cited-artifact probes.

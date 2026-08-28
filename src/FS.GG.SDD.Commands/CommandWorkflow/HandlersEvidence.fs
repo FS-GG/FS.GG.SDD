@@ -237,6 +237,30 @@ module internal HandlersEvidence =
     let private dischargedByARun (declaration: EvidenceDeclaration) =
         declaration.Kind = EvidenceKind.Verification && claimsRealPass declaration
 
+    let private candidateHeadEffect = RunProcess("git", [ "rev-parse"; "HEAD" ], "")
+
+    let private processResult effect model =
+        model.InterpretedEffects
+        |> List.tryPick (fun result ->
+            if effectKey result.Effect = effectKey effect then
+                result.Process
+            else
+                None)
+
+    let private candidateHead model =
+        processResult candidateHeadEffect model
+        |> Option.bind (fun result ->
+            let candidate = result.StandardOutput.Trim()
+
+            if
+                result.Started
+                && result.ExitCode = 0
+                && Regex.IsMatch(candidate, "^[a-fA-F0-9]{40,64}$", RegexOptions.CultureInvariant)
+            then
+                Some(candidate.ToLowerInvariant())
+            else
+                None)
+
     /// Resolve the receipt from the interpreted effect log: the report SDD actually read, parsed, and
     /// hashed. Returns the receipt (when there is one to record) and any blocking diagnostics.
     ///
@@ -297,7 +321,13 @@ module internal HandlersEvidence =
                                 run.Failed
                                 (claimants |> List.map _.Id.Value |> List.sort)
                             :: untypedAdvisory
-                    | Ok run -> Some run, untypedAdvisory
+                    | Ok run ->
+                        match candidateHead model with
+                        | Some candidate -> Some { run with CandidateCommit = candidate }, untypedAdvisory
+                        | None ->
+                            None,
+                            DiagnosticConstructors.observedRunCandidateUnavailable artifactPath
+                            :: untypedAdvisory
 
     /// Stamp the receipt onto every previously-unobserved obligation the run discharges. A feature can
     /// have independently-run server and client lanes, so a later report must not erase the durable
@@ -345,6 +375,54 @@ module internal HandlersEvidence =
         match syncReportPath model.Request with
         | Some path when not (Set.contains path alreadyPlanned) -> [ ReadFile path ]
         | _ -> []
+
+    let private candidateDiffEffect workId candidate =
+        RunProcess(
+            "git",
+            [ "diff"
+              "--quiet"
+              candidate
+              "--"
+              "."
+              $":(exclude)work/{workId}/evidence.yml"
+              $":(exclude)readiness/{workId}/**" ],
+            ""
+        )
+
+    let private observedCandidates workId model =
+        parseExistingEvidence workId model
+        |> fun (artifact, _, _) -> artifact
+        |> Option.toList
+        |> List.collect _.Evidence
+        |> List.choose _.ObservedRun
+        |> List.map _.CandidateCommit
+        |> List.filter (fun candidate ->
+            Regex.IsMatch(candidate, "^[a-fA-F0-9]{40,64}$", RegexOptions.CultureInvariant))
+        |> List.distinct
+
+    /// Git observations needed to stamp or validate exact-candidate execution.
+    /// The diff excludes only the receipt and generated readiness projection: those
+    /// may be committed after the tested commit, while any source/policy edit invalidates it.
+    let observedRunCandidateEffects workId model =
+        let required =
+            match model.Request.Command with
+            | Evidence when
+                (requestedTestReport model.Request).IsSome
+                || (requestedSyncReport model.Request).IsSome
+                ->
+                [ candidateHeadEffect ]
+            | Verify
+            | Ship -> observedCandidates workId model |> List.map (candidateDiffEffect workId)
+            | _ -> []
+
+        required |> List.filter (effectKey >> fun key -> not (hasInterpreted key model))
+
+    let observedRunCandidateIsCurrent workId model (run: ObservedRun) =
+        if not (Regex.IsMatch(run.CandidateCommit, "^[a-fA-F0-9]{40,64}$", RegexOptions.CultureInvariant)) then
+            false
+        else
+            processResult (candidateDiffEffect workId run.CandidateCommit) model
+            |> Option.exists (fun result -> result.Started && result.ExitCode = 0)
 
     /// A declaration whose CURRENT receipt is sourced from `reportPath` — the ones `--sync-observed-run`
     /// re-stamps. A receipt pointing at a DIFFERENT report is not one this TRX regenerated, so syncing
@@ -399,7 +477,10 @@ module internal HandlersEvidence =
                                   path
                                   run.Failed
                                   (holders |> List.map _.Id.Value |> List.sort) ]
-                        | Ok run -> Some run, []
+                        | Ok run ->
+                            match candidateHead model with
+                            | Some candidate -> Some { run with CandidateCommit = candidate }, []
+                            | None -> None, [ DiagnosticConstructors.observedRunCandidateUnavailable artifactPath ]
 
     /// Re-stamp the recomputed receipt onto every obligation whose current receipt is sourced from the
     /// synced report — and only those. Idempotent: syncing an unchanged TRX rewrites the same bytes,

@@ -212,6 +212,7 @@ module EvidenceRoundTripPropertyTests =
                           { Source = source
                             Digest = "sha256:" + System.String(hex)
                             DigestContract = "exact-bytes-v1"
+                            CandidateCommit = String.replicate 40 "a"
                             Outcome = (if failed = 0 then "passed" else "failed")
                             Passed = passed
                             Failed = failed
@@ -485,6 +486,7 @@ module EvidenceRoundTripPropertyTests =
                     { Source = "artifacts/test-results.trx"
                       Digest = "sha256:" + String.replicate 64 "a"
                       DigestContract = "exact-bytes-v1"
+                      CandidateCommit = String.replicate 40 "a"
                       Outcome = "passed"
                       Passed = 1630
                       Failed = 0

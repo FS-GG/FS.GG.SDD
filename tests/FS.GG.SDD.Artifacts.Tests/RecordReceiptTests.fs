@@ -194,6 +194,7 @@ module RecordReceiptTests =
                         { Source = "artifacts/test-results.trx"
                           Digest = sha "c"
                           DigestContract = "exact-bytes-v1"
+                          CandidateCommit = String.replicate 40 "c"
                           Outcome = "passed"
                           Passed = 12
                           Failed = 0

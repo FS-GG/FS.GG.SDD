@@ -813,19 +813,40 @@ module internal HandlersVerify =
                                 |> Option.bind (fun (yaml, _) ->
                                     parsePerformanceIntentYaml yaml |> Result.toOption |> Option.flatten)
 
-                            evidenceValidationDiagnostics
-                                workId
-                                specFacts
-                                clarificationFacts
-                                checklistFacts
-                                planFacts
-                                taskFacts
-                                performanceIntent
-                                currentSnapshots
-                                (citedArtifactExists model)
-                                (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
-                                (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
-                                artifact
+                            let ordinary =
+                                evidenceValidationDiagnostics
+                                    workId
+                                    specFacts
+                                    clarificationFacts
+                                    checklistFacts
+                                    planFacts
+                                    taskFacts
+                                    performanceIntent
+                                    currentSnapshots
+                                    (citedArtifactExists model)
+                                    (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
+                                    (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
+                                    artifact
+
+                            let staleCandidates =
+                                artifact.Evidence
+                                |> List.choose (fun declaration ->
+                                    declaration.ObservedRun
+                                    |> Option.bind (fun run ->
+                                        if
+                                            Option.isNone (observedRunInconsistency run)
+                                            && not (observedRunCandidateIsCurrent workId model run)
+                                        then
+                                            Some declaration.Id.Value
+                                        else
+                                            None))
+                                |> List.distinct
+                                |> List.sort
+
+                            if List.isEmpty staleCandidates then
+                                ordinary
+                            else
+                                ordinary @ [ observedRunStale (evidencePath workId) staleCandidates ]
 
                         let obligations = evidenceObligations taskFacts
 

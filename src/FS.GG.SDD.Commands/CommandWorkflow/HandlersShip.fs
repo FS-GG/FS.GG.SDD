@@ -569,6 +569,8 @@ module internal HandlersShip =
                                     observedRunIsCurrent
                                         (fun path -> snapshot path model |> Option.bind _.RawBytes)
                                         declaration
+                                    && (declaration.ObservedRun
+                                        |> Option.exists (observedRunCandidateIsCurrent workId model))
                                 ))
                             |> List.map _.Id.Value
                             |> List.distinct

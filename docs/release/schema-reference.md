@@ -241,7 +241,8 @@ meant *"the paperwork is consistent"* rather than *"this works"*.
 
 It is now a real number. `fsgg-sdd evidence --from-test-report <path>` **parses** a runner-produced
 report — **TRX** or **JUnit XML** — and records an **`observedRun` receipt** on each obligation the run
-discharges. Every field is derived from the report SDD read; none is authored:
+discharges. Report facts are derived from the report SDD read, and candidate identity is derived from
+the enclosing Git worktree; none is authored:
 
 ```yaml
 - id: EV001
@@ -252,6 +253,7 @@ discharges. Every field is derived from the report SDD read; none is authored:
     source: artifacts/test-results.trx         # cited: probed for existence at verify (#349)
     digest: "sha256:9f2c…"                     # SHA-256 of the exact report bytes, computed by SDD
     digestContract: exact-bytes-v1              # BOM and line endings are part of the evidence identity
+    candidateCommit: 4f6a…                      # immutable tested source candidate, resolved by SDD
     outcome: passed                            # DERIVED from the counts, never copied
     passed: 1630
     failed: 0
@@ -262,9 +264,14 @@ An obligation carrying a **passing** receipt counts as `observed`; one without c
 `selfAttested`. The report is a cited path, so a receipt whose report is later deleted turns its
 obligation `invalid` at `verify` through the existing `evidence.artifactNotFound` cascade.
 
-Receipts created before `digestContract: exact-bytes-v1` used normalized decoded text. They are
-classified as legacy rather than silently reinterpreted: retain the report and run
+Receipts created before `digestContract: exact-bytes-v1`, or without `candidateCommit`, are
+classified as legacy rather than silently reinterpreted. Retain the report and run
 `fsgg-sdd evidence --sync-observed-run <path>` to re-stamp an exact-byte receipt.
+
+The candidate remains current when the worktree differs only in the receipt itself or its generated
+`readiness/<id>/` projection. That narrow allowance avoids the impossible self-reference of storing a
+commit's own hash inside its tree. Any source, policy, test, or other lifecycle-input change makes
+`verify` and `ship` report `evidence.observedRunStale` until the suite is rerun.
 
 **SDD never runs a test.** ADR-0035 rejected shelling out to a runner: it would put toolchain
 knowledge inside a lifecycle tool that must also serve Rust, TypeScript, and Godot workspaces. SDD

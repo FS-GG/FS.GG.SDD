@@ -4,6 +4,7 @@ open System.IO
 open System.Text.Json
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.TestShared
 open Xunit
 
 /// Automated no-Governance lifecycle smoke (US2). Drives the existing command
@@ -276,6 +277,15 @@ module LifecycleSmokeTests =
 <TestRun id="performance-replay" name="run" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
   <ResultSummary outcome="Completed"><Counters total="5" executed="5" passed="5" failed="0" error="0" notExecuted="0" /></ResultSummary>
 </TestRun>"""
+
+        for args in
+            [ [ "init"; "-q" ]
+              [ "config"; "user.email"; "lifecycle@example.invalid" ]
+              [ "config"; "user.name"; "lifecycle" ]
+              [ "add"; "-A" ]
+              [ "commit"; "-qm"; "tested candidate" ] ] do
+            let exitCode, _ = TestShared.ChildProcess.git d.Root args
+            Assert.Equal(0, exitCode)
 
         let evidenceExit, evidenceOutput, evidenceError =
             TestSupport.runCliRaw

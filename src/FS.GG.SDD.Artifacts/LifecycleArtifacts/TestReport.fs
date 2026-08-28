@@ -156,6 +156,9 @@ module TestReport =
                                 { Source = source
                                   Digest = $"sha256:{digest.Value}"
                                   DigestContract = "exact-bytes-v1"
+                                  // The command handler stamps this from `git rev-parse HEAD` at
+                                  // the effect edge. The pure parser cannot observe a repository.
+                                  CandidateCommit = ""
                                   // Derived, never copied from the report's own summary attribute (FR-005):
                                   // TRX says `outcome="Completed"` for a run with failures, and JUnit has no
                                   // outcome at all. The counts are the only thing both formats agree on.

@@ -968,9 +968,17 @@ module internal DiagnosticConstructors =
         errorDiagnostic
             "evidence.observedRunStale"
             (Some path)
-            "An observedRun receipt no longer matches the exact bytes of its cited test report."
+            "An observedRun receipt no longer matches its exact tested candidate or the bytes of its cited test report."
             "Re-run the suite and then `fsgg-sdd evidence --sync-observed-run <report>` before verify or ship."
             ids
+
+    let observedRunCandidateUnavailable path =
+        errorDiagnostic
+            "evidence.observedRunCandidateUnavailable"
+            (Some path)
+            "The test report was readable, but the repository's immutable candidate commit could not be resolved."
+            "Run this command inside a Git worktree with a committed candidate, then re-run the suite and record the report."
+            []
 
     /// FS.GG.SDD#865. The record channel's twin of `observedRunInconsistent`, and the reason the record
     /// channel does not reopen FS.GG.SDD#350's hole: a record receipt is ALWAYS hand-written — there is

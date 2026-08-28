@@ -15,4 +15,4 @@ Classification is path-based, deterministic, promotion-only, and conservative:
 - `normal`: product implementation and tests without a protected-path match.
 - `high`: workflows, build/package policy, public signatures/contracts, release/migration/authority policy, formal specifications, classifier implementation, or unknown input.
 
-On pull requests, both sides of renames are inputs. On pushes, the previous and current commit are compared. Failure to obtain a valid comparison emits `high`; it does not abort before the required context can report.
+On pull requests, both sides of renames are inputs. Any rename or deletion promotes the whole comparison to `high`, independent of the paths' ordinary classes. On pushes, the previous and current commit are compared. Failure to obtain a valid comparison or malformed CLI input emits `high`; it does not abort before the required context can report.

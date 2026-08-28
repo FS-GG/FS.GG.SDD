@@ -52,6 +52,8 @@ module Evidence =
             Digest: string
             /// `exact-bytes-v1`; legacy receipts missing the field require explicit re-sync.
             DigestContract: string
+            /// Immutable Git commit whose source tree produced the report.
+            CandidateCommit: string
             Outcome: string
             Passed: int
             Failed: int
@@ -268,6 +270,7 @@ module Evidence =
             { Source: string option
               Digest: string option
               DigestContract: string option
+              CandidateCommit: string option
               Outcome: string option
               Passed: int
               Failed: int

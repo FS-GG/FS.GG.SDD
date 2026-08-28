@@ -63,6 +63,9 @@ module Evidence =
             /// `exact-bytes-v1` is the only current receipt contract. Missing fields parse as the
             /// legacy normalized-text contract and are deliberately rejected until re-synced.
             DigestContract: string
+            /// Immutable Git commit whose source tree produced the report. A receipt-only
+            /// descendant may carry the receipt without invalidating this binding.
+            CandidateCommit: string
             Outcome: string
             Passed: int
             Failed: int
@@ -1449,6 +1452,7 @@ module Evidence =
             let outcome = run.Outcome.Trim().ToLowerInvariant()
 
             run.DigestContract = "exact-bytes-v1"
+            && Regex.IsMatch(run.CandidateCommit, "^[a-fA-F0-9]{40,64}$", RegexOptions.CultureInvariant)
             && outcome = "passed"
             && run.Failed = 0
             && run.Passed > 0)
@@ -1484,6 +1488,8 @@ module Evidence =
         elif not (String.Equals(run.DigestContract, "exact-bytes-v1", StringComparison.Ordinal)) then
             Some
                 $"digestContract '{run.DigestContract}' is legacy; re-run evidence --sync-observed-run to migrate it to exact-bytes-v1"
+        elif not (Regex.IsMatch(run.CandidateCommit, "^[a-fA-F0-9]{40,64}$", RegexOptions.CultureInvariant)) then
+            Some "candidateCommit is missing or is not an immutable Git commit id; re-run evidence --sync-observed-run"
         elif String.IsNullOrWhiteSpace run.Source then
             Some "source names no report"
         else
@@ -1746,6 +1752,7 @@ module Evidence =
             { Source: string option
               Digest: string option
               DigestContract: string option
+              CandidateCommit: string option
               Outcome: string option
               Passed: int
               Failed: int
@@ -1755,6 +1762,7 @@ module Evidence =
             { Source = None
               Digest = None
               DigestContract = None
+              CandidateCommit = None
               Outcome = None
               Passed = 0
               Failed = 0
@@ -1765,6 +1773,8 @@ module Evidence =
               ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
               ArtifactCodec.optionalScalar "digestContract" (fun r -> r.DigestContract) (fun v r ->
                   { r with DigestContract = v })
+              ArtifactCodec.optionalScalar "candidateCommit" (fun r -> r.CandidateCommit) (fun v r ->
+                  { r with CandidateCommit = v })
               ArtifactCodec.optionalScalar "outcome" (fun r -> r.Outcome) (fun v r -> { r with Outcome = v })
               ArtifactCodec.intScalar "passed" 0 (fun r -> r.Passed) (fun v r -> { r with Passed = v })
               ArtifactCodec.intScalar "failed" 0 (fun r -> r.Failed) (fun v r -> { r with Failed = v })
@@ -1782,6 +1792,7 @@ module Evidence =
                     { Source = source
                       Digest = digest
                       DigestContract = draft.DigestContract |> Option.defaultValue "normalized-text-v1"
+                      CandidateCommit = draft.CandidateCommit |> Option.defaultValue ""
                       Outcome = draft.Outcome |> Option.defaultValue ""
                       Passed = draft.Passed
                       Failed = draft.Failed
@@ -1792,6 +1803,7 @@ module Evidence =
             { Source = Some run.Source
               Digest = Some run.Digest
               DigestContract = Some run.DigestContract
+              CandidateCommit = Some run.CandidateCommit
               Outcome = Some run.Outcome
               Passed = run.Passed
               Failed = run.Failed

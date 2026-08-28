@@ -493,6 +493,7 @@ module ArtifactCodecTests =
                         { Source = "observedsourceval"
                           Digest = "sha256:" + String.replicate 64 "b"
                           DigestContract = "exact-bytes-v1"
+                          CandidateCommit = String.replicate 40 "b"
                           Outcome = "passed"
                           Passed = 7
                           Failed = 0

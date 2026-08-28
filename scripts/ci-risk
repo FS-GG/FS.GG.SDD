@@ -6,6 +6,16 @@ usage() {
   exit 2
 }
 
+emit_high() {
+  local why="$1"
+  printf 'profile=high\n'
+  printf 'test_tier=full\n'
+  printf 'protected_controls=true\n'
+  printf 'reason=%s\n' "$why"
+  printf 'paths=\n'
+  exit 0
+}
+
 paths=()
 base=""
 head=""
@@ -18,10 +28,12 @@ while [ $# -gt 0 ]; do
       break
       ;;
     --base)
+      [ $# -ge 2 ] || emit_high 'comparison unavailable or malformed'
       base="${2:-}"
       shift 2
       ;;
     --head)
+      [ $# -ge 2 ] || emit_high 'comparison unavailable or malformed'
       head="${2:-}"
       shift 2
       ;;
@@ -29,12 +41,13 @@ while [ $# -gt 0 ]; do
       usage
       ;;
     *)
-      usage
+      emit_high 'classifier input malformed'
       ;;
   esac
 done
 
 reason=""
+structural_change=false
 
 if [ ${#paths[@]} -eq 0 ] && { [ -n "$base" ] || [ -n "$head" ]; }; then
   if [ -z "$base" ] || [ -z "$head" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null || ! git cat-file -e "$head^{commit}" 2>/dev/null; then
@@ -43,6 +56,12 @@ if [ ${#paths[@]} -eq 0 ] && { [ -n "$base" ] || [ -n "$head" ]; }; then
     # --no-renames deliberately reports both sides of renames. A deleted protected
     # path remains protected even when its replacement looks harmless.
     mapfile -t paths < <(git diff --name-only --no-renames "$base" "$head")
+    # A rename or deletion is structural even when both path names would otherwise
+    # be Small/Normal. Treat it as High independently of extension or destination.
+    if ! git diff --quiet --diff-filter=DR "$base" "$head"; then
+      structural_change=true
+      reason="rename or deletion present"
+    fi
   fi
 fi
 
@@ -71,6 +90,9 @@ for raw in "${paths[@]}"; do
     .claude/skills/*|.codex/skills/*|.agents/skills/*|\
     docs/release/*|docs/decisions/*|docs/api-surface/*|work/*/plan.md|work/*/contracts/*|\
     src/FS.GG.Contracts/*|src/*/TypedSpecifications/*|tests/quint-*|\
+    src/FS.GG.SDD.Commands/CommandWorkflow/*|\
+    src/FS.GG.SDD.Artifacts/LifecycleArtifacts/Evidence.fs|\
+    src/FS.GG.SDD.Artifacts/LifecycleArtifacts/TestReport.fs|\
     *.fsi|*.sln|Directory.Build.*|Directory.Packages.*|packages.lock.json|*/packages.lock.json|\
     NuGet.Config|global.json)
       high_paths+=("$path")
@@ -89,6 +111,10 @@ for raw in "${paths[@]}"; do
       ;;
   esac
 done
+
+if [ "$structural_change" = true ]; then
+  promote 2
+fi
 
 if [ ${#paths[@]} -eq 0 ]; then
   rank=2
