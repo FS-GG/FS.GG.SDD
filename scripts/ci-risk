@@ -59,7 +59,7 @@ promote() {
 for raw in "${paths[@]}"; do
   path="${raw#./}"
 
-  if [ -z "$path" ] || [[ "$path" = /* ]] || [[ "/$path/" = *'/../'* ]] || [[ "$path" == *$'\n'* ]]; then
+  if [ -z "$path" ] || [[ "$path" = /* ]] || [[ "/$path/" = *'/../'* ]] || [[ "$path" == *$'\n'* ]] || [[ "$path" == *$'\r'* ]]; then
     high_paths+=("${path:-<empty>}")
     promote 2
     continue
@@ -117,8 +117,12 @@ case "$rank" in
 esac
 
 reason="${reason//$'\n'/ }"
+reason="${reason//$'\r'/ }"
+paths_output="${paths[*]}"
+paths_output="${paths_output//$'\n'/ }"
+paths_output="${paths_output//$'\r'/ }"
 printf 'profile=%s\n' "$profile"
 printf 'test_tier=%s\n' "$test_tier"
 printf 'protected_controls=%s\n' "$protected"
 printf 'reason=%s\n' "$reason"
-printf 'paths=%s\n' "${paths[*]}"
+printf 'paths=%s\n' "$paths_output"

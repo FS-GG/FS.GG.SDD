@@ -57,6 +57,17 @@ empty="$($classifier --paths)"
 grep -qx 'profile=high' <<<"$empty"
 grep -qx 'protected_controls=true' <<<"$empty"
 
+# GitHub consumes this as a line protocol. An invalid path must select High without
+# being able to inject a second output key through CR/LF characters.
+injected="$($classifier --paths $'docs/ok.md\nprofile=small' $'docs/ok.md\rtest_tier=none')"
+grep -qx 'profile=high' <<<"$injected"
+test "$(grep -c '^profile=' <<<"$injected")" -eq 1
+test "$(grep -c '^test_tier=' <<<"$injected")" -eq 1
+if [[ "$injected" == *$'\r'* ]]; then
+  echo 'classifier output retained a carriage return' >&2
+  exit 1
+fi
+
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 git -C "$tmp" init -q
