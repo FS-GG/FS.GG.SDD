@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/937-sdd-modernization/ship.json",
-      "digest": "sha256:744b449365e52efa06e8ac7dd3f2b98e39569fdd86959a9f63ae97b86ae3619c",
+      "digest": "sha256:3165b0cf6714a0a8d8e63b9cc412dbfbb8ab42bc9d7935e21336c5768b042b3c",
       "schemaVersion": 1
     },
     {
       "path": "readiness/937-sdd-modernization/verify.json",
-      "digest": "sha256:6ce059b88f8384cde5ee7d4a9505d4ee115fc9bd0cdc38ee33d5df59c4537d56",
+      "digest": "sha256:fdd094104347ff6806cc9cf733e6e813fb464a07887e0302cdaf3a28b9516ad6",
       "schemaVersion": 1
     },
     {
       "path": "readiness/937-sdd-modernization/work-model.json",
-      "digest": "sha256:dfc38cd290688330e462e0d74af306e8a35dfd62cc4cdde04180e7cd6e9c1653",
+      "digest": "sha256:55cb2d8e7c7e89849de1f951352db473b62658fd35ed5ee03f5fd1270903e7c7",
       "schemaVersion": 1
     }
   ],
