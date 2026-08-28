@@ -4,10 +4,10 @@
   "workId": "937-sdd-modernization",
   "stage": "ship",
   "status": "shipReady",
-  "generator": "FS.GG.SDD.Artifacts/1.5.0",
+  "generator": "FS.GG.SDD.Artifacts/2.0.0",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "bb84f43aacc22678185fb56f5df84e9806193a450d0fc760c54973ba1f77ca31"
+    "value": "d31b579480555e10194fea39848e40c8c60070b22ac2dc0da6ba8b22a4353834"
   },
   "verificationReadiness": {
     "status": "verificationReady",
