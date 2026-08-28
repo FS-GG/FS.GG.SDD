@@ -54,11 +54,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: ["Generated test fixtures are provenance metadata; the observed-run receipt binds the candidate execution."]
@@ -82,11 +82,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [Classifier behavior is exercised by independently authored mutation cases.]
@@ -110,11 +110,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [Protected-control wiring is asserted structurally and exercised in CI.]
@@ -138,11 +138,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [Stable required contexts and classified skips are pinned by classifier tests.]
@@ -166,11 +166,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [Exact-candidate independent critic review is a merge-boundary obligation.]
@@ -194,11 +194,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [Public compatibility fields remain parseable and API baselines are current.]
@@ -222,11 +222,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [The full command test report is recorded as observed execution.]
@@ -250,11 +250,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [A legacy work package parses in dry-run mode without source rewrites.]
@@ -278,11 +278,11 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:d3370f07150397a0157ba4ef304e30ba71835b928f75c732a77932bbe750e745"
+      digest: "sha256:286d0418ff9e9584c5bd07f80b51e7130ccba6396d85a84b71565257f1c948ef"
       digestContract: exact-bytes-v1
-      candidateCommit: d2a72e052f2e20c74488d23662e765a39b45a191
+      candidateCommit: 8b3d8973c6bdcf7fe0cea8e57be5c43f7fcab99c
       outcome: passed
-      passed: 1339
+      passed: 1341
       failed: 0
       skipped: 0
     notes: [Generated guidance and manifests are regenerated from the candidate.]
