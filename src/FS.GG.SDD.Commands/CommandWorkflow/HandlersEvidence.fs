@@ -392,11 +392,20 @@ module internal HandlersEvidence =
     let private candidateEvidenceEffect workId candidate =
         RunProcess("git", [ "show"; $"{candidate}:work/{workId}/evidence.yml" ], "")
 
-    let private withoutExecutionReceipts (artifact: EvidenceArtifact) =
+    let private withoutExecutionReceipts workId (artifact: EvidenceArtifact) =
+        let readinessPrefix = $"readiness/{workId}/"
+
         { artifact with
             // Parser diagnostics are derived from the receipt being deliberately erased here; they
             // are not authored evidence semantics and therefore cannot participate in this comparison.
             Diagnostics = []
+            SourceSnapshots =
+                artifact.SourceSnapshots
+                |> List.map (fun source ->
+                    if source.Path.StartsWith(readinessPrefix, StringComparison.Ordinal) then
+                        { source with Digest = None }
+                    else
+                        source)
             Evidence =
                 artifact.Evidence
                 |> List.map (fun declaration ->
@@ -405,9 +414,10 @@ module internal HandlersEvidence =
                         JourneyReceipt = None }) }
 
     /// A receipt necessarily lands after the commit it names, so the candidate comparison permits the
-    /// generated observedRun/journeyReceipt blocks and nothing else in evidence.yml. Comparing decoded artifacts keeps
-    /// this rule semantic: notes, results, sources, obligations, and every other authored field remain
-    /// candidate-bound even if YAML framing or receipt field order changes.
+    /// generated observedRun/journeyReceipt blocks and the digest of an SDD-generated readiness
+    /// snapshot. Comparing decoded artifacts keeps this rule semantic: notes, results, source identity,
+    /// obligations, and every other authored field remain candidate-bound even if YAML framing or
+    /// receipt field order changes.
     let private candidateEvidenceIsReceiptOnly workId candidate model =
         match processResult (candidateEvidenceEffect workId candidate) model with
         | Some result when result.Started && result.ExitCode = 0 ->
@@ -415,7 +425,7 @@ module internal HandlersEvidence =
 
             match current, parseEvidenceArtifactForCommand (evidencePath workId) result.StandardOutput with
             | Some currentArtifact, Ok(candidateArtifact, _) ->
-                withoutExecutionReceipts currentArtifact = withoutExecutionReceipts candidateArtifact
+                withoutExecutionReceipts workId currentArtifact = withoutExecutionReceipts workId candidateArtifact
             | _ -> false
         | _ -> false
 
