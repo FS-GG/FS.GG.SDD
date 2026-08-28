@@ -233,6 +233,13 @@ module TestReportTests =
         Assert.False(isObserved (declarationWith "pass" false failingReceipt))
 
     [<Fact>]
+    let ``claimsRealPass treats synthetic as provenance rather than a readiness veto`` () =
+        Assert.True(claimsRealPass (declarationWith "pass" false None))
+        Assert.True(claimsRealPass (declarationWith "pass" true None))
+        Assert.False(claimsRealPass (declarationWith "failed" false None))
+        Assert.False(claimsRealPass (declarationWith "failed" true None))
+
+    [<Fact>]
     let ``a receipt claiming passed while carrying failures never discharges an obligation`` () =
         // `TestReport.parse` cannot produce this — `outcome` is derived. A hand-authored evidence.yml
         // can. It is blocked as `observedRunInconsistent`; `isObserved` refuses it independently, so
@@ -252,7 +259,7 @@ module TestReportTests =
 
     [<Fact>]
     let ``one observed run cannot launder a hand-asserted pass sitting beside it`` () =
-        // `obligationIsObserved` requires EVERY declaration claiming a real pass to be observed. An
+        // `obligationIsObserved` requires EVERY declaration claiming a pass to be observed. An
         // obligation discharged by two declarations, one with a receipt and one without, is NOT
         // observed — otherwise a single genuine run would launder any number of typed passes.
         let observed = declarationWith "pass" false passingReceipt
@@ -261,7 +268,7 @@ module TestReportTests =
         Assert.True(obligationIsObserved [ observed ])
         Assert.False(obligationIsObserved [ observed; asserted ])
 
-        // And the invariant #398 rests on: a real pass is either observed or self-attested, never both
+        // And the invariant #398 rests on: a pass is either observed or self-attested, never both
         // and never neither.
         for declaration in [ observed; asserted ] do
             Assert.NotEqual(isObserved declaration, isSelfAttested declaration)

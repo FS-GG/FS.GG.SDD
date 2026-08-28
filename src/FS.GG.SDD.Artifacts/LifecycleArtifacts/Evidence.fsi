@@ -454,8 +454,9 @@ module Evidence =
     /// Returns the reason, or `None` when the receipt is coherent.
     val observedRunInconsistency: run: ObservedRun -> string option
 
-    /// Does this declaration claim a real pass — `result: pass`, not disclosed `synthetic`? The
-    /// satisfaction rule, named once because the attestation split below partitions exactly it.
+    /// Does this declaration claim a pass? `synthetic` is provenance metadata and does not change
+    /// the authored result; observation decides whether the claim is usable at a protected boundary.
+    /// The satisfaction rule is named once because the attestation split below partitions exactly it.
     val claimsRealPass: declaration: EvidenceDeclaration -> bool
 
     /// Does this declaration discharge its obligation on the author's word alone? (FS.GG.SDD#398.)

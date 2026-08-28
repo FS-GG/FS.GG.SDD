@@ -1,5 +1,5 @@
 ---
-description: "Implement tasks with Elmish/MVU boundaries and real-evidence discipline."
+description: "Implement tasks with Elmish/MVU boundaries and candidate-bound evidence discipline."
 ---
 
 # /speckit.implement

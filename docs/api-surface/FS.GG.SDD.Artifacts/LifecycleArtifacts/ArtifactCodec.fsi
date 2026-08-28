@@ -92,9 +92,9 @@ module ArtifactCodec =
 
     /// An optional nested mapping decoded through a draft `'D`: read the sub-mapping into the draft
     /// (e.g. an option-carrying draft that reads null-aware), then `lift` it to the model field
-    /// `'F option` — `None` rejects the draft (e.g. a blank synthetic disclosure, keeping the
-    /// undisclosed-synthetic gate honest). `lower` projects the field back for rendering. Omits the
-    /// key when the field is `None`.
+    /// `'F option` — `None` rejects the draft (e.g. a blank optional provenance block rather than a
+    /// partially populated record). `lower` projects the field back for rendering. Omits the key when
+    /// the field is `None`.
     val optionalNestedVia:
         key: string ->
         subFields: FieldCodec<'D> list ->

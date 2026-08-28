@@ -97,14 +97,14 @@ module ExampleArtifactsContractTests =
             Assert.NotEmpty declarations
 
             // Feature 081 (#142): the corpus now also carries the canonical deferral shape.
-            // Each declaration must be EITHER a satisfying pass (result: pass, non-synthetic)
+            // Each declaration must be EITHER a satisfying pass (result: pass; synthetic is provenance)
             // OR a well-formed deferral carrying all four gate-required fields — so the
             // copyable evidence example can never teach a deferral the gate would reject.
             Assert.All(
                 declarations,
                 fun declaration ->
                     let result = declaration.Result.Trim().ToLowerInvariant()
-                    let isSatisfyingPass = result = "pass" && not declaration.Synthetic
+                    let isSatisfyingPass = Evidence.claimsRealPass declaration
 
                     let isWellFormedDeferral =
                         (result = "deferred" || declaration.Kind = Evidence.EvidenceKind.Deferral)

@@ -229,9 +229,9 @@ module ArtifactCodec =
         : FieldCodec<'M> =
         // An optional nested mapping decoded through a draft: read the sub-mapping into `'D` (e.g. an
         // option-carrying draft that reads null-aware), then `lift` it to the model field `'F option`
-        // — returning `None` rejects the draft (e.g. a blank synthetic disclosure, keeping the
-        // undisclosed-synthetic gate honest, FS.GG.SDD#180). `lower` projects the field back to the
-        // draft for rendering. Omits the key entirely when the field is `None`.
+        // — returning `None` rejects the draft (e.g. a blank optional provenance block rather than a
+        // partially populated record, FS.GG.SDD#180). `lower` projects the field back to the draft for
+        // rendering. Omits the key entirely when the field is `None`.
         { Key = key
           Read =
             fun mapping model ->

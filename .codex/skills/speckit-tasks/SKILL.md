@@ -26,8 +26,8 @@ sequence; tasks within a phase may run in parallel).
 ## Status legend
 
 - `[ ]` — pending
-- `[X]` — done with real evidence (or with synthetic evidence disclosed per
-  Principle V — see `/speckit.implement`)
+- `[X]` — done with candidate-bound execution appropriate to the selected risk
+  profile (see `/speckit.implement`)
 - `[-]` — skipped, with written rationale on the task line
 
 Never mark a failing task `[X]`. Never weaken an assertion to green a build —
@@ -38,8 +38,8 @@ narrow the scope and document it.
 - **Story grouping.** Tasks belong to a phase (Phase 1..N) and optionally a
   user story (`[US1]`, `[US2]`, ...). Keep phases sequential; stories within a
   phase may run in parallel.
-- **Tier annotation.** Mark each task `[T1]` or `[T2]` if the phase
-  classification differs from the spec's overall tier. Omit when it matches.
+- **Risk annotation.** Mark a task `[small]`, `[normal]`, or `[high]` only when
+  it differs from the feature's overall profile. Omit when it matches.
 - **Parallel-safe marker.** `[P]` means "no dependency on another incomplete
   task in this phase." Emit it as a hint where it holds.
 - **Cross-task dependencies.** When a task depends on a non-obvious earlier task

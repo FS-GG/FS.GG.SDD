@@ -1711,7 +1711,8 @@ module Evidence =
 
         // The disclosure's inner scalars read null-aware into an option-carrying draft (#180); the
         // caller lifts a fully-populated, non-blank draft to `Some SyntheticDisclosure` and everything
-        // else (bare null, absence, blank) to `None`, so the undisclosed-synthetic gate stays honest.
+        // else (bare null, absence, blank) to `None`. The block is optional provenance metadata, so an
+        // absent or blank block is absence rather than a readiness verdict.
         type DisclosureDraft =
             { StandsInFor: string option
               Reason: string option }
