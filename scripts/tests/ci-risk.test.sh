@@ -27,10 +27,49 @@ assert_profile high .github/workflows/gate.yml
 assert_profile high src/FS.GG.SDD.Commands/CommandTypes.fsi
 assert_profile high docs/release/migrations/next.md
 assert_profile high .specify/memory/constitution.md
+assert_profile high AGENTS.md
+assert_profile high CLAUDE.md
+assert_profile high .agents/policy.md
+assert_profile high .agents/skills/example/SKILL.md
+assert_profile high .claude/commands/review.md
+assert_profile high .claude/skills/example/SKILL.md
+assert_profile high .codex/instructions.md
+assert_profile high .codex/skills/example/SKILL.md
 assert_profile high work/937-sdd-modernization/plan.md
 assert_profile high work/937-sdd-modernization/contracts/public-schema.yml
 assert_profile high unknown/new-surface.xyz
 assert_profile high docs/guide.md src/FS.GG.SDD.Commands/CommandTypes.fs .github/workflows/gate.yml
+
+assert_protected_controls_from() {
+  local classifier_path="$1"
+  local authority_path="$2"
+  local result
+  result="$("$classifier_path" --paths "$authority_path")"
+  grep -qx 'profile=high' <<<"$result"
+  grep -qx 'test_tier=full' <<<"$result"
+  grep -qx 'protected_controls=true' <<<"$result"
+}
+
+# Root agent instructions are executable authority, not ordinary Markdown. Pin all three outputs,
+# then remove each literal independently and prove the same assertion fails on the escaped path.
+assert_protected_controls_from "$classifier" AGENTS.md
+assert_protected_controls_from "$classifier" CLAUDE.md
+
+mutation_tmp="$(mktemp -d)"
+trap 'rm -rf "$mutation_tmp"' EXIT
+for authority_path in AGENTS.md CLAUDE.md; do
+  mutant="$mutation_tmp/ci-risk-${authority_path}"
+  authority_literal="${authority_path//./\\.}"
+  sed "s/${authority_literal}|//" "$classifier" >"$mutant"
+  chmod +x "$mutant"
+
+  if assert_protected_controls_from "$mutant" "$authority_path" >/dev/null 2>&1; then
+    echo "removing $authority_path from the authority rule did not expose the protected-control escape" >&2
+    exit 1
+  fi
+done
+rm -rf "$mutation_tmp"
+trap - EXIT
 
 workflow="$repo_root/.github/workflows/gate.yml"
 assert_guard() {

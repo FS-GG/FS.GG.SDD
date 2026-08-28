@@ -87,7 +87,7 @@ for raw in "${paths[@]}"; do
   case "$path" in
     .github/workflows/*|.github/actions/*|.fsgg/*|.config/*|eng/*|scripts/*|\
     .specify/memory/constitution.md|.specify/presets/*|\
-    .claude/skills/*|.codex/skills/*|.agents/skills/*|\
+    AGENTS.md|CLAUDE.md|.agents/*|.claude/*|.codex/*|\
     docs/release/*|docs/decisions/*|docs/api-surface/*|work/*/plan.md|work/*/contracts/*|\
     src/FS.GG.Contracts/*|src/*/TypedSpecifications/*|tests/quint-*|\
     src/FS.GG.SDD.Commands/CommandWorkflow/*|\
