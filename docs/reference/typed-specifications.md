@@ -8,7 +8,7 @@ description: The typed specification kernel, requirements extension, canonical m
 
 # Typed Specifications
 
-`FS.GG.SDD.Artifacts` 1.5.0 provides the namespace
+`FS.GG.SDD.Artifacts` 2.0.0 provides the namespace
 `FS.GG.SDD.Artifacts.TypedSpecifications`. It is an additive package API; existing
 Standard SDD Markdown, commands, schemas, defaults, and exit codes are unchanged.
 

@@ -7,6 +7,6 @@
     <Compile Include="EvidenceParity.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FS.GG.SDD.Artifacts" Version="1.5.0" />
+    <PackageReference Include="FS.GG.SDD.Artifacts" Version="2.0.0" />
   </ItemGroup>
 </Project>

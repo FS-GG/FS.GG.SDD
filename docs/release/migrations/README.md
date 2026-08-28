@@ -33,6 +33,7 @@ Use [TEMPLATE.md](TEMPLATE.md) as the starting point for a new note.
 
 | Version | Note | Breaking changes |
 |---|---|---|
+| `2.0.0` | [`2.0.0.md`](2.0.0.md) | **(1)** `ObservedRun` adds `CandidateCommit`, changing the public F# record constructor; legacy receipts must be synchronized on their original tested candidate or replaced by a newly executed report. |
 | `1.0.0` | [`1.0.0.md`](1.0.0.md) | **(1)** `ObservedRun` adds the explicit exact-byte digest contract; legacy receipts must be re-synchronized. **(2)** `FileSnapshot` adds optional raw bytes so filesystem evidence can preserve exact content. |
 | `0.30.0` | [`0.30.0.md`](0.30.0.md) | **None enumerated** — the note opens *"This release is additive"*. It records the opt-in `{production-journey}` requirement class, whose schema-v1 journey receipt must come from FS.GG.Game `0.12.0` and be bound to the same passing observed test report; unclassified and `{gameplay}` requirements keep their existing evidence semantics. |
 | `0.27.0` | [`0.27.0.md`](0.27.0.md) | **(1)** Interactive and render-loop projects must declare `project.profile` and a typed `performanceIntent` in `spec.md` front matter before `analyze` can report `implementationReady`, and a later `evidence[].performanceBudget.intent` must equal that declaration. Non-interactive projects and legacy evidence keep their previous behavior. Carries `FS.GG.Contracts` `7.0.0` and governance-handoff contract `2.0.0`. |
@@ -49,7 +50,7 @@ obligation above admits them — that rule says an additive-only release **MUST 
 carry a note. Whether each page is better retitled, reclassified, or withdrawn is
 not settled here; the index's job is to be complete about what exists.
 
-The `1.0.0` release is **breaking** and therefore carries the note above. The move
+The `1.0.0` and `2.0.0` releases are **breaking** and therefore carry the notes above. The move
 from `0.32.0` to `1.0.0` was the required major bump for the breaking public F#
 record-shape changes.
 
@@ -57,8 +58,8 @@ The `migrations[]` array in [`release-readiness.json`](../release-readiness.json
 declares the notes of the release that artifact currently describes — not every
 note ever published — and a test asserts that each note it declares is for that
 release and exists on disk, so the obligation is a file and not a claim. An
-additive-only release therefore leaves `migrations[]` empty; that is the state the
-current line is in, and the per-release paragraphs below are its record. Every
+additive-only release therefore leaves `migrations[]` empty. The current `2.0.0`
+line is breaking and names its migration above. Every
 `<version>.md` note in this directory is listed in the index above, so the index —
 not `migrations[]` — is where a reader finds the notes earlier releases published.
 

@@ -412,7 +412,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "1.5.0"
+        "version": "2.0.0"
       },
       "sources": [
         {

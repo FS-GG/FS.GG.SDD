@@ -800,6 +800,33 @@ module ObservedRunCommandTests =
         | Some verification -> Assert.Equal("verificationReady", verification.Readiness)
         | None -> failwith "verify produced no summary"
 
+    [<Fact>]
+    let ``a committed non-receipt evidence edit invalidates the tested candidate`` () =
+        let root = evidencedProjectClaimingPass ()
+        TestSupport.writeRelative root reportPath (trxWith 5 0)
+        runWithReport root (Some reportPath) |> ignore
+
+        let exitCode, _ =
+            TestShared.ChildProcess.git root [ "commit"; "-am"; "record receipt" ]
+
+        Assert.Equal(0, exitCode)
+
+        TestSupport.readRelative root evidencePath
+        |> fun text -> text.Replace("notes: []", "notes: [\"changed after execution\"]")
+        |> TestSupport.writeRelative root evidencePath
+
+        let exitCode, _ =
+            TestShared.ChildProcess.git root [ "commit"; "-am"; "edit evidence meaning" ]
+
+        Assert.Equal(0, exitCode)
+
+        let verified = runVerifyRequiringObserved root
+        Assert.Contains(verified.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match verified.Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
     /// **The FS.GG.SDD#350 failure leg, committed.** This is the boilerplate probe from the issue —
     /// a lifecycle walked on pure scaffolding, `result: pass` / `synthetic: false` on every
     /// obligation, and nothing ever run — and under `--require-observed` it must NOT reach
@@ -1034,6 +1061,30 @@ module ObservedRunCommandTests =
                 Assert.Equal(6, run.Passed)
                 Assert.Equal(0, run.Failed)
                 Assert.Equal(digestOf (trxWith 6 0), run.Digest)
+
+    [<Fact>]
+    let ``sync cannot relabel an old report to a source successor`` () =
+        let root = receiptedProject 5
+
+        let exitCode, _ =
+            TestShared.ChildProcess.git root [ "commit"; "-am"; "record receipt" ]
+
+        Assert.Equal(0, exitCode)
+
+        TestSupport.writeRelative root "src/App/Code.fs" "module App.Code\nlet value = 2\n"
+        let exitCode, _ = TestShared.ChildProcess.git root [ "add"; "-A" ]
+        Assert.Equal(0, exitCode)
+
+        let exitCode, _ =
+            TestShared.ChildProcess.git root [ "commit"; "-qm"; "source successor" ]
+
+        Assert.Equal(0, exitCode)
+
+        let before = TestSupport.readRelative root evidencePath
+        let result = runWithSync root (Some reportPath)
+
+        Assert.Contains(result.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+        Assert.Equal(before, TestSupport.readRelative root evidencePath)
 
     [<Fact>]
     let ``sync is idempotent`` () =

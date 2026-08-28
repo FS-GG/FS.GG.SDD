@@ -266,11 +266,13 @@ obligation `invalid` at `verify` through the existing `evidence.artifactNotFound
 
 Receipts created before `digestContract: exact-bytes-v1`, or without `candidateCommit`, are
 classified as legacy rather than silently reinterpreted. Retain the report and run
-`fsgg-sdd evidence --sync-observed-run <path>` to re-stamp an exact-byte receipt.
+`fsgg-sdd evidence --sync-observed-run <path>` on the original tested candidate to re-stamp an
+exact-byte receipt. Sync preserves that candidate identity; it never relabels an old report to the
+current `HEAD`. After a source successor, rerun the suite and record a new receipt.
 
-The candidate remains current when the worktree differs only in the receipt itself or its generated
+The candidate remains current when the worktree differs only in generated execution receipts or its generated
 `readiness/<id>/` projection. That narrow allowance avoids the impossible self-reference of storing a
-commit's own hash inside its tree. Any source, policy, test, or other lifecycle-input change makes
+commit's own hash inside its tree. Any source, policy, test, non-receipt evidence, or other lifecycle-input change makes
 `verify` and `ship` report `evidence.observedRunStale` until the suite is rerun.
 
 **SDD never runs a test.** ADR-0035 rejected shelling out to a runner: it would put toolchain

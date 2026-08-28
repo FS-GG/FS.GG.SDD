@@ -104,7 +104,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("1.5.x", entry.SddVersionLine)
+        Assert.Equal("2.0.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -291,12 +291,15 @@ module ReleaseContractTests =
                     Path = "docs/release/migrations/9.9.9.md" } // names a file nobody wrote
         )
 
-    // ...and the classification of THIS release, pinned separately. The 1.0.1 patch republishes
-    // the #857 determinism fix without a breaking public-contract change.
+    // ...and the classification of THIS release, pinned separately. CandidateCommit changes the
+    // positional constructor of a public F# record, so 2.0.0 must carry exactly its migration note.
     [<Fact>]
-    let ``T023 this patch release carries no migration note`` () =
-        Assert.False(migrationNoteRequired Clarifying)
-        Assert.Empty release.Migrations
+    let ``T023 this breaking release carries its migration note`` () =
+        Assert.True(migrationNoteRequired Breaking)
+        let note = Assert.Single release.Migrations
+        Assert.Equal("2.0.0", note.Version)
+        Assert.Equal("docs/release/migrations/2.0.0.md", note.Path)
+        Assert.Contains(note.BreakingChanges, fun change -> change.Contains("CandidateCommit"))
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =

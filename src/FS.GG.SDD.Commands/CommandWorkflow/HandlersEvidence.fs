@@ -389,6 +389,36 @@ module internal HandlersEvidence =
             ""
         )
 
+    let private candidateEvidenceEffect workId candidate =
+        RunProcess("git", [ "show"; $"{candidate}:work/{workId}/evidence.yml" ], "")
+
+    let private withoutExecutionReceipts (artifact: EvidenceArtifact) =
+        { artifact with
+            // Parser diagnostics are derived from the receipt being deliberately erased here; they
+            // are not authored evidence semantics and therefore cannot participate in this comparison.
+            Diagnostics = []
+            Evidence =
+                artifact.Evidence
+                |> List.map (fun declaration ->
+                    { declaration with
+                        ObservedRun = None
+                        JourneyReceipt = None }) }
+
+    /// A receipt necessarily lands after the commit it names, so the candidate comparison permits the
+    /// generated observedRun/journeyReceipt blocks and nothing else in evidence.yml. Comparing decoded artifacts keeps
+    /// this rule semantic: notes, results, sources, obligations, and every other authored field remain
+    /// candidate-bound even if YAML framing or receipt field order changes.
+    let private candidateEvidenceIsReceiptOnly workId candidate model =
+        match processResult (candidateEvidenceEffect workId candidate) model with
+        | Some result when result.Started && result.ExitCode = 0 ->
+            let current, _, _ = parseExistingEvidence workId model
+
+            match current, parseEvidenceArtifactForCommand (evidencePath workId) result.StandardOutput with
+            | Some currentArtifact, Ok(candidateArtifact, _) ->
+                withoutExecutionReceipts currentArtifact = withoutExecutionReceipts candidateArtifact
+            | _ -> false
+        | _ -> false
+
     let private observedCandidates workId model =
         parseExistingEvidence workId model
         |> fun (artifact, _, _) -> artifact
@@ -406,13 +436,18 @@ module internal HandlersEvidence =
     let observedRunCandidateEffects workId model =
         let required =
             match model.Request.Command with
-            | Evidence when
-                (requestedTestReport model.Request).IsSome
-                || (requestedSyncReport model.Request).IsSome
-                ->
-                [ candidateHeadEffect ]
+            | Evidence when (requestedTestReport model.Request).IsSome -> [ candidateHeadEffect ]
+            | Evidence when (requestedSyncReport model.Request).IsSome ->
+                observedCandidates workId model
+                |> List.collect (fun candidate ->
+                    [ candidateDiffEffect workId candidate
+                      candidateEvidenceEffect workId candidate ])
             | Verify
-            | Ship -> observedCandidates workId model |> List.map (candidateDiffEffect workId)
+            | Ship ->
+                observedCandidates workId model
+                |> List.collect (fun candidate ->
+                    [ candidateDiffEffect workId candidate
+                      candidateEvidenceEffect workId candidate ])
             | _ -> []
 
         required |> List.filter (effectKey >> fun key -> not (hasInterpreted key model))
@@ -423,6 +458,7 @@ module internal HandlersEvidence =
         else
             processResult (candidateDiffEffect workId run.CandidateCommit) model
             |> Option.exists (fun result -> result.Started && result.ExitCode = 0)
+            && candidateEvidenceIsReceiptOnly workId run.CandidateCommit model
 
     /// A declaration whose CURRENT receipt is sourced from `reportPath` — the ones `--sync-observed-run`
     /// re-stamps. A receipt pointing at a DIFFERENT report is not one this TRX regenerated, so syncing
@@ -478,9 +514,26 @@ module internal HandlersEvidence =
                                   run.Failed
                                   (holders |> List.map _.Id.Value |> List.sort) ]
                         | Ok run ->
-                            match candidateHead model with
-                            | Some candidate -> Some { run with CandidateCommit = candidate }, []
-                            | None -> None, [ DiagnosticConstructors.observedRunCandidateUnavailable artifactPath ]
+                            let candidates =
+                                holders
+                                |> List.choose _.ObservedRun
+                                |> List.map _.CandidateCommit
+                                |> List.distinct
+
+                            match candidates with
+                            | [ candidate ] when
+                                holders
+                                |> List.choose _.ObservedRun
+                                |> List.forall (observedRunCandidateIsCurrent workId model)
+                                ->
+                                // Sync refreshes the report digest and counts for the SAME tested
+                                // candidate. It must never relabel an old report to today's HEAD.
+                                Some { run with CandidateCommit = candidate }, []
+                            | _ ->
+                                None,
+                                [ DiagnosticConstructors.observedRunStale
+                                      artifactPath
+                                      (holders |> List.map _.Id.Value |> List.sort) ]
 
     /// Re-stamp the recomputed receipt onto every obligation whose current receipt is sourced from the
     /// synced report — and only those. Idempotent: syncing an unchanged TRX rewrites the same bytes,

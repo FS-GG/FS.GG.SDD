@@ -250,7 +250,7 @@ module ReleaseContract =
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "1.5.x"
+            [ { SddVersionLine = "2.0.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -1136,8 +1136,11 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // This patch has no breaking public-contract change, so it declares no migration note.
-          Migrations = [] }
+          Migrations =
+            [ { Version = "2.0.0"
+                Path = "docs/release/migrations/2.0.0.md"
+                BreakingChanges =
+                  [ "ObservedRun adds CandidateCommit and changes the public F# record constructor arity" ] } ] }
 
     // ---- canonical serialization ----
 

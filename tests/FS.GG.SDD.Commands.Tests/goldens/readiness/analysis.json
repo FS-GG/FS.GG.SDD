@@ -4,7 +4,7 @@
   "workId": "068-readiness-golden",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.5.0",
+  "generator": "FS.GG.SDD.Artifacts/2.0.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
