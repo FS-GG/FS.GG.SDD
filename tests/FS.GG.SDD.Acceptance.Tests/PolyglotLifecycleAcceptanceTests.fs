@@ -259,6 +259,15 @@ module PolyglotLifecycleAcceptanceTests =
         copyFile fableJunit (Path.Combine(root, "artifacts", "fable.junit.xml"))
         copyFile consoleJunit (Path.Combine(root, "artifacts", "console.trx"))
 
+        for args in
+            [ [ "init"; "-q" ]
+              [ "config"; "user.email"; "polyglot@example.invalid" ]
+              [ "config"; "user.name"; "polyglot" ]
+              [ "add"; "-A" ]
+              [ "commit"; "-qm"; "tested candidate" ] ] do
+            let exitCode, _ = FS.GG.SDD.TestShared.TestShared.ChildProcess.git root args
+            Assert.Equal(0, exitCode)
+
         let importReport path =
             { TestSupport.evidenceRequest root workId "Polyglot lifecycle acceptance" with
                 FromTestReport = Some path }

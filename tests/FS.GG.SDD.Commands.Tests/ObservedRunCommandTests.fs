@@ -788,7 +788,9 @@ module ObservedRunCommandTests =
         TestSupport.writeRelative root reportPath (trxWith 5 0)
         runWithReport root (Some reportPath) |> ignore
 
-        let exitCode, _ = TestShared.ChildProcess.git root [ "commit"; "-am"; "record receipt" ]
+        let exitCode, _ =
+            TestShared.ChildProcess.git root [ "commit"; "-am"; "record receipt" ]
+
         Assert.Equal(0, exitCode)
 
         let verified = runVerifyRequiringObserved root
