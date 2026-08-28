@@ -54,9 +54,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -82,9 +82,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -110,9 +110,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -138,9 +138,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -166,9 +166,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -194,9 +194,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -222,9 +222,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -250,9 +250,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
@@ -278,9 +278,9 @@ evidence:
     synthetic: true
     observedRun:
       source: readiness/937-sdd-modernization/test-results/commands.trx
-      digest: "sha256:3ef3c8fa19639a18c289c6736089d176b32080f74e50dd3a29069cf00d62f0b7"
+      digest: "sha256:df30bdb775fc09610072a9c9294352cd883d74991c9971e45f985cc5a0ebbd9c"
       digestContract: exact-bytes-v1
-      candidateCommit: 1d3c5a4260a4e5c8057c51b4b8215b6141923c0b
+      candidateCommit: e2542f7aee7ae19dc1cd5025b8198b8325ca4cff
       outcome: passed
       passed: 1342
       failed: 0
