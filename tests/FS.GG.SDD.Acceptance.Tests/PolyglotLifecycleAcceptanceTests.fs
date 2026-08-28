@@ -157,6 +157,22 @@ module PolyglotLifecycleAcceptanceTests =
 
         replace count 0 text
 
+    let private clearObservedRuns (ids: Set<string>) (text: string) =
+        let folder (currentId, skipping, kept) (line: string) =
+            if line.StartsWith("  - id: ", StringComparison.Ordinal) then
+                let id = line.Substring("  - id: ".Length).Trim()
+                Some id, false, line :: kept
+            elif line = "    observedRun:" && currentId |> Option.exists ids.Contains then
+                currentId, true, kept
+            elif skipping && line.StartsWith("      ", StringComparison.Ordinal) then
+                currentId, true, kept
+            else
+                currentId, false, line :: kept
+
+        text.Split('\n')
+        |> Array.fold folder (None, false, [])
+        |> fun (_, _, kept) -> kept |> List.rev |> String.concat "\n"
+
     [<Fact>]
     let ``one lifecycle imports real TRX and JUnit reports without a language taxonomy`` () =
         let reportsRoot = Path.Combine(fixtureRoot, "results")
@@ -252,12 +268,17 @@ module PolyglotLifecycleAcceptanceTests =
 
         evidenceText root workId
         |> onlyFirstObligationClaimsPass
+        |> activateMissing 4
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
         copyFile trx (Path.Combine(root, "artifacts", "server.trx"))
         copyFile junit (Path.Combine(root, "artifacts", "client.junit.xml"))
         copyFile fableJunit (Path.Combine(root, "artifacts", "fable.junit.xml"))
         copyFile consoleJunit (Path.Combine(root, "artifacts", "console.trx"))
+
+        // Commit the same canonical evidence representation that later imports update. This keeps
+        // the candidate immutable apart from generated execution receipts.
+        TestSupport.runEvidence root workId "Polyglot lifecycle acceptance" |> ignore
 
         for args in
             [ [ "init"; "-q" ]
@@ -282,22 +303,23 @@ module PolyglotLifecycleAcceptanceTests =
         importReport "artifacts/server.trx" |> assertNoErrors
         Assert.Contains("source: artifacts/server.trx", evidenceText root workId)
 
-        // Reactivate the client obligations. EV001 retains the TRX receipt, while the newly
-        // pass-claiming obligations are still unobserved and can receive the JUnit receipt.
+        // All obligation semantics were committed before execution. Clear only generated receipt
+        // blocks between imports so each real runner format occupies its own lane while every receipt
+        // remains bound to the same immutable candidate.
         evidenceText root workId
-        |> activateMissing 2
+        |> clearObservedRuns (set [ "EV002"; "EV003"; "EV004"; "EV005" ])
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
         importReport "artifacts/client.junit.xml" |> assertNoErrors
 
         evidenceText root workId
-        |> activateMissing 1
+        |> clearObservedRuns (set [ "EV003"; "EV004"; "EV005" ])
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
         importReport "artifacts/fable.junit.xml" |> assertNoErrors
 
         evidenceText root workId
-        |> activateMissing 1
+        |> clearObservedRuns (set [ "EV004"; "EV005" ])
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
         importReport "artifacts/console.trx" |> assertNoErrors
