@@ -783,6 +783,54 @@ module ObservedRunCommandTests =
         | None -> failwith "ship produced no summary"
 
     [<Fact>]
+    let ``restoring candidate bytes in the working tree cannot hide an untested HEAD`` () =
+        let root = evidencedProjectClaimingPass ()
+        let candidateSource = "module App.Code\nlet value = 1\n"
+        TestSupport.writeRelative root "src/App/Code.fs" candidateSource
+        TestSupport.writeRelative root reportPath (trxWith 5 0)
+        runWithReport root (Some reportPath) |> ignore
+
+        TestSupport.writeRelative root "src/App/Code.fs" "module App.Code\nlet value = 2\n"
+
+        let exitCode, _ =
+            TestShared.ChildProcess.git root [ "commit"; "-am"; "untested source successor" ]
+
+        Assert.Equal(0, exitCode)
+
+        // Reproduce the bypass exactly: the checkout looks like the tested candidate, but immutable
+        // HEAD still contains the untested successor that would merge.
+        TestSupport.writeRelative root "src/App/Code.fs" candidateSource
+
+        let verified = runVerifyRequiringObserved root
+        Assert.Contains(verified.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match verified.Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+        Assert.Contains(shipped.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match shipped.Ship with
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
+
+    [<Fact>]
+    let ``an untracked source file after the observed run invalidates the candidate`` () =
+        let root = evidencedProjectClaimingPass ()
+        TestSupport.writeRelative root reportPath (trxWith 5 0)
+        runWithReport root (Some reportPath) |> ignore
+
+        TestSupport.writeRelative root "src/App/Untracked.fs" "module App.Untracked\nlet value = 1\n"
+
+        let verified = runVerifyRequiringObserved root
+        Assert.Contains(verified.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match verified.Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+    [<Fact>]
     let ``a receipt-only descendant preserves the tested candidate binding`` () =
         let root = evidencedProjectClaimingPass ()
         TestSupport.writeRelative root reportPath (trxWith 5 0)

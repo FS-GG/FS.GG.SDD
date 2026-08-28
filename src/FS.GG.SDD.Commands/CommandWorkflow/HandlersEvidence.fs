@@ -239,6 +239,19 @@ module internal HandlersEvidence =
 
     let private candidateHeadEffect = RunProcess("git", [ "rev-parse"; "HEAD" ], "")
 
+    let private candidateWorkingTreeEffect workId =
+        RunProcess(
+            "git",
+            [ "status"
+              "--porcelain=v1"
+              "--untracked-files=all"
+              "--"
+              "."
+              $":(exclude)work/{workId}/evidence.yml"
+              $":(exclude)readiness/{workId}/**" ],
+            ""
+        )
+
     let private processResult effect model =
         model.InterpretedEffects
         |> List.tryPick (fun result ->
@@ -260,6 +273,13 @@ module internal HandlersEvidence =
                 Some(candidate.ToLowerInvariant())
             else
                 None)
+
+    let private candidateWorkingTreeIsClean workId model =
+        processResult (candidateWorkingTreeEffect workId) model
+        |> Option.exists (fun result ->
+            result.Started
+            && result.ExitCode = 0
+            && String.IsNullOrWhiteSpace result.StandardOutput)
 
     /// Resolve the receipt from the interpreted effect log: the report SDD actually read, parsed, and
     /// hashed. Returns the receipt (when there is one to record) and any blocking diagnostics.
@@ -323,8 +343,13 @@ module internal HandlersEvidence =
                             :: untypedAdvisory
                     | Ok run ->
                         match candidateHead model with
-                        | Some candidate -> Some { run with CandidateCommit = candidate }, untypedAdvisory
+                        | Some candidate when candidateWorkingTreeIsClean workId model ->
+                            Some { run with CandidateCommit = candidate }, untypedAdvisory
                         | None ->
+                            None,
+                            DiagnosticConstructors.observedRunCandidateUnavailable artifactPath
+                            :: untypedAdvisory
+                        | Some _ ->
                             None,
                             DiagnosticConstructors.observedRunCandidateUnavailable artifactPath
                             :: untypedAdvisory
@@ -376,12 +401,13 @@ module internal HandlersEvidence =
         | Some path when not (Set.contains path alreadyPlanned) -> [ ReadFile path ]
         | _ -> []
 
-    let private candidateDiffEffect workId candidate =
+    let private candidateHeadDiffEffect workId candidate =
         RunProcess(
             "git",
             [ "diff"
               "--quiet"
               candidate
+              "HEAD"
               "--"
               "."
               $":(exclude)work/{workId}/evidence.yml"
@@ -446,17 +472,20 @@ module internal HandlersEvidence =
     let observedRunCandidateEffects workId model =
         let required =
             match model.Request.Command with
-            | Evidence when (requestedTestReport model.Request).IsSome -> [ candidateHeadEffect ]
+            | Evidence when (requestedTestReport model.Request).IsSome ->
+                [ candidateHeadEffect; candidateWorkingTreeEffect workId ]
             | Evidence when (requestedSyncReport model.Request).IsSome ->
                 observedCandidates workId model
                 |> List.collect (fun candidate ->
-                    [ candidateDiffEffect workId candidate
+                    [ candidateHeadDiffEffect workId candidate
+                      candidateWorkingTreeEffect workId
                       candidateEvidenceEffect workId candidate ])
             | Verify
             | Ship ->
                 observedCandidates workId model
                 |> List.collect (fun candidate ->
-                    [ candidateDiffEffect workId candidate
+                    [ candidateHeadDiffEffect workId candidate
+                      candidateWorkingTreeEffect workId
                       candidateEvidenceEffect workId candidate ])
             | _ -> []
 
@@ -466,8 +495,9 @@ module internal HandlersEvidence =
         if not (Regex.IsMatch(run.CandidateCommit, "^[a-fA-F0-9]{40,64}$", RegexOptions.CultureInvariant)) then
             false
         else
-            processResult (candidateDiffEffect workId run.CandidateCommit) model
+            processResult (candidateHeadDiffEffect workId run.CandidateCommit) model
             |> Option.exists (fun result -> result.Started && result.ExitCode = 0)
+            && candidateWorkingTreeIsClean workId model
             && candidateEvidenceIsReceiptOnly workId run.CandidateCommit model
 
     /// A declaration whose CURRENT receipt is sourced from `reportPath` — the ones `--sync-observed-run`
