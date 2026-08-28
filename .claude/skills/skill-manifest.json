@@ -69,13 +69,13 @@
     {
       "id": "fs-gg-sdd-evidence",
       "scope": "process",
-      "sha256": "aa961e82e582f25ff1590bf69ed70d0753c964fa9847c4f36e1e672df6c4a2e8",
+      "sha256": "6da5483bf1da1fd601b54dbb449c8378be9b37905745ad800103e464b17c4abd",
       "resolvablePath": ".agents/skills/fs-gg-sdd-evidence/SKILL.md",
       "materializes-when": "always",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "aa961e82e582f25ff1590bf69ed70d0753c964fa9847c4f36e1e672df6c4a2e8"
+          "sha256": "6da5483bf1da1fd601b54dbb449c8378be9b37905745ad800103e464b17c4abd"
         }
       ]
     },

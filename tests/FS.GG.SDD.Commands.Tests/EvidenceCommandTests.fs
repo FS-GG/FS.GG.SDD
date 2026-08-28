@@ -1977,7 +1977,13 @@ evidence:
 
     [<Fact>]
     let ``a production journey requires a complete receipt bound to the observed report`` () =
-        let reportText = "journey report bytes"
+        let reportText =
+            """<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" notExecuted="0" />
+  </ResultSummary>
+</TestRun>"""
+
         let digest = digestOf reportText
         let declaration = journeyDeclaration digest
 
