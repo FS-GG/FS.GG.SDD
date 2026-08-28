@@ -68,14 +68,14 @@ evidence:
 """
 
     [<Fact>]
-    let ``evidence missingRequiredEvidence correction shows the non-synthetic pass form`` () =
+    let ``evidence missingRequiredEvidence correction shows the observed-run form`` () =
         // FR-008: the surfaced unsatisfied-obligation diagnostic shows what satisfies it.
         let diagnostic =
             FS.GG.SDD.Commands.CommandReports.missingRequiredEvidence evidencePath [ "EV001" ]
 
         Assert.Equal("evidence.missingRequiredEvidence", diagnostic.Id)
         Assert.Contains("result: pass", diagnostic.Correction)
-        Assert.Contains("synthetic: false", diagnostic.Correction)
+        Assert.Contains("current observed-run receipt", diagnostic.Correction)
 
     [<Fact>]
     let ``evidence creates authored evidence artifact with real filesystem evidence`` () =
@@ -251,7 +251,7 @@ evidence:
         )
 
     [<Fact>]
-    let ``evidence blocks undisclosed synthetic evidence without mutation`` () =
+    let ``synthetic disclosure is optional but a missing cited artifact still blocks`` () =
         let root = initializedAnalyzedProject ()
         let before = TestSupport.readRelative root evidencePath
 
@@ -262,7 +262,8 @@ evidence:
         let report = TestSupport.runRequest request
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence")
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence")
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
         Assert.Equal(before, TestSupport.readRelative root evidencePath)
 
     [<Fact>]
@@ -751,10 +752,7 @@ evidence:
 """
 
     [<Fact>]
-    let ``evidence blocks a synthetic pass whose syntheticDisclosure is bare null (#180)`` () =
-        // FS.GG.SDD#180: an explicit `standsInFor: null` / `reason: null` is *absence*, so the
-        // undisclosed-synthetic gate must fire exactly as it does when the block is omitted. Before
-        // the null-aware read these parsed to Some "null" and the gate was silently bypassed.
+    let ``bare-null syntheticDisclosure remains absence and provenance stays optional`` () =
         let root = initializedAnalyzedProject ()
         let before = TestSupport.readRelative root evidencePath
 
@@ -765,7 +763,8 @@ evidence:
         let report = TestSupport.runRequest request
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence")
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence")
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
         Assert.Equal(before, TestSupport.readRelative root evidencePath)
 
     [<Fact>]
@@ -1597,10 +1596,9 @@ evidence:
 
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
 
-    /// FR-006: a disclosed synthetic pass does not satisfy, so it is not held to the existence rule
-    /// either — it is already honest about being synthetic, and the cascade records it `synthetic`.
+    /// Provenance does not exempt a passing claim from the cited-artifact existence rule.
     [<Fact>]
-    let ``evidence does not block a disclosed synthetic pass citing a missing artifact`` () =
+    let ``evidence blocks a synthetic-marked pass citing a missing artifact`` () =
         let root = visualSurfaceScaffoldedProject ()
         let obligationId = visualObligationId root
 
@@ -1614,7 +1612,7 @@ evidence:
 
         let report = TestSupport.runEvidence root workId title
 
-        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
 
     // ---------------------------------------------------------------------------------------------
     // FS.GG.SDD#822 — a work item's own `readiness/<id>/ship-verdict.json` cannot exist yet at the
@@ -1688,11 +1686,9 @@ evidence:
         Assert.Equal<string list>([ ownShipVerdictPath ], selfShipVerdict.RelatedIds)
         Assert.Equal<string list>([ "evidence/frame-that-was-never-rendered.png" ], genericMissing.RelatedIds)
 
-    /// FR-005 / SC-002: a disclosed synthetic pass is honest, so it does not BLOCK — but it never
-    /// satisfies. The gate must not reclassify it `invalid`; the existing cascade records it
-    /// `synthetic`, which is unsatisfying by the satisfaction rule this feature inherits.
+    /// A visual-inspection pass must name a rendered artifact regardless of provenance metadata.
     [<Fact>]
-    let ``evidence records a synthetic visual-inspection pass as unsatisfying, not invalid`` () =
+    let ``evidence blocks a synthetic-marked visual pass with no rendered artifact`` () =
         let root = visualSurfaceScaffoldedProject ()
         let obligationId = visualObligationId root
 
@@ -1703,16 +1699,12 @@ evidence:
 
         let report = TestSupport.runEvidence root workId title
 
-        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             report.Diagnostics,
             fun diagnostic -> diagnostic.Id = "evidence.missingVisualInspectionArtifact"
         )
-
-        match report.Evidence with
-        | Some summary -> Assert.Equal(1, summary.SyntheticCount)
-        | None -> failwith "Expected an evidence summary."
 
     /// FR-006: a deferral is a first-class disposition. Its `result` is `deferred`, never `pass`, so
     /// the artifact gate must not fire on it — only the existing four-field deferral gate applies.
@@ -2009,11 +2001,10 @@ evidence:
         Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
 
     [<Fact>]
-    let ``a gameplay obligation is unmet by a synthetic pass`` () =
-        // Synthetic state can never discharge a gameplay obligation (the epic's core rule).
+    let ``synthetic provenance does not override a gameplay test-kind pass`` () =
         let disposition = gameplayDisposition (declarationOfKind "verification" true)
-        Assert.NotEqual("supported", disposition.State)
-        Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+        Assert.Equal("supported", disposition.State)
+        Assert.Equal(0, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
 
     [<Fact>]
     let ``classifiedObligationsUnmetCount counts the unmet classified obligation and not the supported one`` () =
@@ -2070,7 +2061,7 @@ tasks:
     requiredSkills: [fsharp]
     requiredEvidence: [EV001]
   - id: T002
-    title: Cover gameplay requirement FR-001 with a non-synthetic test
+    title: Cover gameplay requirement FR-001 with an observed test
     status: pending
     owner: codex
     requirements: [FR-001]

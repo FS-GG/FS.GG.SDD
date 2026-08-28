@@ -548,7 +548,7 @@ module internal TaskGraphAuthoring =
 
         // WI-4 (ADR-0048): the per-classified-FR gameplay obligation, one granularity finer than the
         // project-wide visual task. Every FR annotated `{gameplay}` earns a task discharged only by a
-        // real, non-synthetic test — the `gameplayTestCapability` tag makes the minted obligation carry
+        // test of the required kind — the `gameplayTestCapability` tag makes the minted obligation carry
         // `RequiredEvidenceKinds` (see HandlersEvidence). Its `sourceIds` are empty for the same reason
         // the visual task's are (an invented id would fail `unknownSources`); it links the FR through
         // `requirements`, and its title carries the FR number so re-derivation merges it stably. Emitted
@@ -560,7 +560,7 @@ module internal TaskGraphAuthoring =
             |> List.choose (fun reference ->
                 maybeTask
                     []
-                    $"Cover gameplay requirement {reference.RequirementId.Value} with a non-synthetic test"
+                    $"Cover gameplay requirement {reference.RequirementId.Value} with an observed test"
                     [ reference.RequirementId ]
                     []
                     primaryDependency

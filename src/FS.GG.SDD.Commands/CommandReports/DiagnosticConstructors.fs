@@ -741,7 +741,7 @@ module internal DiagnosticConstructors =
             "evidence.missingRequiredEvidence"
             (Some path)
             "One or more required evidence obligations are missing current evidence or accepted deferral."
-            "For each missing obligation id, add a matching evidence declaration with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral."
+            "For each missing obligation id, add a matching result: pass declaration and register a current observed-run receipt, or add an accepted deferral."
             ids
 
     let staleEvidence path ids =

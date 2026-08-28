@@ -200,8 +200,8 @@ module EarlyStageGuidanceContractTests =
             | Error diagnostics -> failwith $"Documented coverage line did not parse: {line}\n{diagnostics}"
 
     [<Fact>]
-    let ``the documented satisfied evidence block satisfies under the live parser`` () =
-        let blocks = taggedBlocks "evidence:satisfied" guidanceDoc
+    let ``the documented pass declaration parses under the live parser`` () =
+        let blocks = taggedBlocks "evidence:pass" guidanceDoc
         Assert.NotEmpty blocks
 
         for block in blocks do
@@ -220,9 +220,8 @@ module EarlyStageGuidanceContractTests =
                     declarations,
                     fun declaration ->
                         Assert.True(
-                            declaration.Result.Trim().ToLowerInvariant() = "pass"
-                            && not declaration.Synthetic,
-                            $"Guidance marks this declaration SATISFIED but the non-synthetic-pass rule rejects it: {declaration.Id.Value}"
+                            Evidence.claimsRealPass declaration,
+                            $"Guidance marks this as a pass declaration but the live predicate rejects it: {declaration.Id.Value}"
                         )
                 )
             | Error diagnostics -> failwith $"Documented evidence block did not parse:\n{text}\n{diagnostics}"

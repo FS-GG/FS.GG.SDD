@@ -35,7 +35,7 @@ module Verify =
             /// than assuming it. See `Evidence.isObserved`.
             Observed: bool
             /// WI-4 (ADR-0048): is this the disposition of a classified `{gameplay}` FR obligation —
-            /// the per-FR obligation only a real, non-synthetic test discharges? Carried per-disposition
+            /// the per-FR obligation only an observed test of the required kind discharges? Carried per-disposition
             /// so `ship` and the Governance handoff count "classified-FR obligations unmet" over the
             /// committed verify view without re-deriving it. Absent in a pre-WI-4 view ⇒ `false`.
             ClassifiedRequirement: bool

@@ -1,6 +1,6 @@
 ---
 name: fs-gg-sdd-lifecycle
-description: The map of the FS.GG spec-driven development (SDD) process — what it is, the canonical command order from charter to ship, the authored-source vs generated-view model, the doctrine, and how agents drive it with the fsgg-sdd CLI. Start here, then use the per-stage fs-gg-sdd-* skills.
+description: The map of the risk-scaled FS.GG SDD process — choose small, normal, or high, keep evidence candidate-bound, and use only decision-bearing lifecycle commands. Start here, then use a per-stage skill when that stage is required.
 ---
 
 # FS.GG SDD Lifecycle
@@ -25,10 +25,23 @@ those ids, evidence is declared explicitly, generated views are currency-checked
 and an optional Governance layer can inspect the same artifacts without taking
 over authoring.
 
-The payoff is not ceremony. It is that "ship readiness" for a change is a
-deterministic, inspectable fact rather than a judgement call.
+The payoff is not ceremony. It is concise, inspectable support for a merge
+decision. Artifact count is never a confidence metric.
 
-## The canonical order (memorize this)
+## Choose risk before stages
+
+- **Small:** prose, metadata, or localized maintenance that cannot change runtime
+  or protected policy. Record concise intent, run relevant cheap checks, and bind
+  review to the exact candidate.
+- **Normal:** ordinary product behavior. Use a specification, focused tests,
+  exact-candidate execution, and an independent critic.
+- **High:** authority, release, migration, destructive, security, public
+  contract, formal-model, build-policy, or CI-policy work. Use the full relevant
+  fail-closed controls.
+
+Unknown impact is high. Do not create empty stages merely to advance a counter.
+
+## The full high-risk order
 
 ```
 init → charter → specify → clarify → checklist → plan → tasks → analyze → [implement] → evidence → verify → ship
@@ -105,10 +118,10 @@ These are the load-bearing authoring contracts. The full reference is
   `**FR-001**`, a missing colon, or a separate-line `(covers AC-###)` — including a
   **soft-wrapped** bullet whose marker wrapped to the next line — is **counted but
   uncovered**. See [[fs-gg-sdd-checklist]].
-- **Evidence satisfaction:** an obligation is satisfied **only** by a matching
-  `evidence.yml` declaration with `result: pass` **and** `synthetic: false`. A
-  synthetic pass discloses a stand-in and does **not** satisfy; a deferral does
-  not satisfy. See [[fs-gg-sdd-evidence]].
+- **Evidence confidence:** `result: pass` is only a claim. Protected readiness
+  requires a coherent current runner or durable-record receipt. `synthetic` is
+  provenance metadata and does not override an observed outcome. See
+  [[fs-gg-sdd-evidence]].
 
 > **Deferral closure — a second sense of "deferral" the lifecycle does NOT gate
 > for you.** The evidence rule above is *within* a work item. A `DEC` /
@@ -184,8 +197,8 @@ Every command projects the same `CommandReport` three ways, precedence
 The scaffolded `.fsgg/constitution.md` is the highest-precedence engineering
 authority in a product. Core principles:
 
-1. **Specify before implementing** — every non-trivial change starts from a
-   written spec (outcome, scope, tier, surface impact, how it's verified).
+1. **Specify proportionately before implementing** — normal/high changes start
+   from a spec; small changes need concise intent and scope.
 2. **Structured artifacts are the machine contract** — Markdown authors; typed,
    schema-versioned artifacts are what tools rely on; when prose and structured
    data disagree, the plan declares which wins and which view records it.
@@ -195,9 +208,9 @@ authority in a product. Core principles:
 4. **Idiomatic simplicity is the default.**
 5. **Model–Update–Effect is the boundary for state and I/O** — pure transitions,
    I/O at the edge.
-6. **Test evidence is mandatory** — behavior-changing code ships with tests that
-   fail before and pass after; prefer real fixtures over mocks; disclose synthetic
-   stand-ins.
+6. **Candidate-bound test evidence is mandatory** — behavior-changing code ships
+   with observed execution and independent review bound to the exact candidate;
+   fixture provenance is metadata.
 7. **Agents and humans share one contract** — agent guidance is generated from the
    same lifecycle contract, never a second source of truth.
 8. **Observability and safe failure** — actionable diagnostics; distinguish
@@ -216,9 +229,12 @@ authority in a product. Core principles:
 > long-running/integration tests that assumed non-termination, not just to add
 > tests for the new behavior.
 
-Every change also declares a **tier**: Tier 1 (contracted — public surface,
-schema, command, artifact layout, integration; needs spec+plan+tasks+signatures+
-tests+docs) or Tier 2 (internal cleanup — needs spec+tests, baselines unchanged).
+Every change declares a **risk profile**. Small prose or metadata work uses a
+concise decision package and cheap relevant checks. Normal product behavior uses
+focused tests plus exact-candidate independent review. Authority, release,
+migration, destructive, security, public-contract, formal-model, build-policy,
+and CI-policy changes are High and retain their relevant fail-closed controls.
+Unknown impact is High.
 
 ## SDD is useful without Governance
 

@@ -13,7 +13,7 @@
 Every non-trivial change MUST follow this order:
 
 1. **Specify.** The feature spec names the user-visible outcome, scope
-   boundaries, change classification (Tier 1 / Tier 2), public API impact, and
+  boundaries, risk profile, public API impact, and
    verification approach.
 2. **Sketch in FSI.** The intended public surface is drafted as a `.fsi`
    signature and exercised interactively in F# Interactive before any `.fs`
@@ -118,7 +118,7 @@ Rationale: Elmish makes the hard part observable. State transitions become plain
 values that can be tested exhaustively, and I/O becomes an explicit contract that
 can be audited, interpreted, and exercised with real evidence.
 
-### V. Test Evidence Is Mandatory
+### V. Candidate-Bound Test Evidence Is Mandatory
 
 Behavior-changing code MUST include automated tests that fail before the change
 and pass after. Prefer tests that run against real dependencies (real
@@ -129,17 +129,16 @@ framework's skip mechanism, or task status `[-]`) with written rationale. Never
 mark a failing test as passed. Never weaken an assertion to green a build —
 narrow the scope instead, and document it.
 
-**Synthetic evidence** — mocks, stubs, fakes, hardcoded fixtures, in-memory
-substitutes, canned responses — MAY be used when real evidence is unavailable or
-prohibitively expensive AND a real-evidence path is planned or documented as
-infeasible. Every synthetic use MUST be disclosed at the use site with a comment
-naming the fact and reason (e.g. `// SYNTHETIC: no staging DB yet; real path
-tracked in <issue>`), MUST carry the token `Synthetic` in the test name, and MUST
-be listed in the PR description. Prefer explicit, ugly literals over clever
-factories that make synthetic data feel real.
+Bind meaningful execution and independent review to the exact candidate being
+accepted. Independently authored negative controls are stronger than author
+labels about whether fixture data is synthetic. Fixture provenance SHOULD be
+inspectable when it helps a reviewer understand limits, but it is metadata: it
+MUST NOT independently turn an observed pass into a failure or an authored pass
+into proof. Protected boundaries MUST reject missing, stale, malformed, failed,
+or candidate-mismatched execution receipts.
 
-Rationale: Synthetic evidence is the quiet failure mode of "passing" tests.
-Visible disclosure keeps it honest without requiring a governance platform.
+Rationale: Confidence follows what ran, against which candidate, under whose
+independent review—not the realism label attached to test data.
 
 ### VI. Observability and Safe Failure
 
@@ -151,19 +150,18 @@ swallowed exceptions are forbidden in critical paths.
 <!-- LOCKED -->
 ## Change Classification
 
-Every feature declares a tier in its spec:
+Every change selects the highest applicable risk profile:
 
-- **Tier 1 (contracted change)** — adds, removes, or modifies public API
-  surface; introduces new dependencies; changes inter-project contracts
-  (`.proto`, OpenAPI); alters observable behavior covered by existing specs.
-  Requires the full artifact chain: spec, plan, `.fsi` updates, surface-area
-  baseline updates, test evidence, and documentation updates.
-- **Tier 2 (internal change)** — refactors, performance, internal cleanup
-  with no behavioral change. Requires spec and tests; `.fsi` and baselines
-  remain untouched.
+- **Small** — prose, metadata, or localized maintenance that cannot alter
+  runtime behavior or protected policy. Use concise intent, relevant cheap
+  checks, candidate identity, and review.
+- **Normal** — ordinary product behavior. Use a specification, focused tests,
+  exact-candidate execution, and independent critic review.
+- **High** — public contracts, authority, release, migration, destructive,
+  security, formal-model, build-policy, or CI-policy changes. Retain the full
+  relevant fail-closed controls and migration analysis.
 
-A Tier 1 change that fails to update `.fsi` or baselines is a defect,
-regardless of whether tests pass.
+Unknown or indeterminate impact is high. Profiles only promote.
 
 <!-- TAILORABLE: tune per project. Keep the stack-exclusivity rule unless the
      project is intentionally polyglot. Pack output path, logging library,
@@ -200,16 +198,19 @@ loading any skill.
 <!-- LOCKED -->
 ## Development Workflow
 
-Use standard Spec Kit for feature work: specify → plan → tasks → implement.
-`spec.md`, `plan.md`, and `tasks.md` are authored artifacts, not a generated
-graph; no custom feature/product/project graph is the source of truth for
-ordinary work.
+Use the smallest decision-bearing workflow allowed by the selected risk profile.
+Standard Spec Kit remains available for normal and high-risk feature work;
+small changes do not require empty lifecycle hand-offs. `spec.md`, `plan.md`,
+and `tasks.md` are authored aids when they carry decisions, not success metrics.
 
-Repo-owned checks are kept only when they are narrow and pay for themselves —
+Repo-owned checks are risk-selected and kept only when they are narrow and pay for themselves —
 for example API surface-drift checks, package-skew checks, docs build checks,
 and release packaging checks. Each active check SHOULD have a short
 justification: what product contract it protects, when it runs, who owns it, and
-what it costs. No check requires an external governance repository.
+what it costs. Required context names remain stable, but expensive work MAY be
+skipped when a conservative classifier proves its subject cannot be affected.
+Unknown classification runs the high-risk path. No check requires an external
+governance repository.
 
 Any intentional deferral MUST be explicit in the spec or plan and scoped as a
 bounded follow-up.

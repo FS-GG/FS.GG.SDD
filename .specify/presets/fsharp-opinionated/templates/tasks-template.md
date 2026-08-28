@@ -7,8 +7,7 @@
 ## Status Legend
 
 - `[ ]` — pending
-- `[X]` — done with real evidence (or with synthetic evidence disclosed per
-  Principle V)
+- `[X]` — done with candidate-bound execution appropriate to the risk profile
 - `[-]` — skipped (with written rationale)
 
 Never mark a failing task `[X]`; never weaken an assertion to green a build.
@@ -21,9 +20,8 @@ against the packed library, a smoke run of the application, a manual walk-throug
 with transcript, or a screenshot captured under `readiness/`. Domain, model, or
 core-layer changes alone do **not** satisfy `[X]` for a `[US*]` task, even if
 their unit tests pass green. If the user-reachable surface is missing, stubbed, or
-not yet wired, mark `[ ]` (work continues). If the path can only be exercised with
-synthetic evidence for now, keep it honest: disclose the synthetic evidence per
-Principle V and open a tracking issue for the real wire-up.
+not yet wired, mark `[ ]` (work continues). Fixture provenance may explain
+limits, but it does not replace exercising the user-reachable path.
 
 For stateful or I/O-bearing stories, `[X]` also requires Elmish/MVU evidence:
 the public `Model` / `Msg` / `Effect` or `Cmd<Msg>` contract was exercised,
@@ -37,7 +35,7 @@ phase tasks; those are evaluated against their own phase verification.
 
 - **[P]** — parallel-safe (no dependency on another incomplete task in this phase)
 - **[US1]**, **[US2]**, … — user-story scope
-- **[T1]** / **[T2]** — Tier 1 (contracted) vs Tier 2 (internal) change
+- **[small]** / **[normal]** / **[high]** — override the feature profile when a task differs
 
 Phases run in sequence; tasks within a phase may run in parallel. When a task
 depends on a non-obvious earlier task, note it in the task description (e.g.
@@ -105,6 +103,6 @@ depends on a non-obvious earlier task, note it in the task description (e.g.
 
 ## Phase 5: Integration & Polish
 
-- [ ] T023 Surface-area baseline refresh (Tier 1 only)
+- [ ] T023 Surface-area baseline refresh when a public surface changed
 - [ ] T024 Run the packed library through the numbered example scripts and confirm none are broken
-- [ ] T025 Confirm every synthetic dependency is disclosed per Principle V (use-site comment, `Synthetic` test token, PR description entry)
+- [ ] T025 Confirm execution and independent review receipts bind the exact candidate; keep provenance notes concise and non-blocking

@@ -1,6 +1,6 @@
 ---
 name: fs-gg-sdd-evidence
-description: Stage 8 of the FS.GG SDD lifecycle — fsgg-sdd evidence authors work/<id>/evidence.yml declaring how each obligation is satisfied. Carries the load-bearing satisfaction rule (only result:pass AND synthetic:false satisfies) and the kind/result vocabularies. Use after implementing, before verify.
+description: Optional full-lifecycle evidence stage — record candidate-bound observed execution or durable records for obligations. Synthetic provenance remains visible metadata and does not determine readiness. Use when normal/high-risk work needs a typed evidence package.
 ---
 
 # Evidence (stage 8)
@@ -71,34 +71,31 @@ verification-kind source pointing at `<path>` (a declared pointer; its existence
 `verify`). It is inert without the flag. Neither behavior overwrites an obligation you have
 already authored (no-clobber).
 
-## The satisfaction rule (load-bearing)
+## The confidence rule (load-bearing)
 
-> An obligation is **satisfied** only by a matching declaration whose `result` is
-> `pass` **and** whose `synthetic` is `false`.
+> `result: pass` is a claim. At protected readiness, it satisfies only with a
+> coherent current `observedRun` or applicable durable `recordReceipt`.
 
-- `synthetic: true` + `result: pass` → disposition **synthetic**: discloses a
-  stand-in, does **not** satisfy.
+- `synthetic: true|false` describes provenance and remains visible in reports; it
+  does not override a coherent observed outcome.
 - `result: deferred` (or `kind: deferral`) → an accepted **deferral**, not a
   satisfaction.
 - `result: fail | missing | stale | blocked` → not satisfied.
 
-That rule is what **`evidence`** checks — necessary and sufficient *here*, and clearing
-it earns `evidenceReady`. It is **not** sufficient at **`verify`**: an obligation you
-satisfy with a real pass must additionally be *observed*. Read the next section before
-you author a run of `pass`/`false` and assume `verify` will be green.
+`evidenceReady` means the declarations are coherent; it is not proof of execution.
+`verify` applies the observed-receipt rule by default.
 
 ## Satisfied here is not observed at verify (the observed-run receipt)
 
-`evidenceReady` is not `verifyReady`. The satisfaction rule above (`result: pass ∧
-synthetic: false`) is *necessary but not sufficient* at `verify`: an obligation
-satisfied by a real pass must **also carry an `observedRun` receipt** — proof that a
-suite actually ran — or `verify` blocks with **`verify.unobservedRequiredTest`**. This
+`evidenceReady` is not `verifyReady`. An obligation claiming pass must carry an
+`observedRun` receipt—evidence that a suite actually ran—or `verify` blocks with
+**`verify.unobservedRequiredTest`**. This
 gate is **on by default** (the ADR-0035 stage-3b flip, since 0.14.0); `--no-require-observed`
 is the migration-window opt-out, not the normal path.
 
-So the common failure is real: author every obligation to `pass`/`false`, get
+So the common failure is real: author every obligation to `pass`, get
 `evidenceReady`, then watch `verify` block on obligations you thought were done. The
-satisfaction rule is where that pass is *declared*; the observed-run receipt is what
+result is where that pass is *declared*; the observed-run receipt is what
 makes it *count* at the merge boundary.
 
 **Earn the receipt.** Run your suite to a machine-readable report (a `.trx`), then
@@ -168,8 +165,8 @@ hand and silently desyncing the one you miss.
 **How each kind reaches a green `verify`.** Only a `verification`-kind pass can receive
 a receipt, so the observed rule lands differently per kind:
 
-- **`verification` (a test).** Real `pass` + `synthetic: false` **plus** an
-  `observedRun` from `--from-test-report`. This is the only kind a suite run can
+- **`verification` (a test).** `pass` plus an `observedRun` from
+  `--from-test-report`. This is the only kind a suite run can
   discharge, and the only kind that satisfies `verify` on a pass.
 - **`generated-view`.** Its currency is established by the **generators**, not by a test
   run — so it has *no honest observed run*, and a bare `result: pass` on it is
@@ -196,13 +193,11 @@ declared deferrals and still be coherent: it truthfully says "this obligation is
 satisfied yet, and here is why." That is strictly better than dressing an unfinished
 obligation up as done.
 
-The one thing never to do is convert a deferral into a **synthetic pass** to make a
-count look greener. Only `result: pass ∧ synthetic: false` satisfies, so a synthetic
-pass buys you nothing at `verify` and costs you the honesty the model exists to
-protect. When an obligation genuinely can't be satisfied in this cut (blocked
+The one thing never to do is convert a deferral into a **pass claim** merely to
+make a count look greener. A pass still needs a current receipt at `verify`.
+When an obligation genuinely can't be satisfied in this cut (blocked
 upstream, out of scope for now, awaiting a dependency), **defer it and say why** —
-that is the honest, first-class outcome. A run that ends *N real pass / M deferred /
-0 synthetic* is a healthy run.
+that is the honest, first-class outcome.
 
 ## Vocabularies
 
@@ -305,18 +300,19 @@ A repeatable sweep over the graph:
 
 1. **Group by origin ref.** Read each entry's `requirementRefs`/`planDecisionRefs`;
    obligations for the same FR/PD classify together.
-2. **Point real work at real proof.** For each obligation whose code + test exist, set
-   `result: pass`, `synthetic: false`, and `artifacts`/`source` to the actual test or
-   proof file. This is the only state that satisfies.
+2. **Point work at candidate-bound proof.** For each obligation whose code and test
+   exist, set `result: pass`, record provenance accurately, and attach the actual
+   artifact/source plus an observed-run receipt. The receipt, not `synthetic`, proves
+   execution.
 3. **Defer what isn't done — honestly.** For each obligation you can't satisfy in this
    cut, record a deferral (`result: deferred` / `kind: deferral`) with a `note` saying
    why. Deferrals are first-class (above); leaving some is expected, not a failure.
-4. **Never synthesize to fill a gap.** If you're tempted to mark something
-   `synthetic: true` just to clear it, defer it instead — a synthetic pass doesn't
-   satisfy anyway.
+4. **Never invent execution.** Generated fixtures are acceptable and must be labeled
+   accurately, but they do not replace an observed-run receipt. Defer work that did
+   not run.
 
-The end state is every obligation in a truthful disposition — a mix of real passes and
-declared deferrals, zero synthetic stand-ins.
+The end state is every obligation in a truthful disposition — candidate-bound passes
+and explicit deferrals, with provenance retained as metadata.
 
 ## Bulk-authoring a large obligation set
 
@@ -380,12 +376,12 @@ Discharge it by doing exactly that:
 Two rules are enforced, and both exist because a green suite over a
 self-contradicting spec once shipped an invisible ball:
 
-- **A `pass` must name a rendered artifact.** A non-synthetic `result: pass` with an
+- **A `pass` must name a rendered artifact.** A `result: pass` with an
   empty `artifacts:` and no `sourceRefs[]` `path`/`uri` blocks with
   `evidence.missingVisualInspectionArtifact`. A pass that names no image asserts that
   someone looked at a frame that does not exist.
-- **A `synthetic: true` pass never satisfies it**, exactly as for every other
-  obligation. Disclosing a stand-in is honest; it is not proof.
+- **Provenance does not waive the artifact.** `synthetic: true` remains visible,
+  but a passing claim still names what was inspected and carries observation.
 
 If you cannot render and look in this cut, **defer it** with the four deferral fields.
 A declared deferral is a first-class outcome (above); a synthetic pass is not a
@@ -401,18 +397,17 @@ This lifecycle `evidence.yml` is the **SDD evidence contract**. A product
 scaffolded by SDD may ship a *separate, unrelated* "evidence" document of its own
 (e.g. a rendering product's visual-evidence report) — that is **not** this file.
 
-## Real-vs-synthetic discipline
+## Provenance discipline
 
-Prefer real filesystem/process/schema artifacts. When a synthetic stand-in is
-unavoidable, set `synthetic: true` and disclose what real path it stands in for —
-the tool will correctly record it as not-satisfying rather than letting a stand-in
-masquerade as proof.
+Keep fixture provenance concise when it helps a reviewer understand limits. Set
+`synthetic: true` when useful and disclose what it stands in for, but do not
+mistake the label for a verdict—the runner receipt and candidate binding decide.
 
 ## Pitfalls
 
 - A typo in `kind` (e.g. `test`) silently becomes `verification` — your declared
   kind is lost. Use the exact vocabulary.
-- Marking work `synthetic: true` and expecting it to satisfy — it never does.
+- Expecting `synthetic: false` to prove execution—it is author-controlled metadata.
 - **An unescaped quote in free-text prose blocks the stage as a YAML syntax error.**
   `evidence.yml` is machine-generated with `notes`/`rationale`, so an apostrophe in a
   single-quoted scalar (`'RM1's shell'`) closes it early. Double it (`'RM1''s shell'`), or

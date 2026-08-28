@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo 'usage: scripts/ci-risk --paths [PATH ...] | --base SHA --head SHA' >&2
+  exit 2
+}
+
+paths=()
+base=""
+head=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --paths)
+      shift
+      paths=("$@")
+      break
+      ;;
+    --base)
+      base="${2:-}"
+      shift 2
+      ;;
+    --head)
+      head="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+reason=""
+
+if [ ${#paths[@]} -eq 0 ] && { [ -n "$base" ] || [ -n "$head" ]; }; then
+  if [ -z "$base" ] || [ -z "$head" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null || ! git cat-file -e "$head^{commit}" 2>/dev/null; then
+    reason="comparison unavailable or malformed"
+  else
+    # --no-renames deliberately reports both sides of renames. A deleted protected
+    # path remains protected even when its replacement looks harmless.
+    mapfile -t paths < <(git diff --name-only --no-renames "$base" "$head")
+  fi
+fi
+
+rank=0
+normal_paths=()
+high_paths=()
+small_paths=()
+
+promote() {
+  local candidate="$1"
+  if [ "$candidate" -gt "$rank" ]; then rank="$candidate"; fi
+}
+
+for raw in "${paths[@]}"; do
+  path="${raw#./}"
+
+  if [ -z "$path" ] || [[ "$path" = /* ]] || [[ "/$path/" = *'/../'* ]] || [[ "$path" == *$'\n'* ]]; then
+    high_paths+=("${path:-<empty>}")
+    promote 2
+    continue
+  fi
+
+  case "$path" in
+    .github/workflows/*|.github/actions/*|.fsgg/*|.config/*|eng/*|scripts/*|\
+    .specify/memory/constitution.md|.specify/presets/*|\
+    .claude/skills/*|.codex/skills/*|.agents/skills/*|\
+    docs/release/*|docs/decisions/*|docs/api-surface/*|work/*/plan.md|work/*/contracts/*|\
+    src/FS.GG.Contracts/*|src/*/TypedSpecifications/*|tests/quint-*|\
+    *.fsi|*.sln|Directory.Build.*|Directory.Packages.*|packages.lock.json|*/packages.lock.json|\
+    NuGet.Config|global.json)
+      high_paths+=("$path")
+      promote 2
+      ;;
+    src/*|tests/*)
+      normal_paths+=("$path")
+      promote 1
+      ;;
+    docs/*|specs/*|work/*|readiness/*|*.md|.specify/feature.json)
+      small_paths+=("$path")
+      ;;
+    *)
+      high_paths+=("$path")
+      promote 2
+      ;;
+  esac
+done
+
+if [ ${#paths[@]} -eq 0 ]; then
+  rank=2
+  reason="${reason:-no changed paths supplied}"
+fi
+
+case "$rank" in
+  0)
+    profile=small
+    test_tier=none
+    protected=false
+    reason="small-only paths: ${small_paths[*]}"
+    ;;
+  1)
+    profile=normal
+    test_tier=fast
+    protected=false
+    reason="normal paths: ${normal_paths[*]}"
+    ;;
+  *)
+    profile=high
+    test_tier=full
+    protected=true
+    reason="${reason:-high or unknown paths: ${high_paths[*]}}"
+    ;;
+esac
+
+reason="${reason//$'\n'/ }"
+printf 'profile=%s\n' "$profile"
+printf 'test_tier=%s\n' "$test_tier"
+printf 'protected_controls=%s\n' "$protected"
+printf 'reason=%s\n' "$reason"
+printf 'paths=%s\n' "${paths[*]}"

@@ -101,9 +101,9 @@ module internal EvidenceDomain =
                     if isRecordDischargeTagged task.RequiredSkills then
                         // A record obligation's correction must not tell the author to run a suite that
                         // cannot exist for it. Naming the receipt is the whole remedy.
-                        $"Add evidence {id} for {task.Id.Value} with result: pass, synthetic: false, and a recordReceipt naming the durable record that discharges it (kind: decision | issue | commit), or an accepted deferral linked to {task.Id.Value}."
+                        $"Add evidence {id} for {task.Id.Value} with result: pass and a recordReceipt naming the durable record that discharges it (kind: decision | issue | commit), or an accepted deferral linked to {task.Id.Value}."
                     else
-                        $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
+                        $"Add evidence {id} for {task.Id.Value} with result: pass, then register a current observed-run receipt, or add an accepted deferral linked to {task.Id.Value}." }))
         |> List.groupBy _.ObligationId
         |> List.map (fun (_, group) ->
             let mergedTags =

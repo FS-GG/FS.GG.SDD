@@ -34,11 +34,9 @@ fsgg-sdd verify --work <id>
 
 A verification view with: evidence dispositions, test dispositions, skill
 visibility, the task graph status validity, and lifecycle readiness, with a
-top-level readiness verdict. Crucially, **synthetic and missing evidence never
-count as satisfied** here — the disposition states include explicit
-`EvidenceSyntheticDisposition` / `EvidenceMissingDisposition` (and the test
-equivalents), so a synthetic stand-in shows up as disclosed-but-unsatisfied rather
-than passing silently.
+top-level readiness verdict. Missing, malformed, stale, failed, or unobserved
+claims never count as satisfied. Synthetic provenance remains visible in
+compatibility counts but does not override a coherent current observed outcome.
 
 ## The work-model boundary
 
@@ -51,9 +49,8 @@ generated `agent-commands/<target>/` guidance becomes available (see
 
 ## Pitfalls
 
-- Expecting `verify` to pass with synthetic-only or deferred evidence — it reports
-  them as not-satisfied. Supply real `result: pass`, `synthetic: false` evidence
-  for obligations that must close. See [[fs-gg-sdd-evidence]].
+- Expecting `verify` to pass on an authored `result: pass`—register a current
+  runner receipt (or applicable durable record). See [[fs-gg-sdd-evidence]].
 - Reading a stale `verify.json` — re-run after changing any source.
 
 ## Next

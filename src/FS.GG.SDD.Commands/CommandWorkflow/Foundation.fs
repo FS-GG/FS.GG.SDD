@@ -197,17 +197,13 @@ Semantic comment quality requires human judgment and cannot be completely
 enforced by automatic linting. Automated checks MAY catch structural omissions,
 but they MUST NOT claim semantic completeness.
 
-## Change Classification
+## Risk Profile
 
-Every change declares a tier in its spec:
-
-- **Tier 1 (contracted change):** public surface, schema, generated view, command,
-  artifact layout, agent-skill contract, or external integration. Requires a spec,
-  a plan, tasks, signatures where code exists, tests, docs, and migration notes
-  when applicable.
-- **Tier 2 (internal change):** implementation cleanup with no externally visible
-  contract change. Requires a spec and tests; signatures and baselines stay
-  unchanged.
+Choose the highest applicable profile. Small prose or metadata work uses one concise
+decision package and relevant cheap checks. Normal product behavior uses a specification,
+focused tests, candidate binding, and independent review. Authority, release, migration,
+destructive, security, public-contract, formal-model, build-policy, and CI-policy changes
+are High and retain their relevant full fail-closed controls. Unknown impact is High.
 
 ## Development Workflow
 
@@ -382,17 +378,17 @@ scaffolded line is already correct as written:
 
 ## §1.2 `evidence.yml` satisfaction
 
-Each entry under `evidence:` declares a `kind` and a `result`. An obligation is
-**satisfied** only by a matching declaration whose `result` is `pass` **and** whose
-`synthetic` is `false`.
+Each entry under `evidence:` declares a `kind` and an authored `result`. A
+matching `result: pass` claims success; protected verification additionally
+requires a current observed-run or applicable durable-record receipt.
 
-- `synthetic: true` with `result: pass` discloses a stand-in and does **not** satisfy.
+- `synthetic: true|false` records provenance and does not decide readiness.
 - `result: deferred` (or `kind: deferral`) is an accepted deferral, not a satisfaction.
 - `result: fail`, `missing`, `stale`, or `blocked` does not satisfy.
 
-Copyable declaration that satisfies its obligation:
+Copyable pass declaration (register its observed run separately):
 
-```yaml evidence:satisfied
+```yaml evidence:pass
 schemaVersion: 1
 evidence:
   - id: EV001
@@ -401,7 +397,7 @@ evidence:
       type: task
       id: T001
     result: pass
-    synthetic: false
+    synthetic: true # provenance metadata; an observed receipt decides readiness
 ```
 
 ## Once the work model exists

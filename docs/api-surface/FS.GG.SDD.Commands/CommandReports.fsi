@@ -110,7 +110,7 @@ module CommandReports =
     val undisclosedSyntheticEvidence: path: string -> ids: string list -> Diagnostic
     val missingDeferralRationale: path: string -> ids: string list -> Diagnostic
 
-    /// A visual-inspection obligation declared `result: pass` / `synthetic: false` that names no
+    /// A visual-inspection obligation declared `result: pass` that names no
     /// rendered artifact (FS.GG.SDD#306).
     val missingVisualInspectionArtifact: path: string -> ids: string list -> Diagnostic
 

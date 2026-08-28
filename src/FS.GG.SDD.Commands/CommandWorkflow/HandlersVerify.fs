@@ -396,12 +396,6 @@ module internal HandlersVerify =
                 elif
                     matches
                     |> List.exists (fun declaration ->
-                        declaration.Synthetic && Option.isNone declaration.SyntheticDisclosure)
-                then
-                    "invalid", [ "evidence.undisclosedSyntheticEvidence" ]
-                elif
-                    matches
-                    |> List.exists (fun declaration ->
                         (declaration.Kind = EvidenceKind.Deferral
                          || normalizedEvidenceResult declaration.Result = "deferred")
                         && (Option.isNone declaration.Rationale
@@ -451,23 +445,15 @@ module internal HandlersVerify =
                             && not (recordReceiptIsCurrent artifactBytes declaration)))
                 then
                     "invalid", [ "evidence.recordReceiptStale" ]
-                elif
-                    matches
-                    |> List.exists (fun declaration ->
-                        normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
-                then
-                    "synthetic", []
-                // WI-4 (ADR-0048): mirror the `ED-` cascade — a classified {gameplay} FR obligation is
-                // satisfied only by a real, non-synthetic test KIND. A non-synthetic pass of a non-test
-                // kind (e.g. `implementation`) leaves the required test UNMET, not satisfied, so `ED-`
-                // and `TD-` cannot drift on what discharges a gameplay obligation (as for the #306
-                // visual arm above). A synthetic-only pass already fell to `synthetic`.
+                // Mirror the `ED-` cascade: a classified requirement needs the required test kind.
+                // Provenance remains metadata and observation is handled by the receipt arms below.
+                // A pass of a non-test kind (for example, `implementation`) leaves the required test
+                // unmet, so `ED-` and `TD-` cannot drift on what discharges a gameplay obligation.
                 elif
                     isProductionJourneyTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
                     && matches
                        |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass"
-                           && not declaration.Synthetic)
+                           normalizedEvidenceResult declaration.Result = "pass")
                     && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactBytes))
                 then
                     if matches |> List.exists hasValidJourneyReceipt then
@@ -478,8 +464,7 @@ module internal HandlersVerify =
                     isGameplayTestTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
                     && matches
                        |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass"
-                           && not declaration.Synthetic)
+                           normalizedEvidenceResult declaration.Result = "pass")
                     && not (matches |> List.exists (satisfiesRequiredEvidenceKinds realTestEvidenceKinds))
                 then
                     "invalid", [ "evidence.classifiedRequirementTestObligationUnmet" ]
@@ -494,8 +479,7 @@ module internal HandlersVerify =
                 // than restate it: `ED-`, `TD-`, `ship`, and the committed verdict cannot drift on
                 // what "observed" means.
                 //
-                // A disclosed `synthetic` pass never arrives (the arm above took it), and a deferral
-                // never claims a pass at all — so neither is punished for a run it never asserted.
+                // A deferral never claims a pass at all and therefore never reaches the receipt arm.
                 //
                 // The `ED-` ladder is deliberately NOT given this arm, and the asymmetry is the
                 // design rather than an oversight. ADR-0035 §2 scopes `unobserved` to a TEST

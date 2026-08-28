@@ -179,16 +179,12 @@ module AuthoringDocsContractTests =
         | Ok declarations -> declarations
         | Error diagnostics -> failwith $"Documented evidence block did not parse:\n{text}\n{diagnostics}"
 
-    /// The non-synthetic-`pass` satisfaction rule, re-expressed here in one line
-    /// because it is not exposed as a public predicate (it lives in the verify and
-    /// evidence disposition ladders; T002 keeps this rule in sync with them).
-    let private satisfies (declaration: Evidence.EvidenceDeclaration) =
-        declaration.Result.Trim().ToLowerInvariant() = "pass"
-        && not declaration.Synthetic
+    let private claimsPass (declaration: Evidence.EvidenceDeclaration) =
+        Evidence.claimsRealPass declaration
 
     [<Fact>]
-    let ``Documented satisfied evidence blocks satisfy under the live parser`` () =
-        let blocks = taggedBlocks "evidence:satisfied" referenceDoc
+    let ``Documented pass evidence blocks claim pass under the live parser`` () =
+        let blocks = taggedBlocks "evidence:pass" referenceDoc
         Assert.NotEmpty blocks
 
         for block in blocks do
@@ -199,14 +195,14 @@ module AuthoringDocsContractTests =
                 parsed,
                 fun declaration ->
                     Assert.True(
-                        satisfies declaration,
-                        $"Doc marks this declaration SATISFIED, but the non-synthetic-pass rule rejects it: {declaration.Id.Value}"
+                        claimsPass declaration,
+                        $"Doc marks this declaration PASS, but the live predicate rejects it: {declaration.Id.Value}"
                     )
             )
 
     [<Fact>]
-    let ``Documented unsatisfied evidence blocks do not satisfy under the live parser`` () =
-        let blocks = taggedBlocks "evidence:unsatisfied" referenceDoc
+    let ``Documented non-pass evidence blocks do not claim pass under the live parser`` () =
+        let blocks = taggedBlocks "evidence:not-pass" referenceDoc
         Assert.NotEmpty blocks
 
         for block in blocks do
@@ -217,8 +213,8 @@ module AuthoringDocsContractTests =
                 parsed,
                 fun declaration ->
                     Assert.False(
-                        satisfies declaration,
-                        $"Doc marks this declaration UNSATISFIED, but the non-synthetic-pass rule accepts it: {declaration.Id.Value}"
+                        claimsPass declaration,
+                        $"Doc marks this declaration NON-PASS, but the live predicate accepts it: {declaration.Id.Value}"
                     )
             )
 

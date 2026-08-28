@@ -401,7 +401,7 @@ module internal HandlersShip =
             shipEvidenceAttestationCounts verificationView
 
         // WI-4 (ADR-0048): the merge-boundary aggregate Governance binds — classified {gameplay} FR
-        // obligations left unmet (not discharged by a real non-synthetic test nor an accepted deferral).
+        // obligations left unmet (not discharged by an observed test of the required kind nor a deferral).
         // Serialized into ship.json so `parseShipReadinessFacts` can lift it into the handoff.
         let classifiedObligationsUnmet =
             match verificationView with
@@ -818,7 +818,7 @@ module internal HandlersShip =
 
                             // WI-4 (ADR-0048): the merge-boundary aggregate Governance binds — classified
                             // {gameplay} FR obligations left unmet, i.e. not discharged by a real
-                            // non-synthetic test ("supported") nor an accepted deferral ("deferred").
+                            // observed test of the required kind ("supported") nor a deferral ("deferred").
                             let classifiedObligationsUnmet =
                                 match verificationView with
                                 | Some v ->

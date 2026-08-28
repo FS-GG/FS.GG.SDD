@@ -11,16 +11,13 @@ Execute the feature's tasks against the plan. Update `tasks.md` as you go.
 Use the status legend from the template exactly:
 
 - `[ ]` — not started.
-- `[X]` — **done.** The code paths that will run in production were exercised.
-  Tests used real dependencies (real filesystem, real process, real network)
-  where safe. Synthetic evidence is permitted only when disclosed per Principle V
-  (see below); a task resting on undisclosed synthetic evidence is not `[X]`.
+- `[X]` — **done.** The user-reachable path was exercised against the exact
+  candidate with checks appropriate to its risk profile.
 - `[-]` — **skipped.** Requires written rationale on the task line.
 
-**Never mark a task `[X]` if it failed, or if its "pass" rests on synthetic
-evidence that has not been disclosed.** Never weaken an assertion to green a
-build — narrow the scope and document it instead. Dishonest status undermines the
-whole point of test evidence (Principle V).
+**Never mark a task `[X]` if it failed or if no current execution receipt supports
+the claim.** Never weaken an assertion to green a build—narrow the scope and
+document it instead.
 
 ## Vertical-slice rule (US phases)
 
@@ -40,8 +37,8 @@ A diff that touches only `Domain/`, `Core/`, `Models/`, or equivalent internal
 layers is **never** sufficient evidence for `[X]` on a `[US*]` task. The story
 isn't done when the model compiles; it's done when the user can reach it. If
 wire-up to the UI / CLI / API surface is missing, the honest status is `[ ]`
-(keep working). If the path can only be exercised with synthetic evidence for
-now, disclose it per Principle V and open a tracking issue for the real wire-up.
+(keep working). Fixture provenance may explain limits, but it does not replace
+exercising the user-reachable path.
 
 ## Elmish/MVU discipline (Principle IV)
 
@@ -61,10 +58,8 @@ Before marking an MVU-bearing `[US*]` task `[X]`, verify all of the following:
 
 - FSI or packed-library tests exercise public `init` / `update` paths.
 - Tests assert both next `Model` and emitted effects for representative messages.
-- The interpreter path has real evidence where safe (real filesystem, process,
-  network, database, or host entry point). If it can only run against a fake,
-  in-memory substitute, canned response, or unconnected interpreter, disclose
-  that synthetic evidence per Principle V and track the real-evidence path.
+- The interpreter path has candidate-bound execution evidence at the boundary
+  its risk profile requires.
 - The user-facing entry point is wired through the interpreter boundary, not
   around it.
 
@@ -72,30 +67,13 @@ Simple pure functions do not need an MVU shell. If a task does not involve
 stateful workflow or I/O, note that Principle IV is not applicable and use the
 ordinary spec → FSI → semantic tests → implementation path.
 
-## Synthetic-evidence disclosure (Principle V)
+## Evidence confidence (Principle V)
 
-Synthetic evidence — mocks, stubs, fakes, hardcoded fixtures, in-memory
-substitutes, canned responses — MAY be used when real evidence is unavailable or
-prohibitively expensive AND a real-evidence path is planned or documented as
-infeasible. When you rely on it, disclose it at every surface:
-
-1. **Code-level.** Add a `// SYNTHETIC:` comment at the use site naming the fact
-   and the reason (and the real-evidence path if known). Example:
-   ```fsharp
-   let userRepo = InMemoryUserRepo()  // SYNTHETIC: staging DB not provisioned; real repo in US-17
-   ```
-   Prefer explicit, ugly literals over clever factories that make synthetic data
-   feel real.
-2. **Test-level.** Test names exercising the synthetic surface contain the token
-   `Synthetic`. Example:
-   ```fsharp
-   [<Test>] let ``Signup.createUser_Synthetic_persists in-memory`` () = ...
-   ```
-3. **PR-level.** List every synthetic dependency in the PR description with its
-   reason and real-evidence path (or why it is infeasible).
-
-There is no `[S]` task marker, no propagated `[S*]`, and no evidence audit in
-this repository: disclosure is the discipline, not a gate.
+Treat fixture realism as useful provenance, not a readiness verdict. Completion
+requires a coherent execution receipt bound to the exact candidate; protected
+work also requires an independent critic verdict bound to that candidate. Reject
+authored passes, stale or malformed receipts, failed runs, and self-review. A new
+candidate invalidates prior execution and review.
 
 ## Workflow, per task
 
@@ -109,8 +87,7 @@ this repository: disclosure is the discipline, not a gate.
    unit test on the domain layer is not enough.
 4. Update the status in `tasks.md`. Before writing `[X]` on a `[US*]` task,
    confirm the vertical-slice rule is satisfied; if not, the honest status is
-   `[ ]`. If the pass rests on synthetic evidence, add the code-level, test-level,
-   and PR-level disclosures before moving on.
+   `[ ]`. Confirm candidate binding before moving on.
 5. Move to the next task.
 
 ## Visibility discipline (Principle II)

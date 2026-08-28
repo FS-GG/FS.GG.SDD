@@ -382,7 +382,7 @@ module CommandTypes =
             AdvisoryCount: int
             BlockingCount: int
             /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet — not discharged by a
-            /// real non-synthetic test (nor an accepted deferral). The aggregate Governance binds to
+            /// observed test of the required kind (nor an accepted deferral). The aggregate Governance binds to
             /// block-on-ship. `0` for every work item that classifies no FR (additive, backward-compatible).
             ClassifiedObligationsUnmetCount: int
             JourneyObligationsUnmetCount: int

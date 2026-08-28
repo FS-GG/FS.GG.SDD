@@ -211,8 +211,8 @@ module Evidence =
             LinkedSourceIds: string list
             ExpectedEvidenceKinds: string list
             /// WI-4 (ADR-0048): when non-empty, the obligation is satisfied only by a matching
-            /// declaration whose kind is one of these AND is a non-synthetic pass — the "real test
-            /// kind ∧ synthetic:false" gate a classified `{gameplay}` FR carries. Empty (the default
+            /// declaration whose kind is one of these and claims pass. Observation is evaluated
+            /// separately. Empty (the default
             /// for every other obligation) imposes no kind restriction, so this is additive and
             /// backward-compatible.
             RequiredEvidenceKinds: string list
@@ -338,13 +338,13 @@ module Evidence =
 
     val isVisualInspectionTagged: tags: string list -> bool
 
-    /// The FR classification facet (ADR-0048) that carries the per-FR non-synthetic test obligation —
+    /// The FR classification facet (ADR-0048) that carries the per-FR observed-test obligation —
     /// one of `RequirementModel.recognizedRequirementClasses`, named because it is this class the task
     /// generator maps to a gameplay-test obligation.
     val gameplayClassification: string
 
     /// The capability tag marking a task, and the obligation minted from it, as a per-classified-FR
-    /// gameplay test obligation discharged only by a real, non-synthetic test (ADR-0048, WI-4).
+    /// gameplay test obligation discharged only by an observed test of the required kind.
     val gameplayTestCapability: string
     val productionJourneyClassification: string
     val productionJourneyCapability: string
@@ -399,12 +399,12 @@ module Evidence =
     val namesRenderedArtifact: declaration: EvidenceDeclaration -> bool
 
     /// The visual-inspection artifact rule, stated once for the `evidence` gate, the `ED-`
-    /// disposition, and the `TD-` mirror: a real (non-synthetic) `pass` that names no rendered
+    /// disposition, and the `TD-` mirror: a `pass` that names no rendered
     /// artifact. A synthetic pass and a deferral both fall outside it.
     val passesWithoutRenderedArtifact: declaration: EvidenceDeclaration -> bool
 
     /// The classified-FR (`{gameplay}`) required-evidence-kind rule (ADR-0048, WI-4), stated once for
-    /// the `ED-` disposition and its `TD-` mirror: a real (non-synthetic) `pass` whose kind is one of
+    /// the `ED-` disposition and its `TD-` mirror: a `pass` whose kind is one of
     /// `requiredKinds`. A synthetic pass and a non-test kind both fall outside it.
     val satisfiesRequiredEvidenceKinds: requiredKinds: string list -> declaration: EvidenceDeclaration -> bool
 
@@ -422,7 +422,7 @@ module Evidence =
     /// disposition, and the `TD-` mirror (FS.GG.SDD#349, FR-007): the cited paths of a *satisfying*
     /// declaration that `exists` reports absent, sorted.
     ///
-    /// Only `result: pass` ∧ `synthetic: false` — the satisfaction rule — is held to this. A
+    /// Every `result: pass` claim is held to this regardless of provenance metadata. A
     /// deferral, a disclosed synthetic pass, and any non-pass result may legitimately cite an
     /// artifact that does not exist yet, and yield `[]` (FR-006).
     ///

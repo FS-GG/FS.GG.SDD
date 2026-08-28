@@ -70,7 +70,7 @@ See [[fs-gg-sdd-analyze]] and [[fs-gg-sdd-troubleshooting]].
 
 ## What a plan covers
 
-For a lifecycle/contracted (Tier 1) change, the plan identifies:
+For a change whose risk requires a plan, identify only the decision-bearing parts:
 
 - the **public surface** to declare (signatures first — `.fsi` where the language
   supports it) and the surface baseline to maintain;
@@ -87,8 +87,8 @@ For a lifecycle/contracted (Tier 1) change, the plan identifies:
 - the **tests and fixtures** that cover stale or conflicting artifacts — prefer
   real fixtures over mocks.
 
-A Tier 2 (internal) change needs a plan and tests, but signatures and baselines
-stay unchanged.
+Small work may not need a separate plan. Normal work plans material behavioral
+decisions. High work also plans the relevant compatibility and fail-closed controls.
 
 ## Example skeleton
 
@@ -97,7 +97,7 @@ stay unchanged.
 # Plan
 
 ## Technical Context
-F# / Elmish-style command loop. Input mapping is a new public surface (Tier 1).
+F# / Elmish-style command loop. Input mapping is a new public surface (High risk).
 
 ## Constitution Check
 III Public Surface: declare `InputMap.fsi` before `.fs`. V MUE: key events are

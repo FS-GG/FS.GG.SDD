@@ -48,7 +48,7 @@ module internal RemediationPointers =
     let frontMatter = grammar "5-per-stage-front-matter-used-by-every-authored-stage"
     let coverageLine = grammar "1-checklist-coverage-line-used-by-checklist"
     let decisionTag = grammar "4-clarify-decision-tag-resolution-used-by-clarify"
-    let evidenceDecl = grammar "2-evidenceyml-satisfaction-used-by-evidenceverify"
+    let evidenceDecl = grammar "2-evidenceyml-confidence-used-by-evidenceverify"
     let specifyFacts = grammar "3-specify---input-intent-facts-used-by-specify"
 
     let at sk gr = { Skill = sk; Grammar = gr }

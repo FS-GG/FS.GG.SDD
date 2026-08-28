@@ -306,7 +306,7 @@ module CommandTypes =
             AdvisoryCount: int
             BlockingCount: int
             /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet — not discharged by a
-            /// real non-synthetic test (nor an accepted deferral). `0` when no FR is classified.
+            /// observed test of the required kind (nor an accepted deferral). `0` when no FR is classified.
             ClassifiedObligationsUnmetCount: int
             JourneyObligationsUnmetCount: int
             SourceSnapshotCount: int

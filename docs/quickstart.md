@@ -133,9 +133,10 @@ wrong. The full grammar, accepted/rejected forms, and copyable examples are in
   The second is the form `specify` scaffolds. A bold `**FR-001**`, a colon-less
   line, or an `AC-###` on a separate line is counted but **not** covered.
 
-- **`evidence`** satisfies an obligation only with a matching, **non-synthetic**
-  `evidence.yml` declaration whose `result` is `pass` (a synthetic pass and a
-  deferral do not satisfy it):
+- **`evidence`** records an authored `result: pass` claim. At protected
+  verification boundaries, the matching obligation also needs a current
+  observed-run receipt bound to the candidate. `synthetic` is provenance
+  metadata and does not decide readiness; a deferral does not satisfy:
 
   ```yaml
   evidence:
@@ -145,7 +146,7 @@ wrong. The full grammar, accepted/rejected forms, and copyable examples are in
         type: task
         id: T001
       result: pass
-      synthetic: false
+      synthetic: true # valid metadata when this run used generated fixtures
   ```
 
 ## Cross-cutting generators

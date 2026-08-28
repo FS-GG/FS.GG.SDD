@@ -334,8 +334,8 @@ module Evidence =
             // drop for a plan-decision task.
             LinkedSourceIds: string list
             ExpectedEvidenceKinds: string list
-            // WI-4 (ADR-0048): the "real test kind ∧ synthetic:false" gate a classified {gameplay}
-            // FR obligation carries. Non-empty ⇒ satisfied only by a non-synthetic pass whose kind is
+            // The required test-kind gate a classified gameplay FR obligation carries. Non-empty
+            // means a passing declaration must use one of these kinds; observation is checked later.
             // one of these. Empty (every other obligation) ⇒ no kind restriction — additive and
             // backward-compatible.
             RequiredEvidenceKinds: string list
@@ -417,14 +417,14 @@ module Evidence =
         tags
         |> List.exists (fun tag -> String.Equals(tag, visualInspectionSkill, StringComparison.OrdinalIgnoreCase))
 
-    // WI-4 (ADR-0048): the FR classification facet that carries the per-FR non-synthetic test
+    // The FR classification facet that carries the per-FR observed-test
     // obligation. It is one of `RequirementModel.recognizedRequirementClasses` (currently the only
     // one); named here because it is *this* class — not the vocabulary at large — that the task
     // generator maps to a gameplay-test obligation.
     let gameplayClassification = "gameplay"
 
     // WI-4 (ADR-0048): the capability tag marking a task — and the obligation minted from it — as a
-    // per-classified-FR gameplay test obligation, discharged only by a real, non-synthetic test. It
+    // per-classified-FR gameplay test obligation, discharged only by an observed test. It
     // lives here, in Artifacts, for the same reason as `visualInspectionSkill`: the task generator
     // that stamps it and the evidence/verify handlers that read it back off the obligation sit in
     // different modules of `Commands` and must agree on one literal.
@@ -434,7 +434,7 @@ module Evidence =
     let productionJourneyCapability = "production-journey"
 
     /// The evidence kinds that count as a *real test* for a classified-FR obligation (ADR-0048). A
-    /// gameplay obligation is satisfied only by one of these kinds with a non-synthetic pass — the
+    /// gameplay obligation is satisfied only by one of these kinds with a passing observed run—the
     /// single source of truth for the derived obligation's `RequiredEvidenceKinds`.
     let realTestEvidenceKinds = [ "verification" ]
 
@@ -1326,25 +1326,23 @@ module Evidence =
         |> List.sortBy _.DeclarationId
 
     /// The visual-inspection artifact rule (FS.GG.SDD#306, FR-004), stated once. A declaration that
-    /// claims a real, non-synthetic pass while naming no rendered artifact asserts that someone
+    /// claims a pass while naming no rendered artifact asserts that someone
     /// looked at a frame that does not exist. Three call sites read this — the `evidence` pre-write
     /// gate, the `ED-` disposition cascade, and the `TD-` mirror — so the rule cannot drift between
     /// what blocks and what the readiness view records.
     ///
-    /// A disclosed synthetic pass and a deferral both fall outside it: neither claims a real pass.
+    /// Provenance does not exempt a passing claim from naming the artifact it says was inspected.
     let passesWithoutRenderedArtifact (declaration: EvidenceDeclaration) =
         normalizedEvidenceResult declaration.Result = "pass"
-        && not declaration.Synthetic
         && not (namesRenderedArtifact declaration)
 
-    /// WI-4 (ADR-0048): does this declaration satisfy a required-evidence-kind gate — a real,
-    /// non-synthetic pass whose kind is one of `requiredKinds`? A synthetic pass never satisfies (the
-    /// epic's core rule: synthetic state can never discharge a gameplay obligation), and neither does
-    /// a non-test kind (e.g. `implementation`). Stated once so the `ED-` disposition cascade and its
+    /// Does this declaration satisfy a required-evidence-kind gate — a passing claim whose kind is
+    /// one of `requiredKinds`? Provenance does not change the kind or observed outcome. A non-test
+    /// kind (e.g. `implementation`) still cannot discharge a test obligation. Stated once so the
+    /// `ED-` disposition cascade and its
     /// `TD-` verify mirror cannot drift on what discharges a classified-FR obligation.
     let satisfiesRequiredEvidenceKinds (requiredKinds: string list) (declaration: EvidenceDeclaration) =
         normalizedEvidenceResult declaration.Result = "pass"
-        && not declaration.Synthetic
         && List.contains (evidenceKindSourceValue declaration.Kind) requiredKinds
 
     /// FS.GG.SDD#349 (FR-002). Both path-bearing buckets, because `namesRenderedArtifact` above
@@ -1410,15 +1408,15 @@ module Evidence =
         |> List.sort
 
     /// The cited-artifact existence rule (FS.GG.SDD#349, FR-006/FR-007), stated once. A declaration
-    /// that claims a real, non-synthetic pass while citing a file that is not on disk asserts that
+    /// that claims a pass while citing a file that is not on disk asserts that
     /// something was proven by an artifact nobody can open.
     ///
-    /// Gated on the satisfaction rule (`pass` ∧ not synthetic) *inside* the rule, so that the three
+    /// Gated on the passing claim inside the rule, so that the three
     /// call sites — the `evidence` pre-write gate, the `ED-` cascade, and the `TD-` mirror — cannot
     /// drift on which declarations are held to it. A deferral legitimately cites an artifact that
     /// does not exist yet; blocking it would teach authors to stop deferring.
     let missingCitedArtifacts (exists: string -> bool) (declaration: EvidenceDeclaration) =
-        if normalizedEvidenceResult declaration.Result <> "pass" || declaration.Synthetic then
+        if normalizedEvidenceResult declaration.Result <> "pass" then
             []
         else
             citedArtifactPaths declaration |> List.filter (exists >> not)
@@ -1491,11 +1489,10 @@ module Evidence =
         else
             None
 
-    /// Does this declaration claim a real pass — `result: pass`, not disclosed `synthetic`? The
-    /// satisfaction rule, named once because the attestation split below partitions exactly it.
+    /// Does this declaration claim a pass? Provenance is metadata; observation decides whether the
+    /// claim is usable at a protected boundary.
     let claimsRealPass (declaration: EvidenceDeclaration) =
         normalizedEvidenceResult declaration.Result = "pass"
-        && not declaration.Synthetic
 
     /// Does this declaration discharge its obligation on the author's word alone? (FS.GG.SDD#398.)
     /// The exact complement of `isObserved` over the satisfaction rule, so that

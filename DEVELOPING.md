@@ -80,12 +80,10 @@ Add `--no-build` to reuse existing binaries, and `-- <args>` to forward to `dotn
 (e.g. `scripts/test.sh fast -- --filter 'FullyQualifiedName~Codec'` — a user `--filter`
 wins over the tier's). `scripts/test.sh --help` prints the same table.
 
-**Tiering removes no CI coverage.** The per-PR gate (`.github/workflows/gate.yml`) runs
-`bash scripts/test.sh --no-build -c Debug` — the same `full` tier defined here, looping every
-test project unfiltered — and is still required, so a `Commands`-layer regression is caught at
-PR CI even if you only ran the fast tier locally, and the gate can't drift from the local
-`full` runner (nor reintroduce the solution-wide resource-exhaustion hazard the loop
-avoids). The tiers speed the *local* loop; the gate remains the backstop.
+The per-PR gate (`.github/workflows/gate.yml`) uses `scripts/ci-risk`: small
+changes skip this runner, normal changes run `fast`, and high or indeterminate
+changes run the unfiltered `full` tier. Required context names remain stable, and
+the workflow consumes this same runner rather than maintaining a second suite.
 
 The script loops the six test projects rather than running `dotnet test FS.GG.SDD.sln`.
 That covers exactly the same tests (those six *are* the solution's test projects), avoids

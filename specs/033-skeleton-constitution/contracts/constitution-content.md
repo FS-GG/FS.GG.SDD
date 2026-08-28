@@ -108,17 +108,13 @@ Semantic comment quality requires human judgment and cannot be completely
 enforced by automatic linting. Automated checks MAY catch structural omissions,
 but they MUST NOT claim semantic completeness.
 
-## Change Classification
+## Risk Profile
 
-Every change declares a tier in its spec:
-
-- **Tier 1 (contracted change):** public surface, schema, generated view, command,
-  artifact layout, agent-skill contract, or external integration. Requires a spec,
-  a plan, tasks, signatures where code exists, tests, docs, and migration notes
-  when applicable.
-- **Tier 2 (internal change):** implementation cleanup with no externally visible
-  contract change. Requires a spec and tests; signatures and baselines stay
-  unchanged.
+Choose the highest applicable profile. Small prose or metadata work uses one concise
+decision package and relevant cheap checks. Normal product behavior uses a specification,
+focused tests, candidate binding, and independent review. Authority, release, migration,
+destructive, security, public-contract, formal-model, build-policy, and CI-policy changes
+are High and retain their relevant full fail-closed controls. Unknown impact is High.
 
 ## Development Workflow
 

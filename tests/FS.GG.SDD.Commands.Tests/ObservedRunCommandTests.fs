@@ -507,6 +507,54 @@ module ObservedRunCommandTests =
             Assert.Equal(ship.EvidenceSupportedCount, ship.EvidenceSelfAttestedCount + ship.EvidenceObservedCount)
 
     [<Fact>]
+    let ``synthetic provenance does not override an observed passing candidate`` () =
+        let root = evidencedProjectClaimingPass ()
+
+        TestSupport.readRelative root evidencePath
+        |> fun text -> text.Replace("synthetic: false", "synthetic: true")
+        |> TestSupport.writeRelative root evidencePath
+
+        TestSupport.writeRelative root reportPath (trxWith 9 0)
+        let recorded = runWithReport root (Some reportPath)
+
+        Assert.DoesNotContain(recorded.Diagnostics, fun d -> d.Severity = Diagnostics.DiagnosticError)
+        Assert.All(parsedEvidence root |> _.Evidence, fun d -> Assert.True(d.Synthetic))
+        Assert.All(parsedEvidence root |> _.Evidence, fun d -> Assert.True(d.ObservedRun.IsSome))
+
+        let verified = TestSupport.runVerify root workId title
+
+        match verified.Verification with
+        | Some verification ->
+            Assert.Equal("verificationReady", verification.Readiness)
+            Assert.True(verification.EvidenceObservedCount > 0)
+        | None -> failwith "verify produced no summary."
+
+        let shipped = TestSupport.runShip root workId title
+
+        match shipped.Ship with
+        | Some ship -> Assert.Equal("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary."
+
+    [<Fact>]
+    let ``synthetic provenance cannot turn an unobserved pass into proof`` () =
+        let root = evidencedProjectClaimingPass ()
+
+        TestSupport.readRelative root evidencePath
+        |> fun text -> text.Replace("synthetic: false", "synthetic: true")
+        |> TestSupport.writeRelative root evidencePath
+
+        let verified =
+            { TestSupport.verifyRequest root workId title with
+                RequireObserved = true }
+            |> TestSupport.runRequest
+
+        Assert.Contains(verified.Diagnostics, fun d -> d.Id = "verify.unobservedRequiredTest")
+
+        match verified.Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary."
+
+    [<Fact>]
     let ``a recorded receipt SURVIVES a later evidence run made without the flag`` () =
         // The receipt is recorded once and then read back on every subsequent `evidence` run. If a
         // merge or codec regression dropped it on re-render, every obligation in the fleet would

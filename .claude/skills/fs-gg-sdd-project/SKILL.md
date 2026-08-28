@@ -56,12 +56,12 @@ and a drift guard) is `docs/reference/authoring-contracts.md`. Summary:
   colon-less line, or a separate `(covers AC-###)` line — including a
   **soft-wrapped** bullet whose marker wrapped to the next physical line — is
   counted by the loose scan but **not** covered.
-- **`evidence.yml` satisfaction.** `kind` ∈ `implementation · verification ·
+- **`evidence.yml` confidence.** `kind` ∈ `implementation · verification ·
   review · generated-view · synthetic · deferral · note · missing` (an unknown
   kind silently becomes `verification`); `result` ∈ `pass · fail · deferred ·
-  missing · stale · advisory · blocked`. An obligation is satisfied only by a
-  matching **non-synthetic** declaration with `result: pass`; a synthetic `pass`
-  and a `deferral` do not satisfy it. This lifecycle `evidence.yml` is distinct
+  missing · stale · advisory · blocked`. `result: pass` is a claim; protected
+  readiness requires a current observed-run or durable-record receipt.
+  `synthetic` is provenance metadata. This lifecycle `evidence.yml` is distinct
   from any unrelated "evidence" document a scaffolded product may ship.
 - **`specify --input` intent.** Supply `value:`, `scope:`, and `requirement:` on
   their own labeled lines; an unlabeled line is read as the user value.

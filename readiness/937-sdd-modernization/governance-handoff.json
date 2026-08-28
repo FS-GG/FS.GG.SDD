@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "contractVersion": "2.0.0",
+  "generatorVersion": "FS.GG.SDD.Artifacts/1.5.0",
+  "workId": "937-sdd-modernization",
+  "sources": [
+    {
+      "path": "readiness/937-sdd-modernization/ship.json",
+      "digest": "sha256:744b449365e52efa06e8ac7dd3f2b98e39569fdd86959a9f63ae97b86ae3619c",
+      "schemaVersion": 1
+    },
+    {
+      "path": "readiness/937-sdd-modernization/verify.json",
+      "digest": "sha256:6ce059b88f8384cde5ee7d4a9505d4ee115fc9bd0cdc38ee33d5df59c4537d56",
+      "schemaVersion": 1
+    },
+    {
+      "path": "readiness/937-sdd-modernization/work-model.json",
+      "digest": "sha256:dfc38cd290688330e462e0d74af306e8a35dfd62cc4cdde04180e7cd6e9c1653",
+      "schemaVersion": 1
+    }
+  ],
+  "evidence": {
+    "nodes": [
+      {
+        "id": "evidence:EV001",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV002",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV003",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV004",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV005",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV006",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV007",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV008",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV009",
+        "state": "synthetic",
+        "rationale": null
+      },
+      {
+        "id": "task:T001",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T002",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T003",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T004",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T005",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T006",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T007",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T008",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T009",
+        "state": "pending",
+        "rationale": null
+      }
+    ],
+    "dependencies": [
+      {
+        "dependent": "evidence:EV001",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "evidence:EV002",
+        "dependency": "task:T002"
+      },
+      {
+        "dependent": "evidence:EV003",
+        "dependency": "task:T003"
+      },
+      {
+        "dependent": "evidence:EV004",
+        "dependency": "task:T004"
+      },
+      {
+        "dependent": "evidence:EV005",
+        "dependency": "task:T005"
+      },
+      {
+        "dependent": "evidence:EV006",
+        "dependency": "task:T006"
+      },
+      {
+        "dependent": "evidence:EV007",
+        "dependency": "task:T007"
+      },
+      {
+        "dependent": "evidence:EV008",
+        "dependency": "task:T008"
+      },
+      {
+        "dependent": "evidence:EV009",
+        "dependency": "task:T009"
+      },
+      {
+        "dependent": "task:T001",
+        "dependency": "evidence:EV001"
+      },
+      {
+        "dependent": "task:T002",
+        "dependency": "evidence:EV002"
+      },
+      {
+        "dependent": "task:T003",
+        "dependency": "evidence:EV003"
+      },
+      {
+        "dependent": "task:T004",
+        "dependency": "evidence:EV004"
+      },
+      {
+        "dependent": "task:T005",
+        "dependency": "evidence:EV005"
+      },
+      {
+        "dependent": "task:T006",
+        "dependency": "evidence:EV006"
+      },
+      {
+        "dependent": "task:T006",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T007",
+        "dependency": "evidence:EV007"
+      },
+      {
+        "dependent": "task:T007",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T008",
+        "dependency": "evidence:EV008"
+      },
+      {
+        "dependent": "task:T008",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T009",
+        "dependency": "evidence:EV009"
+      },
+      {
+        "dependent": "task:T009",
+        "dependency": "task:T001"
+      }
+    ]
+  },
+  "performanceEvidence": [],
+  "governedReferences": [],
+  "governanceConfig": {
+    "policyPresent": false,
+    "capabilitiesPresent": false,
+    "toolingPresent": false
+  },
+  "readiness": {
+    "shipDisposition": "shipReady",
+    "verificationReadiness": "verificationReady",
+    "counts": {
+      "advisory": 0,
+      "warning": 0,
+      "blocking": 0,
+      "classifiedObligationsUnmet": 0,
+      "journeyObligationsUnmet": 0
+    },
+    "blockingDiagnosticIds": [],
+    "perViewState": [
+      {
+        "view": "ship.json",
+        "state": "current"
+      },
+      {
+        "view": "verify.json",
+        "state": "current"
+      },
+      {
+        "view": "work-model.json",
+        "state": "current"
+      }
+    ]
+  },
+  "diagnostics": []
+}

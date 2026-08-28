@@ -13,7 +13,7 @@
 #   carry the `tier=slow` trait (FS.GG.SDD#209) and the cheap tiers filter them out with
 #   `--filter tier!=slow`, admitting the in-process majority without the subprocess tail.
 #
-#   So: pick a tier matched to what you changed, and let the PR gate be the backstop.
+#   So: pick a tier matched to what you changed. CI uses the same risk-selected tiers.
 #
 # TIERS (cheapest first, so a failure surfaces fast). The `tier=slow` trait (FS.GG.SDD#209) marks
 # the ~150 tests that spawn a real dotnet/CLI/git subprocess; `tier!=slow` lets the cheap tiers
@@ -22,9 +22,8 @@
 #   component  + Validation + full Cli          1,637 tests, ~35s   — adds validation + the CLI process smokes
 #   full       every project, unfiltered      ~1,787 tests, ~2-3m   — everything, no filter; parity with the PR gate
 #
-# THIS REMOVES NO CI COVERAGE. `.github/workflows/gate.yml` still runs the FULL suite on every
-# PR and is still required, so a Commands-layer regression is caught there even if you only ran
-# `fast` locally. Tiering speeds the local loop; it does not weaken the gate.
+# CI selection: small changes skip this runner, normal changes run `fast`, and high-risk changes
+# run `full`. Unknown impact is high. The required context always reports.
 #
 # USAGE
 #   scripts/test.sh                 # full (safe default — same coverage as the gate), ~2-3m
@@ -157,7 +156,7 @@ fi
 
 echo "tier: $tier  (${#projects[@]} projects, $config)"
 if [ "$tier" != "full" ]; then
-  echo "note: the PR gate still runs the FULL suite — this tier is the local inner loop only."
+  echo "note: normal-risk CI uses fast; high-risk CI uses the full tier."
 fi
 echo
 

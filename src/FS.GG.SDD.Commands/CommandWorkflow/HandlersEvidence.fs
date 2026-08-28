@@ -39,7 +39,7 @@ module internal HandlersEvidence =
             /// can hardcode the `false` it reads today. Always `false` until FS.GG.SDD#350 lands.
             Observed: bool
             /// WI-4 (ADR-0048): is this the obligation of a classified `{gameplay}` FR — the per-FR
-            /// obligation that only a real, non-synthetic test discharges? Carried per-disposition so
+            /// obligation that only an observed test of the required kind discharges? Carried per-disposition so
             /// `evidence`/`verify`/`ship` count "classified-FR obligations unmet" identically without
             /// re-correlating each disposition back to its obligation's tags.
             ClassifiedRequirement: bool
@@ -917,11 +917,6 @@ module internal HandlersEvidence =
             |> List.distinct
             |> List.sort
 
-        let undisclosedSynthetic =
-            artifact.Evidence
-            |> List.filter (fun declaration -> declaration.Synthetic && Option.isNone declaration.SyntheticDisclosure)
-            |> List.map (fun declaration -> declaration.Id.Value)
-
         let missingDeferralFields =
             artifact.Evidence
             |> List.filter (fun declaration ->
@@ -1017,8 +1012,8 @@ module internal HandlersEvidence =
               unknownEvidenceReference path (String.concat "," unknowns)
           if not (List.isEmpty unsupportedResults) then
               unsupportedEvidenceResultState path unsupportedResults
-          if not (List.isEmpty undisclosedSynthetic) then
-              undisclosedSyntheticEvidence path undisclosedSynthetic
+          // Synthetic disclosure is optional provenance metadata. Observation and candidate
+          // currency—not an author-controlled label—decide protected readiness.
           if not (List.isEmpty missingDeferralFields) then
               missingDeferralRationale path missingDeferralFields
           if not (List.isEmpty missingVisualArtifacts) then
@@ -1213,12 +1208,6 @@ module internal HandlersEvidence =
                 elif
                     matches
                     |> List.exists (fun declaration ->
-                        declaration.Synthetic && Option.isNone declaration.SyntheticDisclosure)
-                then
-                    "invalid", [ "evidence.undisclosedSyntheticEvidence" ]
-                elif
-                    matches
-                    |> List.exists (fun declaration ->
                         (declaration.Kind = EvidenceKind.Deferral
                          || normalizedEvidenceResult declaration.Result = "deferred")
                         && (Option.isNone declaration.Rationale
@@ -1233,11 +1222,8 @@ module internal HandlersEvidence =
                         not (Set.contains (normalizedEvidenceResult declaration.Result) allowedEvidenceResults))
                 then
                     "invalid", [ "evidence.unsupportedResultState" ]
-                // #306: a visual-inspection obligation is satisfied only by a rendered artifact plus
-                // an explicit disposition. The `not declaration.Synthetic` guard keeps a disclosed
-                // synthetic pass falling through to `"synthetic"` below (unsatisfying, but honest and
-                // not a defect) rather than being reclassified `"invalid"`. A deferral never reaches
-                // here — its result is `deferred`, not `pass`.
+                // A visual-inspection pass must name a rendered artifact regardless of provenance.
+                // A deferral never reaches here because its result is `deferred`, not `pass`.
                 elif
                     isVisualInspectionTagged obligation.RequiredSkillOrCapabilityTags
                     && matches |> List.exists passesWithoutRenderedArtifact
@@ -1246,8 +1232,8 @@ module internal HandlersEvidence =
                 // #349: a pass whose cited artifact is not on disk is unsupported, not supported.
                 // Sits beside the #306 arm because it is the same defect one step further along: #306
                 // catches "claimed a look at a frame it never names", this catches "named a frame that
-                // is not there". `missingCitedArtifacts` applies the `pass ∧ ¬synthetic` gate itself,
-                // so a deferral and a disclosed synthetic pass both fall through, as above.
+                // is not there". `missingCitedArtifacts` applies to every passing claim; a deferral
+                // still falls through because it claims no pass.
                 elif
                     matches
                     |> List.exists (fun declaration ->
@@ -1286,24 +1272,16 @@ module internal HandlersEvidence =
                             && not (recordReceiptIsCurrent artifactBytes declaration)))
                 then
                     "invalid", [ "evidence.recordReceiptStale" ]
-                elif
-                    matches
-                    |> List.exists (fun declaration ->
-                        normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
-                then
-                    "synthetic", []
-                // WI-4 (ADR-0048): a classified {gameplay} FR obligation is satisfied only by a real,
-                // non-synthetic test kind. A non-synthetic pass whose KIND is not a real test (e.g. an
-                // `implementation` pass) must not register as "supported" for such an obligation — that
-                // is the gate the epic requires (a headless test, never mere implementation or synthetic
-                // state). A synthetic-only pass already fell to "synthetic" above, and a deferral/missing
-                // to their own arms, so this fires only on a real pass of the wrong kind.
+                // A classified requirement is satisfied only by the required test kind. Provenance
+                // remains metadata; observation is enforced by verify.
+                // A pass whose kind is not a real test (for example, `implementation`) must not
+                // register as supported for that obligation. A deferral or missing result reaches
+                // its own arm, so this fires only on a pass of the wrong kind.
                 elif
                     isProductionJourneyTagged obligation.RequiredSkillOrCapabilityTags
                     && matches
                        |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass"
-                           && not declaration.Synthetic)
+                           normalizedEvidenceResult declaration.Result = "pass")
                     && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactBytes))
                 then
                     if matches |> List.exists hasValidJourneyReceipt then
@@ -1314,8 +1292,7 @@ module internal HandlersEvidence =
                     not (List.isEmpty obligation.RequiredEvidenceKinds)
                     && matches
                        |> List.exists (fun declaration ->
-                           normalizedEvidenceResult declaration.Result = "pass"
-                           && not declaration.Synthetic)
+                           normalizedEvidenceResult declaration.Result = "pass")
                     && not (
                         matches
                         |> List.exists (satisfiesRequiredEvidenceKinds obligation.RequiredEvidenceKinds)
@@ -1397,7 +1374,7 @@ module internal HandlersEvidence =
               staleEvidence path stale ]
 
     /// WI-4 (ADR-0048): a classified `{gameplay}` FR obligation is UNMET unless discharged by a real
-    /// non-synthetic test (`"supported"`) or an accepted deferral (`"deferred"`, a first-class outcome
+    /// test of the required kind (`"supported"`) or an accepted deferral (`"deferred"`, a first-class outcome
     /// as for visualSurface). Every other state — synthetic, invalid, missing, stale, advisory,
     /// blocking — leaves the per-FR test obligation unmet, and that is the count Governance binds to.
     let classifiedObligationUnmet (disposition: EvidenceDispositionDraft) =

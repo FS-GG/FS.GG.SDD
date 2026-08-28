@@ -7,9 +7,10 @@
 # FIXPOINT of the tool that produces it (#211): running the generators over it leaves a
 # graph its own evidence still satisfies.
 #
-# The satisfaction rule: an obligation is satisfied ONLY by a matching declaration with
-# `result: pass` AND `synthetic: false` — a synthetic pass or a deferral does not satisfy
-# it. See [[fs-gg-sdd-evidence]] and docs/reference/authoring-contracts.md.
+# A matching `result: pass` is the authored outcome. Protected verification additionally
+# requires a current observed-run receipt bound to the candidate. `synthetic` records
+# provenance and does not decide readiness; a deferral does not satisfy. See
+# [[fs-gg-sdd-evidence]] and docs/reference/authoring-contracts.md.
 #
 # A declaration matches an obligation by `id` (EV### == the task's `requiredEvidence`
 # id); the same declaration clears both the evidence gate (ED-###) and the verify test
@@ -27,7 +28,7 @@
 # deferral shape (matched by SkillGateDoctestTests against the deferral gate rule).
 schemaVersion: 1
 evidence:
-  # Satisfies EV001 (T001, requirement FR-001): real (non-synthetic) verification that passed.
+  # Declares EV001 (T001, requirement FR-001) passed; verify binds it to an observed run.
   # T001 also disposes PD-001: the plan scaffold derives one PD per FR mirroring that FR's own
   # refs, so `tasks` folds the PD id into the requirement task rather than deriving a duplicate
   # task over the identical FR/AC set.

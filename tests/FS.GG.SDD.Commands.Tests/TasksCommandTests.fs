@@ -958,7 +958,7 @@ module TasksCommandTests =
         let tasks = TestSupport.readRelative root tasksPath
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains("Cover gameplay requirement FR-001 with a non-synthetic test", tasks)
+        Assert.Contains("Cover gameplay requirement FR-001 with an observed test", tasks)
         Assert.Contains("gameplay-test", tasks)
 
     [<Fact>]

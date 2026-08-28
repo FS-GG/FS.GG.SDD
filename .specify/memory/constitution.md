@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report
 ==================
-This file: FS.GG.SDD Constitution v1.2.0
+This file: FS.GG.SDD Constitution v2.0.0
 
-Version change: 1.1.0 -> 1.2.0
-Bump rationale: Core Principle IX adds the shared rationale-first comment-quality
-contract, including the caller-documentation/implementation-reasoning boundary,
-standalone context rule, and honest human-review boundary. MINOR: adds a new
-engineering obligation without changing any public API or persisted schema.
+Version change: 1.2.0 -> 2.0.0
+Bump rationale: lifecycle artifacts, evidence confidence, and CI obligations now
+scale with product risk. Exact-candidate execution and independent review replace
+artifact volume and synthetic classification as the default confidence path.
+MAJOR: removes compulsory process obligations while preserving compatibility.
 
 Prior rationale (1.1.0): Engineering Constraint "package namespace is
 FS.GG.SDD.*" gained an explicit carve-out for SDD-owned org-shared contract
@@ -70,17 +70,12 @@ gates. If prose and structured data disagree, the feature plan MUST say which
 source wins, how the conflict is reported, and which generated view records the
 diagnostic.
 
-Required lifecycle artifacts are:
-
-- project charter and policy;
-- specification and acceptance criteria;
-- clarification answers;
-- requirements checklist;
-- technical plan;
-- typed task graph;
-- evidence declarations;
-- normalized work model;
-- generated readiness views.
+Lifecycle artifacts are required only when they carry a decision needed for the
+selected risk profile. A small change may use one concise decision package; a
+normal change needs a specification, focused verification, candidate binding,
+and independent review; a high-risk change retains the relevant full controls.
+Generators MUST NOT require repeated source snapshots or stage-to-stage views
+that merely restate facts already bound to the candidate.
 
 Rationale: SDD must avoid replacing Markdown drift with schema drift. Humans can
 write prose, but tools need stable typed contracts.
@@ -93,8 +88,8 @@ Every public F# module MUST have a corresponding `.fsi` signature file. The
 policy.
 
 Surface-area baselines MUST be maintained for public modules once code exists.
-A Tier 1 API change that does not update signatures, baselines, tests, and docs
-is incomplete.
+A public-API change is high risk and is incomplete without updated signatures,
+baselines, tests, and docs.
 
 ### IV. Idiomatic Simplicity Is the Default
 
@@ -127,9 +122,12 @@ Simple pure parsers, data models, and validators do not need MVU ceremony.
 ### VI. Test Evidence Is Mandatory
 
 Behavior-changing code MUST include automated tests that fail before the change
-and pass after. Prefer real filesystem/process/schema fixtures over mocks. When
-synthetic data is unavoidable, disclose it in the test name or nearby comment
-and explain what real path it stands in for.
+and pass after. Confidence comes primarily from execution against the exact
+candidate, independently authored negative controls, and independent critic
+review. Fixture or synthetic provenance SHOULD remain inspectable metadata, but
+MUST NOT override an observed outcome by itself. A claimed pass with no coherent,
+current execution or durable-record receipt MUST remain unsatisfied at a
+protected boundary.
 
 Generated views, schema migrations, and command output contracts need snapshot
 or golden-fixture coverage once they become public or tool-facing.
@@ -170,15 +168,19 @@ but they MUST NOT claim semantic completeness.
 
 ## Change Classification
 
-Every feature declares a tier in its spec:
+Every change selects the highest applicable risk profile:
 
-- **Tier 1 (contracted change):** public API, schema, generated-view, command,
-  artifact layout, agent-skill contract, or cross-repo integration change.
-  Requires spec, plan, tasks, `.fsi` where code exists, tests, docs, and
-  migration notes when applicable.
-- **Tier 2 (internal change):** implementation cleanup with no user-visible or
-  tool-visible contract change. Requires spec and tests; signatures and
-  baselines remain unchanged.
+- **Small:** prose, metadata, or localized maintenance that cannot change
+  runtime behavior or protected policy. Requires concise intent, relevant cheap
+  checks, exact-candidate identity, and review.
+- **Normal:** ordinary product behavior. Requires a specification, focused
+  tests, exact-candidate execution, and independent critic review.
+- **High:** authority, release, migration, destructive, security, public API or
+  schema, formal-model, build-policy, or CI-policy change. Requires the full
+  relevant fail-closed controls, compatibility analysis, and migration notes.
+
+Unknown or indeterminate impact is high. Profiles promote but never demote when
+multiple impacts apply.
 
 ## Engineering Constraints
 
@@ -203,8 +205,11 @@ Every feature declares a tier in its spec:
 
 ## Development Workflow
 
-Use standard Spec Kit: specify -> clarify as needed -> plan -> tasks ->
-implement -> analyze before merge.
+Use the smallest decision-bearing workflow allowed by the risk profile. Standard
+Spec Kit remains available for normal and high-risk work; small changes do not
+need empty clarification, checklist, plan, task, evidence, analysis, verify, and
+ship hand-offs. Before merge, bind executed checks and independent critic review
+to the exact candidate.
 
 For lifecycle features, plans must identify:
 
@@ -229,4 +234,4 @@ Versioning policy:
 - MINOR: new principles or materially expanded obligations.
 - PATCH: clarifications that do not change obligations.
 
-**Version**: 1.2.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-08-20
+**Version**: 2.0.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-08-28

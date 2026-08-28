@@ -51,12 +51,12 @@ present but establishes no coverage):
 
 See [[fs-gg-sdd-checklist]].
 
-## 2. `evidence.yml` satisfaction (used by `evidence`/`verify`)
+## 2. `evidence.yml` confidence (used by `evidence`/`verify`)
 
-> An obligation is **satisfied** only by a matching declaration whose `result` is
-> `pass` **and** whose `synthetic` is `false`.
+> `result: pass` is an authored claim. Protected readiness requires a coherent,
+> current runner or durable-record receipt.
 
-- `synthetic: true` + `result: pass` → disposition **synthetic**, does not satisfy.
+- `synthetic: true|false` → provenance metadata; it does not override an observed outcome.
 - `result: deferred` (or `kind: deferral`) → accepted deferral, does not satisfy.
 - `result: fail | missing | stale | blocked` → not satisfied.
 
@@ -65,7 +65,7 @@ deferral · note · missing` (`generatedview` also accepted). **An unrecognized
 `kind` silently becomes `verification`** — spell it exactly.
 **`result`:** `pass · fail · deferred · missing · stale · advisory · blocked`.
 
-**Satisfies:**
+**Passing declaration (observation is registered separately):**
 
 ```yaml
 schemaVersion: 1

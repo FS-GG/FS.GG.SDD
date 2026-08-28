@@ -71,8 +71,8 @@ In: local two-player volley, scoring, serve. Out: online play, AI, tournaments.
 Honors constitution I (specify-before-implement) and VI (test evidence mandatory).
 
 ## Lifecycle Notes
-Tier 1 change: introduces a public input-mapping surface, so signatures + tests
-land together.
+High-risk change: introduces a public input-mapping surface, so signatures,
+baselines, tests, and docs land together.
 ```
 
 ## Pitfalls

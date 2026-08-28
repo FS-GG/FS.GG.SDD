@@ -25,6 +25,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select risk-scaled verification
+        id: risk
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          bash scripts/tests/ci-risk.test.sh
+          result="$(bash scripts/ci-risk --base "$BASE_SHA" --head "$HEAD_SHA")"
+          printf '%s\n' "$result"
+          printf '%s\n' "$result" >> "$GITHUB_OUTPUT"
+          {
+            echo '### SDD CI risk selection'
+            echo '```text'
+            printf '%s\n' "$result"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # FIRST, because it costs ~1s and needs no SDK, no restore and no network — and because what it
       # guards is this job's own subject: the committed lock graph (FS.GG.SDD#762).
@@ -41,6 +61,7 @@ jobs:
         run: bash scripts/tests/lockfile-sync-gating.test.sh
 
       - name: Set up .NET
+        if: steps.risk.outputs.profile != 'small'
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
@@ -68,6 +89,7 @@ jobs:
       # live in exactly one place. RestoreLockedMode is also set in Directory.Build.props
       # when GITHUB_ACTIONS=true and a lockfile exists; this forces it explicitly.
       - name: Restore (locked)
+        if: steps.risk.outputs.profile != 'small'
         uses: ./.github/actions/locked-restore
         with:
           target: FS.GG.SDD.sln
@@ -75,6 +97,7 @@ jobs:
       # --no-restore: restore already happened above (exactly once). NU1603/NU1608 are
       # promoted to errors in Directory.Build.props.
       - name: Build (net10.0)
+        if: steps.risk.outputs.profile != 'small'
         run: dotnet build FS.GG.SDD.sln -c Debug --no-restore
 
       # Guard the skill-root materializer's WRITE SET (FS.GG.SDD#767). The driver is a `.fsx` outside
@@ -98,6 +121,7 @@ jobs:
       # assertions passed on that emptiness. Restoring here, unsilenced and under `set -e`, makes a
       # restore failure a loud red naming its own cause instead of a check with no subject.
       - name: Unit-test the skill-root materializer's write set
+        if: steps.risk.outputs.profile == 'high'
         run: |
           set -euo pipefail
           dotnet build src/FS.GG.Contracts/FS.GG.Contracts.fsproj -c Release --no-restore
@@ -152,12 +176,14 @@ jobs:
       # `$(FsggKitSkillRoots)`/`$(FsggKitViewSkillRoots)` directly because it lives INSIDE the file
       # that IS the declaration — it is the declaration's own resolution, not a third hand-copy.
       - name: Resolve the view root this tree no longer commits
+        if: steps.risk.outputs.profile == 'high'
         run: bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
 
       # The receiver pin is deliberately executable and immediately adjacent to its call site.
       # `skill-view selftest` owns fixture and swapped-root behaviour; this receiver only proves that
       # its exact production invocation refuses every retired or malformed spelling.
       - name: Pin the receiver-project generate invocation
+        if: steps.risk.outputs.profile == 'high'
         shell: bash
         run: |
           set -euo pipefail
@@ -175,6 +201,7 @@ jobs:
           bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
 
       - name: Unit-test the root-asymmetry check
+        if: steps.risk.outputs.profile == 'high'
         run: bash scripts/tests/check-root-asymmetry.test.sh
 
       # Mutation-test the working-tree cleanliness check (FS.GG.SDD#870 AC3) BEFORE the suite runs,
@@ -194,6 +221,7 @@ jobs:
       # Pure bash, no .NET, no restore, no network — it is cheap enough to run ahead of the build,
       # and it is in THIS job so it inherits the required `gate` context.
       - name: Unit-test the working-tree cleanliness check
+        if: steps.risk.outputs.profile == 'high'
         run: bash scripts/tests/check-tree-clean.test.sh
 
       # The bulk of the suite (Artifacts / Commands / Validation / Contracts / Cli, plus the
@@ -220,8 +248,9 @@ jobs:
       # before this the census of recorded receipts was structurally stuck at zero, because nothing
       # in the repo emitted a report to record one from. It changes no test, filter, or exit code.
       - name: Test (offline suite)
+        if: steps.risk.outputs.profile != 'small'
         id: test
-        run: bash scripts/test.sh --no-build -c Debug --results-dir artifacts/test-results
+        run: bash scripts/test.sh "${{ steps.risk.outputs.test_tier }}" --no-build -c Debug --results-dir artifacts/test-results
 
       # FS.GG.SDD#870 AC2/AC3, and it is placed HERE — immediately after the suite, before anything
       # else writes — because the subject is precisely "what the step above left behind".
@@ -245,6 +274,7 @@ jobs:
       # covered, this is where it surfaces — as a red on the PR that changed it, not as a 684k-line
       # diff on some unrelated one.
       - name: Working tree stayed clean (the suite must not dirty it)
+        if: steps.risk.outputs.profile != 'small'
         run: bash scripts/check-tree-clean.sh --label "scripts/test.sh --no-build -c Debug (full tier)"
 
       # Q2's public compiler is accepted from the package a consumer will install, against the
@@ -254,12 +284,14 @@ jobs:
       # compares every result byte-for-byte, and executes generated bindings under both .NET and
       # Fable/Node. Keeping this in the existing required `gate` job makes the check merge-enforcing.
       - name: Set up exact Go toolchain for the Q1 lmt object
+        if: steps.risk.outputs.profile == 'high'
         uses: actions/setup-go@v5
         with:
           go-version: "1.24.1"
           cache: false
 
       - name: Provision exact Q2 compiler-acceptance tools
+        if: steps.risk.outputs.profile == 'high'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/quint-q2-tools"
@@ -285,6 +317,7 @@ jobs:
           dotnet tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-q2-tools/fable"
 
       - name: Exact package-only Quint compiler acceptance
+        if: steps.risk.outputs.profile == 'high'
         env:
           QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
           LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
@@ -294,6 +327,7 @@ jobs:
         run: bash tests/quint-q2-compiler-acceptance.sh
 
       - name: Qualify the Linux user and network namespace sandbox
+        if: steps.risk.outputs.profile == 'high'
         run: |
           set -euo pipefail
           if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
@@ -302,6 +336,7 @@ jobs:
           /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
 
       - name: Exact package-only Quint Typed SDD v2 acceptance
+        if: steps.risk.outputs.profile == 'high'
         env:
           QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
           LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
@@ -312,6 +347,7 @@ jobs:
         run: bash tests/quint-q3-typed-sdd-acceptance.sh
 
       - name: Upload exact Q2/Q3 Quint acceptance reports (JUnit)
+        if: steps.risk.outputs.profile == 'high'
         uses: actions/upload-artifact@v4
         with:
           name: quint-q2-q3-acceptance-junit
@@ -328,7 +364,7 @@ jobs:
       # producer silently ceasing to emit reports — the exact regression #511 exists to close — is
       # still loud when the suite DID run.
       - name: Upload test reports (TRX)
-        if: ${{ !cancelled() && steps.test.conclusion != 'skipped' }}
+        if: ${{ !cancelled() && steps.risk.outputs.profile != 'small' && steps.test.conclusion != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-trx
@@ -364,6 +400,7 @@ jobs:
       # is make the growth impossible to land SILENTLY: the baseline must be re-committed, and that
       # commit prints the classification and the exact suggested version in the log.
       - name: API-surface baselines (surface --check — both version axes)
+        if: steps.risk.outputs.profile == 'high'
         run: |
           rc=0
           echo '── FS.GG.Contracts (own .fsproj axis) ──'
@@ -390,6 +427,7 @@ jobs:
       # capture is needed. As one ordinary step it
       # is skipped when something upstream is already red.
       - name: Dependency-surface captures (dependency-surface --check)
+        if: steps.risk.outputs.profile == 'high'
         run: |
           dotnet run --project src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -c Debug --no-build -- \
             dependency-surface --check --text
@@ -400,8 +438,21 @@ jobs:
     steps:
       - name: Checkout (SDD)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select risk-scaled verification
+        id: risk
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          result="$(bash scripts/ci-risk --base "$BASE_SHA" --head "$HEAD_SHA")"
+          printf '%s\n' "$result"
+          printf '%s\n' "$result" >> "$GITHUB_OUTPUT"
 
       - name: Set up .NET
+        if: steps.risk.outputs.profile == 'high'
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
@@ -416,6 +467,7 @@ jobs:
       # non-empty and this fails. Repo-specific settings live in Directory.Build.local.props /
       # Directory.Packages.local.props, which the materialize never touches.
       - name: Assert the committed build config matches the pinned FS.GG.Kit
+        if: steps.risk.outputs.profile == 'high'
         run: |
           set -euo pipefail
           dotnet build .config/kit/FS.GG.Kit.receiver.proj -t:FsggKitMaterialize -v minimal
@@ -472,8 +524,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select risk-scaled verification
+        id: risk
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          result="$(bash scripts/ci-risk --base "$BASE_SHA" --head "$HEAD_SHA")"
+          printf '%s\n' "$result"
+          printf '%s\n' "$result" >> "$GITHUB_OUTPUT"
 
       - name: Set up .NET
+        if: steps.risk.outputs.profile == 'high'
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
@@ -486,6 +551,7 @@ jobs:
       # Guard the baseline resolver itself (feature 064 / #91): a wrong baseline yields a
       # plausible-looking result, not an obvious error (see #90), so pin the selection.
       - name: Unit-test the baseline resolver
+        if: steps.risk.outputs.profile == 'high'
         run: bash scripts/tests/pick-latest-version.test.sh
 
       # Guard the gate's own verdict logic (#381). Both defects it pins — Indeterminate/NoBaselineYet
@@ -493,9 +559,11 @@ jobs:
       # required check, so nothing downstream could have caught them. Neither needs the feed or the
       # SDK to test, which is why they are unit-tested here rather than trusted.
       - name: Unit-test the gate verdict + CP#### rendering
+        if: steps.risk.outputs.profile == 'high'
         run: bash scripts/tests/apicompat-check.test.sh
 
       - name: ApiCompat vs feed baseline
+        if: steps.risk.outputs.profile == 'high'
         env:
           NUGET_FEED_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NUGET_FEED_USER: ${{ github.actor }}

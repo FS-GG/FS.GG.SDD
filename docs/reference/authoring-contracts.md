@@ -126,12 +126,12 @@ Forms that leave the requirement **unclassified**:
 
 Classifying an FR `{gameplay}` (ADR-0048) is not a label alone — it derives a **per-FR
 test obligation**, one granularity finer than the project-wide visual-inspection obligation
-below. It is satisfied **only by a real, non-synthetic test**:
+below. It is satisfied only by an observed test of the required kind:
 
 | Stage | Effect |
 | --- | --- |
-| `tasks` | one derived task per classified FR, `Cover gameplay requirement FR-### with a non-synthetic test`, carrying the `gameplay-test` capability, `requirements: [FR-###]`, and its own `requiredEvidence` obligation |
-| `evidence` / `verify` | that obligation is satisfied only by `result: pass` ∧ `synthetic: false` ∧ a **real test kind** (`kind: verification`). A synthetic pass never satisfies it, and neither does a non-test kind (e.g. `implementation`) — an `implementation` pass that discharges an ordinary requirement leaves a gameplay one **unmet** |
+| `tasks` | one derived task per classified FR, `Cover gameplay requirement FR-### with an observed test`, carrying the `gameplay-test` capability, `requirements: [FR-###]`, and its own `requiredEvidence` obligation |
+| `evidence` / `verify` | that obligation needs `result: pass`, a verification-kind declaration, and a current observed-run receipt. A non-test kind (e.g. `implementation`) leaves it **unmet**; synthetic provenance does not override the observed outcome |
 | `verify` / `ship` | a per-FR disposition, plus an aggregate **`classifiedObligationsUnmet`** count — surfaced in `verify.json`, `ship.json`, and the `governance-handoff.json` (`readiness.counts.classifiedObligationsUnmet`) — that a Governance gate binds to block-on-ship |
 
 An **accepted deferral** (with all four deferral fields) is a first-class outcome that the
@@ -164,18 +164,20 @@ does not fail the build, it just records a different kind than you wrote.
 **`result` vocabulary:** `pass` · `fail` · `deferred` · `missing` · `stale` ·
 `advisory` · `blocked` (trimmed and lowercased before matching).
 
-**Satisfaction rule.** An obligation is **satisfied** only by a matching
-declaration whose `result` is `pass` **and** whose `synthetic` is `false`.
+**Confidence rule.** `result: pass` is an authored claim. At protected
+readiness, an obligation is satisfied only when a coherent current observed-run
+or applicable durable-record receipt supports it. `synthetic` remains
+provenance metadata and does not override an observed outcome.
 
-- `synthetic: true` with `result: pass` → disposition `synthetic`. A synthetic
-  pass **discloses a stand-in and does not satisfy** the obligation.
+- `synthetic: true|false` remains visible provenance metadata; it does not decide
+  whether a current observed outcome satisfies the obligation.
 - `result: deferred` (or `kind: deferral`) → disposition `deferred` — an accepted
   deferral, not a satisfaction.
 - `result: fail`, `missing`, `stale`, `blocked` → not satisfied.
 
-A copyable declaration that **satisfies** its obligation:
+A copyable passing declaration (register its observed run separately):
 
-```yaml evidence:satisfied
+```yaml evidence:pass
 schemaVersion: 1
 evidence:
   - id: EV001
@@ -185,21 +187,14 @@ evidence:
       id: T001
     artifacts: [tests/FS.GG.SDD.Commands.Tests/EvidenceCommandTests.fs]
     result: pass
-    synthetic: false
+    synthetic: true
 ```
 
-Declarations that **do not** satisfy (a synthetic pass and an outright fail):
+An outright non-pass declaration:
 
-```yaml evidence:unsatisfied
+```yaml evidence:not-pass
 schemaVersion: 1
 evidence:
-  - id: EV001
-    kind: synthetic
-    subject:
-      type: task
-      id: T001
-    result: pass
-    synthetic: true
   - id: EV002
     kind: verification
     subject:
@@ -654,11 +649,11 @@ When it is `true`:
 | --- | --- |
 | `checklist` | one **advisory** (non-blocking) review row prompting for the between-requirements defect class — draw order vs geometry, overlapping bands, z-order vs collision bounds |
 | `tasks` | one derived task `Inspect a rendered frame`, `requiredSkills: [<implement skill>, visual-inspection]`, empty `sourceIds:` (it descends from no fact id — that is the point), and one `requiredEvidence` obligation |
-| `evidence` / `verify` | that obligation is satisfied only by `result: pass` ∧ `synthetic: false` ∧ **a named rendered artifact** |
+| `evidence` / `verify` | a passing claim must name a rendered artifact regardless of provenance metadata |
 
 The artifact is an `artifacts:` entry, or a `sourceRefs[]` entry carrying a `path` or a `uri`. A
-non-synthetic `pass` that names neither blocks with `evidence.missingVisualInspectionArtifact`: it
-asserts that someone looked at a frame that does not exist. A `synthetic: true` pass never satisfies
+`pass` that names neither blocks with `evidence.missingVisualInspectionArtifact`: it
+asserts that someone looked at a frame that does not exist. Synthetic provenance does not exempt
 it, as for every other obligation, and an accepted deferral (with all four deferral fields) is a
 first-class outcome that the artifact rule does not touch.
 
