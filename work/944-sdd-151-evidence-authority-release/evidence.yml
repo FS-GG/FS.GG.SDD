@@ -11,7 +11,7 @@ sourceAnalysis: readiness/944-sdd-151-evidence-authority-release/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/944-sdd-151-evidence-authority-release/analysis.json
-    digest: f055bb61480ca83ff572ede798037df2fd9400a0544fffaf2f259692b4f24839
+    digest: 9966b74db51fff878ecdfcb0119e647bbe3b83f8164a117d1ae9d29e66087aaa
     schemaVersion: 1
   - label: checklist
     path: work/944-sdd-151-evidence-authority-release/checklist.md
