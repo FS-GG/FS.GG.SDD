@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "a74e82d35ddedabeb9ff312ba46fcbb22fd089aafbfc0debd36d7f0c6b0c8788"
+        "value": "62d272058c6ae1ce22c61b8f32eba118121624d01ee48f553cbf87341a96bc80"
       }
     },
     {
@@ -718,7 +718,7 @@
   "evidence": [
     {
       "id": "EV001",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T001",
       "taskRefs": [
@@ -727,8 +727,11 @@
       "requirementRefs": [
         "FR-001"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -742,7 +745,7 @@
     },
     {
       "id": "EV002",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T002",
       "taskRefs": [
@@ -751,8 +754,11 @@
       "requirementRefs": [
         "FR-002"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -766,7 +772,7 @@
     },
     {
       "id": "EV003",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T003",
       "taskRefs": [
@@ -775,8 +781,11 @@
       "requirementRefs": [
         "FR-003"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -790,7 +799,7 @@
     },
     {
       "id": "EV004",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T004",
       "taskRefs": [
@@ -799,8 +808,11 @@
       "requirementRefs": [
         "FR-004"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -814,7 +826,7 @@
     },
     {
       "id": "EV005",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T005",
       "taskRefs": [
@@ -823,8 +835,11 @@
       "requirementRefs": [
         "FR-005"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -838,15 +853,18 @@
     },
     {
       "id": "EV006",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T006",
       "taskRefs": [
         "T006"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -860,15 +878,18 @@
     },
     {
       "id": "EV007",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T007",
       "taskRefs": [
         "T007"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -882,15 +903,18 @@
     },
     {
       "id": "EV008",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T008",
       "taskRefs": [
         "T008"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -904,7 +928,7 @@
     },
     {
       "id": "EV009",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T009",
       "taskRefs": [
@@ -913,8 +937,11 @@
       "requirementRefs": [
         "FR-001"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -928,7 +955,7 @@
     },
     {
       "id": "EV010",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T010",
       "taskRefs": [
@@ -937,8 +964,11 @@
       "requirementRefs": [
         "FR-002"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -952,7 +982,7 @@
     },
     {
       "id": "EV011",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T011",
       "taskRefs": [
@@ -961,8 +991,11 @@
       "requirementRefs": [
         "FR-005"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -976,15 +1009,18 @@
     },
     {
       "id": "EV012",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T012",
       "taskRefs": [
         "T012"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -998,15 +1034,18 @@
     },
     {
       "id": "EV013",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T013",
       "taskRefs": [
         "T013"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -1020,15 +1059,18 @@
     },
     {
       "id": "EV014",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T014",
       "taskRefs": [
         "T014"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -1042,15 +1084,18 @@
     },
     {
       "id": "EV015",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T015",
       "taskRefs": [
         "T015"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -1117,7 +1162,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "a74e82d35ddedabeb9ff312ba46fcbb22fd089aafbfc0debd36d7f0c6b0c8788"
+            "value": "62d272058c6ae1ce22c61b8f32eba118121624d01ee48f553cbf87341a96bc80"
           },
           "schemaVersion": 1
         },
@@ -1148,7 +1193,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "2da6286a2bbb9f788ac049a2780e7367e3b6baddd2d0000a980cc257bcb3695f"
+        "value": "2ed2532edf4ef3b9215b1c32a47994e57487d20d1cc93c16988231aa854703bf"
       },
       "currency": "current"
     }

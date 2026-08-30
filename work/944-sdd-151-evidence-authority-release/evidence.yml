@@ -1,7 +1,7 @@
 schemaVersion: 1
 workId: 944-sdd-151-evidence-authority-release
 stage: evidence
-status: needsEvidenceCorrection
+status: evidenceReady
 sourceSpec: work/944-sdd-151-evidence-authority-release/spec.md
 sourceClarifications: work/944-sdd-151-evidence-authority-release/clarifications.md
 sourceChecklist: work/944-sdd-151-evidence-authority-release/checklist.md
@@ -50,6 +50,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV002
     kind: verification
@@ -67,6 +75,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV003
     kind: verification
@@ -84,6 +100,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV004
     kind: verification
@@ -101,6 +125,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV005
     kind: verification
@@ -118,6 +150,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV006
     kind: verification
@@ -135,6 +175,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV007
     kind: verification
@@ -152,6 +200,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV008
     kind: verification
@@ -169,6 +225,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV009
     kind: verification
@@ -186,6 +250,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV010
     kind: verification
@@ -203,6 +275,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV011
     kind: verification
@@ -220,6 +300,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV012
     kind: verification
@@ -237,6 +325,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV013
     kind: verification
@@ -254,6 +350,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV014
     kind: verification
@@ -271,6 +375,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
   - id: EV015
     kind: verification
@@ -288,6 +400,14 @@ evidence:
     sourceRefs: []
     result: pass
     synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:db3115de7c219ba45416e87f472eca846b02ddcb9502a80c5500777b03d3499c"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
 lifecycleNotes:
   - "Next lifecycle action: verify."
