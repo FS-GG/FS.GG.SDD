@@ -1,4 +1,2 @@
-  FS.GG.Contracts -> /tmp/fsgg-sdd-944-v39tIs/src/FS.GG.Contracts/bin/Release/net10.0/FS.GG.Contracts.dll
-  FS.GG.SDD.Artifacts -> /tmp/fsgg-sdd-944-v39tIs/src/FS.GG.SDD.Artifacts/bin/Release/net10.0/FS.GG.SDD.Artifacts.dll
   The package FS.GG.SDD.Artifacts.1.5.1 is missing a readme. Go to https://aka.ms/nuget/authoring-best-practices/readme to learn why package readmes are important.
-  Successfully created package '/tmp/sdd944-post-api-pack/FS.GG.SDD.Artifacts.1.5.1.nupkg'.
+  Successfully created package '/tmp/tmp.aBUAr7CBak/FS.GG.SDD.Artifacts.1.5.1.nupkg'.
