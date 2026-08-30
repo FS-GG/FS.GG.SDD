@@ -609,6 +609,14 @@ module internal HandlersShip =
                         else
                             [ recordReceiptStale (evidencePath workId) stale ])
 
+                // FS.GG.SDD#942: ship must not trust an earlier green verify view when its local
+                // evidence existed only in the author's ignored/untracked checkout. Re-evaluate the
+                // exact same candidate-membership facts at this terminal boundary.
+                let localAuthorityDiagnostics =
+                    existingEvidenceArtifact
+                    |> Option.toList
+                    |> List.collect (localArtifactAuthorityDiagnostics workId model)
+
                 let evidencePresenceDiagnostics =
                     match existingEvidenceArtifact, snapshot (evidencePath workId) model with
                     | None, None ->
@@ -638,6 +646,7 @@ module internal HandlersShip =
                     @ existingEvidenceDiagnostics
                     @ observedRunCurrentnessDiagnostics
                     @ recordReceiptCurrentnessDiagnostics
+                    @ localAuthorityDiagnostics
                     @ evidencePresenceDiagnostics
                     @ verificationPrereqDiagnostics
                     @ shipViewDiagnostics

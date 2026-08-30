@@ -89,7 +89,48 @@ module TestSupport =
     let existsRelative (root: string) (path: string) =
         File.Exists(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))
 
-    let runRequest request =
+    let private noFixtureCandidateAuthority root =
+        File.Exists(Path.Combine(root, ".fsgg-test-no-source-authority"))
+
+    /// Lifecycle fixtures model a committed candidate, not an ambient scratch directory. Local
+    /// evidence authority is defined against HEAD, so keep the fixture's authored sources and proof
+    /// artifacts candidate-owned before exercising the evidence boundary. Negative authority tests
+    /// opt out with the private sentinel above and therefore exercise the real process failure.
+    let commitFixtureCandidate root =
+        let run args =
+            let exitCode, output = TestShared.ChildProcess.git root args
+            let renderedArgs = String.concat " " args
+
+            if exitCode <> 0 then
+                failwith $"git {renderedArgs} failed ({exitCode}): {output}"
+
+        if not (Directory.Exists(Path.Combine(root, ".git"))) then
+            run [ "init"; "--quiet" ]
+            run [ "config"; "user.email"; "sdd-tests@example.invalid" ]
+            run [ "config"; "user.name"; "SDD Tests" ]
+
+        // Generated readiness/evidence fixture files may follow the product's local-ignore defaults,
+        // but an exact-candidate test needs them present in HEAD by construction.
+        run [ "add"; "--all"; "--force" ]
+
+        let status, changes = TestShared.ChildProcess.git root [ "status"; "--porcelain" ]
+
+        if status <> 0 then
+            failwith $"git status --porcelain failed ({status}): {changes}"
+
+        if not (String.IsNullOrWhiteSpace changes) then
+            run [ "commit"; "--quiet"; "-m"; "test fixture candidate" ]
+
+    let runRequest (request: CommandRequest) =
+        if
+            (request.Command = SddCommand.Evidence
+             || request.Command = SddCommand.Verify
+             || request.Command = SddCommand.Ship)
+            && not request.DryRun
+            && not (noFixtureCandidateAuthority request.ProjectRoot)
+        then
+            commitFixtureCandidate request.ProjectRoot
+
         let model, effects = init request
 
         let rec interpretUntilIdle state pending =
@@ -361,6 +402,7 @@ module TestSupport =
     let initializeAnalyzedProject root workId title =
         initializeTasksReadyProject root workId title
         runAnalyze root workId title |> ignore
+        commitFixtureCandidate root
 
     let initializeEvidencedProject root workId title =
         initializeAnalyzedProject root workId title

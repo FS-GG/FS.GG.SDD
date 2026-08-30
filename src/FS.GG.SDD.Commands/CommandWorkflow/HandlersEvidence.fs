@@ -182,6 +182,112 @@ module internal HandlersEvidence =
         |> List.sort
         |> List.map ReadFile
 
+    // FS.GG.SDD#942: `ReadFile` establishes only that a path exists in this checkout. It cannot
+    // establish that the exact Git candidate contains the path. Keep Git at the MVU effect edge and
+    // feed its answer back into the same pure planning loop as the existing cited-file reads.
+    let private gitWorkspaceProbe =
+        RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "")
+
+    let private gitTrackedPathProbe path =
+        // HEAD, not merely the index: a staged-but-uncommitted artifact is still absent from an
+        // exact-head clone and therefore cannot authorize that head's ship verdict.
+        RunProcess("git", [ "cat-file"; "-e"; $"HEAD:./{normalizeRelativePath path}" ], "")
+
+    let private processResult effect (model: CommandModel) =
+        model.InterpretedEffects
+        |> List.tryFind (fun result -> result.Effect = effect)
+        |> Option.bind _.Process
+
+    let private requiredCitedArtifactPaths (artifact: EvidenceArtifact option) =
+        artifact
+        |> Option.toList
+        |> List.collect _.Evidence
+        |> List.filter (fun declaration ->
+            normalizedEvidenceResult declaration.Result = "pass"
+            && not declaration.Synthetic)
+        |> List.collect citedArtifactPaths
+
+    let private mergedRequiredCitedArtifactPaths workId (model: CommandModel) =
+        let existing, _, _ = parseExistingEvidence workId model
+        let input, _ = parseInputEvidence workId model.Request
+
+        // `--from-test-report` becomes an `observedRun.source` during this command. Include it in
+        // the authority wave before that receipt exists in evidence.yml; otherwise the final gate
+        // would correctly ask about the newly cited path but have no interpreted HEAD answer for it.
+        let requestedReport =
+            model.Request.FromTestReport
+            |> Option.map _.Trim()
+            |> Option.filter (fun path -> path <> "" && citedPathIsContained path)
+            |> Option.map normalizeRelativePath
+            |> Option.toList
+
+        requiredCitedArtifactPaths existing
+        @ requiredCitedArtifactPaths input
+        @ requestedReport
+        |> List.map normalizeRelativePath
+        |> List.distinct
+        |> List.sort
+
+    /// The first effect detects whether the workspace has Git candidate authority at all. Inside a
+    /// Git work tree, every local authority path receives an exact literal HEAD query; ignored and
+    /// untracked files both red. A missing/non-Git answer is not silently promoted to source-
+    /// projection authority: an archive is exactly where checkout-only bytes must fail closed.
+    let citedArtifactAuthorityEffects workId (model: CommandModel) : CommandEffect list =
+        if model.Request.DryRun then
+            []
+        else
+            match processResult gitWorkspaceProbe model with
+            | None -> [ gitWorkspaceProbe ]
+            | Some probe when probe.Started && probe.ExitCode = 0 && probe.StandardOutput.Trim() = "true" ->
+                mergedRequiredCitedArtifactPaths workId model
+                |> List.map gitTrackedPathProbe
+                |> List.filter (fun effect -> Option.isNone (processResult effect model))
+            | Some _ -> []
+
+    type LocalArtifactAuthority =
+        | Tracked
+        | NotTracked
+        | Unavailable
+        | PreviewOnly
+
+    let localArtifactAuthority (model: CommandModel) path =
+        if model.Request.DryRun then
+            // Dry-run deliberately executes no process; absence of an observation there is not an
+            // authority verdict and must not replace the write-preview contract with a false block.
+            PreviewOnly
+        else
+            match processResult gitWorkspaceProbe model with
+            | Some probe when probe.Started && probe.ExitCode = 0 && probe.StandardOutput.Trim() = "true" ->
+                match processResult (gitTrackedPathProbe path) model with
+                | Some result when result.Started && result.ExitCode = 0 -> Tracked
+                | Some result when result.Started && result.ExitCode <> 0 -> NotTracked
+                | Some _ -> Unavailable
+                | None -> Unavailable
+            | Some _ -> Unavailable
+            | None -> Unavailable
+
+    let localArtifactAuthorityDiagnostics workId (model: CommandModel) (artifact: EvidenceArtifact) =
+        let requiredPaths = requiredCitedArtifactPaths (Some artifact)
+
+        let notTracked, unavailable =
+            requiredPaths
+            |> List.map normalizeRelativePath
+            |> List.distinct
+            |> List.sort
+            |> List.fold
+                (fun (notTracked, unavailable) path ->
+                    match localArtifactAuthority model path with
+                    | NotTracked -> path :: notTracked, unavailable
+                    | Unavailable -> notTracked, path :: unavailable
+                    | Tracked
+                    | PreviewOnly -> notTracked, unavailable)
+                ([], [])
+
+        [ if not (List.isEmpty notTracked) then
+              evidenceLocalArtifactNotTracked (evidencePath workId) (List.rev notTracked)
+          if not (List.isEmpty unavailable) then
+              evidenceLocalArtifactAuthorityUnavailable (evidencePath workId) (List.rev unavailable) ]
+
     // ---- FS.GG.SDD#350 / ADR-0035: the observed run receipt ----
 
     /// The raw, trimmed `--from-test-report` value, if the author gave one.
@@ -447,6 +553,14 @@ module internal HandlersEvidence =
             | Truncated _ -> false
         else
             true
+
+    let citedArtifactIsUsable model path =
+        citedArtifactExists model path
+        && (match localArtifactAuthority model path with
+            | Tracked
+            | PreviewOnly -> true
+            | NotTracked
+            | Unavailable -> false)
 
     /// A structurally valid journey receipt is still unsupported when the bytes it cites have
     /// moved. Keep this predicate at the disposition boundary: a diagnostic alone must never let a
@@ -1682,10 +1796,12 @@ sourceAnalysis: {analysisPath workId}
                                     (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                     merged
 
+                            let authorityDiagnostics = localArtifactAuthorityDiagnostics workId model merged
+
                             let dispositions =
                                 evidenceDispositions
                                     obligations
-                                    (citedArtifactExists model)
+                                    (citedArtifactIsUsable model)
                                     (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                     artifact
 
@@ -1699,6 +1815,7 @@ sourceAnalysis: {analysisPath workId}
                             mergeDiagnostics
                             @ testReportDiagnostics
                             @ validationDiagnostics
+                            @ authorityDiagnostics
                             @ dispositionDiagnostics,
                             Some text,
                             Some summary

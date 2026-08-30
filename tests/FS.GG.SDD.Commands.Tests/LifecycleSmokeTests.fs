@@ -277,6 +277,8 @@ module LifecycleSmokeTests =
   <ResultSummary outcome="Completed"><Counters total="5" executed="5" passed="5" failed="0" error="0" notExecuted="0" /></ResultSummary>
 </TestRun>"""
 
+        TestSupport.commitFixtureCandidate d.Root
+
         let evidenceExit, evidenceOutput, evidenceError =
             TestSupport.runCliRaw
                 120000

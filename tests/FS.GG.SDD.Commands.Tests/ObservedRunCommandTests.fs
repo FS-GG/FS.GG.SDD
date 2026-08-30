@@ -426,6 +426,7 @@ module ObservedRunCommandTests =
     let ``the real CLI accepts --from-test-report and records the receipt`` () =
         let root = evidencedProjectClaimingPass ()
         TestSupport.writeRelative root reportPath (trxWith 1630 0)
+        TestSupport.commitFixtureCandidate root
 
         let exitCode, stdout, stderr =
             [ "evidence"

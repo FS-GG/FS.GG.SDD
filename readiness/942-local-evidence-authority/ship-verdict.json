@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "942-local-evidence-authority",
+  "stage": "ship",
+  "status": "shipReady",
+  "generator": "FS.GG.SDD.Artifacts/1.5.0",
+  "sourcesDigest": {
+    "algorithm": "sha256",
+    "value": "094a2b639cf3470465a9ecdadb698d35f7ab3adf7e09a6e84ab431781873db95"
+  },
+  "verificationReadiness": {
+    "status": "verificationReady",
+    "evidenceSupportedCount": 16,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 16
+  },
+  "disposition": {
+    "state": "shipReady",
+    "blockingFindingIds": []
+  },
+  "readiness": "shipReady"
+}

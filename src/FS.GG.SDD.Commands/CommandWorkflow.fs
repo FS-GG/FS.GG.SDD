@@ -119,7 +119,9 @@ module CommandWorkflow =
                         @ (match model.Request.Command with
                            | Evidence
                            | Verify
-                           | Ship -> citedArtifactReadEffects workId model
+                           | Ship ->
+                               citedArtifactReadEffects workId model
+                               @ citedArtifactAuthorityEffects workId model
                            | _ -> [])
                         // FS.GG.SDD#350: the `--from-tests` report. `Evidence` only — it is the stage
                         // that RECORDS the receipt. `Verify` re-reads the receipt's report through
@@ -427,6 +429,7 @@ module CommandWorkflow =
                             ((typedCompilerCandidateEffects workId model)
                              @ (duplicateCandidateReadEffects workId model)
                              @ (citedArtifactReadEffects workId model)
+                             @ (citedArtifactAuthorityEffects workId model)
                              @ (agentGuidanceCandidateReadEffects workId model)
                              // 056: provider-skill bodies for the re-mirror step (two-phase).
                              @ (providerSkillMirrorReads model))
