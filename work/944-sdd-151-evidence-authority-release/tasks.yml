@@ -13,19 +13,19 @@ work:
 sources:
   - label: spec
     path: work/944-sdd-151-evidence-authority-release/spec.md
-    digest: 6f6c5391ff6be94bc39bcae73a8698136ea6f613a78b93ae18208f6f595628aa
+    digest: d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4
     schemaVersion: 1
   - label: clarifications
     path: work/944-sdd-151-evidence-authority-release/clarifications.md
-    digest: 23f75d12d8ab4493a2f4c3d612d678dffbb959a2bb8eb076286124562cd07d94
+    digest: 2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9
     schemaVersion: 1
   - label: checklist
     path: work/944-sdd-151-evidence-authority-release/checklist.md
-    digest: 40292c9d14b4453bb90b3ccfa0ead216815125e4c384dcf86a42cf40a0caa8cc
+    digest: 13f38e105426f4e81c3c16dc9c9fe8f93e9d0abebcb0ca28b71f3da2f2460502
     schemaVersion: 1
   - label: plan
     path: work/944-sdd-151-evidence-authority-release/plan.md
-    digest: 2dd6c7c6d0c082f1232d9aec0eae3b9bfcb6c63e7467272f32343c3da90fdfa4
+    digest: 58bd1eab126996fc07336232e6861cf85e27364f03b674b5df6bf0b54279c3c1
     schemaVersion: 1
 tasks:
   - id: T001
@@ -178,6 +178,16 @@ tasks:
     sourceIds: [GV-001, PD-002]
     requiredSkills: [deterministic-json]
     requiredEvidence: [EV015]
+  - id: T016
+    title: Implement clarification decision DEC-004
+    status: done
+    owner: sdd
+    dependencies: [T003, T005]
+    requirements: [FR-003, FR-005]
+    decisions: [DEC-004]
+    sourceIds: [AC-003, AC-005, DEC-004, FR-003, FR-005, PD-003, PD-005]
+    requiredSkills: [release-engineering, readiness-evidence]
+    requiredEvidence: [EV016]
 acceptedDeferrals: []
 findings: []
 advisoryNotes:

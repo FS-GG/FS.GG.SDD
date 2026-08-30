@@ -16,9 +16,9 @@ publicOrToolFacingImpact: true
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/944-sdd-151-evidence-authority-release/spec.md sha256:6f6c5391ff6be94bc39bcae73a8698136ea6f613a78b93ae18208f6f595628aa schemaVersion:1
-- clarifications: work/944-sdd-151-evidence-authority-release/clarifications.md sha256:23f75d12d8ab4493a2f4c3d612d678dffbb959a2bb8eb076286124562cd07d94 schemaVersion:1
-- checklist: work/944-sdd-151-evidence-authority-release/checklist.md sha256:40292c9d14b4453bb90b3ccfa0ead216815125e4c384dcf86a42cf40a0caa8cc schemaVersion:1
+- spec: work/944-sdd-151-evidence-authority-release/spec.md sha256:d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4 schemaVersion:1
+- clarifications: work/944-sdd-151-evidence-authority-release/clarifications.md sha256:2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9 schemaVersion:1
+- checklist: work/944-sdd-151-evidence-authority-release/checklist.md sha256:13f38e105426f4e81c3c16dc9c9fe8f93e9d0abebcb0ca28b71f3da2f2460502 schemaVersion:1
 
 ## Plan Scope
 - Work item 944-sdd-151-evidence-authority-release is planned from the current specification, clarification, and checklist facts.

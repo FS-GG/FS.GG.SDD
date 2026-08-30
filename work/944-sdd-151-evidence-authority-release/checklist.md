@@ -21,8 +21,8 @@ Prose status: checklistReady
 - work/944-sdd-151-evidence-authority-release/clarifications.md
 
 ## Source Snapshot
-- spec: work/944-sdd-151-evidence-authority-release/spec.md sha256:6f6c5391ff6be94bc39bcae73a8698136ea6f613a78b93ae18208f6f595628aa schemaVersion:1
-- clarifications: work/944-sdd-151-evidence-authority-release/clarifications.md sha256:23f75d12d8ab4493a2f4c3d612d678dffbb959a2bb8eb076286124562cd07d94 schemaVersion:1
+- spec: work/944-sdd-151-evidence-authority-release/spec.md sha256:d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4 schemaVersion:1
+- clarifications: work/944-sdd-151-evidence-authority-release/clarifications.md sha256:2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9 schemaVersion:1
 
 ## Checklist Items
 - CHK-001 [FR-001] [AC-001] blocking: Requirement FR-001 is testable and linked to acceptance coverage.

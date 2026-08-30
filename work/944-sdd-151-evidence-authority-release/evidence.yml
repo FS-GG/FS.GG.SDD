@@ -15,23 +15,23 @@ sourceSnapshots:
     schemaVersion: 1
   - label: checklist
     path: work/944-sdd-151-evidence-authority-release/checklist.md
-    digest: 40292c9d14b4453bb90b3ccfa0ead216815125e4c384dcf86a42cf40a0caa8cc
+    digest: 13f38e105426f4e81c3c16dc9c9fe8f93e9d0abebcb0ca28b71f3da2f2460502
     schemaVersion: 1
   - label: clarifications
     path: work/944-sdd-151-evidence-authority-release/clarifications.md
-    digest: 23f75d12d8ab4493a2f4c3d612d678dffbb959a2bb8eb076286124562cd07d94
+    digest: 2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9
     schemaVersion: 1
   - label: plan
     path: work/944-sdd-151-evidence-authority-release/plan.md
-    digest: 2dd6c7c6d0c082f1232d9aec0eae3b9bfcb6c63e7467272f32343c3da90fdfa4
+    digest: 58bd1eab126996fc07336232e6861cf85e27364f03b674b5df6bf0b54279c3c1
     schemaVersion: 1
   - label: spec
     path: work/944-sdd-151-evidence-authority-release/spec.md
-    digest: 6f6c5391ff6be94bc39bcae73a8698136ea6f613a78b93ae18208f6f595628aa
+    digest: d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4
     schemaVersion: 1
   - label: tasks
     path: work/944-sdd-151-evidence-authority-release/tasks.yml
-    digest: a964a734e24f0f713cb593a548f134f916ebcf2d21e12dfbf3f85bbba17eee34
+    digest: 11132f1f20b625046c1240c1f25431a09f7150d087706df3624c00bedb7646e9
     schemaVersion: 1
 evidence:
   - id: EV001
@@ -409,5 +409,30 @@ evidence:
       failed: 0
       skipped: 0
     notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV016
+    kind: verification
+    subject:
+      type: task
+      id: T016
+    taskRefs: [T016]
+    requirementRefs: [FR-003, FR-005]
+    acceptanceScenarioRefs: [AC-003, AC-005]
+    clarificationDecisionRefs: [DEC-004]
+    checklistResultRefs: [CR-006]
+    planDecisionRefs: [PD-003, PD-005]
+    obligationRefs: [EV016]
+    artifacts: [scripts/tests/apicompat-check.test.sh, scripts/tests/release-artifact-custody.test.sh, scripts/verify-release-candidate.sh, work/944-sdd-151-evidence-authority-release/architecture-review.md, work/944-sdd-151-evidence-authority-release/evidence/process/back-to-back-pack.txt, work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:062b542f6f579d25d0101b384423682904d3b6c663be8b05ea7ac21d338a3219"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Second-order shell-status and exact-archive custody controls support the revised release authorization boundary.]
 lifecycleNotes:
   - "Next lifecycle action: verify."
