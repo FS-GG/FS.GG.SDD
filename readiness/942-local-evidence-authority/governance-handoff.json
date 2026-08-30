@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/942-local-evidence-authority/ship.json",
-      "digest": "sha256:247b753cc3a670ca3e5009bab330f1e75c8697ee44d981b18eef8fc414a8e019",
+      "digest": "sha256:42df0b304006f7b29030631d21606a807070c562edb1e3165900f0554de4aff7",
       "schemaVersion": 1
     },
     {
       "path": "readiness/942-local-evidence-authority/verify.json",
-      "digest": "sha256:36aa580df26c3f688bfe51b98a18d73b6199cf71094e3a00e8d7835598fd68aa",
+      "digest": "sha256:0aee00e363001af6305c0bb313ea0197aa3483520bf62d653edbbe51ad7617af",
       "schemaVersion": 1
     },
     {
       "path": "readiness/942-local-evidence-authority/work-model.json",
-      "digest": "sha256:83eda1dbbef16a5f492aa36b7dda758a407e37a5b9ac4879c48393c2724b4663",
+      "digest": "sha256:f9f976e0429462bde258d28333529695950ea97b36e00265e336317638ffdb9c",
       "schemaVersion": 1
     }
   ],
