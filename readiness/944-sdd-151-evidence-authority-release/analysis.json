@@ -3,7 +3,7 @@
   "viewVersion": "1.0",
   "workId": "944-sdd-151-evidence-authority-release",
   "stage": "analyze",
-  "status": "needsGeneratedViewRefresh",
+  "status": "implementationReady",
   "generator": "FS.GG.SDD.Artifacts/1.5.1",
   "sources": [
     {
@@ -550,39 +550,24 @@
     }
   ],
   "readiness": {
-    "status": "needsGeneratedViewRefresh",
-    "readyCount": 0,
+    "status": "implementationReady",
+    "readyCount": 45,
     "advisoryCount": 0,
     "warningCount": 0,
     "blockingCount": 0,
-    "staleSourceCount": 1,
+    "staleSourceCount": 0,
     "missingDispositionCount": 0,
     "malformedSourceCount": 0,
     "generatedViewFindingCount": 0,
     "acceptedDeferralCount": 0
   },
-  "findings": [
-    {
-      "id": "AF001",
-      "category": "staleSource",
-      "severity": "staleSource",
-      "state": "open",
-      "path": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
-      "relatedIds": [
-        "readiness/944-sdd-151-evidence-authority-release/work-model.json"
-      ],
-      "message": "Generated view \u0027readiness/944-sdd-151-evidence-authority-release/work-model.json\u0027 is stale.",
-      "correction": "Regenerate readiness/\u003Cid\u003E/work-model.json from current lifecycle sources."
-    }
-  ],
+  "findings": [],
   "generatedViews": [
     {
       "path": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
       "kind": "workModel",
       "currency": "current",
-      "diagnosticIds": [
-        "staleGeneratedView"
-      ]
+      "diagnosticIds": []
     }
   ],
   "optionalBoundaryFacts": [
@@ -608,21 +593,10 @@
       "diagnosticIds": []
     }
   ],
-  "diagnostics": [
-    {
-      "id": "staleGeneratedView",
-      "severity": "warning",
-      "artifact": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
-      "message": "Generated view \u0027readiness/944-sdd-151-evidence-authority-release/work-model.json\u0027 is stale.",
-      "correction": "Regenerate readiness/\u003Cid\u003E/work-model.json from current lifecycle sources.",
-      "relatedIds": [
-        "readiness/944-sdd-151-evidence-authority-release/work-model.json"
-      ]
-    }
-  ],
+  "diagnostics": [],
   "nextAction": {
-    "actionId": "correctBlockingDiagnostics",
+    "actionId": "analysis.next.implement",
     "command": null,
-    "reason": "Analysis found lifecycle diagnostics that must be corrected before implementation."
+    "reason": "Lifecycle sources are current and ready for implementation."
   }
 }

@@ -16,7 +16,7 @@
     },
     {
       "path": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
-      "digest": "sha256:dce8fc81bf21027aa2b5042a300d75bfe9c7cb06223b347e7eb205fc2e9c9ab8",
+      "digest": "sha256:5e282fee5399b37e9479b2b8679af09ff8840bbd6bfb4a6b405cd64ef42e4fd7",
       "schemaVersion": 1
     }
   ],
@@ -98,6 +98,11 @@
         "rationale": null
       },
       {
+        "id": "evidence:EV016",
+        "state": "real",
+        "rationale": null
+      },
+      {
         "id": "task:T001",
         "state": "real",
         "rationale": null
@@ -171,6 +176,11 @@
         "id": "task:T015",
         "state": "real",
         "rationale": null
+      },
+      {
+        "id": "task:T016",
+        "state": "real",
+        "rationale": null
       }
     ],
     "dependencies": [
@@ -233,6 +243,10 @@
       {
         "dependent": "evidence:EV015",
         "dependency": "task:T015"
+      },
+      {
+        "dependent": "evidence:EV016",
+        "dependency": "task:T016"
       },
       {
         "dependent": "task:T001",
@@ -333,6 +347,18 @@
       {
         "dependent": "task:T015",
         "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T016",
+        "dependency": "evidence:EV016"
+      },
+      {
+        "dependent": "task:T016",
+        "dependency": "task:T003"
+      },
+      {
+        "dependent": "task:T016",
+        "dependency": "task:T005"
       }
     ]
   },
