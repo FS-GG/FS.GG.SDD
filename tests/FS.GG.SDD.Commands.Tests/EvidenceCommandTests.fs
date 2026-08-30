@@ -156,6 +156,7 @@ evidence:
         |> fun text -> text.Replace("kind: missing", "kind: verification").Replace("result: missing", "result: pass")
         |> TestSupport.writeRelative root evidencePath
 
+        TestSupport.commitFixtureCandidate root
         TestSupport.runEvidence root workId title |> ignore
 
         let beforeReceipt =
@@ -166,6 +167,7 @@ evidence:
         Assert.Equal(CommandOutcome.Blocked, beforeReceipt.Outcome)
 
         TestSupport.writeRelative root testReport (passingTrx 1)
+        TestSupport.commitFixtureCandidate root
 
         let receiptReport =
             { TestSupport.evidenceRequest root workId title with
@@ -1307,6 +1309,7 @@ tasks:
         TestSupport.authorPlanProse root workId // #351: the scaffold's plan prose now blocks analyze
         TestSupport.runTasks root workId title |> ignore
         TestSupport.runAnalyze root workId title |> ignore
+        TestSupport.commitFixtureCandidate root
         TestSupport.runEvidence root workId title |> ignore
         root
 
@@ -1387,6 +1390,8 @@ tasks:
                 "    artifacts: []\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
         |> ignore
 
+        TestSupport.commitFixtureCandidate root
+
         let report = TestSupport.runEvidence root workId title
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
@@ -1412,6 +1417,8 @@ tasks:
                 "    artifacts: [evidence/frame-ceiling-bounce.png]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
         |> ignore
 
+        TestSupport.commitFixtureCandidate root
+
         let report = TestSupport.runEvidence root workId title
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
@@ -1436,6 +1443,8 @@ tasks:
                 "T006"
                 "    artifacts: []\n    sourceRefs:\n      - kind: verification\n        path: evidence/frame-ceiling-bounce.png\n        result: pass\n    result: pass\n    synthetic: false\n")
         |> ignore
+
+        TestSupport.commitFixtureCandidate root
 
         let report = TestSupport.runEvidence root workId title
 
@@ -1464,6 +1473,8 @@ tasks:
                 "T006"
                 "    artifacts: [evidence/frame-ceiling-bounce.png]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
         |> ignore
+
+        TestSupport.commitFixtureCandidate root
 
         let report = TestSupport.runEvidence root workId title
 
@@ -1557,6 +1568,7 @@ tasks:
     [<Fact>]
     let ``ignored local evidence reds evidence verify and ship and remains red in a clean clone`` () =
         let root = visualSurfaceScaffoldedProject ()
+        TestSupport.writeRelative root ".fsgg-test-no-source-authority" "negative authority control\n"
         let obligationId = visualObligationId root
         let artifactPath = "ignored-proof/visual-frame.png"
         renderFrame root artifactPath
@@ -1591,6 +1603,7 @@ tasks:
         let root = visualSurfaceScaffoldedProject ()
         initializeGitCandidate root
         commitAll root "baseline candidate"
+        TestSupport.writeRelative root ".fsgg-test-no-source-authority" "negative authority control\n"
 
         let obligationId = visualObligationId root
         let artifactPath = "untracked-proof/visual-frame.png"
@@ -1616,6 +1629,7 @@ tasks:
         let root = visualSurfaceScaffoldedProject ()
         initializeGitCandidate root
         commitAll root "baseline candidate"
+        TestSupport.writeRelative root ".fsgg-test-no-source-authority" "negative authority control\n"
 
         let obligationId = visualObligationId root
         let artifactPath = $"work/{workId}/evidence/staged-only-frame.png"
@@ -1656,6 +1670,98 @@ tasks:
         let report = TestSupport.runEvidence root workId title
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.localArtifactNotTracked")
+
+    [<Fact>]
+    let ``git archive projection without repository authority blocks evidence verify and ship`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        let artifactPath = $"work/{workId}/evidence/visual-frame.png"
+        renderFrame root artifactPath
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{artifactPath}]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        initializeGitCandidate root
+        commitAll root "candidate with tracked proof"
+
+        let archiveRoot = TestSupport.tempDirectory ()
+        let archivePath = System.IO.Path.Combine(archiveRoot, "candidate.zip")
+        let projectionRoot = System.IO.Path.Combine(archiveRoot, "projection")
+        git root [ "archive"; "--format=zip"; $"--output={archivePath}"; "HEAD" ]
+        System.IO.Compression.ZipFile.ExtractToDirectory(archivePath, projectionRoot)
+        TestSupport.writeRelative projectionRoot ".fsgg-test-no-source-authority" "negative authority control\n"
+
+        for report in
+            [ TestSupport.runEvidence projectionRoot workId title
+              TestSupport.runVerify projectionRoot workId title
+              TestSupport.runShip projectionRoot workId title ] do
+            Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+            Assert.Contains(
+                report.Diagnostics,
+                fun diagnostic -> diagnostic.Id = "evidence.localArtifactAuthorityUnavailable"
+            )
+
+    [<Fact>]
+    let ``missing Git command answer fails closed for local evidence`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        let artifactPath = $"work/{workId}/evidence/visual-frame.png"
+        renderFrame root artifactPath
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{artifactPath}]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let originalPath = System.Environment.GetEnvironmentVariable "PATH"
+        let emptyPath = TestSupport.tempDirectory ()
+        TestSupport.writeRelative root ".fsgg-test-no-source-authority" "negative authority control\n"
+
+        try
+            System.Environment.SetEnvironmentVariable("PATH", emptyPath)
+            let report = TestSupport.runEvidence root workId title
+            Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+            Assert.Contains(
+                report.Diagnostics,
+                fun diagnostic -> diagnostic.Id = "evidence.localArtifactAuthorityUnavailable"
+            )
+        finally
+            System.Environment.SetEnvironmentVariable("PATH", originalPath)
+
+    [<Fact>]
+    let ``explicit dry-run projection preview does not claim an authority failure`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        let artifactPath = $"work/{workId}/evidence/visual-frame.png"
+        renderFrame root artifactPath
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{artifactPath}]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report =
+            { TestSupport.evidenceRequest root workId title with
+                DryRun = true }
+            |> TestSupport.runRequest
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.localArtifactAuthorityUnavailable"
+        )
 
     [<Fact>]
     let ``explicit durable external receipt does not require local Git path authority`` () =

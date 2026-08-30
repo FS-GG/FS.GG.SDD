@@ -21,8 +21,8 @@ Prose status: checklistReady
 - work/942-local-evidence-authority/clarifications.md
 
 ## Source Snapshot
-- spec: work/942-local-evidence-authority/spec.md sha256:ed33f5e49d6c22cfbfe8482fa0d5e45643e6d85b494d479b9b931cf1c3f189e4 schemaVersion:1
-- clarifications: work/942-local-evidence-authority/clarifications.md sha256:ed5c945fb3f230d80a15cacd9641b3d2b3b063729452436c0cf1236a4d538cfa schemaVersion:1
+- spec: work/942-local-evidence-authority/spec.md sha256:0181a9b85a4d8e6c820875a66774b8136b176dd0f0450dc98ad19cf07440f959 schemaVersion:1
+- clarifications: work/942-local-evidence-authority/clarifications.md sha256:662acbb7af46944f84c2be5ac5369227a9217ebe703ca9eade7829710c252e5f schemaVersion:1
 
 ## Checklist Items
 - CHK-001 [FR-001] [AC-001] [AC-002] blocking: Requirement FR-001 is testable and linked to acceptance coverage.

@@ -53,7 +53,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "0aad692569e82fc616935e7210a4ef7df8a27c56847df5f29e8ae8242703cec2"
+        "value": "c7354800045bea3f2cec54d7b42c839a021441dbb0a1d83135c1239d74257cf0"
       }
     },
     {
@@ -65,7 +65,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "ed5c945fb3f230d80a15cacd9641b3d2b3b063729452436c0cf1236a4d538cfa"
+        "value": "662acbb7af46944f84c2be5ac5369227a9217ebe703ca9eade7829710c252e5f"
       }
     },
     {
@@ -89,7 +89,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "ec5b0b84627ea9e20f36fd28e909836dcbfe083fddeb0d1a08477de37de16b58"
+        "value": "b0f5409ae69efa7a2d70b5312760e2cad55f702d8d49594fcb72302c71597aaa"
       }
     },
     {
@@ -101,7 +101,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "ed33f5e49d6c22cfbfe8482fa0d5e45643e6d85b494d479b9b931cf1c3f189e4"
+        "value": "0181a9b85a4d8e6c820875a66774b8136b176dd0f0450dc98ad19cf07440f959"
       }
     },
     {
@@ -113,7 +113,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "b7259f83ce47720d94ee16242b5c7753ab0a5a8b1960efe5cecac46d3f8702f6"
+        "value": "f7d020eeb36a27143609d8407c64df2733ef45000c537e75ae437c7cf35c276b"
       }
     }
   ],
@@ -216,8 +216,8 @@
     },
     {
       "id": "FR-005",
-      "title": "The implementation MUST include inversion controls for ignored-existing, untracked-existing, missing-on-clean-checkout, tracked-work-evidence positive, and explicit-external-receipt positive cases. (covers AC-001, AC-002, AC-003, AC-004, AC-005)",
-      "text": "The implementation MUST include inversion controls for ignored-existing, untracked-existing, missing-on-clean-checkout, tracked-work-evidence positive, and explicit-external-receipt positive cases. (covers AC-001, AC-002, AC-003, AC-004, AC-005)",
+      "title": "The implementation MUST include inversion controls for ignored-existing, untracked-existing, staged-only, missing-on-clean-checkout, Git-archive/no-repository, unavailable-Git-command, tracked-work-evidence positive, and explicit-external-receipt positive cases. (covers AC-001, AC-002, AC-003, AC-004, AC-005)",
+      "text": "The implementation MUST include inversion controls for ignored-existing, untracked-existing, staged-only, missing-on-clean-checkout, Git-archive/no-repository, unavailable-Git-command, tracked-work-evidence positive, and explicit-external-receipt positive cases. (covers AC-001, AC-002, AC-003, AC-004, AC-005)",
       "acceptanceCriteria": [
         "AC-001",
         "AC-002",
@@ -282,8 +282,8 @@
     },
     {
       "id": "DEC-003",
-      "title": "Prove the boundary with independently discriminating fixtures for ignored, untracked, clean-checkout-missing, tracked, and external-receipt cases.",
-      "decision": "Prove the boundary with independently discriminating fixtures for ignored, untracked, clean-checkout-missing, tracked, and external-receipt cases.",
+      "title": "Prove the boundary with independently discriminating fixtures for ignored, untracked, staged-only, clean-checkout-missing, Git-archive/no-repository, unavailable-Git-command, tracked, and external-receipt cases.",
+      "decision": "Prove the boundary with independently discriminating fixtures for ignored, untracked, staged-only, clean-checkout-missing, Git-archive/no-repository, unavailable-Git-command, tracked, and external-receipt cases.",
       "requirementRefs": [
         "FR-005"
       ],
@@ -1202,7 +1202,7 @@
           "path": "work/942-local-evidence-authority/checklist.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "0aad692569e82fc616935e7210a4ef7df8a27c56847df5f29e8ae8242703cec2"
+            "value": "c7354800045bea3f2cec54d7b42c839a021441dbb0a1d83135c1239d74257cf0"
           },
           "schemaVersion": 1
         },
@@ -1210,7 +1210,7 @@
           "path": "work/942-local-evidence-authority/clarifications.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "ed5c945fb3f230d80a15cacd9641b3d2b3b063729452436c0cf1236a4d538cfa"
+            "value": "662acbb7af46944f84c2be5ac5369227a9217ebe703ca9eade7829710c252e5f"
           },
           "schemaVersion": 1
         },
@@ -1226,7 +1226,7 @@
           "path": "work/942-local-evidence-authority/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "ec5b0b84627ea9e20f36fd28e909836dcbfe083fddeb0d1a08477de37de16b58"
+            "value": "b0f5409ae69efa7a2d70b5312760e2cad55f702d8d49594fcb72302c71597aaa"
           },
           "schemaVersion": 1
         },
@@ -1234,7 +1234,7 @@
           "path": "work/942-local-evidence-authority/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "ed33f5e49d6c22cfbfe8482fa0d5e45643e6d85b494d479b9b931cf1c3f189e4"
+            "value": "0181a9b85a4d8e6c820875a66774b8136b176dd0f0450dc98ad19cf07440f959"
           },
           "schemaVersion": 1
         },
@@ -1242,14 +1242,14 @@
           "path": "work/942-local-evidence-authority/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "b7259f83ce47720d94ee16242b5c7753ab0a5a8b1960efe5cecac46d3f8702f6"
+            "value": "f7d020eeb36a27143609d8407c64df2733ef45000c537e75ae437c7cf35c276b"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "34fbe72498c656ce02d26ee6fc84008da58140850d62441917ef9d41f99c8b4e"
+        "value": "5576e487a2b494e1a5046836f9eb7a53ca666d43995f3ad171ba33e35bfeae85"
       },
       "currency": "current"
     }

@@ -211,15 +211,27 @@ module internal HandlersEvidence =
         let existing, _, _ = parseExistingEvidence workId model
         let input, _ = parseInputEvidence workId model.Request
 
-        requiredCitedArtifactPaths existing @ requiredCitedArtifactPaths input
+        // `--from-test-report` becomes an `observedRun.source` during this command. Include it in
+        // the authority wave before that receipt exists in evidence.yml; otherwise the final gate
+        // would correctly ask about the newly cited path but have no interpreted HEAD answer for it.
+        let requestedReport =
+            model.Request.FromTestReport
+            |> Option.map _.Trim()
+            |> Option.filter (fun path -> path <> "" && citedPathIsContained path)
+            |> Option.map normalizeRelativePath
+            |> Option.toList
+
+        requiredCitedArtifactPaths existing
+        @ requiredCitedArtifactPaths input
+        @ requestedReport
         |> List.map normalizeRelativePath
         |> List.distinct
         |> List.sort
 
-    /// The first effect detects whether the workspace has Git candidate authority at all. SDD also
-    /// supports source projections and initialized-but-not-yet-versioned workspaces, so a clean
-    /// non-Git root preserves the pre-existing existence rule. Inside a Git work tree, every local
-    /// authority path receives an exact literal index query; ignored and untracked files both red.
+    /// The first effect detects whether the workspace has Git candidate authority at all. Inside a
+    /// Git work tree, every local authority path receives an exact literal HEAD query; ignored and
+    /// untracked files both red. A missing/non-Git answer is not silently promoted to source-
+    /// projection authority: an archive is exactly where checkout-only bytes must fail closed.
     let citedArtifactAuthorityEffects workId (model: CommandModel) : CommandEffect list =
         if model.Request.DryRun then
             []
@@ -236,13 +248,13 @@ module internal HandlersEvidence =
         | Tracked
         | NotTracked
         | Unavailable
-        | SourceProjection
+        | PreviewOnly
 
     let localArtifactAuthority (model: CommandModel) path =
         if model.Request.DryRun then
             // Dry-run deliberately executes no process; absence of an observation there is not an
             // authority verdict and must not replace the write-preview contract with a false block.
-            SourceProjection
+            PreviewOnly
         else
             match processResult gitWorkspaceProbe model with
             | Some probe when probe.Started && probe.ExitCode = 0 && probe.StandardOutput.Trim() = "true" ->
@@ -251,7 +263,6 @@ module internal HandlersEvidence =
                 | Some result when result.Started && result.ExitCode <> 0 -> NotTracked
                 | Some _ -> Unavailable
                 | None -> Unavailable
-            | Some probe when probe.Started -> SourceProjection
             | Some _ -> Unavailable
             | None -> Unavailable
 
@@ -269,7 +280,7 @@ module internal HandlersEvidence =
                     | NotTracked -> path :: notTracked, unavailable
                     | Unavailable -> notTracked, path :: unavailable
                     | Tracked
-                    | SourceProjection -> notTracked, unavailable)
+                    | PreviewOnly -> notTracked, unavailable)
                 ([], [])
 
         [ if not (List.isEmpty notTracked) then
@@ -547,7 +558,7 @@ module internal HandlersEvidence =
         citedArtifactExists model path
         && (match localArtifactAuthority model path with
             | Tracked
-            | SourceProjection -> true
+            | PreviewOnly -> true
             | NotTracked
             | Unavailable -> false)
 
