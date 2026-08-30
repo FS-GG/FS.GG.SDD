@@ -1358,6 +1358,20 @@ tasks:
 
         System.IO.File.WriteAllBytes(absolute, [| 0x89uy; 0x50uy; 0x4Euy; 0x47uy; 0x0Duy; 0x0Auy; 0x1Auy; 0x0Auy |])
 
+    let private git root args =
+        let exitCode, output = TestShared.ChildProcess.git root args
+        let renderedArgs = String.concat " " args
+        Assert.True((exitCode = 0), $"git {renderedArgs} failed ({exitCode}): {output}")
+
+    let private initializeGitCandidate root =
+        git root [ "init"; "--quiet" ]
+        git root [ "config"; "user.email"; "sdd-tests@example.invalid" ]
+        git root [ "config"; "user.name"; "SDD Tests" ]
+
+    let private commitAll root message =
+        git root [ "add"; "--all" ]
+        git root [ "commit"; "--quiet"; "-m"; message ]
+
     /// FR-004 / SC-003: a non-synthetic `pass` that names no rendered artifact is exactly the shape
     /// of Breakout1's green suite over an invisible ball. It blocks.
     [<Fact>]
@@ -1535,6 +1549,133 @@ tasks:
         let report = TestSupport.runEvidence root workId title
 
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+    // ---------------------------------------------------------------------------------------------
+    // FS.GG.SDD#942 — local evidence authority must survive an exact-head checkout.
+    // ---------------------------------------------------------------------------------------------
+
+    [<Fact>]
+    let ``ignored local evidence reds evidence verify and ship and remains red in a clean clone`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        let artifactPath = "ignored-proof/visual-frame.png"
+        renderFrame root artifactPath
+        TestSupport.writeRelative root ".gitignore" "ignored-proof/\n"
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: []\n    sourceRefs:\n      - kind: verification\n        path: {artifactPath}\n        result: pass\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        initializeGitCandidate root
+        commitAll root "candidate without ignored proof"
+
+        for report in
+            [ TestSupport.runEvidence root workId title
+              TestSupport.runVerify root workId title
+              TestSupport.runShip root workId title ] do
+            Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+            Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.localArtifactNotTracked")
+
+        let clean = TestSupport.tempDirectory ()
+        git root [ "clone"; "--quiet"; root; clean ]
+        let cleanReport = TestSupport.runEvidence clean workId title
+        Assert.Equal(CommandOutcome.Blocked, cleanReport.Outcome)
+        Assert.Contains(cleanReport.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+    [<Fact>]
+    let ``untracked existing local evidence is not candidate authority`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        initializeGitCandidate root
+        commitAll root "baseline candidate"
+
+        let obligationId = visualObligationId root
+        let artifactPath = "untracked-proof/visual-frame.png"
+        renderFrame root artifactPath
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{artifactPath}]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        git root [ "add"; evidencePath ]
+        git root [ "commit"; "--quiet"; "-m"; "cite untracked proof" ]
+
+        let report = TestSupport.runEvidence root workId title
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.localArtifactNotTracked")
+
+    [<Fact>]
+    let ``staged-only local evidence cannot authorize the unchanged HEAD`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        initializeGitCandidate root
+        commitAll root "baseline candidate"
+
+        let obligationId = visualObligationId root
+        let artifactPath = $"work/{workId}/evidence/staged-only-frame.png"
+        renderFrame root artifactPath
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{artifactPath}]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        git root [ "add"; evidencePath; artifactPath ]
+
+        let report = TestSupport.runEvidence root workId title
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.localArtifactNotTracked")
+
+    [<Fact>]
+    let ``tracked work-package evidence remains supported`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        let artifactPath = $"work/{workId}/evidence/visual-frame.png"
+        renderFrame root artifactPath
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{artifactPath}]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        initializeGitCandidate root
+        commitAll root "candidate with tracked proof"
+
+        let report = TestSupport.runEvidence root workId title
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.localArtifactNotTracked")
+
+    [<Fact>]
+    let ``explicit durable external receipt does not require local Git path authority`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: []\n    sourceRefs:\n      - kind: verification\n        uri: https://ci.example/runs/942\n        result: pass\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        initializeGitCandidate root
+        commitAll root "candidate with external receipt"
+
+        let report = TestSupport.runEvidence root workId title
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.localArtifactNotTracked")
 
     /// FR-001: the gate validates `merged` (on-disk ⊕ `InputText`), so the probe must see BOTH.
     ///

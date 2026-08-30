@@ -845,12 +845,14 @@ module internal HandlersVerify =
                                 (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                 artifact
 
+                        let authorityDiagnostics = localArtifactAuthorityDiagnostics workId model artifact
+
                         let obligations = evidenceObligations taskFacts
 
                         let dispositions =
                             evidenceDispositions
                                 obligations
-                                (citedArtifactExists model)
+                                (citedArtifactIsUsable model)
                                 (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                 artifact
 
@@ -862,7 +864,7 @@ module internal HandlersVerify =
                         let testViews =
                             verifyTestDispositionViews
                                 taskFacts
-                                (citedArtifactExists model)
+                                (citedArtifactIsUsable model)
                                 (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                 model.Request.RequireObserved
                                 artifact
@@ -922,6 +924,7 @@ module internal HandlersVerify =
                         let summary = evidenceSummary workId artifact dispositions
 
                         validationDiagnostics
+                        @ authorityDiagnostics
                         @ dispositionDiagnostics
                         @ testDiagnostics
                         @ skillDiagnostics,

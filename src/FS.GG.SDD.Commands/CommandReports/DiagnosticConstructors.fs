@@ -806,6 +806,28 @@ module internal DiagnosticConstructors =
             "Produce the cited artifact, correct the path, or stop claiming a pass — a cited path that is not on disk proves nothing."
             paths
 
+    // FS.GG.SDD#942: filesystem existence is not durable local authority. An ignored or untracked
+    // file disappears from an exact-head checkout even though it satisfies `File.Exists` in the
+    // author's dirty tree. Keep this distinct from artifactNotFound: the repair is to make the
+    // evidence candidate-owned (prefer work/<id>/evidence/) or cite an explicit external URI.
+    let evidenceLocalArtifactNotTracked path paths =
+        errorDiagnostic
+            "evidence.localArtifactNotTracked"
+            (Some path)
+            "Evidence passes while citing a local artifact that is not tracked by the current Git candidate."
+            "Add the durable artifact to Git (prefer work/<id>/evidence/ for generated proof), cite another tracked repository-relative artifact, or use an explicit sourceRefs uri for durable external evidence."
+            paths
+
+    // A process that started inside a Git work tree but could not answer the exact-path query has
+    // supplied no provenance verdict. This is a non-answer, never permission to retain shipReady.
+    let evidenceLocalArtifactAuthorityUnavailable path paths =
+        errorDiagnostic
+            "evidence.localArtifactAuthorityUnavailable"
+            (Some path)
+            "The command could not establish Git authority for one or more cited local evidence artifacts."
+            "Restore Git access and re-run the command. Local evidence cannot support verification or ship readiness until its candidate membership is known."
+            paths
+
     // FS-GG/FS.GG.SDD#822: the one cited path that `artifactNotFound`'s generic message is wrong
     // advice for — a work item's own `readiness/<id>/ship-verdict.json`. Every other citation
     // genuinely CAN be produced before evidence runs; this one structurally cannot, because `ship`
