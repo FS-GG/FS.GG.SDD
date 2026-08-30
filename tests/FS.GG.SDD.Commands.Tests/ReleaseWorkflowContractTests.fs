@@ -42,8 +42,12 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("$artifacts_version\" != \"$cli_version", workflow)
 
         let start = workflow.IndexOf("\n  publish-artifacts:\n", StringComparison.Ordinal)
-        let locate = workflow.IndexOf("\n  locate-artifacts:\n", start, StringComparison.Ordinal)
-        let finish = workflow.IndexOf("\n  publish-cli:\n", locate, StringComparison.Ordinal)
+
+        let locate =
+            workflow.IndexOf("\n  locate-artifacts:\n", start, StringComparison.Ordinal)
+
+        let finish =
+            workflow.IndexOf("\n  publish-cli:\n", locate, StringComparison.Ordinal)
 
         Assert.True(
             start >= 0 && locate > start && finish > locate,
