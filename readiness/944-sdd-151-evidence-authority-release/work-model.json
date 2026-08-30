@@ -53,7 +53,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "40292c9d14b4453bb90b3ccfa0ead216815125e4c384dcf86a42cf40a0caa8cc"
+        "value": "9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15"
       }
     },
     {
@@ -65,7 +65,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "23f75d12d8ab4493a2f4c3d612d678dffbb959a2bb8eb076286124562cd07d94"
+        "value": "2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9"
       }
     },
     {
@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "c4e713e4531fd12df96e2d3310242f3a0cd3abd0c3476d63df71eeec79c5e638"
+        "value": "9efb0007d134e85dc76aabe3808a58d725ebf65aff511907584ba7a0969036e7"
       }
     },
     {
@@ -89,7 +89,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "2dd6c7c6d0c082f1232d9aec0eae3b9bfcb6c63e7467272f32343c3da90fdfa4"
+        "value": "675278a463d1b9fc63e5cc974e01b65d135885d80c28367f26ccaa0c98c3b5ab"
       }
     },
     {
@@ -101,7 +101,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "6f6c5391ff6be94bc39bcae73a8698136ea6f613a78b93ae18208f6f595628aa"
+        "value": "d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4"
       }
     },
     {
@@ -113,7 +113,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "a964a734e24f0f713cb593a548f134f916ebcf2d21e12dfbf3f85bbba17eee34"
+        "value": "8eaac673c49c3c45b831f727ed96967da4585ad72b3bbe8fede1816fa0a2f045"
       }
     }
   ],
@@ -172,8 +172,8 @@
     },
     {
       "id": "FR-003",
-      "title": "The exact candidate MUST pass repeated focused Debug, complete Debug and Release suites, SDD verify/ship, package/API/validation/release dry-run gates, and a release-coherence inversion. (covers AC-003)",
-      "text": "The exact candidate MUST pass repeated focused Debug, complete Debug and Release suites, SDD verify/ship, package/API/validation/release dry-run gates, and a release-coherence inversion. (covers AC-003)",
+      "title": "The exact candidate MUST pass repeated focused Debug, complete Debug and Release suites, SDD verify/ship, package/API/validation/release dry-run gates, and release-coherence inversions. Shell test harnesses MUST capture explicit command statuses outside \u0060if\u0060/\u0060!\u0060 conditional-errexit contexts, aggregate failures, and prove removal of each ApiCompat isolation property fails. (covers AC-003)",
+      "text": "The exact candidate MUST pass repeated focused Debug, complete Debug and Release suites, SDD verify/ship, package/API/validation/release dry-run gates, and release-coherence inversions. Shell test harnesses MUST capture explicit command statuses outside \u0060if\u0060/\u0060!\u0060 conditional-errexit contexts, aggregate failures, and prove removal of each ApiCompat isolation property fails. (covers AC-003)",
       "acceptanceCriteria": [
         "AC-003"
       ],
@@ -185,10 +185,12 @@
         "column": 1
       },
       "linkedTaskIds": [
-        "T003"
+        "T003",
+        "T016"
       ],
       "linkedEvidenceIds": [
-        "EV003"
+        "EV003",
+        "EV016"
       ]
     },
     {
@@ -214,8 +216,8 @@
     },
     {
       "id": "FR-005",
-      "title": "The handoff MUST identify exact candidate, package paths, package identities/versions, and SHA-256 digests so later feed pushes reuse byte-identical artifacts. (covers AC-005)",
-      "text": "The handoff MUST identify exact candidate, package paths, package identities/versions, and SHA-256 digests so later feed pushes reuse byte-identical artifacts. (covers AC-005)",
+      "title": "Whole-nupkg bytes MUST NOT be claimed reproducible across independent packs. A no-push workflow dispatch at the exact release commit MUST build and qualify the coherent set once, upload the packages plus a source/head/inventory/SHA-256 manifest as a durable artifact, and a later tag/release workflow MUST fail closed unless it can download and verify that exact artifact before pushing the same archives to both feeds without rebuilding or repacking. (covers AC-005)",
+      "text": "Whole-nupkg bytes MUST NOT be claimed reproducible across independent packs. A no-push workflow dispatch at the exact release commit MUST build and qualify the coherent set once, upload the packages plus a source/head/inventory/SHA-256 manifest as a durable artifact, and a later tag/release workflow MUST fail closed unless it can download and verify that exact artifact before pushing the same archives to both feeds without rebuilding or repacking. (covers AC-005)",
       "acceptanceCriteria": [
         "AC-005"
       ],
@@ -227,11 +229,13 @@
         "column": 1
       },
       "linkedTaskIds": [
-        "T005"
+        "T005",
+        "T016"
       ],
       "linkedEvidenceIds": [
         "EV005",
-        "EV011"
+        "EV011",
+        "EV016"
       ]
     }
   ],
@@ -247,7 +251,7 @@
       "acceptanceRefs": [],
       "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
       "sourceLocation": {
-        "line": 28,
+        "line": 30,
         "column": 1
       },
       "linkedTaskIds": [
@@ -266,7 +270,7 @@
       "acceptanceRefs": [],
       "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
       "sourceLocation": {
-        "line": 29,
+        "line": 31,
         "column": 1
       },
       "linkedTaskIds": [
@@ -286,11 +290,30 @@
       "acceptanceRefs": [],
       "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
       "sourceLocation": {
-        "line": 30,
+        "line": 32,
         "column": 1
       },
       "linkedTaskIds": [
         "T008"
+      ]
+    },
+    {
+      "id": "DEC-004",
+      "title": "Separate source qualification from archive custody. The reviewed PR proves the build/test/custody mechanism; a post-merge dry-run creates the only publishable archives, and the tag/release path promotes those exact retained bytes after verifying commit-bound manifest identity. Independent repacks are an inversion and must differ without weakening the custody contract.",
+      "decision": "Separate source qualification from archive custody. The reviewed PR proves the build/test/custody mechanism; a post-merge dry-run creates the only publishable archives, and the tag/release path promotes those exact retained bytes after verifying commit-bound manifest identity. Independent repacks are an inversion and must differ without weakening the custody contract.",
+      "requirementRefs": [
+        "FR-003",
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "sourceLocation": {
+        "line": 33,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T016"
       ]
     }
   ],
@@ -713,6 +736,44 @@
         "line": 15,
         "column": 1
       }
+    },
+    {
+      "id": "T016",
+      "title": "Implement clarification decision DEC-004",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T003",
+        "T005"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-005"
+      ],
+      "decisions": [
+        "DEC-004"
+      ],
+      "sourceIds": [
+        "AC-003",
+        "AC-005",
+        "DEC-004",
+        "FR-003",
+        "FR-005",
+        "PD-003",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "readiness-evidence",
+        "release-engineering"
+      ],
+      "requiredEvidence": [
+        "EV016"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
     }
   ],
   "evidence": [
@@ -1115,6 +1176,38 @@
         "line": 15,
         "column": 1
       }
+    },
+    {
+      "id": "EV016",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T016",
+      "taskRefs": [
+        "T016"
+      ],
+      "requirementRefs": [
+        "FR-003",
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "scripts/tests/apicompat-check.test.sh",
+        "scripts/tests/release-artifact-custody.test.sh",
+        "scripts/verify-release-candidate.sh",
+        "work/944-sdd-151-evidence-authority-release/architecture-review.md",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/back-to-back-pack.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
     }
   ],
   "generatedViews": [
@@ -1155,7 +1248,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/checklist.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "40292c9d14b4453bb90b3ccfa0ead216815125e4c384dcf86a42cf40a0caa8cc"
+            "value": "9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15"
           },
           "schemaVersion": 1
         },
@@ -1163,7 +1256,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/clarifications.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "23f75d12d8ab4493a2f4c3d612d678dffbb959a2bb8eb076286124562cd07d94"
+            "value": "2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9"
           },
           "schemaVersion": 1
         },
@@ -1171,7 +1264,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "c4e713e4531fd12df96e2d3310242f3a0cd3abd0c3476d63df71eeec79c5e638"
+            "value": "9efb0007d134e85dc76aabe3808a58d725ebf65aff511907584ba7a0969036e7"
           },
           "schemaVersion": 1
         },
@@ -1179,7 +1272,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "2dd6c7c6d0c082f1232d9aec0eae3b9bfcb6c63e7467272f32343c3da90fdfa4"
+            "value": "675278a463d1b9fc63e5cc974e01b65d135885d80c28367f26ccaa0c98c3b5ab"
           },
           "schemaVersion": 1
         },
@@ -1187,7 +1280,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "6f6c5391ff6be94bc39bcae73a8698136ea6f613a78b93ae18208f6f595628aa"
+            "value": "d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4"
           },
           "schemaVersion": 1
         },
@@ -1195,14 +1288,14 @@
           "path": "work/944-sdd-151-evidence-authority-release/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "a964a734e24f0f713cb593a548f134f916ebcf2d21e12dfbf3f85bbba17eee34"
+            "value": "8eaac673c49c3c45b831f727ed96967da4585ad72b3bbe8fede1816fa0a2f045"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "d09a6eaad48d01311942e854a6f9b2e800f4346207d47e3019f12c14a70fc9ab"
+        "value": "83c9c36748330fa32ec2aa161e68a098c7f74cb719325112f78f2dac8f1d58d8"
       },
       "currency": "current"
     }

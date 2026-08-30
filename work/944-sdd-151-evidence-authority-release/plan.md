@@ -18,13 +18,13 @@ Prose status: planned
 ## Source Snapshot
 - spec: work/944-sdd-151-evidence-authority-release/spec.md sha256:d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4 schemaVersion:1
 - clarifications: work/944-sdd-151-evidence-authority-release/clarifications.md sha256:2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9 schemaVersion:1
-- checklist: work/944-sdd-151-evidence-authority-release/checklist.md sha256:13f38e105426f4e81c3c16dc9c9fe8f93e9d0abebcb0ca28b71f3da2f2460502 schemaVersion:1
+- checklist: work/944-sdd-151-evidence-authority-release/checklist.md sha256:9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15 schemaVersion:1
 
 ## Plan Scope
 - Work item 944-sdd-151-evidence-authority-release is planned from the current specification, clarification, and checklist facts.
 - Requirement count: 5.
 - Clarification decision count: 4.
-- Checklist result count: 6.
+- Checklist result count: 5.
 
 ## Plan Decisions
 - PD-001 [AC-001] [FR-001] [DEC-001] complete: Download exact protected-main run/job logs, compare retry state, and run the unchanged RefreshEvidenceDeadlockTests repeatedly in fresh Debug processes plus complete Debug/Release suites; change the test only if a reproducible root cause is established.

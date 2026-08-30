@@ -30,7 +30,6 @@ Prose status: checklistReady
 - CHK-003 [FR-003] [AC-003] blocking: Requirement FR-003 is testable and linked to acceptance coverage.
 - CHK-004 [FR-004] [AC-004] blocking: Requirement FR-004 is testable and linked to acceptance coverage.
 - CHK-005 [FR-005] [AC-005] blocking: Requirement FR-005 is testable and linked to acceptance coverage.
-- CHK-006 [FR-003] [FR-005] [AC-003] [AC-005] blocking: Shell-status propagation and exact-artifact custody have explicit positive and mutation controls at every authorization boundary.
 
 ## Review Results
 - CR-001 [CHK:CHK-001] [FR-001] [AC-001] pass: Requirement FR-001 is testable and linked to acceptance coverage.
@@ -38,7 +37,6 @@ Prose status: checklistReady
 - CR-003 [CHK:CHK-003] [FR-003] [AC-003] pass: Requirement FR-003 is testable and linked to acceptance coverage.
 - CR-004 [CHK:CHK-004] [FR-004] [AC-004] pass: Requirement FR-004 is testable and linked to acceptance coverage.
 - CR-005 [CHK:CHK-005] [FR-005] [AC-005] pass: Requirement FR-005 is testable and linked to acceptance coverage.
-- CR-006 [CHK:CHK-006] [FR-003] [FR-005] [AC-003] [AC-005] pass: The revised contract rejects conditional-errexit vacuity, independent repack substitution, stale/mismatched run artifacts, and cross-feed byte divergence.
 
 ## Accepted Deferrals
 No accepted checklist deferrals recorded.

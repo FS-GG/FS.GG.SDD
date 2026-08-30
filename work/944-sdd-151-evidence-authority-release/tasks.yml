@@ -21,11 +21,11 @@ sources:
     schemaVersion: 1
   - label: checklist
     path: work/944-sdd-151-evidence-authority-release/checklist.md
-    digest: 13f38e105426f4e81c3c16dc9c9fe8f93e9d0abebcb0ca28b71f3da2f2460502
+    digest: 9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15
     schemaVersion: 1
   - label: plan
     path: work/944-sdd-151-evidence-authority-release/plan.md
-    digest: 58bd1eab126996fc07336232e6861cf85e27364f03b674b5df6bf0b54279c3c1
+    digest: 675278a463d1b9fc63e5cc974e01b65d135885d80c28367f26ccaa0c98c3b5ab
     schemaVersion: 1
 tasks:
   - id: T001
