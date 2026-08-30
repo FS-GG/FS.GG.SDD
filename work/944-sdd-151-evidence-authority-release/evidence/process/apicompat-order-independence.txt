@@ -1,0 +1,15 @@
+  ok   keeps-[Baseline]-and-but-not-on 
+  ok   strips-targetframework-variant  
+  ok   no-trailing-bracket-unchanged   
+  ok   keeps-interior-brackets         
+  ok   clean-passes                     -> pass (exit 0)
+  ok   break-fails                      -> break (exit 1)
+  ok   indeterminate-alone-FAILS        -> indeterminate (exit 3)
+  ok   nobaseline-alone-FAILS           -> nobaseline (exit 1)
+  ok   break-outranks-indet             -> break (exit 1)
+  ok   indet-outranks-nobaseline        -> indeterminate (exit 3)
+  ok   all-three                        -> break (exit 1)
+  ok   feedunavailable-not-a-fail       -> pass (exit 0)
+  ok   contracts-needs-a-baseline      
+  ok   ambient-cache-isolated          
+apicompat-check.test.sh: all passed

@@ -51,3 +51,12 @@ disjoint. No product scope or non-vacuity control was weakened to optimize this
 timing experiment. The event demonstrates that claim expiry and an explicitly
 recorded precedence/dependency transition are necessary before a critical
 release lane can safely widen its touch set.
+
+## Bounded architecture review
+
+The two related qualification findings triggered a bounded state-boundary review
+before PR creation. The mapping, sibling inventory, causal classification,
+repair, and discriminating positive/inversion controls are recorded in
+`work/944-sdd-151-evidence-authority-release/architecture-review.md`. ApiCompat's
+restore/build state is now hermetic; the protected-main seeding anomaly remains
+bounded and causally separate on the available evidence.

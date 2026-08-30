@@ -96,7 +96,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-003]
     obligationRefs: [EV003]
-    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md, work/944-sdd-151-evidence-authority-release/architecture-review.md, work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt, work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt, work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt]
     sourceRefs: []
     result: pass
     synthetic: false
@@ -346,7 +346,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001, PD-002, PD-003, PD-004, PD-005]
     obligationRefs: [EV013]
-    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md, work/944-sdd-151-evidence-authority-release/architecture-review.md, work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-real.txt, work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt, work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt, work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt]
     sourceRefs: []
     result: pass
     synthetic: false

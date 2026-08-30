@@ -285,10 +285,22 @@ for proj in "${PROJECTS[@]}"; do
 
   cv="$(check_version "$baseline")"
   log="$workdir/${pkgid}.log"
+  # `dotnet pack` restores as part of package validation. Isolating only NuGet's package/HTTP
+  # caches is not enough: MSBuild otherwise writes obj/project.assets.json and bin/ under the
+  # candidate checkout, and that assets file embeds this script's throwaway NUGET_PACKAGES path.
+  # The trap then deletes the cache while leaving a poisoned project state behind; a later
+  # release-style `dotnet pack --no-restore` consumes it and can warn/fail on missing assemblies.
+  # Keep ALL ApiCompat-owned restore/build state under the same disposable work directory so the
+  # check is order-independent with every subsequent build/pack stage (FS.GG.SDD#944).
+  project_state="$workdir/project-state/${pkgid}"
+  mkdir -p "$project_state/obj" "$project_state/bin"
   if dotnet pack "$proj" -c Release --configfile "$cfg" \
         -p:Version="$cv" \
         -p:EnablePackageValidation=true \
         -p:PackageValidationBaselineVersion="$baseline" \
+        -p:BaseIntermediateOutputPath="$project_state/obj/" \
+        -p:MSBuildProjectExtensionsPath="$project_state/obj/" \
+        -p:BaseOutputPath="$project_state/bin/" \
         -o "$workdir/out" >"$log" 2>&1; then
     printf '  %-22s OK            (compatible with %s)\n' "$pkgid" "$baseline"
     ok=$((ok + 1))

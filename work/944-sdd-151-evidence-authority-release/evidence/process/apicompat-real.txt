@@ -1,0 +1,7 @@
+apicompat-check — ApiCompat/Package Validation vs the org feed baseline
+REQUIRED gate: any outcome below other than OK exits non-zero and blocks the merge.
+feed: https://nuget.pkg.github.com/FS-GG/index.json   projects: 1
+
+  FS.GG.Contracts        OK            (compatible with 7.5.2)
+
+summary: OK=1  BREAK=0  NoBaselineYet=0  Indeterminate=0  FeedUnavailable=0  Allowlisted=0  (total 1, compared 1)
