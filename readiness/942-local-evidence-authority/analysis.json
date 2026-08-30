@@ -37,6 +37,16 @@
       "schemaStatus": "current"
     },
     {
+      "path": "readiness/942-local-evidence-authority/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "30a98a33d34e491f9d6e4d1df4e935936a1109ce6ddc5c4fba567f01922868d5"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
       "path": "work/942-local-evidence-authority/checklist.md",
       "kind": "checklist",
       "digest": {
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "f91c2c6fda7168967cb2b0ff4f2687219011765cac5270d73303c7e863203d6c"
+        "value": "b7259f83ce47720d94ee16242b5c7753ab0a5a8b1960efe5cecac46d3f8702f6"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -536,7 +546,7 @@
     {
       "path": "readiness/942-local-evidence-authority/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],

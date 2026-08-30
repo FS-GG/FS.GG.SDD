@@ -1,7 +1,7 @@
 schemaVersion: 1
 workId: 942-local-evidence-authority
 stage: evidence
-status: needsEvidenceCorrection
+status: evidenceReady
 sourceSpec: work/942-local-evidence-authority/spec.md
 sourceClarifications: work/942-local-evidence-authority/clarifications.md
 sourceChecklist: work/942-local-evidence-authority/checklist.md
@@ -11,7 +11,7 @@ sourceAnalysis: readiness/942-local-evidence-authority/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/942-local-evidence-authority/analysis.json
-    digest: 9de49393e72adbeae8dbd6c4b02cb20890056e6768926387218057cc7b565a0c
+    digest: 016af9962e78d1afae755c97cf22464cfe19c1d6653ecf23a378500a4c79db69
     schemaVersion: 1
   - label: checklist
     path: work/942-local-evidence-authority/checklist.md
@@ -35,7 +35,7 @@ sourceSnapshots:
     schemaVersion: 1
 evidence:
   - id: EV001
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T001
@@ -46,13 +46,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV001]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV002
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T002
@@ -63,13 +71,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-002]
     obligationRefs: [EV002]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV003
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T003
@@ -80,13 +96,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV003]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV004
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T004
@@ -97,13 +121,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV004]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV005
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T005
@@ -114,13 +146,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV005]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV006
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T006
@@ -131,13 +171,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV006]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV007
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T007
@@ -148,13 +196,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV007]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV008
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T008
@@ -165,13 +221,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV008]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV009
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T009
@@ -182,13 +246,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001]
     obligationRefs: [EV009]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV010
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T010
@@ -199,13 +271,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-003]
     obligationRefs: [EV010]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV011
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T011
@@ -216,13 +296,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-004]
     obligationRefs: [EV011]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV012
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T012
@@ -233,13 +321,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-005]
     obligationRefs: [EV012]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV013
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T013
@@ -250,13 +346,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001, PD-002, PD-003, PD-004]
     obligationRefs: [EV013]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV014
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T014
@@ -267,13 +371,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-001, PD-002, PD-003, PD-004, PD-005]
     obligationRefs: [EV014]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV015
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T015
@@ -284,13 +396,21 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: []
     obligationRefs: [EV015]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
   - id: EV016
-    kind: missing
+    kind: verification
     subject:
       type: task
       id: T016
@@ -301,10 +421,18 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-004]
     obligationRefs: [EV016]
-    artifacts: []
+    artifacts: [work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx]
     sourceRefs: []
-    result: missing
+    result: pass
     synthetic: false
-    notes: [Evidence required before verify.]
+    observedRun:
+      source: work/942-local-evidence-authority/evidence/full-suite/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:6fac3bc0f723cdefc361808ffcb963e6a7c0193d80e7bebf94a525f36610cb91"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1338
+      failed: 0
+      skipped: 0
+    notes: ["Observed by the full canonical command suite; focused authority-boundary regressions are included."]
 lifecycleNotes:
   - "Next lifecycle action: verify."
