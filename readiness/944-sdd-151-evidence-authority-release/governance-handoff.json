@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/944-sdd-151-evidence-authority-release/ship.json",
-      "digest": "sha256:843047fc38c0342f671b3848a319f42bb61a05b7a7435865b45f144f3883eda5",
+      "digest": "sha256:852347514657865086e4456e9ece95f2bf18900ae54f8f83c0699dd929bcb166",
       "schemaVersion": 1
     },
     {
       "path": "readiness/944-sdd-151-evidence-authority-release/verify.json",
-      "digest": "sha256:08d8d6eec23b5b1bc3cc7fc6a2d40a376c954830afa517b9c61bd3e5614d952c",
+      "digest": "sha256:dfd437c26886ed2bf804736c6e8810a0f808777ebd0aee5f00c769740009516f",
       "schemaVersion": 1
     },
     {
       "path": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
-      "digest": "sha256:0f6686e6c19f5f69f2c975d83fc4f98ca827a54eba21a073379fdebbb95135ac",
+      "digest": "sha256:dce8fc81bf21027aa2b5042a300d75bfe9c7cb06223b347e7eb205fc2e9c9ab8",
       "schemaVersion": 1
     }
   ],
