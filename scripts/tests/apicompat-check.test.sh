@@ -122,6 +122,7 @@ check_ambient_cache_isolation() (
   set -euo pipefail
 
   local fixture_root="$1"
+  local subject_script="$2"
   local package_id="FS.GG.ApiCompat.CacheProbe"
   local baseline_version="1.0.0"
   local authoritative="$fixture_root/authoritative"
@@ -154,6 +155,13 @@ check_ambient_cache_isolation() (
           Condition="'\$(APICOMPAT_ENV_PROBE)' != ''">
     <WriteLinesToFile File="\$(APICOMPAT_ENV_PROBE)"
                       Lines="\$(NUGET_PACKAGES)|\$(NUGET_HTTP_CACHE_PATH)"
+                      Overwrite="true" />
+  </Target>
+  <Target Name="CaptureApiCompatProjectState"
+          BeforeTargets="Pack"
+          Condition="'\$(APICOMPAT_STATE_PROBE)' != ''">
+    <WriteLinesToFile File="\$(APICOMPAT_STATE_PROBE)"
+                      Lines="\$(BaseIntermediateOutputPath)|\$(MSBuildProjectExtensionsPath)|\$(BaseOutputPath)"
                       Overwrite="true" />
   </Target>
 </Project>
@@ -230,7 +238,8 @@ EOF
   APICOMPAT_TEST_PROJECT="$candidate/Probe.csproj" \
   APICOMPAT_TEST_FEED_URL="$authoritative_feed" \
   APICOMPAT_ENV_PROBE="$fixture_root/gate-env.txt" \
-    "$here/../apicompat-check.sh" --baseline "$baseline_version" \
+  APICOMPAT_STATE_PROBE="$fixture_root/gate-state.txt" \
+    "$subject_script" --baseline "$baseline_version" \
       >"$fixture_root/gate.log" 2>&1
 
   grep -F "FS.GG.ApiCompat.CacheProbe OK" "$fixture_root/gate.log" >/dev/null
@@ -239,6 +248,13 @@ EOF
   # build state. Its entire obj/bin graph lived below its workdir and disappeared with the trap.
   test ! -e "$candidate/obj"
   test ! -e "$candidate/bin"
+
+  local gate_intermediate gate_extensions gate_output state_parent
+  IFS='|' read -r gate_intermediate gate_extensions gate_output < "$fixture_root/gate-state.txt"
+  state_parent="$(dirname "${gate_extensions%/}")"
+  test "$gate_intermediate" = "$state_parent/intermediate/"
+  test "$gate_extensions" = "$state_parent/extensions/"
+  test "$gate_output" = "$state_parent/bin/"
 
   local gate_packages gate_http_cache
   IFS='|' read -r gate_packages gate_http_cache < "$fixture_root/gate-env.txt"
@@ -251,15 +267,48 @@ EOF
   test ! -e "$gate_http_cache"
 )
 
-cache_fixture="$(mktemp -d)"
-if check_ambient_cache_isolation "$cache_fixture"; then
-  printf '  ok   %-32s\n' "ambient-cache-isolated"
-else
-  printf '  FAIL %-32s\n' "ambient-cache-isolated"
-  sed 's/^/       /' "$cache_fixture/gate.log" 2>/dev/null || true
-  fail=1
-fi
-rm -rf "$cache_fixture"
+run_isolation_subject() {
+  local name="$1" subject="$2" expected="$3" fixture rc
+  fixture="$(mktemp -d)"
+
+  # Ordinary command invocation is load-bearing. Putting this function call directly in `if` or
+  # behind `!` suppresses the subject's inner `set -e` and lets a failed assertion fall through to
+  # a later zero status. Capture the status first; branch only on the inert integer afterward.
+  check_ambient_cache_isolation "$fixture" "$subject"
+  rc=$?
+
+  if [ "$rc" -eq "$expected" ]; then
+    printf '  ok   %-32s -> exit %s\n' "$name" "$rc"
+  else
+    printf '  FAIL %-32s expected exit %s, got %s\n' "$name" "$expected" "$rc"
+    sed 's/^/       /' "$fixture/gate.log" 2>/dev/null || true
+    sed 's/^/       state: /' "$fixture/gate-state.txt" 2>/dev/null || true
+    fail=1
+  fi
+  rm -rf "$fixture"
+}
+
+subject_root="$(mktemp -d)"
+mkdir -p "$subject_root/lib"
+cp "$here/../lib/apicompat-classify.sh" "$here/../lib/pick-latest-version.sh" "$subject_root/lib/"
+cp "$here/../apicompat-check.sh" "$subject_root/positive.sh"
+run_isolation_subject "ambient-cache-isolated" "$subject_root/positive.sh" 0
+
+for property in BaseIntermediateOutputPath MSBuildProjectExtensionsPath BaseOutputPath; do
+  mutation="$subject_root/without-$property.sh"
+  cp "$here/../apicompat-check.sh" "$mutation"
+  sed -i "/-p:$property=/d" "$mutation"
+  run_isolation_subject "without-$property-REDS" "$mutation" 1
+done
+mutation="$subject_root/without-project-state-isolation.sh"
+cp "$here/../apicompat-check.sh" "$mutation"
+sed -i \
+  -e '/-p:BaseIntermediateOutputPath=/d' \
+  -e '/-p:MSBuildProjectExtensionsPath=/d' \
+  -e '/-p:BaseOutputPath=/d' \
+  "$mutation"
+run_isolation_subject "without-all-state-isolation-REDS" "$mutation" 1
+rm -rf "$subject_root"
 
 if [ "$fail" -ne 0 ]; then
   echo "apicompat-check.test.sh: FAILURES" >&2

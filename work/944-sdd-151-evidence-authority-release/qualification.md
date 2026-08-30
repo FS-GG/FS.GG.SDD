@@ -60,3 +60,10 @@ repair, and discriminating positive/inversion controls are recorded in
 `work/944-sdd-151-evidence-authority-release/architecture-review.md`. ApiCompat's
 restore/build state is now hermetic; the protected-main seeding anomaly remains
 bounded and causally separate on the available evidence.
+
+Independent review then found that the first cluster review's ApiCompat shell
+proof was vacuous under Bash conditional-errexit semantics and that nupkg
+container bytes were neither reproducible nor held in custody across a later tag
+run. The second-order analysis and revised dry-run-to-tag artifact promotion
+contract are recorded in `architecture-review.md`. This repair intentionally
+invalidates the original handoff hashes; no pre-repair package is publishable.

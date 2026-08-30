@@ -230,7 +230,9 @@ jobs:
 
   publish-contracts:
     name: Pack + publish FS.GG.Contracts
-    needs: [resolve-versions, contracts-tests]
+    # A real coherent release may not touch either feed until the retained SDD candidate exists.
+    # On a no-push dispatch locate-artifacts succeeds without a lookup, so Contracts still packs.
+    needs: [resolve-versions, contracts-tests, locate-artifacts]
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD'
     # Least-privilege: only this job gains packages: write; the push uses the run-scoped
@@ -312,10 +314,12 @@ jobs:
             --skip-duplicate
 
   publish-artifacts:
-    name: Build coherent FS.GG.SDD 1.x packages once
+    name: Build and retain coherent FS.GG.SDD 1.x candidate once
     needs: [resolve-versions, artifacts-tests, cli-tests]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD'
+    # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
+    # run promotes this run's retained artifact; it must never pack another container (#944).
+    if: github.repository == 'FS-GG/FS.GG.SDD' && needs.resolve-versions.outputs.push == 'false'
     permissions:
       contents: read
     steps:
@@ -355,7 +359,18 @@ jobs:
             unzip -p "$package" '*.nuspec' | grep -F "commit=\"$GITHUB_SHA\"" >/dev/null \
               || { echo "::error::$package does not bind repository commit $GITHUB_SHA"; exit 1; }
           done
-          sha256sum "${packages[@]}" | sort -k2 > artifacts/packages/pre-push.sha256
+          (
+            cd artifacts/packages
+            sha256sum FS.GG.SDD.Artifacts.*.nupkg FS.GG.SDD.Cli.*.nupkg | LC_ALL=C sort -k2 > pre-push.sha256
+          )
+          printf '%s\n' \
+            'schema=fsgg.sdd.release-candidate/v1' \
+            "head=$GITHUB_SHA" \
+            "version=${{ needs.resolve-versions.outputs.cli_version }}" \
+            'packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Cli' \
+            > artifacts/packages/candidate.env
+          bash scripts/verify-release-candidate.sh \
+            artifacts/packages "$GITHUB_SHA" "${{ needs.resolve-versions.outputs.cli_version }}"
 
       - name: Verify the just-packed CLI is self-contained
         env:
@@ -370,12 +385,57 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  locate-artifacts:
+    name: Preflight retained candidate custody
+    needs: [resolve-versions, artifacts-tests, cli-tests]
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD'
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      candidate_run_id: ${{ steps.locate.outputs.candidate_run_id }}
+    steps:
+      - name: Locate one successful no-push candidate run at the exact head
+        id: locate
+        if: needs.resolve-versions.outputs.push == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mapfile -t run_ids < <(
+            gh api --paginate --slurp \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?event=workflow_dispatch&status=completed&per_page=100" \
+              | jq -r --arg head "$GITHUB_SHA" \
+                  '.[] | .workflow_runs[] | select(.head_sha == $head and .conclusion == "success") | .id'
+          )
+          matches=()
+          for run_id in "${run_ids[@]}"; do
+            count="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" \
+              | jq --arg name "coherent-sdd-packages-$GITHUB_SHA" \
+                  '[.artifacts[] | select(.name == $name and .expired == false)] | length')"
+            [ "$count" -eq 0 ] || [ "$count" -eq 1 ] \
+              || { echo "::error::run $run_id has duplicate coherent candidate artifacts"; exit 1; }
+            [ "$count" -eq 1 ] && matches+=("$run_id")
+          done
+          if [ "${#matches[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one retained no-push candidate for $GITHUB_SHA; found ${#matches[@]}. Dispatch release.yml without a version exactly once at this commit before tagging/publishing."
+            exit 1
+          fi
+          echo "candidate_run_id=${matches[0]}" >> "$GITHUB_OUTPUT"
+          echo "Promoting retained candidate from workflow run ${matches[0]} at $GITHUB_SHA"
+
+      - name: Dry-run custody preflight
+        if: needs.resolve-versions.outputs.push == 'false'
+        run: echo "No-push dispatch will create the retained candidate in publish-artifacts."
+
   publish-cli:
     name: Publish and read back the coherent FS.GG.SDD set
-    needs: [resolve-versions, publish-artifacts]
+    needs: [resolve-versions, locate-artifacts]
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && needs.resolve-versions.outputs.push == 'true'
     permissions:
+      actions: read
       contents: read
       packages: write
       id-token: write
@@ -393,6 +453,14 @@ jobs:
         with:
           name: coherent-sdd-packages-${{ github.sha }}
           path: artifacts/packages
+          run-id: ${{ needs.locate-artifacts.outputs.candidate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify retained candidate identity and hashes before feed credentials
+        run: |
+          set -euo pipefail
+          bash scripts/verify-release-candidate.sh \
+            artifacts/packages "$GITHUB_SHA" "${{ needs.resolve-versions.outputs.cli_version }}"
 
       - name: Publish both packages to GitHub Packages first
         run: |

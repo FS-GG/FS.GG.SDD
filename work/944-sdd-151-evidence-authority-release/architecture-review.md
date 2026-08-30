@@ -76,3 +76,47 @@ The real-repository sequence additionally hashes the Contracts `obj` tree before
 and after ApiCompat and requires equality, then packs Artifacts and CLI with
 `--no-restore` and no missing-cache warning. Final release bytes are generated
 only after a fresh locked restore and Release build at exact HEAD.
+
+## Second-order review: proof transport, not just proof production
+
+Independent review round 0 completed at 09:03 UTC, 28 minutes after the first
+cluster review was recorded. It found two material defects in the review's own
+proof routes. The repair round therefore adds another review/qualification cycle
+and two complete suites; that latency and compute cost is attributed to the first
+review's incomplete trust-boundary model, not to the original evidence-authority
+feature.
+
+The first review missed Bash conditional-errexit vacuity because it read
+`set -e` inside `check_ambient_cache_isolation` as a function-local invariant.
+The caller executed that function as `if check_ambient_cache_isolation ...`; Bash
+suppresses errexit for commands in a function whose invocation is a conditional
+test. A failed inner `test` could therefore fall through to a later successful
+assertion and return zero. The positive route and the three-property removal
+mutation were observationally equivalent. The repaired harness executes every
+subject as an ordinary command under explicit `set +e`/status capture, restores
+`set -e`, and aggregates the result outside any conditional invocation.
+
+The first review also conflated payload equality with nupkg archive identity.
+Two back-to-back packs at one exact commit and without a rebuild produced
+different whole-file SHA-256 values while extracted payload trees matched. ZIP
+container metadata is therefore not a reproducible identity in this toolchain.
+More importantly, the old tag/release workflow always packed again: even a
+reproducible local pair would not constitute custody of the bytes authorized by
+an earlier run.
+
+## Revised trust, identity, and custody chain
+
+| Boundary | Trusted identity | Custody rule | Failure rule |
+| --- | --- | --- | --- |
+| PR build/review | source head/tree, workflow and contract tests | no publishable archive claim; review qualifies the mechanism | changed head invalidates review |
+| post-merge dry-run | exact main commit plus evaluated 1.5.1 identities | pack once; emit two nupkgs and a manifest containing commit, names, versions, sizes, SHA-256; upload one retained Actions artifact | any test, inventory, source binding, install, or manifest mismatch blocks artifact creation |
+| artifact retention | Actions run id + artifact name + manifest | artifact is immutable for the run and retained long enough for release authorization | expired/missing/duplicate candidate runs fail closed |
+| tag/release workflow | tag commit must equal manifest/source commit | discover the unique successful no-push release run for that commit; download its artifact; never invoke `dotnet pack` | zero/multiple candidates, head mismatch, or hash mismatch blocks before feed credentials are used |
+| GitHub Packages | exact downloaded nupkgs | first push consumes retained files | non-duplicate failure stops before nuget.org |
+| nuget.org | same local paths and hashes | second push consumes the same retained files without repack | push failure leaves obligation incomplete |
+| public read-back | package payload plus served package identity/signature exception | compare each served non-signature entry to retained local artifact and record receipt | missing version or payload mismatch fails release |
+
+Whole-file nupkg SHA-256 is authoritative only inside this custody chain. It is
+not expected to match an independent pack. The back-to-back pack inversion proves
+that distinction; the substituted-artifact/head/hash inversions prove the tag
+path cannot silently switch archives.
