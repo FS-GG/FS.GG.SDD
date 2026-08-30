@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "62d272058c6ae1ce22c61b8f32eba118121624d01ee48f553cbf87341a96bc80"
+        "value": "c4e713e4531fd12df96e2d3310242f3a0cd3abd0c3476d63df71eeec79c5e638"
       }
     },
     {
@@ -782,6 +782,10 @@
         "FR-003"
       ],
       "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/architecture-review.md",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt",
         "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
         "work/944-sdd-151-evidence-authority-release/qualification.md"
       ],
@@ -1042,6 +1046,11 @@
       ],
       "requirementRefs": [],
       "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/architecture-review.md",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-real.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt",
         "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
         "work/944-sdd-151-evidence-authority-release/qualification.md"
       ],
@@ -1162,7 +1171,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "62d272058c6ae1ce22c61b8f32eba118121624d01ee48f553cbf87341a96bc80"
+            "value": "c4e713e4531fd12df96e2d3310242f3a0cd3abd0c3476d63df71eeec79c5e638"
           },
           "schemaVersion": 1
         },
@@ -1193,7 +1202,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "2ed2532edf4ef3b9215b1c32a47994e57487d20d1cc93c16988231aa854703bf"
+        "value": "d09a6eaad48d01311942e854a6f9b2e800f4346207d47e3019f12c14a70fc9ab"
       },
       "currency": "current"
     }
