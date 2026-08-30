@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "b4928ae6ef5508e49a1c8b1959b79fcb69ff49798d3f17d8bb699c33ae668339"
+        "value": "2bbd777cfedacdfb2b7d8ad05c3fb692c494f0b7c88c0b90f875e1fcf599e77d"
       }
     },
     {
@@ -1264,7 +1264,7 @@
           "path": "work/944-sdd-151-evidence-authority-release/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "b4928ae6ef5508e49a1c8b1959b79fcb69ff49798d3f17d8bb699c33ae668339"
+            "value": "2bbd777cfedacdfb2b7d8ad05c3fb692c494f0b7c88c0b90f875e1fcf599e77d"
           },
           "schemaVersion": 1
         },
@@ -1295,7 +1295,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "929fab74adbf15355516680003e3d1c3c4fde55755ca3726443bc568bc42509d"
+        "value": "48a6b850acfec35047eda80a4b0eaf50b108585b35596d4d569d4d3f7717f430"
       },
       "currency": "current"
     }
