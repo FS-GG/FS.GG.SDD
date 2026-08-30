@@ -43,15 +43,15 @@
           "FS.GG.Drivers": "[0.16.1, )",
           "FS.GG.Game.Skills": "[0.7.0, )",
           "FS.GG.Rendering.Skills": "[0.1.1, )",
-          "FS.GG.SDD.Artifacts": "[1.5.0, )",
+          "FS.GG.SDD.Artifacts": "[1.5.1, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
       "fs.gg.sdd.validation": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.SDD.Artifacts": "[1.5.0, )",
-          "FS.GG.SDD.Commands": "[1.5.0, )",
+          "FS.GG.SDD.Artifacts": "[1.5.1, )",
+          "FS.GG.SDD.Commands": "[1.5.1, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },

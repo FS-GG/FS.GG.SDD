@@ -139,7 +139,7 @@ malformed, stale, and blocked work models keep blocking unchanged.
   inventory enumerates **JSON fields**.
 - **Markdown projections** (`summary.md`, `commands.md`, `skills.md`) are
   projections, not machine contracts. Their version **tracks the generator
-  version** (`0.2.0`, from `generatorVersion.version` in the envelope) and their
+  version** (`1.5.1`, from `generatorVersion.version` in the envelope) and their
   inventory enumerates **document sections**, not fields.
 - The `AgentCommands` view is documented as **one entry per sub-file** because the
   three files differ in role: `guidance.json` is a machine contract; `commands.md`
@@ -159,10 +159,10 @@ twice over identical inputs yields byte-identical output. (FR-008)
 | `ship.json` | generated view (`ship`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/ship.json` |
 | `ship-verdict.json` | generated view (`shipVerdict`) / JSON — **durable generated** | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/ship-verdict.json` |
 | `governance-handoff.json` | generated view (`governance-handoff`) / JSON | 1 | **2.0.0** | **Stable** | byte-stable | `readiness/<id>/governance-handoff.json` |
-| `summary.md` | generated view (`summary`) / Markdown projection | gen (`0.2.0`) | — | AdditiveOptional | byte-stable | `readiness/<id>/summary.md` |
+| `summary.md` | generated view (`summary`) / Markdown projection | gen (`1.5.1`) | — | AdditiveOptional | byte-stable | `readiness/<id>/summary.md` |
 | `agent-commands/<target>/guidance.json` | generated view (`agentCommands`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/guidance.json` |
-| `agent-commands/<target>/commands.md` | generated view (`agentCommands`) / Markdown projection | gen (`0.2.0`) | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/commands.md` |
-| `agent-commands/<target>/skills.md` | generated view (`agentCommands`) / Markdown projection | gen (`0.2.0`) | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/skills.md` |
+| `agent-commands/<target>/commands.md` | generated view (`agentCommands`) / Markdown projection | gen (`1.5.1`) | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/commands.md` |
+| `agent-commands/<target>/skills.md` | generated view (`agentCommands`) / Markdown projection | gen (`1.5.1`) | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/skills.md` |
 | `command-report (--json)` | command output / JSON | 1 | — | AdditiveOptional | byte-stable | `src/FS.GG.SDD.Commands/CommandSerialization.fs` |
 
 > `governance-handoff.json` is the only contract carrying a cross-repo

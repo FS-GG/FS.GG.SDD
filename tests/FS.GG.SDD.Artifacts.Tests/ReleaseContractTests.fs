@@ -155,14 +155,21 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T012 the published versioning-policy doc agrees with the policy of record`` () =
-        let doc =
+        let rawDoc =
             Path.Combine(TestSupport.repoRoot, "docs", "release", "versioning-policy.md")
             |> File.ReadAllText
-            |> fun text -> text.ToLowerInvariant()
+
+        let doc = rawDoc.ToLowerInvariant()
 
         // the doc is a projection: it must name each change class and its bump
         for token in [ "breaking"; "additive"; "clarifying"; "major"; "minor"; "patch" ] do
             Assert.Contains(token, doc)
+
+        // The generic vocabulary is insufficient: it stayed green while the published projection
+        // claimed a years-old 0.x version and preRelease channel. Bind the human projection to the
+        // same exact identity the machine release contract emits.
+        Assert.Contains($"currently **`{release.Identity.Version}`**", rawDoc)
+        Assert.Contains($"current release is `{releaseChannelValue release.Identity.Channel}`", doc)
 
     // ===== US2 — schema reference doc agrees with the contract (T016) =====
 
@@ -226,8 +233,8 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 0.11.0 is ADDITIVE, so it carries NO migration note (`migrationNoteRequired Additive =
-    // false`). The obvious edit when 0.10.0's note came out was to swap `exactlyOne` for
+    // 1.5.1 is a clarifying patch, so it carries NO migration note
+    // (`migrationNoteRequired Clarifying = false`). The obvious edit when 0.10.0's note came out was to swap `exactlyOne` for
     // `Assert.Empty` — and that would have SILENTLY DELETED the only guard in the repo that says
     // a note must be FOR this release and must EXIST ON DISK. Those checks were written against
     // `exactlyOne`, so they die with it, and nothing would notice until the next BREAKING release

@@ -1,0 +1,293 @@
+schemaVersion: 1
+workId: 944-sdd-151-evidence-authority-release
+stage: evidence
+status: needsEvidenceCorrection
+sourceSpec: work/944-sdd-151-evidence-authority-release/spec.md
+sourceClarifications: work/944-sdd-151-evidence-authority-release/clarifications.md
+sourceChecklist: work/944-sdd-151-evidence-authority-release/checklist.md
+sourcePlan: work/944-sdd-151-evidence-authority-release/plan.md
+sourceTasks: work/944-sdd-151-evidence-authority-release/tasks.yml
+sourceAnalysis: readiness/944-sdd-151-evidence-authority-release/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/944-sdd-151-evidence-authority-release/analysis.json
+    digest: f055bb61480ca83ff572ede798037df2fd9400a0544fffaf2f259692b4f24839
+    schemaVersion: 1
+  - label: checklist
+    path: work/944-sdd-151-evidence-authority-release/checklist.md
+    digest: 40292c9d14b4453bb90b3ccfa0ead216815125e4c384dcf86a42cf40a0caa8cc
+    schemaVersion: 1
+  - label: clarifications
+    path: work/944-sdd-151-evidence-authority-release/clarifications.md
+    digest: 23f75d12d8ab4493a2f4c3d612d678dffbb959a2bb8eb076286124562cd07d94
+    schemaVersion: 1
+  - label: plan
+    path: work/944-sdd-151-evidence-authority-release/plan.md
+    digest: 2dd6c7c6d0c082f1232d9aec0eae3b9bfcb6c63e7467272f32343c3da90fdfa4
+    schemaVersion: 1
+  - label: spec
+    path: work/944-sdd-151-evidence-authority-release/spec.md
+    digest: 6f6c5391ff6be94bc39bcae73a8698136ea6f613a78b93ae18208f6f595628aa
+    schemaVersion: 1
+  - label: tasks
+    path: work/944-sdd-151-evidence-authority-release/tasks.yml
+    digest: a964a734e24f0f713cb593a548f134f916ebcf2d21e12dfbf3f85bbba17eee34
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV001]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV002]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV003]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV004]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV005]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV006]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV007]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV008]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV009]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV010]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV011
+    kind: verification
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV011]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV012
+    kind: verification
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002, PD-005]
+    obligationRefs: [EV012]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV013
+    kind: verification
+    subject:
+      type: task
+      id: T013
+    taskRefs: [T013]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002, PD-003, PD-004, PD-005]
+    obligationRefs: [EV013]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV014
+    kind: verification
+    subject:
+      type: task
+      id: T014
+    taskRefs: [T014]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV014]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV015
+    kind: verification
+    subject:
+      type: task
+      id: T015
+    taskRefs: [T015]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV015]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+lifecycleNotes:
+  - "Next lifecycle action: verify."
