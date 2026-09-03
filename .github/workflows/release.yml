@@ -477,7 +477,7 @@ jobs:
           dotnet restore "$scratch/consumer" --source https://api.nuget.org/v3/index.json --no-http-cache
 
       - name: Set up exact Go toolchain for public Quint acceptance
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: "1.24.1"
           cache: false

@@ -254,7 +254,7 @@ jobs:
       # compares every result byte-for-byte, and executes generated bindings under both .NET and
       # Fable/Node. Keeping this in the existing required `gate` job makes the check merge-enforcing.
       - name: Set up exact Go toolchain for the Q1 lmt object
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: "1.24.1"
           cache: false
