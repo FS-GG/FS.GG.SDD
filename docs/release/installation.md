@@ -35,7 +35,7 @@ Confirm the install and the single reconciled version:
 fsgg-sdd --version
 ```
 
-This prints `0.2.0` — the one version shared by `FS.GG.SDD.Artifacts`,
+This prints `1.5.1` — the one version shared by `FS.GG.SDD.Artifacts`,
 `FS.GG.SDD.Commands`, and `FS.GG.SDD.Cli` (see the
 [versioning policy](versioning-policy.md)).
 

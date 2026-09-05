@@ -1,0 +1,14 @@
+head=b9211ae4427afe11da28618e9d267be049683b60
+pack-a
+55331552d8eb05e50d7acc420c6bee46b8968e938f43e1547f59723055c317ca  /tmp/sdd944-real-pack-a/FS.GG.SDD.Artifacts.1.5.1.nupkg
+ecda481852f6c15c09349e0174f5698f24b13a46f7c2138f12e8ae62c7f79f03  /tmp/sdd944-real-pack-a/FS.GG.SDD.Cli.1.5.1.nupkg
+pack-b
+059392fecf78bd50ef57537fffb589efb28ccc1e1a526ee8c0c6c622f13237ea  /tmp/sdd944-real-pack-b/FS.GG.SDD.Artifacts.1.5.1.nupkg
+b11b67c23bc94401474595c3cb8fd400ed682f84d95b1f3fc1f3e8ff8842b247  /tmp/sdd944-real-pack-b/FS.GG.SDD.Cli.1.5.1.nupkg
+FS.GG.SDD.Artifacts.1.5.1.nupkg: OK
+FS.GG.SDD.Cli.1.5.1.nupkg: OK
+release candidate verified: head=b9211ae4427afe11da28618e9d267be049683b60 version=1.5.1 packages=2
+FS.GG.SDD.Artifacts.1.5.1.nupkg: OK
+FS.GG.SDD.Cli.1.5.1.nupkg: FAILED
+sha256sum: WARNING: 1 computed checksum did NOT match
+substituted_archive_exit=1

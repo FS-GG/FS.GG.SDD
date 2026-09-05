@@ -1,0 +1,602 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "944-sdd-151-evidence-authority-release",
+  "stage": "analyze",
+  "status": "implementationReady",
+  "generator": "FS.GG.SDD.Artifacts/1.5.1",
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "8fc1f65645b49b0b3471ac7dcdcb91eb993cde0b38378077dcfaf3410ba531eb"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/checklist.md",
+      "kind": "checklist",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "kind": "clarification",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "kind": "plan",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "675278a463d1b9fc63e5cc974e01b65d135885d80c28367f26ccaa0c98c3b5ab"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "kind": "specification",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "kind": "tasks",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "8eaac673c49c3c45b831f727ed96967da4585ad72b3bbe8fede1816fa0a2f045"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    }
+  ],
+  "sourceRelationships": [
+    {
+      "id": "AR001",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/checklist.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "planSourceChecklist",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR002",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/checklist.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "taskSourceChecklist",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR003",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/checklist.md",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "checklistSourceClarifications",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR004",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "DEC-001",
+      "targetId": null,
+      "relationship": "clarificationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR005",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "DEC-002",
+      "targetId": null,
+      "relationship": "clarificationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR006",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "DEC-003",
+      "targetId": null,
+      "relationship": "clarificationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR007",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "DEC-004",
+      "targetId": null,
+      "relationship": "clarificationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR008",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "planSourceClarifications",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR009",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "taskSourceClarifications",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR010",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "PC-001",
+      "targetId": null,
+      "relationship": "contractDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR011",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "GV-001",
+      "targetId": null,
+      "relationship": "generatedViewDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR012",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "PM-001",
+      "targetId": null,
+      "relationship": "migrationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR013",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "PD-001",
+      "targetId": null,
+      "relationship": "planDecisionDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR014",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "PD-002",
+      "targetId": null,
+      "relationship": "planDecisionDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR015",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "PD-003",
+      "targetId": null,
+      "relationship": "planDecisionDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR016",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "PD-004",
+      "targetId": null,
+      "relationship": "planDecisionDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR017",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "PD-005",
+      "targetId": null,
+      "relationship": "planDecisionDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR018",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "taskSourcePlan",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR019",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "VO-001",
+      "targetId": null,
+      "relationship": "verificationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR020",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "AC-001",
+      "targetId": null,
+      "relationship": "acceptanceDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR021",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "AC-002",
+      "targetId": null,
+      "relationship": "acceptanceDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR022",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "AC-003",
+      "targetId": null,
+      "relationship": "acceptanceDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR023",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "AC-004",
+      "targetId": null,
+      "relationship": "acceptanceDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR024",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "AC-005",
+      "targetId": null,
+      "relationship": "acceptanceDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR025",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/checklist.md",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "checklistSourceSpec",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR026",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "planSourceSpec",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR027",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "FR-001",
+      "targetId": null,
+      "relationship": "requirementDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR028",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "FR-002",
+      "targetId": null,
+      "relationship": "requirementDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR029",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "FR-003",
+      "targetId": null,
+      "relationship": "requirementDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR030",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "FR-004",
+      "targetId": null,
+      "relationship": "requirementDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR031",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "FR-005",
+      "targetId": null,
+      "relationship": "requirementDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR032",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "sourceSpec",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR033",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": null,
+      "targetId": null,
+      "relationship": "taskSourceSpec",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR034",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T006",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR035",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T007",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR036",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T008",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR037",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T009",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR038",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T010",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR039",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T011",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR040",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T012",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR041",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T013",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR042",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T014",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR043",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T015",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR044",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T016",
+      "targetId": "T003",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR045",
+      "sourcePath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "targetPath": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceId": "T016",
+      "targetId": "T005",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    }
+  ],
+  "readiness": {
+    "status": "implementationReady",
+    "readyCount": 45,
+    "advisoryCount": 0,
+    "warningCount": 0,
+    "blockingCount": 0,
+    "staleSourceCount": 0,
+    "missingDispositionCount": 0,
+    "malformedSourceCount": 0,
+    "generatedViewFindingCount": 0,
+    "acceptedDeferralCount": 0
+  },
+  "findings": [],
+  "generatedViews": [
+    {
+      "path": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
+      "kind": "workModel",
+      "currency": "current",
+      "diagnosticIds": []
+    }
+  ],
+  "optionalBoundaryFacts": [
+    {
+      "path": ".fsgg/policy.yml",
+      "relationship": "optionalGovernancePolicy",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/capabilities.yml",
+      "relationship": "optionalGovernanceCapabilities",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/tooling.yml",
+      "relationship": "optionalGovernanceTooling",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    }
+  ],
+  "diagnostics": [],
+  "nextAction": {
+    "actionId": "analysis.next.implement",
+    "command": null,
+    "reason": "Lifecycle sources are current and ready for implementation."
+  }
+}

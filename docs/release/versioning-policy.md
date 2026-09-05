@@ -19,20 +19,20 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.props` `<Version>` — currently **`0.11.0`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`1.5.1`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
 - `FS.GG.SDD.Cli` (the `fsgg-sdd` CLI)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "0.11.0"` and
-`generatorVersion.version = "0.11.0"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "1.5.1"` and
+`generatorVersion.version = "1.5.1"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
 The `channel` is derived from the version: a major of `0` is `preRelease`; a
-major of `>=1` is `stable`. The current release is `preRelease`.
+major of `>=1` is `stable`. The current release is `stable`.
 
 ## Change class to bump rule
 
@@ -50,11 +50,10 @@ applied to the set of public-contract changes between them.
 
 ## Pre-1.0 (0.x) semantics
 
-The current line is `0.x`. Under SemVer, a `0.y.z` line **MAY** introduce a
+For historical `0.x` releases, SemVer allowed a `0.y.z` line to introduce a
 breaking change on a **minor** bump. This is stated explicitly so early adopters
-are not surprised. A migration note is **still required** for any breaking
-change, pre-1.0 included. The first `1.0.0` line freezes the surfaces currently
-classed `Stable`.
+can interpret those versions. A migration note was **still required** for any
+breaking change, pre-1.0 included. The current `1.x` line follows ordinary SemVer.
 
 ## Schema-version vs contract-version divergence
 

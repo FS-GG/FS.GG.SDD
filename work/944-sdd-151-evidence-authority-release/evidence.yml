@@ -1,0 +1,438 @@
+schemaVersion: 1
+workId: 944-sdd-151-evidence-authority-release
+stage: evidence
+status: evidenceReady
+sourceSpec: work/944-sdd-151-evidence-authority-release/spec.md
+sourceClarifications: work/944-sdd-151-evidence-authority-release/clarifications.md
+sourceChecklist: work/944-sdd-151-evidence-authority-release/checklist.md
+sourcePlan: work/944-sdd-151-evidence-authority-release/plan.md
+sourceTasks: work/944-sdd-151-evidence-authority-release/tasks.yml
+sourceAnalysis: readiness/944-sdd-151-evidence-authority-release/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/944-sdd-151-evidence-authority-release/analysis.json
+    digest: dfaef89dfe7cd7a6276e2859a452765c16e3283a8a060ec1d2d31ebdc9e9f1b8
+    schemaVersion: 1
+  - label: checklist
+    path: work/944-sdd-151-evidence-authority-release/checklist.md
+    digest: 9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15
+    schemaVersion: 1
+  - label: clarifications
+    path: work/944-sdd-151-evidence-authority-release/clarifications.md
+    digest: 2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9
+    schemaVersion: 1
+  - label: plan
+    path: work/944-sdd-151-evidence-authority-release/plan.md
+    digest: 675278a463d1b9fc63e5cc974e01b65d135885d80c28367f26ccaa0c98c3b5ab
+    schemaVersion: 1
+  - label: spec
+    path: work/944-sdd-151-evidence-authority-release/spec.md
+    digest: d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4
+    schemaVersion: 1
+  - label: tasks
+    path: work/944-sdd-151-evidence-authority-release/tasks.yml
+    digest: 8eaac673c49c3c45b831f727ed96967da4585ad72b3bbe8fede1816fa0a2f045
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV001]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV002]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV003]
+    artifacts: [work/944-sdd-151-evidence-authority-release/architecture-review.md, work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt, work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt, work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt, work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV004]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV005]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV006]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV007]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV008]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV009]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV010]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV011
+    kind: verification
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV011]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV012
+    kind: verification
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002, PD-005]
+    obligationRefs: [EV012]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV013
+    kind: verification
+    subject:
+      type: task
+      id: T013
+    taskRefs: [T013]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-002, PD-003, PD-004, PD-005]
+    obligationRefs: [EV013]
+    artifacts: [work/944-sdd-151-evidence-authority-release/architecture-review.md, work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt, work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-real.txt, work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt, work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt, work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV014
+    kind: verification
+    subject:
+      type: task
+      id: T014
+    taskRefs: [T014]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV014]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV015
+    kind: verification
+    subject:
+      type: task
+      id: T015
+    taskRefs: [T015]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV015]
+    artifacts: [work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx, work/944-sdd-151-evidence-authority-release/qualification.md]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Release Commands observation plus the qualification record support this obligation.]
+  - id: EV016
+    kind: verification
+    subject:
+      type: task
+      id: T016
+    taskRefs: [T016]
+    requirementRefs: [FR-003, FR-005]
+    acceptanceScenarioRefs: [AC-003, AC-005]
+    clarificationDecisionRefs: [DEC-004]
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003, PD-005]
+    obligationRefs: [EV016]
+    artifacts: [scripts/tests/apicompat-check.test.sh, scripts/tests/release-artifact-custody.test.sh, scripts/verify-release-candidate.sh, work/944-sdd-151-evidence-authority-release/architecture-review.md, work/944-sdd-151-evidence-authority-release/evidence/process/back-to-back-pack.txt, work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx
+      digest: "sha256:a50525f97942231524553f0a25b9b0033a5a4c5dad95623a6e3a2a6475b06887"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1341
+      failed: 0
+      skipped: 0
+    notes: [Second-order shell-status and exact-archive custody controls support the revised release authorization boundary.]
+lifecycleNotes:
+  - "Next lifecycle action: verify."

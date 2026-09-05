@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "1.5.0"
+    "version": "1.5.1"
   },
   "identity": {
-    "version": "1.5.0",
+    "version": "1.5.1",
     "channel": "stable",
     "packageIds": [
       "FS.GG.SDD.Artifacts",

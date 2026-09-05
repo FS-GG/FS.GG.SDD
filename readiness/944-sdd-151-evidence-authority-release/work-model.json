@@ -1,0 +1,1305 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.2.0",
+  "workId": "944-sdd-151-evidence-authority-release",
+  "project": {
+    "id": "fs.gg.sdd-833",
+    "defaultWorkRoot": "work",
+    "profile": null
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      }
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15"
+      }
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9"
+      }
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "2bbd777cfedacdfb2b7d8ad05c3fb692c494f0b7c88c0b90f875e1fcf599e77d"
+      }
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "675278a463d1b9fc63e5cc974e01b65d135885d80c28367f26ccaa0c98c3b5ab"
+      }
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4"
+      }
+    },
+    {
+      "path": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "8eaac673c49c3c45b831f727ed96967da4585ad72b3bbe8fede1816fa0a2f045"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "944-sdd-151-evidence-authority-release",
+    "title": "Sdd 151 Evidence Authority Release",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "performanceIntent": null,
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "Qualification MUST preserve the existing RefreshEvidenceDeadlockTests non-vacuity assertion and MUST diagnose the protected-main failure from exact logs, retry outcome, repeated isolated processes, and full-suite controls. (covers AC-001)",
+      "text": "Qualification MUST preserve the existing RefreshEvidenceDeadlockTests non-vacuity assertion and MUST diagnose the protected-main failure from exact logs, retry outcome, repeated isolated processes, and full-suite controls. (covers AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "sourceLocation": {
+        "line": 37,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": [
+        "EV001",
+        "EV009"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "title": "FS.GG.SDD.Cli and FS.GG.SDD.Artifacts MUST form one stable 1.5.1 coherent set across authoritative properties, release contract, docs, baselines, and fixtures; FS.GG.Contracts MUST remain 7.5.2. (covers AC-002)",
+      "text": "FS.GG.SDD.Cli and FS.GG.SDD.Artifacts MUST form one stable 1.5.1 coherent set across authoritative properties, release contract, docs, baselines, and fixtures; FS.GG.Contracts MUST remain 7.5.2. (covers AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "sourceLocation": {
+        "line": 38,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002"
+      ],
+      "linkedEvidenceIds": [
+        "EV002",
+        "EV010"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "title": "The exact candidate MUST pass repeated focused Debug, complete Debug and Release suites, SDD verify/ship, package/API/validation/release dry-run gates, and release-coherence inversions. Shell test harnesses MUST capture explicit command statuses outside \u0060if\u0060/\u0060!\u0060 conditional-errexit contexts, aggregate failures, and prove removal of each ApiCompat isolation property fails. (covers AC-003)",
+      "text": "The exact candidate MUST pass repeated focused Debug, complete Debug and Release suites, SDD verify/ship, package/API/validation/release dry-run gates, and release-coherence inversions. Shell test harnesses MUST capture explicit command statuses outside \u0060if\u0060/\u0060!\u0060 conditional-errexit contexts, aggregate failures, and prove removal of each ApiCompat isolation property fails. (covers AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "sourceLocation": {
+        "line": 39,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003",
+        "T016"
+      ],
+      "linkedEvidenceIds": [
+        "EV003",
+        "EV016"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "title": "A clean local install from candidate packages MUST report 1.5.1 and exercise the candidate-owned local evidence refusal plus tracked/external positive controls. (covers AC-004)",
+      "text": "A clean local install from candidate packages MUST report 1.5.1 and exercise the candidate-owned local evidence refusal plus tracked/external positive controls. (covers AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "sourceLocation": {
+        "line": 40,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004"
+      ],
+      "linkedEvidenceIds": [
+        "EV004"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "title": "Whole-nupkg bytes MUST NOT be claimed reproducible across independent packs. A no-push workflow dispatch at the exact release commit MUST build and qualify the coherent set once, upload the packages plus a source/head/inventory/SHA-256 manifest as a durable artifact, and a later tag/release workflow MUST fail closed unless it can download and verify that exact artifact before pushing the same archives to both feeds without rebuilding or repacking. (covers AC-005)",
+      "text": "Whole-nupkg bytes MUST NOT be claimed reproducible across independent packs. A no-push workflow dispatch at the exact release commit MUST build and qualify the coherent set once, upload the packages plus a source/head/inventory/SHA-256 manifest as a durable artifact, and a later tag/release workflow MUST fail closed unless it can download and verify that exact artifact before pushing the same archives to both feeds without rebuilding or repacking. (covers AC-005)",
+      "acceptanceCriteria": [
+        "AC-005"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/944-sdd-151-evidence-authority-release/spec.md",
+      "sourceLocation": {
+        "line": 41,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T005",
+        "T016"
+      ],
+      "linkedEvidenceIds": [
+        "EV005",
+        "EV011",
+        "EV016"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "Treat non-reproduction as a bounded qualification result only when all independent controls are green and the non-vacuity assertion remains byte-unchanged.",
+      "decision": "Treat non-reproduction as a bounded qualification result only when all independent controls are green and the non-vacuity assertion remains byte-unchanged.",
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T006"
+      ]
+    },
+    {
+      "id": "DEC-002",
+      "title": "Use one 1.5.1 version projection for CLI and Artifacts, retain Contracts 7.5.2, and hash the packed nupkgs before handoff.",
+      "decision": "Use one 1.5.1 version projection for CLI and Artifacts, retain Contracts 7.5.2, and hash the packed nupkgs before handoff.",
+      "requirementRefs": [
+        "FR-002",
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "sourceLocation": {
+        "line": 31,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T007"
+      ]
+    },
+    {
+      "id": "DEC-003",
+      "title": "Stop at an exact-head reviewed-ready PR with reproducible candidate packages and clean-install evidence; perform no irreversible release action.",
+      "decision": "Stop at an exact-head reviewed-ready PR with reproducible candidate packages and clean-install evidence; perform no irreversible release action.",
+      "requirementRefs": [
+        "FR-003",
+        "FR-004",
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "sourceLocation": {
+        "line": 32,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T008"
+      ]
+    },
+    {
+      "id": "DEC-004",
+      "title": "Separate source qualification from archive custody. The reviewed PR proves the build/test/custody mechanism; a post-merge dry-run creates the only publishable archives, and the tag/release path promotes those exact retained bytes after verifying commit-bound manifest identity. Independent repacks are an inversion and must differ without weakening the custody contract.",
+      "decision": "Separate source qualification from archive custody. The reviewed PR proves the build/test/custody mechanism; a post-merge dry-run creates the only publishable archives, and the tag/release path promotes those exact retained bytes after verifying commit-bound manifest identity. Independent repacks are an inversion and must differ without weakening the custody contract.",
+      "requirementRefs": [
+        "FR-003",
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+      "sourceLocation": {
+        "line": 33,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T016"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Implement requirement FR-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "FR-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Implement requirement FR-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-002"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "FR-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Implement requirement FR-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-003"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "FR-003",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Implement requirement FR-004",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-004"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-004",
+        "FR-004",
+        "PD-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Implement requirement FR-005",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-005"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "FR-005"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Implement clarification decision DEC-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-001"
+      ],
+      "sourceIds": [
+        "DEC-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "T007",
+      "title": "Implement clarification decision DEC-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-002"
+      ],
+      "sourceIds": [
+        "DEC-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV007"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "T008",
+      "title": "Implement clarification decision DEC-003",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-003"
+      ],
+      "sourceIds": [
+        "DEC-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV008"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "T009",
+      "title": "Implement plan decision PD-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "DEC-001",
+        "FR-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV009"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "T010",
+      "title": "Implement plan decision PD-002",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "DEC-002",
+        "FR-002",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV010"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "T011",
+      "title": "Implement plan decision PD-005",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "DEC-003",
+        "FR-005",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV011"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "T012",
+      "title": "Update contract surface PC-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-002",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV012"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "T013",
+      "title": "Record verification evidence VO-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-002",
+        "PD-003",
+        "PD-004",
+        "PD-005",
+        "VO-001"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV013"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "T014",
+      "title": "Handle migration posture PM-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV014"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "T015",
+      "title": "Refresh generated view impact GV-001",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-001",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV015"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "T016",
+      "title": "Implement clarification decision DEC-004",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T003",
+        "T005"
+      ],
+      "requirements": [
+        "FR-003",
+        "FR-005"
+      ],
+      "decisions": [
+        "DEC-004"
+      ],
+      "sourceIds": [
+        "AC-003",
+        "AC-005",
+        "DEC-004",
+        "FR-003",
+        "FR-005",
+        "PD-003",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "readiness-evidence",
+        "release-engineering"
+      ],
+      "requiredEvidence": [
+        "EV016"
+      ],
+      "source": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/architecture-review.md",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV007",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T007",
+      "taskRefs": [
+        "T007"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV008",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T008",
+      "taskRefs": [
+        "T008"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV009",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T009",
+      "taskRefs": [
+        "T009"
+      ],
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV010",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T010",
+      "taskRefs": [
+        "T010"
+      ],
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV011",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T011",
+      "taskRefs": [
+        "T011"
+      ],
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV012",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T012",
+      "taskRefs": [
+        "T012"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV013",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T013",
+      "taskRefs": [
+        "T013"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/architecture-review.md",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-order-independence.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/apicompat-real.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/post-api-pack.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/state-boundary.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV014",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T014",
+      "taskRefs": [
+        "T014"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV015",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T015",
+      "taskRefs": [
+        "T015"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx",
+        "work/944-sdd-151-evidence-authority-release/qualification.md"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV016",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T016",
+      "taskRefs": [
+        "T016"
+      ],
+      "requirementRefs": [
+        "FR-003",
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "scripts/tests/apicompat-check.test.sh",
+        "scripts/tests/release-artifact-custody.test.sh",
+        "scripts/verify-release-candidate.sh",
+        "work/944-sdd-151-evidence-authority-release/architecture-review.md",
+        "work/944-sdd-151-evidence-authority-release/evidence/process/back-to-back-pack.txt",
+        "work/944-sdd-151-evidence-authority-release/evidence/release/FS.GG.SDD.Commands.Tests.trx"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/944-sdd-151-evidence-authority-release/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "1.5.1"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/944-sdd-151-evidence-authority-release/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "9ca3ad2b614d6a69a9d9c691e08d179ce7839134668e3277cd620030402e0c15"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/944-sdd-151-evidence-authority-release/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "2dd17e96eb47fcc3857b8740d27fac631987cc8ae6e10f6caeb388b6fefc82a9"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/944-sdd-151-evidence-authority-release/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "2bbd777cfedacdfb2b7d8ad05c3fb692c494f0b7c88c0b90f875e1fcf599e77d"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/944-sdd-151-evidence-authority-release/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "675278a463d1b9fc63e5cc974e01b65d135885d80c28367f26ccaa0c98c3b5ab"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/944-sdd-151-evidence-authority-release/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "d3d789b2acece7026f05849cca01a6a810bcd6497c94ae9015ff053ae9e580a4"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/944-sdd-151-evidence-authority-release/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "8eaac673c49c3c45b831f727ed96967da4585ad72b3bbe8fede1816fa0a2f045"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "48a6b850acfec35047eda80a4b0eaf50b108585b35596d4d569d4d3f7717f430"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}

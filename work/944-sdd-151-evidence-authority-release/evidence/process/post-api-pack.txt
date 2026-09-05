@@ -1,0 +1,2 @@
+  The package FS.GG.SDD.Artifacts.1.5.1 is missing a readme. Go to https://aka.ms/nuget/authoring-best-practices/readme to learn why package readmes are important.
+  Successfully created package '/tmp/tmp.aBUAr7CBak/FS.GG.SDD.Artifacts.1.5.1.nupkg'.

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "944-sdd-151-evidence-authority-release",
+  "stage": "ship",
+  "status": "shipReady",
+  "generator": "FS.GG.SDD.Artifacts/1.5.1",
+  "sourcesDigest": {
+    "algorithm": "sha256",
+    "value": "6e3daa324b7cd9d2a84e6a944b87e765febcd98fe1186617acd37d586e520576"
+  },
+  "verificationReadiness": {
+    "status": "verificationReady",
+    "evidenceSupportedCount": 16,
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 16
+  },
+  "disposition": {
+    "state": "shipReady",
+    "blockingFindingIds": []
+  },
+  "readiness": "shipReady"
+}
