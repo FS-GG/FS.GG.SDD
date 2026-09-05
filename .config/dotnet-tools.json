@@ -9,7 +9,7 @@
       ]
     },
     "fs.gg.coord.cli": {
-      "version": "0.83.1",
+      "version": "0.83.2",
       "commands": [
         "fsgg-coord-engine"
       ]
