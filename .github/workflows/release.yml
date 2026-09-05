@@ -363,7 +363,7 @@ jobs:
         run: bash scripts/verify-cli-tool.sh
 
       - name: Upload the only publishable package bytes
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coherent-sdd-packages-${{ github.sha }}
           path: artifacts/packages/*
@@ -389,7 +389,7 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Download the reviewed package bytes
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coherent-sdd-packages-${{ github.sha }}
           path: artifacts/packages
@@ -522,7 +522,7 @@ jobs:
           bash tests/quint-q3-typed-sdd-acceptance.sh
 
       - name: Upload durable dual-feed receipt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdd-1.5.0-dual-feed-receipt-${{ github.sha }}
           path: |

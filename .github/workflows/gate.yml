@@ -312,7 +312,7 @@ jobs:
         run: bash tests/quint-q3-typed-sdd-acceptance.sh
 
       - name: Upload exact Q2/Q3 Quint acceptance reports (JUnit)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: quint-q2-q3-acceptance-junit
           path: artifacts/test-results/quint-q*.junit.xml
@@ -329,7 +329,7 @@ jobs:
       # still loud when the suite DID run.
       - name: Upload test reports (TRX)
         if: ${{ !cancelled() && steps.test.conclusion != 'skipped' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-trx
           path: artifacts/test-results/*.trx
