@@ -17,15 +17,15 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "31be8937f49f6b4656f3e2adfb75f23d9b24814595b0ad8eca2fe83c4787138c"
+        "4591d8e0bc7e1acb28d24caaf40cc98877c51c4479e75b403ab3611803b99005"
 
-    // work-board ships in FS.GG.Drivers 0.8.0, `materializes-when: always` like work-roadmap.
+    // work-board ships in FS.GG.Drivers, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "c0c6096537dc0bc22854bb3d5f011a2eec135e2ac0fe71c9eeb8b27c92d6ac28"
+        "c4da9c8e0ee92112dd2a0d27e16d2f96244afa3ffdd73852020d96b181ea4a0b"
 
-    // padd-item is the product-workspace board filer added by FS.GG.Drivers 0.8.0 (#703).
+    // padd-item is the product-workspace board filer added by FS.GG.Drivers (#703).
     let private paddItemSha256 =
-        "f77540a387627a13ed88133e259eee6fc8d956213a23b18097977bcc07520aca"
+        "60938ac4fc0f147de8be89f125a4a78a958be52ef1b879c33876f901d6486247"
 
     let private workBoardNormalSha256 =
         "535454433c62cdb9088861ca7afbdf8b7c650dc870d789fa211f7715a2a03e07"
@@ -47,8 +47,7 @@ module DriverSkillsTests =
                 "references/deep-detail.md"
                 "references/feedback-contract.md"
                 "references/host-loop.md"
-                "references/workspace-scope.md"
-                "scripts/validate-feedback-state.py" ]
+                "references/workspace-scope.md" ]
               "work-roadmap",
               [ "SKILL.md"
                 "agents/openai.yaml"
@@ -56,9 +55,8 @@ module DriverSkillsTests =
                 "references/deep-detail.md"
                 "references/feedback-contract.md"
                 "references/host-loop.md"
-                "references/roadmap-ledger.md"
-                "scripts/validate-critique-state.py"
-                "scripts/validate-feedback-state.py" ] ]
+                "references/lifecycle-log.md"
+                "references/roadmap-ledger.md" ] ]
 
     let private driverPathFor id =
         [ for root in roots do
@@ -155,8 +153,7 @@ module DriverSkillsTests =
         Assert.Contains(workBoardSha256, shas)
         Assert.Contains(workBoardNormalSha256, shas)
         Assert.Contains(workBoardBestSha256, shas)
-        // The two driver feedback validators are byte-identical, so 23 files yield 22 distinct digests.
-        Assert.Equal(22, shas.Count)
+        Assert.Equal(21, shas.Count)
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -480,4 +477,4 @@ module DriverSkillsTests =
             writtenPaths
         )
 
-        Assert.Equal(28, outcome.Writes |> List.length)
+        Assert.Equal(26, outcome.Writes |> List.length)

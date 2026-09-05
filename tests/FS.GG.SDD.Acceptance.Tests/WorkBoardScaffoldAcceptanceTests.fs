@@ -21,9 +21,10 @@ module WorkBoardScaffoldAcceptanceTests =
         [ "check-board"
           "backlog-triage"
           "pnext-item"
-          "Whenever the host changes or observes a material transition"
-          "<item> — <new status>"
-          "Active:" ]
+          "On every material transition"
+          "line 1 — the material transition(s)"
+          "line 2 — the complete active inventory"
+          "<item>: <previous> -> <new> (<reason>)" ]
 
     // ----- fixture: a real offline scaffold -----
 
@@ -69,7 +70,7 @@ module WorkBoardScaffoldAcceptanceTests =
         for id in [ "work-board-normal"; "work-board-best" ] do
             Assert.True(
                 existsRelative root $".claude/skills/{id}/SKILL.md",
-                $"a scaffold must materialize the routed {id} driver skill from FS.GG.Drivers 0.9.0."
+                $"a scaffold must materialize the routed {id} driver skill from FS.GG.Drivers."
             )
 
         Assert.True(
@@ -92,7 +93,7 @@ module WorkBoardScaffoldAcceptanceTests =
             assembly.GetManifestResourceNames()
             |> Array.tryFind (fun n -> n.Replace('\\', '/') = $"Driver.skill/{id}/SKILL.md")
             |> Option.defaultWith (fun () ->
-                failwith $"the {id} driver body must be embedded in FS.GG.SDD.Commands (FS.GG.Drivers 0.9.0).")
+                failwith $"the {id} driver body must be embedded in FS.GG.SDD.Commands (FS.GG.Drivers).")
 
         match assembly.GetManifestResourceStream name with
         | null -> failwith $"the embedded {id} driver body could not be opened."
