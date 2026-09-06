@@ -1,0 +1,831 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.2.0",
+  "workId": "3247-roadmap-acceptance-authoring",
+  "project": {
+    "id": "fs.gg.sdd-833",
+    "defaultWorkRoot": "work",
+    "profile": null
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      }
+    },
+    {
+      "path": "work/3247-roadmap-acceptance-authoring/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "02d84f460385bce196dd880a31341d669e9184578ab20bd8b84488f3a38c3901"
+      }
+    },
+    {
+      "path": "work/3247-roadmap-acceptance-authoring/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "49f042aff5dee70a7563a9d483ba7759788cd934c28118e5240148468f5d7ebe"
+      }
+    },
+    {
+      "path": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "f5a8b3e21b12c0e659cb347382f5bfa1f802473eb5aaf15ef741c0438e676b4e"
+      }
+    },
+    {
+      "path": "work/3247-roadmap-acceptance-authoring/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "dc33d05bf65ebaf7c0e6eef96233eb1138cd2010afb71f8c617bccb307041743"
+      }
+    },
+    {
+      "path": "work/3247-roadmap-acceptance-authoring/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "b97e3def7281adc5514f99802860d091c5b7f2f81425d5fa57e597aa9299a2ef"
+      }
+    },
+    {
+      "path": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "5b78f38119b930448524ff98f77e96f78a9ee7823321d6dc37252ee5e9ed3559"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "3247-roadmap-acceptance-authoring",
+    "title": "Roadmap Single-PR Acceptance",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "performanceIntent": null,
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "A single pull request MAY fulfill both implementation and acceptance roles when both roles name one exact candidate and one exact merge. (covers AC-001)",
+      "text": "A single pull request MAY fulfill both implementation and acceptance roles when both roles name one exact candidate and one exact merge. (covers AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/3247-roadmap-acceptance-authoring/spec.md",
+      "sourceLocation": {
+        "line": 36,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": [
+        "EV001"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "title": "Shared-role acceptance MUST still refuse candidate/merge collapse and MUST refuse divergent candidate or merge values for the shared PR. (covers AC-001)",
+      "text": "Shared-role acceptance MUST still refuse candidate/merge collapse and MUST refuse divergent candidate or merge values for the shared PR. (covers AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/3247-roadmap-acceptance-authoring/spec.md",
+      "sourceLocation": {
+        "line": 37,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": [
+        "EV001"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "title": "The implementation repository MUST be derived from the applied unit registration, not from the compiler plan-authority issue. (covers AC-002)",
+      "text": "The implementation repository MUST be derived from the applied unit registration, not from the compiler plan-authority issue. (covers AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/3247-roadmap-acceptance-authoring/spec.md",
+      "sourceLocation": {
+        "line": 38,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002"
+      ],
+      "linkedEvidenceIds": [
+        "EV002"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "title": "A critique cycle MAY use the canonical routed work-cycle identity and review a predecessor implementation commit, but MUST bind the routed work suffix and MUST prove through the live repository comparison that the final candidate is exactly one commit ahead, the reviewed commit is its merge base, and the canonical critique artifact is its sole changed file with status \u0060modified\u0060. It MUST refuse divergent history, merge-claiming receipts, and any additional or differently-statused final-candidate change. (covers AC-003)",
+      "text": "A critique cycle MAY use the canonical routed work-cycle identity and review a predecessor implementation commit, but MUST bind the routed work suffix and MUST prove through the live repository comparison that the final candidate is exactly one commit ahead, the reviewed commit is its merge base, and the canonical critique artifact is its sole changed file with status \u0060modified\u0060. It MUST refuse divergent history, merge-claiming receipts, and any additional or differently-statused final-candidate change. (covers AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/3247-roadmap-acceptance-authoring/spec.md",
+      "sourceLocation": {
+        "line": 39,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003"
+      ],
+      "linkedEvidenceIds": [
+        "EV003"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "title": "The exact GS2-07.3 production reproduction MUST clear all identity and critique refusals without changing its immutable issue, PR, lifecycle, candidate, or merge facts. (covers AC-004)",
+      "text": "The exact GS2-07.3 production reproduction MUST clear all identity and critique refusals without changing its immutable issue, PR, lifecycle, candidate, or merge facts. (covers AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/3247-roadmap-acceptance-authoring/spec.md",
+      "sourceLocation": {
+        "line": 40,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004"
+      ],
+      "linkedEvidenceIds": [
+        "EV004"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "Shared-role identity is one explicit mode: the PR numbers match, both candidate values match, and both merge values match; distinct-role rules remain unchanged otherwise.",
+      "decision": "Shared-role identity is one explicit mode: the PR numbers match, both candidate values match, and both merge values match; distinct-role rules remain unchanged otherwise.",
+      "requirementRefs": [
+        "FR-001",
+        "FR-002"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/3247-roadmap-acceptance-authoring/clarifications.md",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ]
+    },
+    {
+      "id": "DEC-002",
+      "title": "Applied unit registration is the sole repository authority for both unit bindings and lifecycle source checks.",
+      "decision": "Applied unit registration is the sole repository authority for both unit bindings and lifecycle source checks.",
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/3247-roadmap-acceptance-authoring/clarifications.md",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002"
+      ]
+    },
+    {
+      "id": "DEC-003",
+      "title": "A canonical routed work-cycle suffix is accepted only when a live repository comparison reports the final candidate exactly one commit ahead, the reviewed commit as merge base, and the canonical critique JSON as the sole \u0060modified\u0060 file; an unrelated cycle, divergent history, extra or differently-statused file, or receipt naming the generated merge is refused.",
+      "decision": "A canonical routed work-cycle suffix is accepted only when a live repository comparison reports the final candidate exactly one commit ahead, the reviewed commit as merge base, and the canonical critique JSON as the sole \u0060modified\u0060 file; an unrelated cycle, divergent history, extra or differently-statused file, or receipt naming the generated merge is refused.",
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/3247-roadmap-acceptance-authoring/clarifications.md",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Permit one exact unit PR to fulfill both roadmap roles",
+      "status": "done",
+      "owner": "coordination-engine",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "FR-002"
+      ],
+      "decisions": [
+        "DEC-001"
+      ],
+      "sourceIds": [
+        "AC-001",
+        "DEC-001",
+        "FR-001",
+        "FR-002",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Derive binding repository from the applied unit",
+      "status": "done",
+      "owner": "coordination-engine",
+      "dependencies": [],
+      "requirements": [
+        "FR-003"
+      ],
+      "decisions": [
+        "DEC-002"
+      ],
+      "sourceIds": [
+        "AC-002",
+        "DEC-002",
+        "FR-003",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Validate routed work-cycle critique ancestry",
+      "status": "done",
+      "owner": "coordination-engine",
+      "dependencies": [],
+      "requirements": [
+        "FR-004"
+      ],
+      "decisions": [
+        "DEC-003"
+      ],
+      "sourceIds": [
+        "AC-003",
+        "DEC-003",
+        "FR-004",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Exercise the immutable GS2-07.3 production reproduction",
+      "status": "done",
+      "owner": "coordination-engine",
+      "dependencies": [
+        "T001",
+        "T002",
+        "T003"
+      ],
+      "requirements": [
+        "FR-005"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-004",
+        "FR-005",
+        "PD-004"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "production-route"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Preserve the acceptance command and schema surface",
+      "status": "done",
+      "owner": "coordination-engine",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-002",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "contract-review"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Record exact candidate verification evidence",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001",
+        "T002",
+        "T003",
+        "T004"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PD-004",
+        "PD-005",
+        "VO-001"
+      ],
+      "requiredSkills": [
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "T007",
+      "title": "Confirm compatibility-patch migration posture",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T005"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV007"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "T008",
+      "title": "Refresh SDD readiness views for the exact engine candidate",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T006"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-001",
+        "PD-004"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV008"
+      ],
+      "source": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [
+        "FR-001",
+        "FR-002"
+      ],
+      "artifactRefs": [
+        "work/3247-roadmap-acceptance-authoring/verification/core.test-report.xml"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "work/3247-roadmap-acceptance-authoring/verification/core.test-report.xml"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "artifactRefs": [
+        "work/3247-roadmap-acceptance-authoring/verification/boardops.test-report.xml"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "work/3247-roadmap-acceptance-authoring/verification/boardops.test-report.xml",
+        "work/3247-roadmap-acceptance-authoring/verification/production-route.stderr.txt"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/3247-roadmap-acceptance-authoring/verification/boardops.test-report.xml",
+        "work/3247-roadmap-acceptance-authoring/verification/core.test-report.xml"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/3247-roadmap-acceptance-authoring/verification/boardops.test-report.xml",
+        "work/3247-roadmap-acceptance-authoring/verification/core.test-report.xml"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV007",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T007",
+      "taskRefs": [
+        "T007"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "work/3247-roadmap-acceptance-authoring/verification/core.test-report.xml"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV008",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T008",
+      "taskRefs": [
+        "T008"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "readiness/3247-roadmap-acceptance-authoring/analysis.json",
+        "readiness/3247-roadmap-acceptance-authoring/work-model.json",
+        "work/3247-roadmap-acceptance-authoring/verification/sdd-commands.test-report.xml"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/3247-roadmap-acceptance-authoring/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "1.5.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/3247-roadmap-acceptance-authoring/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "02d84f460385bce196dd880a31341d669e9184578ab20bd8b84488f3a38c3901"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/3247-roadmap-acceptance-authoring/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "49f042aff5dee70a7563a9d483ba7759788cd934c28118e5240148468f5d7ebe"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/3247-roadmap-acceptance-authoring/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "f5a8b3e21b12c0e659cb347382f5bfa1f802473eb5aaf15ef741c0438e676b4e"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/3247-roadmap-acceptance-authoring/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "dc33d05bf65ebaf7c0e6eef96233eb1138cd2010afb71f8c617bccb307041743"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/3247-roadmap-acceptance-authoring/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "b97e3def7281adc5514f99802860d091c5b7f2f81425d5fa57e597aa9299a2ef"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/3247-roadmap-acceptance-authoring/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "5b78f38119b930448524ff98f77e96f78a9ee7823321d6dc37252ee5e9ed3559"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "54069e5f2febcd732a155c84702b254dbed98acee36ac2b7f4793c1004d30ddf"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}
