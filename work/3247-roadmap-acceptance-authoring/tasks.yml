@@ -1,0 +1,118 @@
+schemaVersion: 1
+work:
+  id: 3247-roadmap-acceptance-authoring
+  title: "Roadmap Single-PR Acceptance"
+  stage: tasks
+  status: tasksReady
+  sourceSpec: work/3247-roadmap-acceptance-authoring/spec.md
+  sourceClarifications: work/3247-roadmap-acceptance-authoring/clarifications.md
+  sourceChecklist: work/3247-roadmap-acceptance-authoring/checklist.md
+  sourcePlan: work/3247-roadmap-acceptance-authoring/plan.md
+  publicOrToolFacingImpact: true
+
+sources:
+  - label: spec
+    path: work/3247-roadmap-acceptance-authoring/spec.md
+    digest: b97e3def7281adc5514f99802860d091c5b7f2f81425d5fa57e597aa9299a2ef
+    schemaVersion: 1
+  - label: clarifications
+    path: work/3247-roadmap-acceptance-authoring/clarifications.md
+    digest: 49f042aff5dee70a7563a9d483ba7759788cd934c28118e5240148468f5d7ebe
+    schemaVersion: 1
+  - label: checklist
+    path: work/3247-roadmap-acceptance-authoring/checklist.md
+    digest: 02d84f460385bce196dd880a31341d669e9184578ab20bd8b84488f3a38c3901
+    schemaVersion: 1
+  - label: plan
+    path: work/3247-roadmap-acceptance-authoring/plan.md
+    digest: dc33d05bf65ebaf7c0e6eef96233eb1138cd2010afb71f8c617bccb307041743
+    schemaVersion: 1
+
+tasks:
+  - id: T001
+    title: Permit one exact unit PR to fulfill both roadmap roles
+    status: done
+    owner: coordination-engine
+    dependencies: []
+    requirements: [FR-001, FR-002]
+    decisions: [DEC-001]
+    sourceIds: [AC-001, FR-001, FR-002, DEC-001, PD-001]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Derive binding repository from the applied unit
+    status: done
+    owner: coordination-engine
+    dependencies: []
+    requirements: [FR-003]
+    decisions: [DEC-002]
+    sourceIds: [AC-002, FR-003, DEC-002, PD-002]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV002]
+  - id: T003
+    title: Validate routed work-cycle critique ancestry
+    status: done
+    owner: coordination-engine
+    dependencies: []
+    requirements: [FR-004]
+    decisions: [DEC-003]
+    sourceIds: [AC-003, FR-004, DEC-003, PD-003]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV003]
+  - id: T004
+    title: Exercise the immutable GS2-07.3 production reproduction
+    status: done
+    owner: coordination-engine
+    dependencies: [T001, T002, T003]
+    requirements: [FR-005]
+    decisions: []
+    sourceIds: [AC-004, FR-005, PD-004]
+    requiredSkills: [automated-tests, production-route]
+    requiredEvidence: [EV004]
+  - id: T005
+    title: Preserve the acceptance command and schema surface
+    status: done
+    owner: coordination-engine
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PD-001, PD-002, PD-003]
+    requiredSkills: [contract-review]
+    requiredEvidence: [EV005]
+  - id: T006
+    title: Record exact candidate verification evidence
+    status: done
+    owner: sdd
+    dependencies: [T001, T002, T003, T004]
+    requirements: []
+    decisions: []
+    sourceIds: [VO-001, PD-004, PD-005]
+    requiredSkills: [readiness-evidence]
+    requiredEvidence: [EV006]
+  - id: T007
+    title: Confirm compatibility-patch migration posture
+    status: done
+    owner: sdd
+    dependencies: [T005]
+    requirements: []
+    decisions: []
+    sourceIds: [PM-001, PC-001]
+    requiredSkills: [schema-versioning]
+    requiredEvidence: [EV007]
+  - id: T008
+    title: Refresh SDD readiness views for the exact engine candidate
+    status: done
+    owner: sdd
+    dependencies: [T006]
+    requirements: []
+    decisions: []
+    sourceIds: [GV-001, PD-004]
+    requiredSkills: [deterministic-json]
+    requiredEvidence: [EV008]
+
+acceptedDeferrals: []
+findings: []
+advisoryNotes:
+  - "FS.GG.SDD records external engine evidence and does not claim source ownership."
+lifecycleNotes:
+  - "Next lifecycle action: fsgg-sdd analyze --work 3247-roadmap-acceptance-authoring."
