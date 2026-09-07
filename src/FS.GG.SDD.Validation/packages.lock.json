@@ -26,7 +26,7 @@
         "type": "Project",
         "dependencies": {
           "FS.GG.Contracts": "[7.5.2, )",
-          "FS.GG.Drivers": "[0.86.0, )",
+          "FS.GG.Drivers": "[0.86.1, )",
           "FS.GG.Game.Skills": "[0.7.0, )",
           "FS.GG.Rendering.Skills": "[0.1.1, )",
           "FS.GG.SDD.Artifacts": "[1.5.0, )",
@@ -35,9 +35,9 @@
       },
       "FS.GG.Drivers": {
         "type": "CentralTransitive",
-        "requested": "[0.86.0, )",
-        "resolved": "0.86.0",
-        "contentHash": "ogEtVUSwrzcDh+l3qMgKXhOU83Wq+CcioKVn32qAr8EaGfSEDjZwIeLawQ0ifrkgcYSXPHdcZd+l3ST6QEqWzQ=="
+        "requested": "[0.86.1, )",
+        "resolved": "0.86.1",
+        "contentHash": "2ZRoJRmmh8oW/K/Vi8GVBI23tcIqliFBUJenU0neW6nX11uQNnzJOX0QDm50gZ8/fUq3ANyNN0Y3ex72ZYXmPQ=="
       },
       "FS.GG.Game.Skills": {
         "type": "CentralTransitive",
