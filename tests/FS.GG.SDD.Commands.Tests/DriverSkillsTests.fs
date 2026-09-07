@@ -28,10 +28,10 @@ module DriverSkillsTests =
         "60938ac4fc0f147de8be89f125a4a78a958be52ef1b879c33876f901d6486247"
 
     let private workBoardNormalSha256 =
-        "a5037841c10e69cd9f6ef48776ae2e2af4a5ef6c311aa72ce06300de44e590dc"
+        "c5f87abd6802145c3fdb678c76a976e00c7dae6b2cebf77c6c247183199bade8"
 
     let private workBoardBestSha256 =
-        "ef98cefa1a66134677f144c5b13a3cc7c4180f1b9a4774d041ee2a98be46e115"
+        "e5d20b10589227151f1112268db21d52a6a444a670cc10abe2c676686d50704b"
 
     let private roots = [ ".agents"; ".claude" ]
 
