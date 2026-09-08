@@ -42,10 +42,19 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("$artifacts_version\" != \"$cli_version", workflow)
 
         let start = workflow.IndexOf("\n  publish-artifacts:\n", StringComparison.Ordinal)
-        let finish = workflow.IndexOf("\n  publish-cli:\n", start, StringComparison.Ordinal)
-        Assert.True(start >= 0 && finish > start, "publish-artifacts must be a distinct job before publish-cli")
 
-        let job = workflow.Substring(start, finish - start)
+        let locate =
+            workflow.IndexOf("\n  locate-artifacts:\n", start, StringComparison.Ordinal)
+
+        let finish =
+            workflow.IndexOf("\n  publish-cli:\n", locate, StringComparison.Ordinal)
+
+        Assert.True(
+            start >= 0 && locate > start && finish > locate,
+            "candidate build, custody lookup, and publisher must remain distinct ordered jobs"
+        )
+
+        let job = workflow.Substring(start, locate - start)
         Assert.Contains("dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj", job)
         Assert.Contains("dotnet pack src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj", job)
         Assert.DoesNotContain("-p:Version=", job)
@@ -53,9 +62,21 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("-p:RepositoryCommit=\"$GITHUB_SHA\"", job)
         Assert.Contains("FS.GG.SDD.Artifacts.*.nupkg", job)
         Assert.Contains("coherent-sdd-packages-${{ github.sha }}", job)
+        Assert.Contains("needs.resolve-versions.outputs.push == 'false'", job)
+        Assert.Contains("scripts/verify-release-candidate.sh", job)
+        Assert.Contains("candidate.env", job)
         Assert.DoesNotContain("dotnet nuget push", job)
 
+        let custody = workflow.Substring(locate, finish - locate)
         let publish = workflow.Substring(finish)
+        Assert.Contains("event=workflow_dispatch&status=completed", custody)
+        Assert.Contains("expected exactly one retained no-push candidate", custody)
+        Assert.Contains("run-id: ${{ needs.locate-artifacts.outputs.candidate_run_id }}", publish)
+        Assert.Contains("needs: [resolve-versions, locate-artifacts]", publish)
+        Assert.Contains("Verify retained candidate identity and hashes before feed credentials", publish)
+        Assert.Contains("scripts/verify-release-candidate.sh", publish)
+        Assert.DoesNotContain("dotnet pack src/FS.GG.SDD.Artifacts", publish)
+        Assert.DoesNotContain("dotnet pack src/FS.GG.SDD.Cli", publish)
         Assert.Equal(4, count "dotnet nuget push" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg\"" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Cli.*.nupkg\"" publish)
