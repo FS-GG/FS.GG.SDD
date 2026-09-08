@@ -10,9 +10,9 @@
       },
       "FS.GG.Game.Skills": {
         "type": "Direct",
-        "requested": "[0.7.0, )",
-        "resolved": "0.7.0",
-        "contentHash": "XxWHqYPxezfZcY7wXkUE3KGzl8dak7eViir0TRCouSVgSkBbVkD8/UxXLZUyGcsTaz5dMM/jBtbsAE6TqGJEhA=="
+        "requested": "[0.8.0, )",
+        "resolved": "0.8.0",
+        "contentHash": "Jfijq4dCJiZCChg6M9C9aJXTLAq0VqbCIcrvxG8ENK01YHiPt7u/dMtIWlTi4iFd4pneBZj4QWLwuAK316TEBQ=="
       },
       "FS.GG.Rendering.Skills": {
         "type": "Direct",
