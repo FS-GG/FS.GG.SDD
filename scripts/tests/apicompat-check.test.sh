@@ -133,9 +133,10 @@ check_ambient_cache_isolation() (
   local ambient_packages="$fixture_root/ambient-packages"
   local ambient_http_cache="$fixture_root/ambient-http-cache"
   local build_packages="$fixture_root/build-packages"
+  local inversion="$fixture_root/order-inversion"
 
   mkdir -p \
-    "$authoritative" "$poison" "$candidate" "$consumer" \
+    "$authoritative" "$poison" "$candidate" "$consumer" "$inversion" \
     "$authoritative_feed" "$poison_feed" \
     "$ambient_packages" "$ambient_http_cache" "$build_packages"
 
@@ -167,6 +168,8 @@ public sealed class Contract
 }
 EOF
   cp "$authoritative/Contract.cs" "$candidate/Contract.cs"
+  cp "$authoritative/Probe.csproj" "$inversion/Probe.csproj"
+  cp "$authoritative/Contract.cs" "$inversion/Contract.cs"
   cat > "$poison/Contract.cs" <<'EOF'
 namespace FS.GG.ApiCompat.CacheProbe;
 public sealed class Contract
@@ -208,6 +211,19 @@ EOF
   test -f \
     "$ambient_packages/fs.gg.apicompat.cacheprobe/$baseline_version/lib/net10.0/$package_id.dll"
 
+  # Inversion/control: a pack that isolates only NUGET_PACKAGES still writes checkout-owned
+  # project.assets.json containing that disposable cache path. Deleting the cache makes the next
+  # --no-restore stage order-dependent. This leg proves the positive isolation assertion below has
+  # a reachable failure state rather than passing over an inert fixture.
+  local inversion_packages="$fixture_root/inversion-packages"
+  NUGET_PACKAGES="$inversion_packages" NUGET_HTTP_CACHE_PATH="$fixture_root/inversion-http-cache" \
+    dotnet pack "$inversion/Probe.csproj" -c Release -o "$fixture_root/inversion-out" \
+      --nologo --verbosity quiet
+  test -f "$inversion/obj/project.assets.json"
+  grep -F "$inversion_packages" "$inversion/obj/project.assets.json" >/dev/null
+  rm -rf "$inversion_packages"
+  test ! -e "$inversion_packages"
+
   NUGET_PACKAGES="$ambient_packages" \
   NUGET_HTTP_CACHE_PATH="$ambient_http_cache" \
   NUGET_FEED_TOKEN="functional-test-token" \
@@ -218,6 +234,11 @@ EOF
       >"$fixture_root/gate.log" 2>&1
 
   grep -F "FS.GG.ApiCompat.CacheProbe OK" "$fixture_root/gate.log" >/dev/null
+
+  # Positive/order-independent leg: the ApiCompat gate owns no persistent candidate restore or
+  # build state. Its entire obj/bin graph lived below its workdir and disappeared with the trap.
+  test ! -e "$candidate/obj"
+  test ! -e "$candidate/bin"
 
   local gate_packages gate_http_cache
   IFS='|' read -r gate_packages gate_http_cache < "$fixture_root/gate-env.txt"
