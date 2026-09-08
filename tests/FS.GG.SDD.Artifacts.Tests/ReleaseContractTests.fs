@@ -104,7 +104,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("1.5.x", entry.SddVersionLine)
+        Assert.Equal("1.6.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -155,14 +155,18 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T012 the published versioning-policy doc agrees with the policy of record`` () =
-        let doc =
+        let rawDoc =
             Path.Combine(TestSupport.repoRoot, "docs", "release", "versioning-policy.md")
             |> File.ReadAllText
-            |> fun text -> text.ToLowerInvariant()
+
+        let doc = rawDoc.ToLowerInvariant()
 
         // the doc is a projection: it must name each change class and its bump
         for token in [ "breaking"; "additive"; "clarifying"; "major"; "minor"; "patch" ] do
             Assert.Contains(token, doc)
+
+        Assert.Contains($"currently **`{release.Identity.Version}`**", rawDoc)
+        Assert.Contains($"current release is `{releaseChannelValue release.Identity.Channel}`", doc)
 
     // ===== US2 — schema reference doc agrees with the contract (T016) =====
 
@@ -226,8 +230,8 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 0.11.0 is ADDITIVE, so it carries NO migration note (`migrationNoteRequired Additive =
-    // false`). The obvious edit when 0.10.0's note came out was to swap `exactlyOne` for
+    // 1.6.0 is additive, so it carries no migration note (`migrationNoteRequired Additive =
+    // false`). The obvious edit when an earlier note came out was to swap `exactlyOne` for
     // `Assert.Empty` — and that would have SILENTLY DELETED the only guard in the repo that says
     // a note must be FOR this release and must EXIST ON DISK. Those checks were written against
     // `exactlyOne`, so they die with it, and nothing would notice until the next BREAKING release

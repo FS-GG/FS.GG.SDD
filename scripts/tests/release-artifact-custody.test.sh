@@ -6,7 +6,7 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 verifier="$repo/scripts/verify-release-candidate.sh"
 fail=0
 head_sha="0123456789abcdef0123456789abcdef01234567"
-version="1.5.1"
+version="1.6.0"
 
 make_package() {
   local path="$1" id="$2" timestamp="$3"
