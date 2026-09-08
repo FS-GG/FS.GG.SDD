@@ -1870,6 +1870,9 @@ providers:
         Assert.Contains("\"fs.gg.sdd.cli\"", manifest)
         Assert.Contains($"\"version\": \"{installedVersion}\"", manifest)
         Assert.Contains("\"fsgg-sdd\"", manifest)
+        Assert.Contains("\"fs.gg.coord.cli\"", manifest)
+        Assert.Contains("\"version\": \"0.87.0\"", manifest)
+        Assert.Contains("\"fsgg-coord-engine\"", manifest)
 
         // It is real JSON, not a string that merely looks like one.
         use parsed = System.Text.Json.JsonDocument.Parse manifest
@@ -1888,17 +1891,16 @@ providers:
         Assert.DoesNotContain(toolManifestPath, provenance.ProducedPaths |> List.map (fun p -> p.Path))
         Assert.Equal(0, exitCodeForReport report)
 
-    // T032 (AC3): no-clobber. An existing manifest is preserved byte-for-byte, the step reports
-    // `skippedExisting` with a non-fatal advisory, and provenance claims no SDD ownership of a
-    // file SDD did not write. (Reachable via `--force`, since any pre-existing non-SDD file is
-    // otherwise a blocking collision, or when a provider produces the manifest itself.)
+    // T032 / #973: entry-owned no-clobber. A Fable co-tenant remains semantically intact while
+    // the exact SDD and coordination entries are added. The path is hybrid, so provenance does
+    // not falsely claim ownership of the whole file.
     [<Fact; Trait("tier", "slow")>]
-    let ``scaffold preserves an existing dotnet tool manifest`` () =
+    let ``scaffold adds owned entries to an existing Fable tool manifest without clobber`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
 
         let authored =
-            "{\n  \"version\": 1,\n  \"isRoot\": true,\n  \"tools\": {\n    \"fake-cli\": {\n      \"version\": \"6.1.4\",\n      \"commands\": [\n        \"fake\"\n      ]\n    }\n  }\n}\n"
+            "{\n  \"version\": 1,\n  \"isRoot\": true,\n  \"tools\": {\n    \"fable\": {\n      \"version\": \"5.16.0\",\n      \"commands\": [\n        \"fable\"\n      ],\n      \"rollForward\": false\n    }\n  }\n}\n"
 
         TestSupport.writeRelative root toolManifestPath authored
 
@@ -1906,13 +1908,16 @@ providers:
             runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
 
         let summary = scaffoldSummary report
-        Assert.Equal("skippedExisting", summary.ToolManifestOutcome)
-        Assert.Contains("scaffold.toolManifestSkippedExisting", diagnosticIds report)
-
-        // Byte-identical: the author's manifest was never rewritten, and no fsgg-sdd pin was
-        // grafted into it.
-        Assert.Equal(authored, TestSupport.readRelative root toolManifestPath)
-        Assert.DoesNotContain("fs.gg.sdd.cli", TestSupport.readRelative root toolManifestPath)
+        Assert.Equal("merged", summary.ToolManifestOutcome)
+        let actual = TestSupport.readRelative root toolManifestPath
+        use parsed = System.Text.Json.JsonDocument.Parse actual
+        let tools = parsed.RootElement.GetProperty("tools")
+        let fable = tools.GetProperty("fable")
+        Assert.Equal("5.16.0", fable.GetProperty("version").GetString())
+        Assert.Equal("fable", fable.GetProperty("commands").[0].GetString())
+        Assert.False(fable.GetProperty("rollForward").GetBoolean())
+        Assert.Equal(installedVersion, tools.GetProperty("fs.gg.sdd.cli").GetProperty("version").GetString())
+        Assert.Equal("0.87.0", tools.GetProperty("fs.gg.coord.cli").GetProperty("version").GetString())
 
         let provenance =
             TestSupport.readRelative root provenancePath
@@ -1921,8 +1926,71 @@ providers:
 
         Assert.Empty provenance.SddOwnedPaths
 
-        // Advisory, never fatal (FR-010): a preserved manifest is a successful scaffold.
+        // A valid co-tenant merge is a successful scaffold.
         Assert.Equal(0, exitCodeForReport report)
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold leaves an already-current owned tool manifest byte-identical`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let authored = HandlersScaffold.toolManifestText installedVersion
+        TestSupport.writeRelative root toolManifestPath authored
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        Assert.Equal("current", (scaffoldSummary report).ToolManifestOutcome)
+        Assert.Equal(authored, TestSupport.readRelative root toolManifestPath)
+        Assert.Equal(0, exitCodeForReport report)
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold refuses a conflicting owned coordination entry without clobber`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+
+        let authored =
+            (HandlersScaffold.toolManifestText installedVersion)
+                .Replace("\"version\": \"0.87.0\"", "\"version\": \"0.86.1\"")
+
+        TestSupport.writeRelative root toolManifestPath authored
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        Assert.Equal("failed", (scaffoldSummary report).ToolManifestOutcome)
+        Assert.Contains("scaffold.toolManifestConflict", diagnosticIds report)
+        Assert.Equal(authored, TestSupport.readRelative root toolManifestPath)
+        Assert.NotEqual(0, exitCodeForReport report)
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold refuses a malformed tool manifest without clobber`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let authored = "{ definitely-not-json\n"
+        TestSupport.writeRelative root toolManifestPath authored
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        Assert.Equal("failed", (scaffoldSummary report).ToolManifestOutcome)
+        Assert.Contains("scaffold.toolManifestConflict", diagnosticIds report)
+        Assert.Equal(authored, TestSupport.readRelative root toolManifestPath)
+        Assert.NotEqual(0, exitCodeForReport report)
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold refuses a wrong tool manifest schema version without clobber`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let authored = "{\n  \"version\": 2,\n  \"isRoot\": true,\n  \"tools\": {}\n}\n"
+        TestSupport.writeRelative root toolManifestPath authored
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        Assert.Equal("failed", (scaffoldSummary report).ToolManifestOutcome)
+        Assert.Contains("scaffold.toolManifestConflict", diagnosticIds report)
+        Assert.Equal(authored, TestSupport.readRelative root toolManifestPath)
+        Assert.NotEqual(0, exitCodeForReport report)
 
     // T033 (AC4 / FR-009): a write that cannot land must not be recorded as landed. `.config`
     // occupied by a regular file makes the manifest write throw at the edge; the step reports
@@ -1975,6 +2043,19 @@ providers:
 
         use parsed = System.Text.Json.JsonDocument.Parse a
         Assert.Equal(1, parsed.RootElement.GetProperty("version").GetInt32())
+
+        // The source constant and receiver-owned root pin move as one reviewed change. This
+        // prevents a future Renovate bump from silently emitting an older coord tool into newly
+        // generated workspaces.
+        let receiverManifest =
+            File.ReadAllText(Path.Combine(TestSupport.repoRoot, toolManifestPath))
+
+        use receiver = System.Text.Json.JsonDocument.Parse receiverManifest
+
+        let receiverCoordVersion =
+            receiver.RootElement.GetProperty("tools").GetProperty("fs.gg.coord.cli").GetProperty("version").GetString()
+
+        Assert.Equal(ScaffoldMutation.coordinationToolVersion, receiverCoordVersion)
 
     // T024 (US4-AC3 / FR-007): scaffold passes NO provider-specific git option to the
     // provider; the `dotnet new` create-arg vector carries no `initGit`/`allow-scripts` — SDD
