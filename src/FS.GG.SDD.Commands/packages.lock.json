@@ -4,9 +4,9 @@
     "net10.0": {
       "FS.GG.Drivers": {
         "type": "Direct",
-        "requested": "[0.86.1, )",
-        "resolved": "0.86.1",
-        "contentHash": "2ZRoJRmmh8oW/K/Vi8GVBI23tcIqliFBUJenU0neW6nX11uQNnzJOX0QDm50gZ8/fUq3ANyNN0Y3ex72ZYXmPQ=="
+        "requested": "[0.87.0, )",
+        "resolved": "0.87.0",
+        "contentHash": "5dQGjQdZmfK7Ice/JCYwieulbdH7FfxsIwRrJTDa8UxmTBGWaky1kfoDeZGCJ4Qqapry5BFm0ju1hr82czKC/w=="
       },
       "FS.GG.Game.Skills": {
         "type": "Direct",

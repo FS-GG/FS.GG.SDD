@@ -1230,23 +1230,36 @@ module internal HandlersScaffold =
             | Some { Started = true } -> "initialized", []
             | None -> "notApplicable", []
 
-        // FS.GG.SDD#315: re-derived from the interpreted log like every other post-instantiation
-        // fact. `pinned` — SDD wrote the manifest; `skippedExisting` — one was already there and
-        // was preserved; `failed` — the write was planned and did not land (its own diagnostic
-        // already rides on the effect result, so none is added here); `notApplicable` — the step
-        // never ran. An incomplete pin is never reported as a pin (FR-009).
+        // FS.GG.SDD#315 + #973: re-derived from the interpreted log like every other
+        // post-instantiation fact. Existing co-tenant entries are retained while the two owned
+        // entries are merged. Malformed/conflicting owned state is a blocking refusal with zero
+        // manifest writes; an incomplete pin is never reported as complete (FR-009).
         let toolManifestOutcome, toolManifestDiagnostics =
-            match
+            let initial = snapshot toolManifestPath model
+
+            let writeResult =
                 model.InterpretedEffects
                 |> List.tryFind (fun result -> isToolManifestWrite result.Effect)
-            with
-            | Some result when result.Succeeded -> "pinned", []
-            | Some _ -> "failed", []
-            | None ->
-                if snapshot toolManifestPath model |> Option.isSome then
-                    "skippedExisting", [ DiagnosticsModule.scaffoldToolManifestSkippedExisting toolManifestPath ]
-                else
-                    "notApplicable", []
+
+            match writeResult, initial with
+            | Some result, None when result.Succeeded -> "pinned", []
+            | Some result, Some _ when result.Succeeded -> "merged", []
+            | Some _, _ -> "failed", []
+            | None, Some existing ->
+                match ScaffoldMutation.mergeToolManifestText model.Request.GeneratorVersion.Version existing.Text with
+                | Ok None -> "current", []
+                | Ok(Some _) -> "failed", []
+                | Error detail ->
+                    "failed",
+                    [ DiagnosticsModule.create
+                          "scaffold.toolManifestConflict"
+                          DiagnosticsModule.DiagnosticError
+                          None
+                          None
+                          $"The existing dotnet tool manifest cannot receive the required SDD-owned entries: {detail}"
+                          "Repair the malformed manifest or reconcile the fs.gg.sdd.cli/fs.gg.coord.cli entry, then re-run scaffold. Unrelated tool entries are never removed."
+                          [ toolManifestPath ] ]
+            | None, None -> "notApplicable", []
 
         let execResults =
             model.InterpretedEffects
@@ -1507,18 +1520,27 @@ module internal HandlersScaffold =
             let manifestReadInterpreted = hasInterpreted manifestReadKey model
             let manifestReadPlanned = hasPlanned manifestReadKey model
 
-            // Interpreted read + no snapshot ⇒ absent ⇒ SDD writes the pin. Present ⇒ preserve
-            // it (no-clobber): either the author placed it there or the provider produced it,
-            // and in the latter case it already stands in `producedPaths` as generatedProduct.
-            // Planning the write over a present file would instead hand `canOverwrite
-            // StructuredSource` a snapshot and be refused as `unsafeOverwrite` — an error, not
-            // the graceful preserve the step owes. (A file appearing between the read and the
-            // write is still refused rather than clobbered, which is the safe direction.)
-            let manifestPresent =
-                manifestReadInterpreted && (snapshot toolManifestPath model |> Option.isSome)
-
+            // An absent manifest is wholly SDD-owned. A present manifest is a hybrid: SDD adds
+            // only its exact SDD + coordination entries after a successful structural merge,
+            // preserving every co-tenant entry (notably Fable). A malformed manifest or a
+            // conflicting owned entry produces no write; the final fold reports the refusal.
             let manifestWriteEffect =
-                WriteFile(toolManifestPath, toolManifestText model.Request.GeneratorVersion.Version, StructuredSource)
+                match snapshot toolManifestPath model with
+                | None ->
+                    Some(
+                        WriteFile(
+                            toolManifestPath,
+                            toolManifestText model.Request.GeneratorVersion.Version,
+                            StructuredSource
+                        )
+                    )
+                | Some existing ->
+                    match
+                        ScaffoldMutation.mergeToolManifestText model.Request.GeneratorVersion.Version existing.Text
+                    with
+                    | Ok(Some merged) -> Some(WriteFile(toolManifestPath, merged, HybridArtifact StructuredMerge))
+                    | Ok None
+                    | Error _ -> None
 
             let manifestWriteResult =
                 model.InterpretedEffects
@@ -1528,7 +1550,12 @@ module internal HandlersScaffold =
             // write leaves `sddOwnedPaths` empty, so provenance and `toolManifestOutcome` agree.
             let sddOwnedPaths =
                 match manifestWriteResult with
-                | Some result when result.Succeeded -> [ toolManifestPath ]
+                | Some { Succeeded = true
+                         Effect = WriteFile(_, _, StructuredSource) } -> [ toolManifestPath ]
+                // A merge owns two entries, not the co-tenant file. The current provenance
+                // schema is path-owned, so claiming the whole manifest here would be false.
+                | Some { Succeeded = true
+                         Effect = WriteFile(_, _, HybridArtifact _) } -> []
                 | _ -> []
 
             if not manifestReadInterpreted then
@@ -1539,16 +1566,18 @@ module internal HandlersScaffold =
                     { model with
                         PendingEffects = model.PendingEffects @ [ manifestReadEffect ] },
                     [ manifestReadEffect ]
-            elif not manifestPresent && Option.isNone manifestWriteResult then
-                // TICK 0b — the manifest is absent: write the pin, then let TICK A record the
-                // interpreted result. `hasPlanned` keeps the write from being re-emitted while
-                // it awaits interpretation.
-                if hasPlanned (effectKey manifestWriteEffect) model then
+            elif Option.isSome manifestWriteEffect && Option.isNone manifestWriteResult then
+                // TICK 0b — create the absent manifest or land the already-derived hybrid merge,
+                // then let TICK A record the interpreted result. `hasPlanned` keeps the write
+                // from being re-emitted while it awaits interpretation.
+                let effect = Option.get manifestWriteEffect
+
+                if hasPlanned (effectKey effect) model then
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ [ manifestWriteEffect ] },
-                    [ manifestWriteEffect ]
+                        PendingEffects = model.PendingEffects @ [ effect ] },
+                    [ effect ]
             elif not (probeInterpreted || probePlanned) then
                 // TICK A — the success path's single provenance write (FR-004, before `git
                 // init`), the work-tree probe, and one SetExecutable per produced `.sh`.

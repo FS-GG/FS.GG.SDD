@@ -81,11 +81,13 @@ rather than silent.
   defaults absent/null to `None`, so records written before it still parse).
   `sddOwnedPaths` (sorted, each marked `owner: sdd`, emitted immediately after
   `mirroredPaths`) records the files **SDD itself** wrote during a post-instantiation step —
-  currently `.config/dotnet-tools.json`, the CLI pin (FS-GG/FS.GG.SDD#315). It is a list
+  currently `.config/dotnet-tools.json` when SDD creates the whole manifest
+  (FS-GG/FS.GG.SDD#315). A merge into a co-tenant manifest owns only two entries and therefore
+  does not claim the path in this path-owned list. It is a list
   separate from `producedPaths` on purpose: the app-only invariant defines `producedPaths` as
   *exactly* the provider's tree (100% precision and recall, disjoint from the skeleton), so an
-  SDD-written file recorded there would break it. Empty when the step was skipped (a manifest
-  already existed) or never ran. Likewise **additive optional** (schema stays v1; `tryParse`
+  SDD-written file recorded there would break it. Empty when the manifest was merged/current,
+  refused, or the step never ran. Likewise **additive optional** (schema stays v1; `tryParse`
   defaults absent/null to `[]`). It is the
   **authority for refresh exclusion** (FR-007 / SC-007): `fsgg-sdd refresh` reads it
   and never regenerates or flags provider-produced runtime files as stale SDD views;
@@ -504,11 +506,13 @@ Blocking diagnostics: `evidence.recordReceiptInvalid`, `evidence.recordReceiptSt
   `schemaVersion` stays `1`.
 
   The additive `scaffold.toolManifestOutcome` field (FS-GG/FS.GG.SDD#315) reports the
-  `.config/dotnet-tools.json` CLI-pin post-instantiation step — `pinned` (SDD wrote the
-  manifest, pinning `fsgg-sdd` at the scaffolding CLI's version), `skippedExisting` (a manifest
-  was already present and was preserved byte-for-byte; a non-fatal
-  `scaffold.toolManifestSkippedExisting` advisory says so), `failed` (planned, did not land), or
-  `notApplicable` (the step never ran — dry run, provider defect, or a pre-invocation block).
+  `.config/dotnet-tools.json` CLI-pin post-instantiation step — `pinned` (SDD created the
+  manifest with exact `fsgg-sdd` and `fsgg-coord-engine` pins), `merged` (those two owned entries
+  were added to a valid co-tenant manifest while unrelated entries were preserved), `current`
+  (both owned entries were already exact and the file stayed byte-identical), `failed` (the write
+  did not land, the manifest was malformed, or an owned entry conflicted), or `notApplicable`
+  (the step never ran — dry run, provider defect, or a pre-invocation block). Malformed and
+  conflicting manifests receive `scaffold.toolManifestConflict` and are never overwritten.
   It sits beside `repoInitOutcome` in json, and renders as `scaffoldToolManifest` in text/rich.
   This additive-optional field moved `reportVersion` to `2.4.0` (a semantic minor);
   `schemaVersion` stays `1`.
