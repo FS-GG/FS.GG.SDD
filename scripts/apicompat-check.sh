@@ -293,13 +293,13 @@ for proj in "${PROJECTS[@]}"; do
   # Keep ALL ApiCompat-owned restore/build state under the same disposable work directory so the
   # check is order-independent with every subsequent build/pack stage (FS.GG.SDD#944).
   project_state="$workdir/project-state/${pkgid}"
-  mkdir -p "$project_state/obj" "$project_state/bin"
+  mkdir -p "$project_state/intermediate" "$project_state/extensions" "$project_state/bin"
   if dotnet pack "$proj" -c Release --configfile "$cfg" \
         -p:Version="$cv" \
         -p:EnablePackageValidation=true \
         -p:PackageValidationBaselineVersion="$baseline" \
-        -p:BaseIntermediateOutputPath="$project_state/obj/" \
-        -p:MSBuildProjectExtensionsPath="$project_state/obj/" \
+        -p:BaseIntermediateOutputPath="$project_state/intermediate/" \
+        -p:MSBuildProjectExtensionsPath="$project_state/extensions/" \
         -p:BaseOutputPath="$project_state/bin/" \
         -o "$workdir/out" >"$log" 2>&1; then
     printf '  %-22s OK            (compatible with %s)\n' "$pkgid" "$baseline"

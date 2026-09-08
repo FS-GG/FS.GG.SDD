@@ -8,8 +8,11 @@ is authoritative; `.github/workflows/release.yml` is its implementation.
 ## Triggers and version resolution
 
 The workflow runs for published releases, pushed `v*` tags, and manual dispatch. Its optional
-`version` input remains Contracts-scoped. An empty manual input is a pack-only dry run; a non-empty
-input enables publishing and overrides only `contracts_version`.
+`version` input remains Contracts-scoped. An empty manual input is the only package-candidate build:
+it runs every package gate, packs the coherent SDD set once, writes a commit/version/inventory/hash
+manifest, and retains that exact artifact without publishing. A non-empty input or tag/release event
+enables publication and overrides only `contracts_version`, but it MUST locate a unique successful
+no-push candidate run at the exact event commit; it never rebuilds the SDD archives.
 
 `resolve-versions` evaluates all three project `<Version>` properties with MSBuild and outputs
 `contracts_version`, `artifacts_version`, `cli_version`, and `push`. Artifacts and CLI are one
@@ -26,8 +29,9 @@ packed at its own resolved version.
 | `artifacts-tests` | Locked restore, Release tests, and clean-package-consumer proof for `FS.GG.SDD.Artifacts`. |
 | `cli-tests` | Locked restore and Release tests for `FS.GG.SDD.Cli`. |
 | `publish-contracts` | Needs resolver + Contracts tests; pack and publish Contracts. |
-| `publish-artifacts` | Needs resolver + Artifacts tests; pack and publish Artifacts. |
-| `publish-cli` | Needs resolver + CLI tests; pack, self-containment smoke, and publish CLI. |
+| `publish-artifacts` | No-push dispatch only: needs resolver + Artifacts/CLI tests; pack both coherent members once, verify/install them, write the identity/hash manifest, and retain the only publishable bytes. |
+| `locate-artifacts` | Publish events only: find exactly one successful, unexpired no-push artifact at the exact release commit; zero or multiple candidates fail closed. |
+| `publish-cli` | Download the retained run artifact by run id, re-verify commit/version/inventory/hashes, then publish the same two files to both feeds and read them back. |
 
 Every job is guarded to `FS-GG/FS.GG.SDD`; fork events cannot reach a publish path. Top-level
 permissions are `contents: read`. Each publish job alone adds `packages: write` and
@@ -35,12 +39,23 @@ permissions are `contents: read`. Each publish job alone adds `packages: write` 
 
 ## Pack and dual-feed publish
 
-Each publish job performs a locked restore, packs one explicit project exactly once, and verifies
-that the expected package exists. When `push == true`, it pushes that exact `.nupkg` first to
+`publish-contracts` retains its independently governed pack path. For the coherent SDD set, only the
+no-push `publish-artifacts` job packs. It uploads exactly two nupkgs with `candidate.env` and
+`pre-push.sha256` in an immutable Actions artifact named for the source commit. A later publishing
+run locates exactly one successful, unexpired workflow-dispatch artifact for its own `GITHUB_SHA`,
+downloads it by source run id, and verifies the manifest, exact filenames/versions, nuspec source
+commit, and SHA-256 values before any feed credential is used. It never invokes `dotnet pack`.
+
+When `push == true`, the publisher pushes each retained `.nupkg` first to
 `https://nuget.pkg.github.com/FS-GG/index.json` with the run-scoped `GITHUB_TOKEN`, then pushes the
 same bytes to `https://api.nuget.org/v3/index.json` using a short-lived key minted by
 `NuGet/login@v1` through OIDC. Both pushes use `--skip-duplicate`; there is no repack between feeds.
 Any non-duplicate failure fails the run.
+
+Whole nupkg SHA-256 is a custody identity, not a reproducible-build claim. Two independent packs may
+contain byte-identical payload entries while differing as ZIP containers. The retained manifest
+authorizes one archive pair; substituting a fresh pack—even with equal extracted payloads—must fail
+hash verification.
 
 The Artifacts job must not pass a global `Version` or `PackageVersion` override. The resolver has
 already proved that the source-evaluated Artifacts and CLI versions are equal, so pack consumes that
@@ -61,7 +76,7 @@ tool from the local package directory and runs the standalone validation smoke b
 
 ## Conformance checks
 
-- **C1** — Manual dispatch without `version` runs seven jobs, packs all three packages, and pushes none.
+- **C1** — Manual dispatch without `version` runs all gates, packs the coherent SDD set once, retains its manifest-bound artifact, and pushes none.
 - **C2** — A version-bearing event tag matching none of the three lines fails; a match publishes all three at their resolved versions.
 - **C3** — Re-running an already published version succeeds through `--skip-duplicate`.
 - **C4** — A failing package test gate prevents its corresponding publish job.
@@ -70,3 +85,5 @@ tool from the local package directory and runs the standalone validation smoke b
 - **C7** — The just-packed Artifacts package passes the clean-consumer fixture.
 - **C8** — Static contract tests require two exact Artifacts pushes and reject a CLI glob inside `publish-artifacts`.
 - **C9** — Packing Artifacts from the source-resolved coherent line writes package version preview.2 while retaining an exact `FS.GG.Contracts` dependency of `7.5.2`; adding either a `Version` or `PackageVersion` override fails tests.
+- **C10** — A publish event with zero, multiple, expired, wrong-head, wrong-version, wrong-inventory, or hash-mismatched candidate artifacts fails before feed credentials; one exact candidate is downloaded by source run id and no SDD pack command exists in the publishing path.
+- **C11** — Back-to-back equal-payload/different-container packages have different hashes, and substituting the second archive into the first candidate handoff fails verification.
