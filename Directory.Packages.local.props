@@ -15,7 +15,7 @@
          package (ADR-0063 owner-repo byte source / ADR-0062 substrate / ADR-0014 verify;
          FS.GG.Game#449, FS.GG.SDD#623). Pinned + restored at CLI build time, its bytes embedded
          and materialized at scaffold time (offline). Its own version cadence — first release 0.1.0. -->
-    <PackageVersion Include="FS.GG.Game.Skills" Version="0.7.0" />
+    <PackageVersion Include="FS.GG.Game.Skills" Version="0.8.0" />
     <!-- FS.GG.Rendering's owner-authored product skill bytes as one versioned package — the
          FOURTH enrollment channel (ADR-0063 third instance; FS.GG.SDD#864, .github#2545/#2639).
          Exactly the FS.GG.Game.Skills seam, one owner over: pinned + restored at CLI build time,
