@@ -45,6 +45,109 @@ module EvidenceCommandTests =
   </ResultSummary>
 </TestRun>"""
 
+    let private replaceFirstOccurrence (oldValue: string) (newValue: string) (text: string) =
+        let index = text.IndexOf(oldValue, System.StringComparison.Ordinal)
+
+        if index < 0 then
+            failwith $"Expected fixture text to contain '{oldValue}'."
+
+        text.Substring(0, index) + newValue + text.Substring(index + oldValue.Length)
+
+    let private declareActivePerformanceIntent root =
+        let specPath = $"work/{workId}/spec.md"
+        let spec = TestSupport.readRelative root specPath
+
+        spec.Replace(
+            "status: specified\n",
+            """status: specified
+performanceIntent:
+  id: normal-play-v1
+  disposition: active
+  targetFps: 60
+  workloadIds: [normal-play]
+  workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+  maximumExpectedScale: 100 actors
+  maxP95Ms: 16.67
+  maxP99Ms: 25
+  maxCatchUpFrames: 0
+  structuralCostBudgets: [actors<=100]
+  requiredCapability: bounded-headless-update-render
+  liveCompositorRequired: false
+  evidenceRefs: []
+"""
+        )
+        |> TestSupport.writeRelative root specPath
+
+    let private addUnboundPerformanceBudget root declarationKind result =
+        let artifactPath = $"readiness/{workId}/performance-evidence.json"
+
+        let declarationTail =
+            if declarationKind = "deferral" then
+                """    result: deferred
+    synthetic: false
+    rationale: The timing result is explicitly deferred while the declaration remains measurable.
+    owner: FS.GG.SDD test fixture
+    scope: normal-play timing only
+    laterLifecycleVisibility: Re-measure before ship.
+"""
+            else
+                $"""    result: {result}
+    synthetic: false
+"""
+
+        let budget =
+            $"""    performanceBudget:
+      artifactPath: {artifactPath}
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: []
+      workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+      currencyToken: commit:abc123
+      capturedAfterUtc: 2026-07-25T00:00:00Z
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+{declarationTail}"""
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirstOccurrence "    kind: verification" $"    kind: {declarationKind}"
+        |> replaceFirstOccurrence "    result: pass\n" budget
+        |> TestSupport.writeRelative root evidencePath
+
+        TestSupport.writeRelative
+            root
+            artifactPath
+            """{"contractVersion":"performance-evidence-v1","claimedBudgetPassed":true,"sampleSets":[{
+"workloadId":"normal-play","workloadDefinitionDigest":"sha256:normal-v1","workloadClass":"normal-play",
+"targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,"maxCatchUpFrames":0,
+"measurementScope":"normal","requiredCapability":"bounded-headless-update-render",
+"hostProfile":"linux-x64-ci","packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless",
+"capabilities":["bounded-headless-update-render"],"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/2",
+"capturedAtUtc":"2026-07-26T00:00:00Z","currencyToken":"commit:abc123","probeReadbackContaminated":false,
+"durationSamplesMs":[12.5,15],"catchUpFrames":[0]}]}"""
+
+    let private unboundPerformanceBudgetProject declarationKind =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+        declareActivePerformanceIntent root
+        TestSupport.runClarify root workId title |> ignore
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+        TestSupport.authorPlanProse root workId
+        TestSupport.runTasks root workId title |> ignore
+        TestSupport.writeRelative root evidencePath (TestShared.EvidenceLadder.passingTaskEvidence 6)
+        TestShared.EvidenceLadder.writeArtifacts root 6
+        addUnboundPerformanceBudget root declarationKind "pass"
+
+        let analysis = TestSupport.runAnalyze root workId title
+        Assert.NotEqual(CommandOutcome.Blocked, analysis.Outcome)
+        root
+
     let undisclosedSyntheticInput =
         """schemaVersion: 1
 workId: 011-evidence-command
@@ -109,6 +212,72 @@ evidence:
         with
         | Ok artifact -> Assert.Equal("evidenceReady", artifact.Status)
         | Error diagnostics -> failwith $"Generated evidence artifact did not parse: {diagnostics}."
+
+    [<Theory>]
+    [<InlineData("verification")>]
+    [<InlineData("deferral")>]
+    let ``evidence accepts an evaluable performance budget before its active intent is bound`` declarationKind =
+        let root = unboundPerformanceBudgetProject declarationKind
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceBudgetPassed")
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceIntentUnbound")
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        TestSupport.assertEvidenceSummary report "evidenceReady"
+
+    [<Fact>]
+    let ``evidence still blocks a malformed unbound performance budget`` () =
+        let root = unboundPerformanceBudgetProject "verification"
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirstOccurrence "      targetFps: 60" "      targetFps: 0"
+        |> TestSupport.writeRelative root evidencePath
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceBudgetMalformed")
+
+    [<Fact>]
+    let ``evidence blocks an explicit performance intent binding that diverges from canonical`` () =
+        let root = unboundPerformanceBudgetProject "verification"
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirstOccurrence
+            $"      artifactPath: readiness/{workId}/performance-evidence.json\n"
+            $"""      artifactPath: readiness/{workId}/performance-evidence.json
+      intent:
+        id: divergent-normal-play-v1
+        disposition: active
+        targetFps: 60
+        workloadIds: [normal-play]
+        workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+        maximumExpectedScale: 100 actors
+        maxP95Ms: 16.67
+        maxP99Ms: 25
+        maxCatchUpFrames: 0
+        structuralCostBudgets: [actors<=100]
+        requiredCapability: bounded-headless-update-render
+        liveCompositorRequired: false
+        evidenceRefs: []
+"""
+        |> TestSupport.writeRelative root evidencePath
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceIntentMismatch")
+
+    [<Fact>]
+    let ``evidence deferral performance budget fails closed when its measured artifact is absent`` () =
+        let root = unboundPerformanceBudgetProject "deferral"
+        System.IO.File.Delete(System.IO.Path.Combine(root, "readiness", workId, "performance-evidence.json"))
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceBudgetMalformed")
 
     [<Fact>]
     let ``evidence bootstraps declarations after implementation without rolling task status backward`` () =
