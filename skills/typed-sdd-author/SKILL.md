@@ -7,8 +7,10 @@ description: Author explicit F# or exact-cache Quint Typed SDD authority through
 
 For manifest-v2 Quint authority, run `fsgg-sdd typed-sdd author --work <id> --title <title>
 --agent <agent-id> --session <session-id> --backend quint-specification-v1 --cache <cache-root>`.
-The cache must contain `objects/<sha256>` for the Q1-qualified Quint 0.32.0 and `lmt` objects; the
-command never downloads tools. It runs both tools twice in isolated roots and atomically records
+Before the first author run, acquire the pinned objects using the producer's documented recipe and run
+`fsgg-sdd typed-sdd provision --cache <cache-root> --quint <path> --lmt <path>`. Provisioning validates
+the exact Linux/amd64 profile-2 hashes and stages the content-addressed set; author never downloads tools.
+It runs both tools twice in isolated roots and atomically records
 Markdown, fences, generated Quint, typed-effect evidence, source map, contract, bindings, receipt,
 and manifest. Never use `author --accept` to replace v1; use migration so rollback remains exact.
 

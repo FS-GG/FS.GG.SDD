@@ -1522,6 +1522,7 @@ module TypedSdd =
 
     let run args =
         match args with
+        | "provision" :: rest -> QuintProvision.run rest
         | operation :: rest when Set.contains operation (set [ "author"; "inspect"; "migrate"; "rollback" ]) ->
             match unknownArgument operation rest with
             | Some token ->
@@ -1556,4 +1557,4 @@ module TypedSdd =
                     [ diagnostic
                           "typedSdd.unknownOperation"
                           "Unknown Typed SDD operation."
-                          "Use author, inspect, migrate, or rollback." ] }
+                          "Use provision, author, inspect, migrate, or rollback." ] }

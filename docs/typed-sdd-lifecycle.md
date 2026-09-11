@@ -63,10 +63,14 @@ string, tuple, record, variant, list, set, or map values.
 ## Installed operations
 
 ```console
+# Validate locally acquired exact tool objects and stage them in the content-addressed cache.
+fsgg-sdd typed-sdd provision --cache /qualified/quint-cache \
+  --quint /acquired/quint-linux-amd64 --lmt /built/lmt
+
 fsgg-sdd typed-sdd author --work demo --title "Demo" --agent tern-001 --session session-1
 fsgg-sdd typed-sdd inspect --work demo
 
-# Explicit Quint v2; no acquisition or moving tool resolution occurs.
+# Explicit Quint v2; authoring performs no acquisition or moving tool resolution.
 fsgg-sdd typed-sdd author --work demo --title "Demo" \
   --agent tern-001 --session session-1 \
   --backend quint-specification-v1 --cache /preseeded/quint-cache
@@ -91,7 +95,9 @@ manifest. The seeded `fs-gg-sdd-typed-author`, `fs-gg-sdd-typed-inspect`, and
 `fs-gg-sdd-typed-migrate` skills are embedded in the Commands assembly and materialized into every
 configured agent-skill root by init, scaffold, refresh, and upgrade.
 
-The v2 cache layout is `objects/<sha256>`. The accepted Linux/amd64 objects are Quint 0.32.0
+The v2 cache layout is `objects/<sha256>`. Follow the exact acquisition and build recipe in
+[Typed SDD tool provisioning](reference/typed-sdd-provisioning.md), then let the installed `provision`
+operation verify both inputs and stage the complete object set. The accepted Linux/amd64 objects are Quint 0.32.0
 `939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f` and the qualified `lmt`
 binary `37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10`.
 The host retains verified bytes, copies them into each isolated run, clears ambient process state,

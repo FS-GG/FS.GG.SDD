@@ -41,6 +41,7 @@
     <Compile Include="RegistrySkillManifest.fs" />
     <Compile Include="QuintTypedSddHost.fs" />
     <Compile Include="QuintTypedSddRollback.fs" />
+    <Compile Include="QuintProvision.fs" />
     <Compile Include="TypedSdd.fsi" />
     <Compile Include="TypedSdd.fs" />
     <Compile Include="Program.fs" />

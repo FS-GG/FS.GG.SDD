@@ -280,7 +280,7 @@ jobs:
             # Go's action/build IDs include the source invocation path even under -trimpath.
             # Q1 qualified this exact command-line-arguments build ID and its ELF note;
             # pin both so the reviewed bytes reproduce in a Git checkout and on a clean host.
-            GO111MODULE=off go build -trimpath \
+            GO111MODULE=off CGO_ENABLED=1 go build -trimpath \
               -ldflags '-buildid=IvXAt1kJ-3iINki1alCT/Ut12KGabgkWIkwVpw-xO/c4zkZMLAubfWHvjZOY8o/8-oR_8tNNndNgfMVoD8F -B 0x03d1703027f57ed4dd2ba90b7cdfc8cdea2815da' \
               -o "$RUNNER_TEMP/quint-q2-tools/lmt" main.go
           )
@@ -314,13 +314,16 @@ jobs:
           Q3_SKIP_Q2: "1"
           Q2_JUNIT_IN: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
           Q3_JUNIT_OUT: artifacts/test-results/quint-q3-typed-sdd-acceptance.junit.xml
+          Q3_TOOLCHAIN_OUT: artifacts/test-results/quint-q3-toolchain.json
         run: bash tests/quint-q3-typed-sdd-acceptance.sh
 
       - name: Upload exact Q2/Q3 Quint acceptance reports (JUnit)
         uses: actions/upload-artifact@v4
         with:
           name: quint-q2-q3-acceptance-junit
-          path: artifacts/test-results/quint-q*.junit.xml
+          path: |
+            artifacts/test-results/quint-q*.junit.xml
+            artifacts/test-results/quint-q3-toolchain.json
           if-no-files-found: error
 
       # Publish the TRX bundle so it outlives the run and a work item's `verify` can cite it.

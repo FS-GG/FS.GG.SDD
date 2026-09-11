@@ -8,7 +8,7 @@ and optional Governance gates the same machine contract.
 
 Standard SDD uses Markdown as its authoring surface. The additive Typed SDD backend uses canonical F#
 and generated Markdown/JSON projections; schema-versioned structured artifacts remain the machine
-contract. Use `fsgg-sdd typed-sdd author`, `inspect`, or `migrate`. Omitted lifecycle selection remains
+contract. Use `fsgg-sdd typed-sdd provision`, `author`, `inspect`, or `migrate`. Omitted lifecycle selection remains
 Standard SDD.
 
 ## Install

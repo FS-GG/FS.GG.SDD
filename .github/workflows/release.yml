@@ -563,7 +563,7 @@ jobs:
             "$RUNNER_TEMP/quint-release-tools/quint" | sha256sum --check --strict
           (
             cd src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/lmt
-            GO111MODULE=off go build -trimpath \
+            GO111MODULE=off CGO_ENABLED=1 go build -trimpath \
               -ldflags '-buildid=IvXAt1kJ-3iINki1alCT/Ut12KGabgkWIkwVpw-xO/c4zkZMLAubfWHvjZOY8o/8-oR_8tNNndNgfMVoD8F -B 0x03d1703027f57ed4dd2ba90b7cdfc8cdea2815da' \
               -o "$RUNNER_TEMP/quint-release-tools/lmt" main.go
           )
@@ -581,6 +581,7 @@ jobs:
           Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
           Q2_JUNIT_OUT: artifacts/feed-readback/quint-q2-public.junit.xml
           Q3_JUNIT_OUT: artifacts/feed-readback/quint-q3-public.junit.xml
+          Q3_TOOLCHAIN_OUT: artifacts/feed-readback/quint-q3-toolchain.json
         run: |
           set -euo pipefail
           if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
@@ -600,5 +601,6 @@ jobs:
             artifacts/feed-readback/*.payloads
             artifacts/feed-readback/*.entries
             artifacts/feed-readback/quint-q*-public.junit.xml
+            artifacts/feed-readback/quint-q3-toolchain.json
           if-no-files-found: error
           retention-days: 90
