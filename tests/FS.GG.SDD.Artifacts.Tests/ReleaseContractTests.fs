@@ -104,7 +104,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("1.6.x", entry.SddVersionLine)
+        Assert.Equal("1.7.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -230,7 +230,7 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 1.6.0 is additive, so it carries no migration note (`migrationNoteRequired Additive =
+    // 1.7.0 is additive, so it carries no migration note (`migrationNoteRequired Additive =
     // false`). The obvious edit when an earlier note came out was to swap `exactlyOne` for
     // `Assert.Empty` — and that would have SILENTLY DELETED the only guard in the repo that says
     // a note must be FOR this release and must EXIST ON DISK. Those checks were written against

@@ -593,7 +593,7 @@ jobs:
       - name: Upload durable dual-feed receipt
         uses: actions/upload-artifact@v4
         with:
-          name: sdd-1.6.0-dual-feed-receipt-${{ github.sha }}
+          name: sdd-1.7.0-dual-feed-receipt-${{ github.sha }}
           path: |
             artifacts/packages/pre-push.sha256
             artifacts/packages/*.nupkg.entries
