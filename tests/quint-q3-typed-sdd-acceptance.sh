@@ -16,6 +16,8 @@ sha() { sha256sum "$1" | cut -d' ' -f1; }
 
 [[ "$(sha "$QUINT_BIN")" == '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' ]] || fail 'wrong Quint cache object'
 [[ "$(sha "$LMT_BIN")" == '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' ]] || fail 'wrong lmt cache object'
+[[ "$(sha "$FABLE_BIN")" == '28f7d8bd23ca801cd3c3d86dbdd053fbdebeacb6f1c7ceffe903b3af69f75451' ]] || fail 'wrong Fable 5.13.0 launcher'
+NO_COLOR=1 "$FABLE_BIN" --version 2>&1 | grep -F '5.13.0' >/dev/null || fail 'wrong Fable executable version'
 
 # Q3 inherits, rather than approximates, Q2's installed compiler, reviewed replay, and
 # real Fable/Node parity proof.
@@ -74,10 +76,134 @@ dotnet tool install FS.GG.SDD.Cli --version "$version" --tool-path "$scratch/too
 cli="$scratch/tool/fsgg-sdd"
 [[ -x "$cli" ]] || fail 'installed CLI executable is absent'
 
+current_stage='installed-provisioning'
+profile1="$scratch/profile1-retained"
+"$cli" typed-sdd author --root "$profile1" --work legacy --title Legacy \
+  --agent acceptance --session profile1 >"$scratch/profile1-author.json"
+"$cli" typed-sdd inspect --root "$profile1" --work legacy >"$scratch/profile1-before.json"
+find "$profile1" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/profile1.before"
+
+printf 'wrong object\n' >"$scratch/wrong-quint"
+if "$cli" typed-sdd provision --cache "$scratch/failed-cache" \
+  --quint "$scratch/wrong-quint" --lmt "$LMT_BIN" >"$scratch/provision-wrong-object.json"; then
+  fail 'wrong provisioning object unexpectedly succeeded'
+fi
+grep -F 'typedSdd.provision.objectMismatch' "$scratch/provision-wrong-object.json" >/dev/null \
+  || fail 'wrong provisioning object diagnostic drifted'
+[[ ! -d "$scratch/failed-cache/objects" ]] || fail 'failed provisioning retained an accepted object directory'
+
+if "$cli" typed-sdd provision --cache "$scratch/wrong-profile-cache" \
+  --profile fsgg-quint-profile/1 --quint "$QUINT_BIN" --lmt "$LMT_BIN" \
+  >"$scratch/provision-wrong-profile.json"; then
+  fail 'wrong-profile provisioning unexpectedly succeeded'
+fi
+grep -F 'typedSdd.provision.profileUnsupported' "$scratch/provision-wrong-profile.json" >/dev/null \
+  || fail 'wrong-profile provisioning diagnostic drifted'
+[[ ! -d "$scratch/wrong-profile-cache/objects" ]] || fail 'wrong-profile provisioning wrote cache objects'
+
+"$cli" typed-sdd provision --cache "$scratch/cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" \
+  >"$scratch/provision.json"
+grep -F '"schema": "fsgg.typed-sdd.provision-report/v1"' "$scratch/provision.json" >/dev/null \
+  || fail 'installed provision report schema is absent'
+grep -F '"package": "FS.GG.SDD.Cli/' "$scratch/provision.json" >/dev/null \
+  || fail 'installed provision report lacks package identity'
+grep -F '"platform": "linux/amd64"' "$scratch/provision.json" >/dev/null \
+  || fail 'installed provision report lacks platform identity'
+grep -F '"profile": "fsgg-quint-profile/2"' "$scratch/provision.json" >/dev/null \
+  || fail 'installed provision report lacks profile identity'
+grep -F '"origin": "github:informalsystems/quint@v0.32.0"' "$scratch/provision.json" >/dev/null \
+  || fail 'installed provision report lacks Quint provenance'
+grep -F '"origin": "github:driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c"' "$scratch/provision.json" >/dev/null \
+  || fail 'installed provision report lacks lmt provenance'
+cat >"$scratch/toolchain-evidence.json" <<EOF
+{"schema":"fsgg.svg-qual.toolchain-evidence/v1","sddPackage":"FS.GG.SDD.Cli/$version","platform":"linux/amd64","profile":"fsgg-quint-profile/2","provisionOperation":"typed-sdd provision","provisionReportSchema":"fsgg.typed-sdd.provision-report/v1","cacheLayout":"objects/<sha256>","quint":{"version":"0.32.0","sha256":"939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f"},"lmt":{"source":"github:driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c","sourceSha256":"88bc47acae2c26919ab96a5cafa80b12fac762092c57840a2baad1afcc7feda3","goVersion":"1.24.1","goArchiveSha256":"cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073","cgoEnabled":"1","sha256":"37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"},"fable":{"version":"5.13.0","launcherSha256":"28f7d8bd23ca801cd3c3d86dbdd053fbdebeacb6f1c7ceffe903b3af69f75451"}}
+EOF
+
+"$cli" typed-sdd provision --cache "$scratch/cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" \
+  >"$scratch/provision-repeat.json"
+cmp "$scratch/provision.json" "$scratch/provision-repeat.json" >/dev/null \
+  || fail 'repeat provisioning report is not deterministic'
+
+"$cli" typed-sdd provision --cache "$scratch/concurrent-cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" \
+  >"$scratch/provision-concurrent-a.json" &
+provision_a=$!
+"$cli" typed-sdd provision --cache "$scratch/concurrent-cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" \
+  >"$scratch/provision-concurrent-b.json" &
+provision_b=$!
+wait "$provision_a"
+wait "$provision_b"
+cmp "$scratch/provision-concurrent-a.json" "$scratch/provision-concurrent-b.json" >/dev/null \
+  || fail 'concurrent duplicate provisioning did not converge'
+
+if "$cli" typed-sdd provision --cache '' --quint "$QUINT_BIN" --lmt "$LMT_BIN" \
+  >"$scratch/provision-invalid-cache.json"; then
+  fail 'invalid cache path unexpectedly provisioned'
+fi
+grep -F 'typedSdd.provision.cachePathInvalid' "$scratch/provision-invalid-cache.json" >/dev/null \
+  || fail 'invalid cache path diagnostic drifted'
+
 cache="$scratch/cache/objects"
-mkdir -p "$cache"
-cp "$QUINT_BIN" "$cache/939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f"
-cp "$LMT_BIN" "$cache/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"
+[[ "$(sha "$cache/939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f")" == \
+  '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' ]] \
+  || fail 'provisioned Quint object drifted'
+[[ "$(sha "$cache/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10")" == \
+  '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' ]] \
+  || fail 'provisioned lmt object drifted'
+"$cli" typed-sdd provision --cache "$scratch/cache" \
+  --quint "$cache/939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f" \
+  --lmt "$cache/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10" \
+  >"$scratch/provision-source-alias.json" \
+  || fail 'exact cache/source alias did not remain idempotent'
+
+"$cli" typed-sdd inspect --root "$profile1" --work legacy >"$scratch/profile1-after.json"
+find "$profile1" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/profile1.after"
+cmp "$scratch/profile1.before" "$scratch/profile1.after" >/dev/null \
+  || fail 'profile-1 workspace changed during profile-2 provisioning'
+cmp "$scratch/profile1-before.json" "$scratch/profile1-after.json" >/dev/null \
+  || fail 'profile-1 inspect changed after profile-2 provisioning'
+
+cp -a "$scratch/cache" "$scratch/modified-cache"
+printf 'modified\n' >>"$scratch/modified-cache/objects/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"
+if "$cli" typed-sdd provision --cache "$scratch/modified-cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" \
+  >"$scratch/provision-cache-conflict.json"; then
+  fail 'conflicting content-addressed cache object unexpectedly provisioned'
+fi
+grep -F 'typedSdd.provision.cacheConflict' "$scratch/provision-cache-conflict.json" >/dev/null \
+  || fail 'cache conflict diagnostic drifted'
+if "$cli" typed-sdd author --root "$scratch/modified-cache-root" --work demo --agent acceptance \
+  --session modified --backend quint-specification-v1 --cache "$scratch/modified-cache" \
+  >"$scratch/modified-cache.json"; then
+  fail 'modified cache object unexpectedly authored an authority'
+fi
+grep -F 'typedSdd.v2.cacheInvalid' "$scratch/modified-cache.json" >/dev/null \
+  || fail 'modified cache diagnostic drifted'
+[[ -z "$(find "$scratch/modified-cache-root" -type f ! -path '*/typed-sdd-transactions/authority.lock' -print -quit 2>/dev/null)" ]] \
+  || fail 'modified-cache refusal wrote authority files'
+
+chmod -x "$cache/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"
+"$cli" typed-sdd provision --cache "$scratch/cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" >/dev/null
+[[ -x "$cache/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10" ]] \
+  || fail 'repeat provisioning did not repair exact object executable mode'
+
+current_stage='small-neutral-profile2-authority'
+small_root="$scratch/small-profile2"
+small_fixture='tests/fixtures/quint-retained-reducer'
+mkdir -p "$small_root/$small_fixture"
+cp "$repo_root/$small_fixture/scene.md" "$small_root/$small_fixture/scene.md"
+cp "$repo_root/$small_fixture/bindings.json" "$small_root/$small_fixture/bindings.json"
+"$cli" typed-sdd author --root "$small_root" --work scene --title 'Tooling qualification reducer' \
+  --agent acceptance --session small --backend quint-specification-v1 --cache "$scratch/cache" \
+  --profile fsgg-quint-profile/2 --source "$small_fixture/scene.md" \
+  --bindings "$small_fixture/bindings.json" >"$scratch/small-author.json"
+grep -F '"outcome": "succeeded"' "$scratch/small-author.json" >/dev/null \
+  || fail 'installed small profile-2 author failed'
+"$cli" typed-sdd inspect --root "$small_root" --work scene >"$scratch/small-inspect.json"
+grep -F '"outcome": "succeeded"' "$scratch/small-inspect.json" >/dev/null \
+  || fail 'installed small profile-2 authority did not inspect'
+grep -F 'RetainedSceneGenerated' "$small_root/readiness/scene/quint/bindings.fs" >/dev/null \
+  || fail 'small profile-2 binding module was not generated'
+grep -F 'ACT-Choose' "$small_root/readiness/scene/quint/bindings.fs" >/dev/null \
+  || fail 'small profile-2 reducer action was not retained'
 
 for run in a b; do
   current_stage="deterministic-author-$run"
@@ -267,9 +393,17 @@ if [[ -n "${Q3_JUNIT_OUT:-}" ]]; then
   mkdir -p "$(dirname "$Q3_JUNIT_OUT")"
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
-    '<testsuite name="FS.GG.SDD.QuintQ3TypedSddAcceptance" tests="14" failures="0">' \
+    '<testsuite name="FS.GG.SDD.QuintQ3TypedSddAcceptance" tests="22" failures="0">' \
     '  <testcase classname="QuintQ3" name="fresh-cache-offline-tool-install" />' \
     '  <testcase classname="QuintQ3" name="exact-content-addressed-tools" />' \
+    '  <testcase classname="QuintQ3" name="installed-staged-provisioning" />' \
+    '  <testcase classname="QuintQ3" name="provisioning-object-and-profile-refusal" />' \
+    '  <testcase classname="QuintQ3" name="modified-cache-object-refusal" />' \
+    '  <testcase classname="QuintQ3" name="profile1-remains-byte-identical" />' \
+    '  <testcase classname="QuintQ3" name="duplicate-and-concurrent-provisioning" />' \
+    '  <testcase classname="QuintQ3" name="invalid-cache-path-refusal" />' \
+    '  <testcase classname="QuintQ3" name="cache-source-alias-idempotence" />' \
+    '  <testcase classname="QuintQ3" name="small-neutral-profile2-author-inspect" />' \
     '  <testcase classname="QuintQ3" name="two-isolated-author-runs" />' \
     '  <testcase classname="QuintQ3" name="installed-general-profile-authority" />' \
     '  <testcase classname="QuintQ3" name="crash-recovery-every-author-boundary" />' \
@@ -283,6 +417,11 @@ if [[ -n "${Q3_JUNIT_OUT:-}" ]]; then
     '  <testcase classname="QuintQ3" name="authenticated-byte-exact-rollback" />' \
     '  <testcase classname="QuintQ3" name="rollback-crash-recovery" />' \
     '</testsuite>' >"$Q3_JUNIT_OUT"
+fi
+
+if [[ -n "${Q3_TOOLCHAIN_OUT:-}" ]]; then
+  mkdir -p "$(dirname "$Q3_TOOLCHAIN_OUT")"
+  cp "$scratch/toolchain-evidence.json" "$Q3_TOOLCHAIN_OUT"
 fi
 
 printf 'Q3-TYPED-SDD-ACCEPTED: offline installed lifecycle, exact tools, deterministic v2, migration and rollback; Q2 replay/parity evidence verified when delegated\n'
