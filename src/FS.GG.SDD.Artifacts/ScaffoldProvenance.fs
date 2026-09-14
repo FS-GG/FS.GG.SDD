@@ -94,6 +94,7 @@ module ScaffoldProvenance =
         | "driver" -> ArtifactOwner.Driver
         | "gameSkill" -> ArtifactOwner.GameSkill
         | "renderingSkill" -> ArtifactOwner.RenderingSkill
+        | "audioSkill" -> ArtifactOwner.AudioSkill
         | _ -> ArtifactOwner.GeneratedProduct
 
     // Additive (contract 1.1.0, ADR-0014): emit `sha256` only when a digest was

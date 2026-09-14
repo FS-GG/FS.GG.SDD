@@ -88,10 +88,15 @@ module internal HandlersUpgrade =
                 )
 
             let driver = DriverSkills.plan presentIds
-            let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
+            let ownerParameters =
+                record.EffectiveParameters
+                |> Map.ofList
+                |> AudioSkills.ownerPredicateParameters record.TemplateRef
+            let product = GameSkills.plan ownerParameters
+            let audio = AudioSkills.plan ownerParameters
             let affectedSkillIds = targets |> List.choose ownerSkillIdOfPath |> Set.ofList
 
-            driver.ProvenancePaths @ product.ProvenancePaths
+            driver.ProvenancePaths @ product.ProvenancePaths @ audio.ProvenancePaths
             |> List.filter (fun (path, _) ->
                 ownerSkillIdOfPath path |> Option.exists affectedSkillIds.Contains
                 && not (Set.contains (normalizeRelativePath path) targetSet))
@@ -191,24 +196,34 @@ module internal HandlersUpgrade =
                 )
 
             let driver = DriverSkills.plan presentIds
-            let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
+            let ownerParameters =
+                record.EffectiveParameters
+                |> Map.ofList
+                |> AudioSkills.ownerPredicateParameters record.TemplateRef
+            let product = GameSkills.plan ownerParameters
             // FS.GG.SDD#864: the fourth channel, under the #798 invariant stated above — every
             // owner-sourced file this step writes leaves the run DECLARED in the record that governs
             // it. It is added to both halves (the writes and the re-declaration) together, because
             // adding it to one alone is precisely the permanent-`Undeclared`-drift defect #798
             // names. The `distinctBy` keeps the established channel's body on a doubly-shipped id,
             // matching `Drift.ownerSourcedBackfill` and scaffold time.
-            let rendering = RenderingSkills.plan (record.EffectiveParameters |> Map.ofList)
+            let rendering = RenderingSkills.plan ownerParameters
+            let audio = AudioSkills.plan ownerParameters
 
             let writes =
-                driver.Writes @ product.Writes @ rendering.Writes
+                driver.Writes @ product.Writes @ rendering.Writes @ audio.Writes
                 |> List.distinctBy (fun effect -> effectPath effect)
                 |> List.filter (fun effect -> effectPath effect |> Option.exists targetSet.Contains)
 
             let affectedSkillIds = targets |> List.choose ownerSkillIdOfPath |> Set.ofList
 
             let newDriverPaths =
-                ownerBackfillRows ArtifactOwner.Driver affectedSkillIds driver.ProvenancePaths
+                (ownerBackfillRows ArtifactOwner.Driver affectedSkillIds driver.ProvenancePaths)
+                @ (driver.ProvenancePaths
+                   |> List.filter (fun (path, _) -> targetSet.Contains path && ownerSkillIdOfPath path |> Option.isNone)
+                   |> List.map (fun (path, sha256) ->
+                       { Path = path; Owner = ArtifactOwner.Driver; Sha256 = Some sha256 }
+                       : ScaffoldProvenance.ScaffoldProducedPath))
 
             let newGameSkillPaths =
                 ownerBackfillRows ArtifactOwner.GameSkill affectedSkillIds product.ProvenancePaths
@@ -220,6 +235,14 @@ module internal HandlersUpgrade =
                 |> List.filter (fun (path, _) -> not (gameOwnedPaths.Contains path))
                 |> ownerBackfillRows ArtifactOwner.RenderingSkill affectedSkillIds
 
+            let earlierOwnedPaths =
+                (product.ProvenancePaths @ rendering.ProvenancePaths) |> List.map fst |> Set.ofList
+
+            let newAudioSkillPaths =
+                audio.ProvenancePaths
+                |> List.filter (fun (path, _) -> not (earlierOwnedPaths.Contains path))
+                |> ownerBackfillRows ArtifactOwner.AudioSkill affectedSkillIds
+
             // The product manifest is the second governing declaration for every owner-sourced
             // skill SDD materializes. Scaffold already composes this union; upgrade must perform
             // the identical transaction when it backfills a missing copy, or the recovered file is
@@ -227,12 +250,8 @@ module internal HandlersUpgrade =
             // actually writes, and amend only an existing provider manifest — a workspace without
             // one does not acquire a new contract during remediation.
             let manifestAdditions =
-                ownerBackfillManifestAdditionsFromRenderingManifest
-                    affectedSkillIds
-                    (RenderingSkills.manifestText ())
-                    driver
-                    product
-                    rendering
+                HandlersScaffold.productManifestAdditions driver product rendering audio
+                |> List.filter (fun entry -> affectedSkillIds.Contains entry.Id)
 
             let manifestPlan = HandlersScaffold.productManifestAmend model manifestAdditions
 
@@ -269,6 +288,7 @@ module internal HandlersUpgrade =
                         List.isEmpty newDriverPaths
                         && List.isEmpty newGameSkillPaths
                         && List.isEmpty newRenderingSkillPaths
+                        && List.isEmpty newAudioSkillPaths
                     then
                         []
                     else
@@ -279,7 +299,9 @@ module internal HandlersUpgrade =
                                 DriverPaths = mergeProducedRows record.DriverPaths newDriverPaths
                                 GameSkillPaths = mergeProducedRows record.GameSkillPaths newGameSkillPaths
                                 RenderingSkillPaths =
-                                    mergeProducedRows record.RenderingSkillPaths newRenderingSkillPaths }
+                                    mergeProducedRows
+                                        record.RenderingSkillPaths
+                                        (newRenderingSkillPaths @ newAudioSkillPaths) }
 
                         [ WriteFile(
                               ScaffoldProvenance.provenancePath,

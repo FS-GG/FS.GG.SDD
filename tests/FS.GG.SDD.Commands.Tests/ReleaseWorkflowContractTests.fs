@@ -90,6 +90,8 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", publish)
         Assert.Contains("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
         Assert.Contains("quint-q3-public.junit.xml", publish)
+        Assert.Contains("artifacts/feed-readback/*.nupkg", publish)
+        Assert.Contains("for attempt in $(seq 1 40)", publish)
         Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", gateWorkflow)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", gateWorkflow)
 
@@ -102,3 +104,14 @@ module ReleaseWorkflowContractTests =
         Assert.True(orgFeed >= 0 && publicFeed > orgFeed, "the org feed must be pushed before nuget.org")
         Assert.Contains("three independently consumable packages", contract)
         Assert.Contains("| `publish-artifacts` |", contract)
+
+    [<Fact>]
+    let ``release has a source-bound read-only dual-feed resume`` () =
+        Assert.Contains("readback_version:", workflow)
+        Assert.Contains("inputs.readback_version != ''", workflow)
+        Assert.Contains("git rev-parse \"refs/tags/v$VERSION^{commit}\"", workflow)
+        Assert.Contains("for attempt in $(seq 1 40)", workflow)
+        Assert.Contains("RepositoryCommit", workflow)
+        Assert.Contains("artifacts/feed-readback/$id.github.nupkg.payloads", workflow)
+        Assert.Contains("artifacts/feed-readback/$id.nuget.nupkg.payloads", workflow)
+        Assert.Contains("artifacts/feed-readback/*", workflow)

@@ -27,6 +27,10 @@ on:
         description: "Explicit FS.GG.Contracts version to publish. Omit for a pack-only dry run."
         type: string
         required: false
+      readback_version:
+        description: "Read-only dual-feed verification of an already-published coherent SDD version"
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -47,7 +51,7 @@ jobs:
   resolve-versions:
     name: Resolve versions (three lines)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
       artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
@@ -150,7 +154,7 @@ jobs:
     name: Contracts tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -178,7 +182,7 @@ jobs:
   artifacts-tests:
     name: Artifacts tests (publish gate)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -203,7 +207,7 @@ jobs:
     name: CLI tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -234,7 +238,7 @@ jobs:
     # On a no-push dispatch locate-artifacts succeeds without a lookup, so Contracts still packs.
     needs: [resolve-versions, contracts-tests, locate-artifacts]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     # Least-privilege: only this job gains packages: write; the push uses the run-scoped
     # GITHUB_TOKEN, never a PAT (FR-002).
     permissions:
@@ -319,7 +323,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
     # run promotes this run's retained artifact; it must never pack another container (#944).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && needs.resolve-versions.outputs.push == 'false'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && needs.resolve-versions.outputs.push == 'false'
     permissions:
       contents: read
     steps:
@@ -389,7 +393,7 @@ jobs:
     name: Preflight retained candidate custody
     needs: [resolve-versions, artifacts-tests, cli-tests]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     permissions:
       actions: read
       contents: read
@@ -433,7 +437,7 @@ jobs:
     name: Publish and read back the coherent FS.GG.SDD set
     needs: [resolve-versions, locate-artifacts]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && needs.resolve-versions.outputs.push == 'true'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && needs.resolve-versions.outputs.push == 'true'
     permissions:
       actions: read
       contents: read
@@ -503,13 +507,13 @@ jobs:
             [ -f "$local_package" ] || { echo "::error::reviewed package is missing for $id $VERSION"; exit 1; }
             gh_url="https://nuget.pkg.github.com/FS-GG/download/$id/$VERSION/$id.$VERSION.nupkg"
             nuget_url="https://api.nuget.org/v3-flatcontainer/$id/$VERSION/$id.$VERSION.nupkg"
-            for attempt in $(seq 1 30); do
+            for attempt in $(seq 1 40); do
               curl --fail --location --silent --show-error -u "$GITHUB_ACTOR:$GH_TOKEN" \
                 "$gh_url" -o "artifacts/feed-readback/$id.github.nupkg" && \
               curl --fail --location --silent --show-error \
                 "$nuget_url" -o "artifacts/feed-readback/$id.nuget.nupkg" && break
-              [ "$attempt" -lt 30 ] || { echo "::error::feed readback timed out for $id $VERSION"; exit 1; }
-              sleep 10
+              [ "$attempt" -lt 40 ] || { echo "::error::feed readback timed out for $id $VERSION"; exit 1; }
+              sleep 15
             done
             for feed in local github nuget; do
               if [ "$feed" = local ]; then
@@ -593,14 +597,69 @@ jobs:
       - name: Upload durable dual-feed receipt
         uses: actions/upload-artifact@v4
         with:
-          name: sdd-1.7.0-dual-feed-receipt-${{ github.sha }}
+          name: sdd-${{ needs.resolve-versions.outputs.cli_version }}-dual-feed-receipt-${{ github.sha }}
           path: |
             artifacts/packages/pre-push.sha256
             artifacts/packages/*.nupkg.entries
             artifacts/packages/*.nupkg.payloads
             artifacts/feed-readback/*.payloads
             artifacts/feed-readback/*.entries
+            artifacts/feed-readback/*.nupkg
             artifacts/feed-readback/quint-q*-public.junit.xml
             artifacts/feed-readback/quint-q3-toolchain.json
+          if-no-files-found: error
+          retention-days: 90
+
+  readback-cli:
+    name: Read-only coherent SDD dual-feed verification
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version != ''
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read back exact public archives
+        id: readback
+        env:
+          VERSION: ${{ inputs.readback_version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::invalid readback version"; exit 1; }
+          git fetch --force origin "refs/tags/v$VERSION:refs/tags/v$VERSION"
+          source_head="$(git rev-parse "refs/tags/v$VERSION^{commit}")"
+          mkdir -p artifacts/feed-readback
+          for id in fs.gg.sdd.artifacts fs.gg.sdd.cli; do
+            gh_url="https://nuget.pkg.github.com/FS-GG/download/$id/$VERSION/$id.$VERSION.nupkg"
+            public_url="https://api.nuget.org/v3-flatcontainer/$id/$VERSION/$id.$VERSION.nupkg"
+            for attempt in $(seq 1 40); do
+              curl --fail --location --silent --show-error -u "$GITHUB_ACTOR:$GH_TOKEN" \
+                "$gh_url" -o "artifacts/feed-readback/$id.github.nupkg" && \
+              curl --fail --location --silent --show-error \
+                "$public_url" -o "artifacts/feed-readback/$id.nuget.nupkg" && break
+              [ "$attempt" -lt 40 ] || { echo "::error::feed readback timed out for $id $VERSION"; exit 1; }
+              sleep 15
+            done
+            for feed in github nuget; do
+              package="artifacts/feed-readback/$id.$feed.nupkg"
+              unzip -p "$package" '*.nuspec' | grep -F "commit=\"$source_head\"" >/dev/null \
+                || { echo "::error::$package does not bind tag source $source_head"; exit 1; }
+              unzip -Z1 "$package" | grep -v '^\.signature\.p7s$' | LC_ALL=C sort >"$package.entries"
+              while IFS= read -r entry; do
+                printf '%s  %s\n' "$(unzip -p "$package" "$entry" | sha256sum | cut -d' ' -f1)" "$entry"
+              done <"$package.entries" >"$package.payloads"
+            done
+            diff -u "artifacts/feed-readback/$id.github.nupkg.payloads" \
+              "artifacts/feed-readback/$id.nuget.nupkg.payloads"
+          done
+          echo "source_head=$source_head" >> "$GITHUB_OUTPUT"
+      - name: Retain read-only feed archives and payload maps
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdd-${{ inputs.readback_version }}-dual-feed-readback-${{ steps.readback.outputs.source_head }}
+          path: artifacts/feed-readback/*
           if-no-files-found: error
           retention-days: 90

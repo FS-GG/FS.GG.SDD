@@ -194,7 +194,11 @@ module internal Drift =
             Set.ofList (SeededSkills.skillNames @ (productSkillEntries (Some record) |> List.map fst))
 
         let driver = DriverSkills.plan presentIds
-        let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
+        let ownerParameters =
+            record.EffectiveParameters
+            |> Map.ofList
+            |> AudioSkills.ownerPredicateParameters record.TemplateRef
+        let product = GameSkills.plan ownerParameters
 
         // ADR-0063 third instance / FS.GG.SDD#864 — this is acceptance 5's answer, made TRUE rather
         // than merely stated: existing scaffolds ARE backfilled, by `fsgg-sdd upgrade`, through this
@@ -205,9 +209,10 @@ module internal Drift =
         // precedes `rendering.Writes`, and the `distinctBy` below drops a later duplicate path. That
         // ordering is the same resolution `HandlersScaffold.plannedRenderingSkillOutcome` applies, so
         // a backfilled tree cannot end up with different bytes than a freshly scaffolded one.
-        let rendering = RenderingSkills.plan (record.EffectiveParameters |> Map.ofList)
+        let rendering = RenderingSkills.plan ownerParameters
+        let audio = AudioSkills.plan ownerParameters
 
-        (driver.Writes @ product.Writes @ rendering.Writes)
+        (driver.Writes @ product.Writes @ rendering.Writes @ audio.Writes)
         |> List.choose (fun effect ->
             match effect with
             | WriteFile(path, body, _) -> Some(path, body)

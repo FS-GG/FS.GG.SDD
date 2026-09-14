@@ -30,6 +30,7 @@ module ArtifactRef =
         /// materialized skill). Externally owned, so `refresh` never regenerates it. Serialized
         /// `"renderingSkill"`; appears only in `ScaffoldProvenanceRecord.RenderingSkillPaths`.
         | RenderingSkill
+        | AudioSkill
 
     type ArtifactKind =
         | ProjectConfig

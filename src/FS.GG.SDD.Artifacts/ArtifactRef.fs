@@ -36,6 +36,7 @@ module ArtifactRef =
         // `GameSkill`), so `refresh` never regenerates it; recorded only in
         // `ScaffoldProvenanceRecord.RenderingSkillPaths`. Serialized `"renderingSkill"`.
         | RenderingSkill
+        | AudioSkill
 
     type ArtifactKind =
         | ProjectConfig
@@ -92,6 +93,7 @@ module ArtifactRef =
         | Driver -> "driver"
         | GameSkill -> "gameSkill"
         | RenderingSkill -> "renderingSkill"
+        | AudioSkill -> "audioSkill"
 
     let kindValue kind =
         match kind with

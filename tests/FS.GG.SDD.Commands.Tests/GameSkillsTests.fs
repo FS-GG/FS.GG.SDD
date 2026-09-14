@@ -16,7 +16,7 @@ module GameSkillsTests =
 
     // The pinned digest of the delivered fs-gg-playtest body (the drift-guard golden).
     let private playtestSha256 =
-        "f070f0719dde93b55d1a41ea8aa881b90e41cd20a20e558771d87ef3fe28f642"
+        "faadc033df39d3c1bd822f9831bf99caf23f369bfb8d3e1ab40bfe64f2b42e3b"
 
     // The FS.GG.Game.Skills 0.7.0 lockstep profile is owner-sourced and must be
     // carried through the same content-addressed materializer as the existing game skills.

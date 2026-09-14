@@ -78,7 +78,8 @@ module RenderingSkillsTests =
 
     [<Fact>]
     let ``the delivered fs-gg-feedback-report digest is pinned to the golden`` () =
-        let outcome = RenderingSkills.plan Map.empty
+        let outcome =
+            RenderingSkills.plan (Map.ofList [ "profile", "app"; "template", "fable-game"; "bundle", "player" ])
 
         let recorded =
             outcome.ProvenancePaths
@@ -272,12 +273,28 @@ module RenderingSkillsTests =
 
     [<Fact>]
     let ``a clean schema-v2 plan reports no sidecar diagnostic`` () =
-        let outcome = RenderingSkills.plan Map.empty
+        let outcome =
+            RenderingSkills.plan (Map.ofList [ "profile", "app"; "template", "fable-game"; "bundle", "player" ])
 
         let ids =
             HandlersScaffold.renderingSkillDiagnostics outcome |> List.map (fun d -> d.Id)
 
         Assert.Empty ids
+
+    [<Fact>]
+    let ``fable selection keeps the Game collision body without a Rendering profile warning`` () =
+        let parameters =
+            AudioSkills.ownerPredicateParameters
+                "fs-gg-fable-game"
+                (Map.ofList [ "template", "forged"; "bundle", "player" ])
+        let game = HandlersScaffold.plannedGameSkillOutcome [] parameters
+        let rendering =
+            HandlersScaffold.plannedRenderingSkillOutcome [] parameters (game.ProvenancePaths |> List.map fst)
+
+        Assert.Contains("fs-gg-collision", game.MaterializedIds)
+        Assert.DoesNotContain("fs-gg-collision", rendering.MaterializedIds)
+        Assert.DoesNotContain("fs-gg-collision", rendering.PredicateUnevaluatedIds)
+        Assert.Empty(HandlersScaffold.renderingSkillDiagnostics rendering)
 
     [<Fact>]
     let ``every fail-closed class reaches an operator under its own diagnostic id`` () =

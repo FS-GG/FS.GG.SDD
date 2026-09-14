@@ -130,10 +130,23 @@ module GameSkillManifestTests =
         Assert.Equal(Some false, ProductPredicate.evaluate "profile in [game] and feedback == false" p)
         Assert.Equal(Some true, ProductPredicate.evaluate "profile == app or profile == game" p)
 
+        Assert.Equal(
+            Some true,
+            ProductPredicate.evaluate
+                "profile == app or template == fable-game and bundle in [studio, tactical]"
+                (paramsOf [ "profile", "headless"; "template", "fable-game"; "bundle", "studio" ])
+        )
+
+        Assert.Equal(
+            Some false,
+            ProductPredicate.evaluate
+                "profile == app or template == fable-game and bundle in [studio, tactical]"
+                (paramsOf [ "profile", "headless"; "template", "fable-game"; "bundle", "player" ])
+        )
+
     [<Theory>]
     [<InlineData("")>]
     [<InlineData("sometimes")>]
-    [<InlineData("profile in [game] and x == y or z == w")>]
     [<InlineData("count(x) > 2")>]
     let ``evaluate returns None for a predicate it cannot evaluate (fail closed)`` (predicate: string) =
         Assert.Equal(None, ProductPredicate.evaluate predicate (paramsOf [ "profile", "game" ]))
