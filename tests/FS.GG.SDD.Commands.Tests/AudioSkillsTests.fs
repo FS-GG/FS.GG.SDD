@@ -29,17 +29,26 @@ module AudioSkillsTests =
         Assert.Equal(None, outcome.ManifestError)
 
         let paths = outcome.ProvenancePaths |> List.map fst |> List.sort
+
         let expected =
             Fsgg.Schemas.agentSkillRoots
             |> List.map (fun root -> $"{root}/skills/fs-gg-browser-audio/SKILL.md")
             |> List.sort
+
         Assert.Equal<string list>(expected, paths)
-        Assert.All(outcome.ProvenancePaths, fun (_, digest) ->
-            Assert.Equal("07d9a0277044162611cffb20089577565fcc0ef802ac71f0cbc668cf70c0818c", digest))
-        Assert.All(outcome.Writes, fun effect ->
-            match effect with
-            | WriteFile(_, _, AgentGuidanceTarget) -> ()
-            | other -> failwithf "unexpected Audio materialization effect: %A" other)
+
+        Assert.All(
+            outcome.ProvenancePaths,
+            fun (_, digest) -> Assert.Equal("07d9a0277044162611cffb20089577565fcc0ef802ac71f0cbc668cf70c0818c", digest)
+        )
+
+        Assert.All(
+            outcome.Writes,
+            fun effect ->
+                match effect with
+                | WriteFile(_, _, AgentGuidanceTarget) -> ()
+                | other -> failwithf "unexpected Audio materialization effect: %A" other
+        )
 
     [<Fact>]
     let ``non fable template omits browser guidance without a predicate gap`` () =
@@ -51,6 +60,7 @@ module AudioSkillsTests =
     [<Fact>]
     let ``selected Audio owner collision refuses the complete skill instead of silently deduplicating`` () =
         let occupied = ".agents/skills/fs-gg-browser-audio/SKILL.md"
+
         let outcome =
             HandlersScaffold.plannedAudioSkillOutcome [ occupied ] (parameters "fable-game") []
 
@@ -66,15 +76,20 @@ module AudioSkillsTests =
     [<Fact>]
     let ``Audio package failures retain Audio ownership in operator diagnostics`` () =
         let cases =
-            [ { RenderingSkills.empty with ManifestError = Some "boom" },
+            [ { RenderingSkills.empty with
+                  ManifestError = Some "boom" },
               "scaffold.audioSkillManifestMalformed"
-              { RenderingSkills.empty with NamespaceCollisionIds = [ "fs-gg-sdd-audio" ] },
+              { RenderingSkills.empty with
+                  NamespaceCollisionIds = [ "fs-gg-sdd-audio" ] },
               "scaffold.audioSkillNamespaceCollision"
-              { RenderingSkills.empty with VerifyFailedIds = [ "fs-gg-browser-audio" ] },
+              { RenderingSkills.empty with
+                  VerifyFailedIds = [ "fs-gg-browser-audio" ] },
               "scaffold.audioSkillVerifyFailed"
-              { RenderingSkills.empty with PredicateUnevaluatedIds = [ "fs-gg-browser-audio" ] },
+              { RenderingSkills.empty with
+                  PredicateUnevaluatedIds = [ "fs-gg-browser-audio" ] },
               "scaffold.audioSkillPredicateUnevaluated"
-              { RenderingSkills.empty with YieldedIds = [ "fs-gg-browser-audio" ] },
+              { RenderingSkills.empty with
+                  YieldedIds = [ "fs-gg-browser-audio" ] },
               "scaffold.ownerSkillCollision" ]
 
         for outcome, expected in cases do

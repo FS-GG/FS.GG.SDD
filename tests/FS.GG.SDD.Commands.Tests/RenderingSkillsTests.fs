@@ -287,7 +287,9 @@ module RenderingSkillsTests =
             AudioSkills.ownerPredicateParameters
                 "fs-gg-fable-game"
                 (Map.ofList [ "template", "forged"; "bundle", "player" ])
+
         let game = HandlersScaffold.plannedGameSkillOutcome [] parameters
+
         let rendering =
             HandlersScaffold.plannedRenderingSkillOutcome [] parameters (game.ProvenancePaths |> List.map fst)
 
@@ -299,9 +301,12 @@ module RenderingSkillsTests =
     [<Fact>]
     let ``only the declared legacy Game Rendering collisions may yield`` () =
         let unexpected =
-            { RenderingSkills.empty with YieldedIds = [ "fs-gg-unrelated-owner-conflict" ] }
+            { RenderingSkills.empty with
+                YieldedIds = [ "fs-gg-unrelated-owner-conflict" ] }
 
-        let diagnostic = Assert.Single(HandlersScaffold.renderingSkillDiagnostics unexpected)
+        let diagnostic =
+            Assert.Single(HandlersScaffold.renderingSkillDiagnostics unexpected)
+
         Assert.Equal("scaffold.ownerSkillCollision", diagnostic.Id)
         Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticSeverity.DiagnosticError, diagnostic.Severity)
 

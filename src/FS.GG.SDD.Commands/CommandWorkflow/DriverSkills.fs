@@ -95,8 +95,11 @@ module internal DriverSkills =
 
             if normalized.StartsWith(workspaceResourcePrefix, System.StringComparison.Ordinal) then
                 let path = normalized.Substring(workspaceResourcePrefix.Length)
-                if System.String.IsNullOrWhiteSpace path then None
-                else tryLoadResourceBytes name |> Option.map (fun bytes -> path, bytes)
+
+                if System.String.IsNullOrWhiteSpace path then
+                    None
+                else
+                    tryLoadResourceBytes name |> Option.map (fun bytes -> path, bytes)
             else
                 None)
         |> Map.ofArray
@@ -334,76 +337,98 @@ module internal DriverSkills =
     /// Exposed internally so corruption/traversal mutations exercise the production parser.
     let planWorkspaceFrom (manifest: string option) (actual: Map<string, byte array>) =
         match manifest with
-            // Older Drivers packages legitimately have neither half of this optional transport.
-            // Once payload bytes exist, however, the manifest is the only closed declaration of
-            // their paths, digests, and modes; losing it must refuse rather than silently omit the
-            // routine helper/policy files.
-            | None when Map.isEmpty actual -> Ok([], [])
-            | None -> Error "workspace-files.json: embedded payload exists without its manifest."
-            | Some text ->
-                try
-                    use document = JsonDocument.Parse text
-                    let root = document.RootElement
-                    let schema = root.GetProperty("schema").GetString()
-                    let rows = root.GetProperty("files").EnumerateArray() |> Seq.toList
+        // Older Drivers packages legitimately have neither half of this optional transport.
+        // Once payload bytes exist, however, the manifest is the only closed declaration of
+        // their paths, digests, and modes; losing it must refuse rather than silently omit the
+        // routine helper/policy files.
+        | None when Map.isEmpty actual -> Ok([], [])
+        | None -> Error "workspace-files.json: embedded payload exists without its manifest."
+        | Some text ->
+            try
+                use document = JsonDocument.Parse text
+                let root = document.RootElement
+                let schema = root.GetProperty("schema").GetString()
+                let rows = root.GetProperty("files").EnumerateArray() |> Seq.toList
 
-                    let safePath (path: string) =
-                        not (System.String.IsNullOrWhiteSpace path)
-                        && not (path.StartsWith("/", System.StringComparison.Ordinal))
-                        && not (path.Contains('\\'))
-                        && not (System.IO.Path.IsPathRooted path)
-                        && (path.Split('/')
-                            |> Array.forall (fun segment ->
-                                segment <> "" && segment <> "." && segment <> ".." && not (segment.Contains(':'))))
+                let safePath (path: string) =
+                    not (System.String.IsNullOrWhiteSpace path)
+                    && not (path.StartsWith("/", System.StringComparison.Ordinal))
+                    && not (path.Contains('\\'))
+                    && not (System.IO.Path.IsPathRooted path)
+                    && (path.Split('/')
+                        |> Array.forall (fun segment ->
+                            segment <> ""
+                            && segment <> "."
+                            && segment <> ".."
+                            && not (segment.Contains(':'))))
 
-                    let parsed =
-                        rows
-                        |> List.map (fun row ->
-                            let path = row.GetProperty("path").GetString() |> Option.ofObj |> Option.defaultValue ""
-                            let digest = row.GetProperty("sha256").GetString() |> Option.ofObj |> Option.defaultValue ""
-                            let executable = row.GetProperty("executable").GetBoolean()
-                            path, digest, executable)
+                let parsed =
+                    rows
+                    |> List.map (fun row ->
+                        let path =
+                            row.GetProperty("path").GetString() |> Option.ofObj |> Option.defaultValue ""
 
-                    let paths = parsed |> List.map (fun (path, _, _) -> path)
-                    let declared = Set.ofList paths
-                    let actualPaths = actual |> Map.keys |> Set.ofSeq
-                    let shaValid (value: string) =
-                        value.Length = 64
-                        && value |> Seq.forall (fun c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))
+                        let digest =
+                            row.GetProperty("sha256").GetString() |> Option.ofObj |> Option.defaultValue ""
 
-                    if schema <> "fsgg/driver-workspace-files/v1" then
-                        Error "workspace-files.json: unsupported schema."
-                    elif List.isEmpty parsed || paths <> List.sort paths || paths.Length <> declared.Count then
-                        Error "workspace-files.json: files must be non-empty, unique, and path-sorted."
-                    elif parsed |> List.exists (fun (path, digest, _) -> not (safePath path) || not (shaValid digest)) then
-                        Error "workspace-files.json: unsafe path or invalid sha256."
-                    elif declared <> actualPaths then
-                        Error "workspace-files.json: embedded payload is not the declared closed file set."
-                    elif
+                        let executable = row.GetProperty("executable").GetBoolean()
+                        path, digest, executable)
+
+                let paths = parsed |> List.map (fun (path, _, _) -> path)
+                let declared = Set.ofList paths
+                let actualPaths = actual |> Map.keys |> Set.ofSeq
+
+                let shaValid (value: string) =
+                    value.Length = 64
+                    && value |> Seq.forall (fun c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))
+
+                if schema <> "fsgg/driver-workspace-files/v1" then
+                    Error "workspace-files.json: unsupported schema."
+                elif
+                    List.isEmpty parsed
+                    || paths <> List.sort paths
+                    || paths.Length <> declared.Count
+                then
+                    Error "workspace-files.json: files must be non-empty, unique, and path-sorted."
+                elif
+                    parsed
+                    |> List.exists (fun (path, digest, _) -> not (safePath path) || not (shaValid digest))
+                then
+                    Error "workspace-files.json: unsafe path or invalid sha256."
+                elif declared <> actualPaths then
+                    Error "workspace-files.json: embedded payload is not the declared closed file set."
+                elif
+                    parsed
+                    |> List.exists (fun (path, digest, _) ->
+                        actual
+                        |> Map.tryFind path
+                        |> Option.forall (fun bytes -> rawSha256 bytes <> digest))
+                then
+                    Error "workspace-files.json: embedded payload digest mismatch."
+                else
+                    let decoded =
                         parsed
-                        |> List.exists (fun (path, digest, _) ->
-                            actual |> Map.tryFind path |> Option.forall (fun bytes -> rawSha256 bytes <> digest))
-                    then
-                        Error "workspace-files.json: embedded payload digest mismatch."
-                    else
-                        let decoded =
-                            parsed
-                            |> List.map (fun (path, _, executable) ->
-                                actual |> Map.tryFind path |> Option.bind tryDecode |> Option.map (fun body -> path, body, executable))
+                        |> List.map (fun (path, _, executable) ->
+                            actual
+                            |> Map.tryFind path
+                            |> Option.bind tryDecode
+                            |> Option.map (fun body -> path, body, executable))
 
-                        if decoded |> List.exists Option.isNone then
-                            Error "workspace-files.json: embedded payload is not supported text."
-                        else
-                            let files = decoded |> List.choose id
-                            Ok(
-                                files
-                                |> List.collect (fun (path, body, executable) ->
-                                    [ yield WriteFile(path, body, AgentGuidanceTarget)
-                                      if executable then yield SetExecutable path ]),
-                                files |> List.map (fun (path, body, _) -> path, Fsgg.SkillMirror.sha256 body)
-                            )
-                with ex ->
-                    Error $"workspace-files.json: {ex.Message}"
+                    if decoded |> List.exists Option.isNone then
+                        Error "workspace-files.json: embedded payload is not supported text."
+                    else
+                        let files = decoded |> List.choose id
+
+                        Ok(
+                            files
+                            |> List.collect (fun (path, body, executable) ->
+                                [ yield WriteFile(path, body, AgentGuidanceTarget)
+                                  if executable then
+                                      yield SetExecutable path ]),
+                            files |> List.map (fun (path, body, _) -> path, Fsgg.SkillMirror.sha256 body)
+                        )
+            with ex ->
+                Error $"workspace-files.json: {ex.Message}"
 
     /// Plan driver materialization from the CLI's embedded package bytes, gated by the set of
     /// skill ids already present in the workspace (seeded ∪ provider). Pure — reads only
@@ -414,10 +439,13 @@ module internal DriverSkills =
         // FS.GG.Drivers also owns repository-root routine development files. They are a separate
         // closed transport from driver skills: paths are already workspace-relative, are written
         // once (not mirrored into skill roots), and remain outside the product skill manifest.
-        let workspace = planWorkspaceFrom (workspaceManifestText ()) (workspaceEmbeddedFiles ())
+        let workspace =
+            planWorkspaceFrom (workspaceManifestText ()) (workspaceEmbeddedFiles ())
 
         match workspace with
-        | Error message -> { skills with ManifestError = skills.ManifestError |> Option.orElse (Some message) }
+        | Error message ->
+            { skills with
+                ManifestError = skills.ManifestError |> Option.orElse (Some message) }
         | Ok(writes, provenance) ->
             { skills with
                 Writes = skills.Writes @ writes

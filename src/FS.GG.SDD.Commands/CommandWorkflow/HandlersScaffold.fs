@@ -592,9 +592,7 @@ module internal HandlersScaffold =
         let gameOwned = Set.ofList gameSkillKeptPaths
 
         let gameOwnedIds =
-            gameSkillKeptPaths
-            |> List.choose Fsgg.SkillMirror.skillIdOfPath
-            |> Set.ofList
+            gameSkillKeptPaths |> List.choose Fsgg.SkillMirror.skillIdOfPath |> Set.ofList
 
         let yieldedIds =
             outcome.ProvenancePaths
@@ -620,8 +618,7 @@ module internal HandlersScaffold =
             // turn that unselected mirror into an unevaluable-predicate warning, and corrupt bytes
             // in an unselected mirror must not block the selected owner body.
             VerifyFailedIds = outcome.VerifyFailedIds |> List.filter (gameOwnedIds.Contains >> not)
-            PredicateUnevaluatedIds =
-                outcome.PredicateUnevaluatedIds |> List.filter (gameOwnedIds.Contains >> not)
+            PredicateUnevaluatedIds = outcome.PredicateUnevaluatedIds |> List.filter (gameOwnedIds.Contains >> not)
             YieldedIds = yieldedIds
             // A withheld sidecar is only worth reporting for a row this scaffold actually
             // materialized; a yielded row's files are the other channel's business now.
@@ -645,8 +642,12 @@ module internal HandlersScaffold =
         Set.ofList [ "fs-gg-collision"; "fs-gg-grids"; "fs-gg-line-drawing"; "fs-gg-visibility" ]
 
     let renderingSkillDiagnostics (outcome: RenderingSkills.RenderingSkillOutcome) : Diagnostic list =
-        let acceptedYields = outcome.YieldedIds |> List.filter acceptedGameRenderingSharedIds.Contains
-        let unexpectedYields = outcome.YieldedIds |> List.filter (acceptedGameRenderingSharedIds.Contains >> not)
+        let acceptedYields =
+            outcome.YieldedIds |> List.filter acceptedGameRenderingSharedIds.Contains
+
+        let unexpectedYields =
+            outcome.YieldedIds
+            |> List.filter (acceptedGameRenderingSharedIds.Contains >> not)
 
         [ yield!
               outcome.ManifestError
@@ -685,7 +686,9 @@ module internal HandlersScaffold =
         (earlierOwnerPaths: string list)
         =
         let outcome = AudioSkills.plan effective
-        let occupied = Set.ofList (producedPaths @ plannedMirroredPaths producedPaths @ earlierOwnerPaths)
+
+        let occupied =
+            Set.ofList (producedPaths @ plannedMirroredPaths producedPaths @ earlierOwnerPaths)
         // Refuse an owner collision as one skill-sized unit. If even a sidecar path overlaps an
         // earlier selected owner, withholding only that path would materialize a partial skill and
         // let the manifest union claim a file set that is not on disk.
@@ -701,8 +704,8 @@ module internal HandlersScaffold =
         let kept =
             outcome.ProvenancePaths
             |> List.filter (fun (path, _) ->
-                Fsgg.SkillMirror.skillIdOfPath path
-                |> Option.forall (yielded.Contains >> not))
+                Fsgg.SkillMirror.skillIdOfPath path |> Option.forall (yielded.Contains >> not))
+
         let keptPaths = kept |> List.map fst |> Set.ofList
 
         { outcome with
@@ -1357,6 +1360,7 @@ module internal HandlersScaffold =
 
         let execResults =
             let produced = producedPaths |> List.map normalizeRelativePath |> Set.ofList
+
             model.InterpretedEffects
             |> List.filter (fun result ->
                 match result.Effect with
@@ -1398,7 +1402,9 @@ module internal HandlersScaffold =
         // ADR-0063 / FS.GG.SDD#623: re-derived (pure) from the same plan TICK A emitted the owner-skill
         // writes from, so the summary's materialized set and the fail-closed diagnostics agree with
         // what was written and recorded under `gameSkillPaths` in provenance.
-        let ownerParameters = AudioSkills.ownerPredicateParameters descriptor.TemplateId effective
+        let ownerParameters =
+            AudioSkills.ownerPredicateParameters descriptor.TemplateId effective
+
         let gameSkillOutcome = plannedGameSkillOutcome producedPaths ownerParameters
 
         // ADR-0063 third instance / FS.GG.SDD#864: re-derived (pure) from the same plan TICK A
@@ -1406,13 +1412,17 @@ module internal HandlersScaffold =
         // kept paths — so the summary, the diagnostics and `renderingSkillPaths` in provenance all
         // describe one plan.
         let renderingSkillOutcome =
-            plannedRenderingSkillOutcome producedPaths ownerParameters (gameSkillOutcome.ProvenancePaths |> List.map fst)
+            plannedRenderingSkillOutcome
+                producedPaths
+                ownerParameters
+                (gameSkillOutcome.ProvenancePaths |> List.map fst)
 
         let audioSkillOutcome =
             plannedAudioSkillOutcome
                 producedPaths
                 ownerParameters
-                ((gameSkillOutcome.ProvenancePaths @ renderingSkillOutcome.ProvenancePaths) |> List.map fst)
+                ((gameSkillOutcome.ProvenancePaths @ renderingSkillOutcome.ProvenancePaths)
+                 |> List.map fst)
 
         let summary: ScaffoldSummary =
             { ProviderName = Some descriptor.Name
@@ -1427,9 +1437,9 @@ module internal HandlersScaffold =
               MaterializedDriverPaths = driverOutcome.ProvenancePaths |> List.map fst |> List.sort
               MaterializedGameSkillPaths = gameSkillOutcome.ProvenancePaths |> List.map fst |> List.sort
               MaterializedRenderingSkillPaths =
-                  (renderingSkillOutcome.ProvenancePaths @ audioSkillOutcome.ProvenancePaths)
-                  |> List.map fst
-                  |> List.sort
+                (renderingSkillOutcome.ProvenancePaths @ audioSkillOutcome.ProvenancePaths)
+                |> List.map fst
+                |> List.sort
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = repoInitOutcome
               ToolManifestOutcome = toolManifestOutcome
@@ -1722,7 +1732,9 @@ module internal HandlersScaffold =
                 // embedded-bytes plan as the driver, gated by the effective scaffold parameters, its
                 // content-verified paths recorded in provenance under `gameSkillPaths`. Emitted in
                 // this same batch so they are interpreted before finalize (TICK C).
-                let ownerParameters = AudioSkills.ownerPredicateParameters descriptor.TemplateId effective
+                let ownerParameters =
+                    AudioSkills.ownerPredicateParameters descriptor.TemplateId effective
+
                 let gameSkillOutcome = plannedGameSkillOutcome producedPaths ownerParameters
 
                 // ADR-0063 third instance / FS.GG.SDD#864: the FOURTH channel — the same
@@ -1739,7 +1751,8 @@ module internal HandlersScaffold =
                     plannedAudioSkillOutcome
                         producedPaths
                         ownerParameters
-                        ((gameSkillOutcome.ProvenancePaths @ renderingSkillOutcome.ProvenancePaths) |> List.map fst)
+                        ((gameSkillOutcome.ProvenancePaths @ renderingSkillOutcome.ProvenancePaths)
+                         |> List.map fst)
 
                 // ADR-0063 tail / skill-union coherence: fold the driver + owner-sourced skills we
                 // just materialized into the provider-shipped product `skill-manifest.json`, so the

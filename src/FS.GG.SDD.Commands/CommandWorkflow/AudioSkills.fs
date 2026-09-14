@@ -14,6 +14,7 @@ module internal AudioSkills =
     // from the durable template reference instead of trusting an arbitrary forwarded parameter.
     let templatePredicateValue (templateRef: string) =
         let prefix = "fs-gg-"
+
         if templateRef.StartsWith(prefix, System.StringComparison.Ordinal) then
             templateRef.Substring(prefix.Length)
         else
@@ -24,6 +25,7 @@ module internal AudioSkills =
 
     let private tryLoadBytes name =
         let assembly = Assembly.GetExecutingAssembly()
+
         match assembly.GetManifestResourceStream(name) with
         | null -> None
         | stream ->
@@ -38,18 +40,23 @@ module internal AudioSkills =
 
     let embeddedFiles () =
         let assembly = Assembly.GetExecutingAssembly()
+
         assembly.GetManifestResourceNames()
         |> Array.choose (fun name ->
             let normalized = name.Replace('\\', '/')
+
             if normalized.StartsWith(skillResourcePrefix, System.StringComparison.Ordinal) then
                 let rest = normalized.Substring(skillResourcePrefix.Length)
                 let separator = rest.IndexOf('/')
-                if separator <= 0 || separator = rest.Length - 1 then None
+
+                if separator <= 0 || separator = rest.Length - 1 then
+                    None
                 else
                     let id = rest.Substring(0, separator)
                     let path = rest.Substring(separator + 1)
                     tryLoadBytes name |> Option.map (fun bytes -> (id, path), bytes)
-            else None)
+            else
+                None)
         |> Map.ofArray
 
     let plan parameters =

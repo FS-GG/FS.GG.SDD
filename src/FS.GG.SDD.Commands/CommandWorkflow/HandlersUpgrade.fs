@@ -88,10 +88,12 @@ module internal HandlersUpgrade =
                 )
 
             let driver = DriverSkills.plan presentIds
+
             let ownerParameters =
                 record.EffectiveParameters
                 |> Map.ofList
                 |> AudioSkills.ownerPredicateParameters record.TemplateRef
+
             let product = GameSkills.plan ownerParameters
             let audio = AudioSkills.plan ownerParameters
             let affectedSkillIds = targets |> List.choose ownerSkillIdOfPath |> Set.ofList
@@ -196,10 +198,12 @@ module internal HandlersUpgrade =
                 )
 
             let driver = DriverSkills.plan presentIds
+
             let ownerParameters =
                 record.EffectiveParameters
                 |> Map.ofList
                 |> AudioSkills.ownerPredicateParameters record.TemplateRef
+
             let product = GameSkills.plan ownerParameters
             // FS.GG.SDD#864: the fourth channel, under the #798 invariant stated above — every
             // owner-sourced file this step writes leaves the run DECLARED in the record that governs
@@ -222,7 +226,9 @@ module internal HandlersUpgrade =
                 @ (driver.ProvenancePaths
                    |> List.filter (fun (path, _) -> targetSet.Contains path && ownerSkillIdOfPath path |> Option.isNone)
                    |> List.map (fun (path, sha256) ->
-                       { Path = path; Owner = ArtifactOwner.Driver; Sha256 = Some sha256 }
+                       { Path = path
+                         Owner = ArtifactOwner.Driver
+                         Sha256 = Some sha256 }
                        : ScaffoldProvenance.ScaffoldProducedPath))
 
             let newGameSkillPaths =
@@ -236,7 +242,9 @@ module internal HandlersUpgrade =
                 |> ownerBackfillRows ArtifactOwner.RenderingSkill affectedSkillIds
 
             let earlierOwnedPaths =
-                (product.ProvenancePaths @ rendering.ProvenancePaths) |> List.map fst |> Set.ofList
+                (product.ProvenancePaths @ rendering.ProvenancePaths)
+                |> List.map fst
+                |> Set.ofList
 
             let newAudioSkillPaths =
                 audio.ProvenancePaths

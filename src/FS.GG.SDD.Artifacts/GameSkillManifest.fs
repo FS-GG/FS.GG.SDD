@@ -126,6 +126,4 @@ module ProductPredicate =
             if clauses |> List.collect id |> List.exists Option.isNone then
                 None
             else
-                clauses
-                |> List.exists (List.forall (fun result -> result = Some true))
-                |> Some
+                clauses |> List.exists (List.forall (fun result -> result = Some true)) |> Some

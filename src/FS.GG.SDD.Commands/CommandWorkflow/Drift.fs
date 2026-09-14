@@ -194,10 +194,12 @@ module internal Drift =
             Set.ofList (SeededSkills.skillNames @ (productSkillEntries (Some record) |> List.map fst))
 
         let driver = DriverSkills.plan presentIds
+
         let ownerParameters =
             record.EffectiveParameters
             |> Map.ofList
             |> AudioSkills.ownerPredicateParameters record.TemplateRef
+
         let product = GameSkills.plan ownerParameters
 
         // ADR-0063 third instance / FS.GG.SDD#864 — this is acceptance 5's answer, made TRUE rather

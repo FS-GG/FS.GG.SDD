@@ -113,7 +113,9 @@ module DriverSkillsTests =
                   "work-roadmap" ],
             writtenPaths |> List.except workspacePaths
         )
-        for path in workspacePaths do Assert.Contains(path, writtenPaths)
+
+        for path in workspacePaths do
+            Assert.Contains(path, writtenPaths)
 
     [<Theory>]
     [<InlineData("drive-board")>]
@@ -138,16 +140,23 @@ module DriverSkillsTests =
     [<Fact>]
     let ``the closed workspace payload installs its exact paths and executable declarations`` () =
         let outcome = DriverSkills.plan Set.empty
+
         let written =
             outcome.Writes
-            |> List.choose (function | WriteFile(path, _, AgentGuidanceTarget) -> Some path | _ -> None)
+            |> List.choose (function
+                | WriteFile(path, _, AgentGuidanceTarget) -> Some path
+                | _ -> None)
 
         for path in workspacePaths do
             Assert.Contains(path, written)
             Assert.Contains(path, outcome.ProvenancePaths |> List.map fst)
 
         let executables =
-            outcome.Writes |> List.choose (function | SetExecutable path -> Some path | _ -> None)
+            outcome.Writes
+            |> List.choose (function
+                | SetExecutable path -> Some path
+                | _ -> None)
+
         Assert.Contains("scripts/check-claim-generation.py", executables)
         Assert.Contains("tools/routine-delivery.py", executables)
         Assert.DoesNotContain(".fsgg/routine-development.json", executables)
@@ -155,12 +164,15 @@ module DriverSkillsTests =
     [<Fact>]
     let ``workspace transport refuses malformed escaping duplicate extra and corrupt inputs`` () =
         let body = Encoding.UTF8.GetBytes "ok\n"
+
         let digest =
             SHA256.HashData body
             |> Convert.ToHexString
             |> fun value -> value.ToLowerInvariant()
+
         let manifest path sha =
-            Some $"""{{"schema":"fsgg/driver-workspace-files/v1","files":[{{"path":"{path}","sha256":"{sha}","executable":false}}]}}"""
+            Some
+                $"""{{"schema":"fsgg/driver-workspace-files/v1","files":[{{"path":"{path}","sha256":"{sha}","executable":false}}]}}"""
 
         let assertRefused candidate files =
             match DriverSkills.planWorkspaceFrom candidate files with
@@ -172,8 +184,10 @@ module DriverSkillsTests =
         assertRefused (manifest "../escape" digest) (Map.ofList [ "../escape", body ])
         assertRefused (manifest "tools/run.py" (String.replicate 64 "0")) (Map.ofList [ "tools/run.py", body ])
         assertRefused (manifest "tools/run.py" digest) (Map.ofList [ "tools/run.py", body; "extra", body ])
+
         assertRefused
-            (Some $"""{{"schema":"fsgg/driver-workspace-files/v1","files":[{{"path":"tools/run.py","sha256":"{digest}","executable":false}},{{"path":"tools/run.py","sha256":"{digest}","executable":false}}]}}""")
+            (Some
+                $"""{{"schema":"fsgg/driver-workspace-files/v1","files":[{{"path":"tools/run.py","sha256":"{digest}","executable":false}},{{"path":"tools/run.py","sha256":"{digest}","executable":false}}]}}""")
             (Map.ofList [ "tools/run.py", body ])
 
     // ---------- the content-addressed drift guard (FR-008) ----------
@@ -530,6 +544,7 @@ module DriverSkillsTests =
             writtenPaths |> List.except workspacePaths
         )
 
-        for path in workspacePaths do Assert.Contains(path, writtenPaths)
+        for path in workspacePaths do
+            Assert.Contains(path, writtenPaths)
 
         Assert.True(outcome.Writes |> List.length >= 26 + workspacePaths.Length)
