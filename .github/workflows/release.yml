@@ -584,6 +584,7 @@ jobs:
           Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
           Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
           Q2_JUNIT_OUT: artifacts/feed-readback/quint-q2-public.junit.xml
+          Q2_EXACT_IR_JUNIT_OUT: artifacts/feed-readback/quint-q2-exact-ir-public.junit.xml
           Q3_JUNIT_OUT: artifacts/feed-readback/quint-q3-public.junit.xml
           Q3_TOOLCHAIN_OUT: artifacts/feed-readback/quint-q3-toolchain.json
         run: |

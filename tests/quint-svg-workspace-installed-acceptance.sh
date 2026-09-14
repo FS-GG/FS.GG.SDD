@@ -6,7 +6,6 @@ repo_root="$(git rev-parse --show-toplevel)"
 : "${QUINT_BIN:?preseed exact Quint 0.32.0 binary in QUINT_BIN}"
 : "${LMT_BIN:?preseed exact lmt binary in LMT_BIN}"
 : "${FABLE_BIN:?preseed exact Fable 5.13.0 executable in FABLE_BIN}"
-: "${Q3_PACKAGE_SOURCE:?public package source is required}"
 
 fail() { printf 'SVG-WORKSPACE-QUINT-REFUSAL: %s\n' "$*" >&2; exit 1; }
 sha() { sha256sum "$1" | cut -d' ' -f1; }
@@ -21,9 +20,23 @@ version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' "$repo_root/Director
 if [[ "${SVG_WORKSPACE_OFFLINE_STAGE:-0}" != '1' ]]; then
   scratch="$(mktemp -d /tmp/fsgg-svg-workspace-quint.XXXXXX)"
   trap 'rm -rf -- "$scratch"' EXIT
+  if [[ -n "${Q3_PACKAGE_SOURCE:-}" ]]; then
+    package_source="$Q3_PACKAGE_SOURCE"
+    package_origin='public-package'
+  else
+    package_source="$scratch/feed"
+    package_origin='candidate-package'
+    mkdir -p "$package_source"
+    for project in FS.GG.Contracts FS.GG.SDD.Artifacts FS.GG.SDD.Commands FS.GG.SDD.Validation FS.GG.SDD.Cli; do
+      dotnet pack "$repo_root/src/$project/$project.fsproj" -c Release -o "$package_source" >/dev/null
+    done
+    provisioning_packages="$scratch/provisioning-packages"
+    NUGET_PACKAGES="$provisioning_packages" dotnet restore "$repo_root/src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj" --no-http-cache >/dev/null
+    find "$provisioning_packages" -type f -name '*.nupkg' -exec cp -f '{}' "$package_source/" \;
+  fi
   printf '%s\n' \
     '<?xml version="1.0" encoding="utf-8"?>' \
-    '<configuration><packageSources><clear /><add key="public" value="'"$Q3_PACKAGE_SOURCE"'" /></packageSources></configuration>' \
+    '<configuration><packageSources><clear /><add key="qualified" value="'"$package_source"'" /></packageSources></configuration>' \
     >"$scratch/NuGet.Config"
   export NUGET_PACKAGES="$scratch/packages"
   export NUGET_HTTP_CACHE_PATH="$scratch/http-cache"
@@ -50,16 +63,19 @@ if [[ "${SVG_WORKSPACE_OFFLINE_STAGE:-0}" != '1' ]]; then
     QUINT_BIN="$QUINT_BIN"
     LMT_BIN="$LMT_BIN"
     FABLE_BIN="$FABLE_BIN"
-    Q3_PACKAGE_SOURCE="$Q3_PACKAGE_SOURCE"
+    Q3_PACKAGE_SOURCE="$package_source"
     Q2_JUNIT_OUT="${Q2_JUNIT_OUT:-}"
+    Q2_EXACT_IR_JUNIT_OUT="${Q2_EXACT_IR_JUNIT_OUT:-}"
     Q3_JUNIT_OUT="${Q3_JUNIT_OUT:-}"
     Q3_TOOLCHAIN_OUT="${Q3_TOOLCHAIN_OUT:-}"
+    SVG_WORKSPACE_PACKAGE_ORIGIN="$package_origin"
   )
 
   if [[ "${SVG_WORKSPACE_SKIP_UNSHARE:-0}" == '1' ]]; then
-    env "${offline_env[@]}" bash "$0"
+    env "${offline_env[@]}" SVG_WORKSPACE_NAMESPACE_ISOLATED=0 bash "$0"
   else
-    /usr/bin/unshare --user --map-root-user --net -- env "${offline_env[@]}" bash "$0"
+    /usr/bin/unshare --user --map-root-user --net -- env "${offline_env[@]}" \
+      SVG_WORKSPACE_NAMESPACE_ISOLATED=1 bash "$0"
   fi
   exit $?
 fi
@@ -68,6 +84,7 @@ scratch="${SVG_WORKSPACE_SCRATCH:?offline scratch root is required}"
 trap 'rm -rf -- "$scratch"' EXIT
 cli="$scratch/tool/fsgg-sdd"
 [[ -x "$cli" ]] || fail 'public CLI was not installed before network isolation'
+package_origin="${SVG_WORKSPACE_PACKAGE_ORIGIN:?package origin is required}"
 
 profile1="$scratch/profile1"
 "$cli" typed-sdd author --root "$profile1" --work legacy --title Legacy \
@@ -141,6 +158,25 @@ for extraction in a b; do
 done
 cmp "$scratch/extraction-a/$general_fixture/cooperative.qnt" "$scratch/extraction-b/$general_fixture/cooperative.qnt" >/dev/null || fail 'neutral lmt extractions differ'
 cmp "$scratch/extraction-a/cooperative.typed.json" "$scratch/extraction-b/cooperative.typed.json" >/dev/null || fail 'neutral Quint typecheck observations differ'
+
+# Retain the package-only exact-IR boundary over the neutral requirements and coordination
+# compiler slices. The adapter script independently applies all 17 malformed-IR mutations.
+ir_root="$scratch/exact-ir"
+mkdir -p "$ir_root"
+cp "$repo_root/docs/experiments/quint-q1/slices/requirements-and-evidence.md" "$ir_root/"
+cp "$repo_root/docs/experiments/quint-q1/slices/coordination-process.md" "$ir_root/"
+(cd "$ir_root" && "$LMT_BIN" requirements-and-evidence.md coordination-process.md)
+for module in requirements.qnt coordination.qnt; do
+  "$QUINT_BIN" typecheck --out="$ir_root/$module.typed.json" "$ir_root/$module"
+done
+artifact_assembly="$(find "$scratch/tool" -name FS.GG.SDD.Artifacts.dll -print -quit)"
+[[ -f "$artifact_assembly" ]] || fail 'installed Artifacts assembly is absent'
+dotnet fsi --reference:"$artifact_assembly" --exec \
+  "$repo_root/tests/FS.GG.SDD.Artifacts.Tests/QuintExactIrAdapterTests.fsx" \
+  "$ir_root/requirements.qnt.typed.json" \
+  >"$scratch/exact-ir.log"
+grep -F 'Exact Quint 0.32.0 Q1 IR corpus and 17 fail-closed mutations passed.' \
+  "$scratch/exact-ir.log" >/dev/null || fail 'exact IR mutation corpus did not pass'
 
 for run in a b; do
   root="$scratch/author-$run"
@@ -298,11 +334,13 @@ set -e
 find "$migration" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/v1.after"
 cmp "$scratch/v1.before" "$scratch/v1.after" >/dev/null || fail 'rollback did not restore exact v1 bytes'
 
+[[ "${SVG_WORKSPACE_NAMESPACE_ISOLATED:-0}" == '1' ]] \
+  || fail 'offline acceptance requires a real user and network namespace'
 mkdir -p "$(dirname "${Q2_JUNIT_OUT:-$scratch/q2.xml}")" "$(dirname "${Q3_JUNIT_OUT:-$scratch/q3.xml}")"
 cat >"${Q2_JUNIT_OUT:-$scratch/q2.xml}" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ2" tests="13" failures="0">
-  <testcase classname="SvgWorkspaceQuintQ2" name="public-package-installed-before-isolation" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="PACKAGE_ORIGIN-installed-before-isolation" />
   <testcase classname="SvgWorkspaceQuintQ2" name="real-network-namespace-isolation" />
   <testcase classname="SvgWorkspaceQuintQ2" name="exact-content-addressed-tools" />
   <testcase classname="SvgWorkspaceQuintQ2" name="neutral-model-lmt-extraction" />
@@ -315,6 +353,32 @@ cat >"${Q2_JUNIT_OUT:-$scratch/q2.xml}" <<'EOF'
   <testcase classname="SvgWorkspaceQuintQ2" name="dotnet-fable-parity" />
   <testcase classname="SvgWorkspaceQuintQ2" name="fable-independent-mutation" />
   <testcase classname="SvgWorkspaceQuintQ2" name="contract-digest-closure" />
+</testsuite>
+EOF
+sed -i "s/PACKAGE_ORIGIN/$package_origin/" "${Q2_JUNIT_OUT:-$scratch/q2.xml}"
+cat >"${Q2_EXACT_IR_JUNIT_OUT:-$scratch/q2-exact-ir.xml}" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ2ExactIr" tests="20" failures="0">
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="requirements-exact-quint-0.32-ir" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="coordination-exact-quint-0.32-typecheck" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="17-fail-closed-ir-mutations" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-profile-version" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-missing-profile-version" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-profile-identity" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-missing-source-binding" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-unknown-root-field" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-wrong-stage" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-compiler-warning" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-catalogue-opcode" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-expression-kind" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-property-kind" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-typedef-field" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-unsupported-choreo" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-empty-tables" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-type-effect-mismatch" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-catalogue-evidence" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-wrong-type-relation" />
+  <testcase classname="SvgWorkspaceQuintQ2ExactIr" name="mutation-hidden-init-semantics" />
 </testsuite>
 EOF
 cat >"${Q3_JUNIT_OUT:-$scratch/q3.xml}" <<'EOF'
@@ -350,4 +414,5 @@ if [[ -n "${Q3_TOOLCHAIN_OUT:-}" ]]; then
   printf '%s\n' '{"schema":"fsgg.svg-workspace.quint-toolchain/v1","profile":"fsgg-quint-profile/2","platform":"linux/amd64","quintSha256":"939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f","lmtSha256":"37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"}' >"$Q3_TOOLCHAIN_OUT"
 fi
 
-printf 'SVG-WORKSPACE-QUINT-ACCEPTED: public=%s profile2=author-inspect-parity migration=rollback-exact profile1=retained\n' "$version"
+printf 'SVG-WORKSPACE-QUINT-ACCEPTED: package=%s version=%s profile2=author-inspect-parity migration=rollback-exact profile1=retained exact-ir=17-refusals\n' \
+  "$package_origin" "$version"

@@ -96,7 +96,10 @@ module ReleaseWorkflowContractTests =
         Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"13\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"20\" failures=\"0\"", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"22\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("17 fail-closed mutations passed", svgWorkspaceQuintAcceptance)
+        Assert.Contains("offline acceptance requires a real user and network namespace", svgWorkspaceQuintAcceptance)
         Assert.Contains("FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE", svgWorkspaceQuintAcceptance)
         Assert.Contains("replacement-rollback-decision-lock", svgWorkspaceQuintAcceptance)
         Assert.Contains("quint-q3-public.junit.xml", publish)
@@ -104,6 +107,10 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("for attempt in $(seq 1 40)", publish)
         Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", gateWorkflow)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", gateWorkflow)
+        Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", gateWorkflow)
+        Assert.Contains("Q2_EXACT_IR_JUNIT_OUT", gateWorkflow)
+        Assert.DoesNotContain("bash tests/quint-q2-compiler-acceptance.sh", gateWorkflow)
+        Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", gateWorkflow)
 
         let orgFeed =
             publish.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)

@@ -252,12 +252,11 @@ jobs:
       - name: Working tree stayed clean (the suite must not dirty it)
         run: bash scripts/check-tree-clean.sh --label "scripts/test.sh --no-build -c Debug (full tier)"
 
-      # Q2's public compiler is accepted from the package a consumer will install, against the
-      # three exact Q1 literate slices. Tool acquisition is an explicit provisioning phase; the
-      # acceptance script then poisons network proxy settings and accepts only the content-addressed
-      # Quint/lmt objects plus pinned Fable. It runs extraction and typecheck in two isolated roots,
-      # compares every result byte-for-byte, and executes generated bindings under both .NET and
-      # Fable/Node. Keeping this in the existing required `gate` job makes the check merge-enforcing.
+      # The package-only compiler and Typed SDD receiver are qualified with owner-neutral models.
+      # Tool acquisition is explicit; the acceptance script installs the candidate, then runs every
+      # provision/author/inspect/recovery/migration operation in the qualified network namespace.
+      # Two isolated extractions and typechecks must agree byte-for-byte, and the general contract
+      # projection executes under both .NET and Fable/Node. This required job remains merge-enforcing.
       - name: Set up exact Go toolchain for the Q1 lmt object
         uses: actions/setup-go@v5
         with:
@@ -289,15 +288,6 @@ jobs:
             "$RUNNER_TEMP/quint-q2-tools/lmt" | sha256sum --check --strict
           dotnet tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-q2-tools/fable"
 
-      - name: Exact package-only Quint compiler acceptance
-        env:
-          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
-          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
-          FABLE_BIN: ${{ runner.temp }}/quint-q2-tools/fable/fable
-          Q2_JUNIT_OUT: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
-          Q2_EXACT_IR_JUNIT_OUT: artifacts/test-results/quint-q2-exact-ir.junit.xml
-        run: bash tests/quint-q2-compiler-acceptance.sh
-
       - name: Qualify the Linux user and network namespace sandbox
         run: |
           set -euo pipefail
@@ -306,16 +296,16 @@ jobs:
           fi
           /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
 
-      - name: Exact package-only Quint Typed SDD v2 acceptance
+      - name: Exact package-only neutral Quint compiler and Typed SDD v2 acceptance
         env:
           QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
           LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
           FABLE_BIN: ${{ runner.temp }}/quint-q2-tools/fable/fable
-          Q3_SKIP_Q2: "1"
-          Q2_JUNIT_IN: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
+          Q2_JUNIT_OUT: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
+          Q2_EXACT_IR_JUNIT_OUT: artifacts/test-results/quint-q2-exact-ir.junit.xml
           Q3_JUNIT_OUT: artifacts/test-results/quint-q3-typed-sdd-acceptance.junit.xml
           Q3_TOOLCHAIN_OUT: artifacts/test-results/quint-q3-toolchain.json
-        run: bash tests/quint-q3-typed-sdd-acceptance.sh
+        run: bash tests/quint-svg-workspace-installed-acceptance.sh
 
       - name: Upload exact Q2/Q3 Quint acceptance reports (JUnit)
         uses: actions/upload-artifact@v4
