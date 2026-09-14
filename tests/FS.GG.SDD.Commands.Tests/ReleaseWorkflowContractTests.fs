@@ -13,6 +13,10 @@ module ReleaseWorkflowContractTests =
         Path.Combine(TestSupport.repoRoot, ".github", "workflows", "gate.yml")
         |> File.ReadAllText
 
+    let private svgWorkspaceQuintAcceptance =
+        Path.Combine(TestSupport.repoRoot, "tests", "quint-svg-workspace-installed-acceptance.sh")
+        |> File.ReadAllText
+
     let private contract =
         Path.Combine(TestSupport.repoRoot, "specs", "044-publish-cli-tool", "contracts", "release-workflow.md")
         |> File.ReadAllText
@@ -90,6 +94,11 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", publish)
         Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", publish)
         Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
+        Assert.Contains("/usr/bin/unshare --user --map-root-user --net", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"13\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"22\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE", svgWorkspaceQuintAcceptance)
+        Assert.Contains("replacement-rollback-decision-lock", svgWorkspaceQuintAcceptance)
         Assert.Contains("quint-q3-public.junit.xml", publish)
         Assert.Contains("artifacts/feed-readback/*.nupkg", publish)
         Assert.Contains("for attempt in $(seq 1 40)", publish)

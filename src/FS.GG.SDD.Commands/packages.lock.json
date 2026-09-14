@@ -12,7 +12,7 @@
         "type": "Direct",
         "requested": "[0.89.0, )",
         "resolved": "0.89.0",
-        "contentHash": "T+QqDcL8KvxYqmOGIuiAmGeUMox/6ldK8j3NicPwWRiXoHDAEYePt9iqXhg6doxrLJPkAYIh8+iuZfvuKpFFTQ=="
+        "contentHash": "9/9Q/gS0E+c3N+ARuJ5PfxcGKMbHeK1vK/QnoigkFujQslfpB1TnRuqhgzS2pi+qOBIYjWD8Uu8YCr15+vXrsw=="
       },
       "FS.GG.Game.Skills": {
         "type": "Direct",
@@ -24,7 +24,7 @@
         "type": "Direct",
         "requested": "[0.2.0, )",
         "resolved": "0.2.0",
-        "contentHash": "COMxzeNTqFNK7u25z4pjhj4MfPFZfJwhtW092X8/7ehO52BncdwDqF5u7/oJGOuN/Gb4KaKl1ZvklixlQdECig=="
+        "contentHash": "VA1vB24HV1vGjjx8ySqZs7gZXVbEKdAsLglnCEhO/LyjN5Vi8gf/R+vE+R5wGxzGG6q6LUv55hDjT4th0WSvoQ=="
       },
       "FSharp.Core": {
         "type": "Direct",
