@@ -384,7 +384,7 @@ EOF
 cat >"${Q3_JUNIT_OUT:-$scratch/q3.xml}" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ3" tests="22" failures="0">
-  <testcase classname="SvgWorkspaceQuintQ3" name="fresh-cache-offline-tool-install" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="fresh-cache-install-before-isolation" />
   <testcase classname="SvgWorkspaceQuintQ3" name="installed-staged-provisioning" />
   <testcase classname="SvgWorkspaceQuintQ3" name="wrong-tool-refusal" />
   <testcase classname="SvgWorkspaceQuintQ3" name="wrong-profile-refusal" />
