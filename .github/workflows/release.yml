@@ -576,7 +576,7 @@ jobs:
             "$RUNNER_TEMP/quint-release-tools/lmt" | sha256sum --check --strict
           dotnet tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-release-tools/fable"
 
-      - name: Rerun Q2 proof and Q3 lifecycle from the public CLI package
+      - name: Qualify neutral Q2 and Q3 receiver boundaries from the public CLI package
         env:
           QUINT_BIN: ${{ runner.temp }}/quint-release-tools/quint
           LMT_BIN: ${{ runner.temp }}/quint-release-tools/lmt
@@ -592,7 +592,7 @@ jobs:
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
           /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
-          bash tests/quint-q3-typed-sdd-acceptance.sh
+          bash tests/quint-svg-workspace-installed-acceptance.sh
 
       - name: Upload durable dual-feed receipt
         uses: actions/upload-artifact@v4
