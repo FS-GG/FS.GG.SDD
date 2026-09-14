@@ -58,6 +58,10 @@ FS.GG.SDD.Artifacts.Diagnostics.missingChecklistBackReference
 FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel
 FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
 FS.GG.SDD.Artifacts.Diagnostics.requirementNotTyped
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldAudioSkillManifestMalformed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldAudioSkillNamespaceCollision
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldAudioSkillPredicateUnevaluated
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldAudioSkillVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverManifestMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverNamespaceCollision
@@ -66,6 +70,7 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillManifestMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillNamespaceCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillPredicateUnevaluated
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldOwnerSkillCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldInvalidParamKey
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed

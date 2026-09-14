@@ -61,6 +61,7 @@
     <Compile Include="DriverSkillsTests.fs" />
     <Compile Include="GameSkillsTests.fs" />
     <Compile Include="RenderingSkillsTests.fs" />
+    <Compile Include="AudioSkillsTests.fs" />
     <Compile Include="ProcessSkillManifestTests.fs" />
     <Compile Include="HelpCommandTests.fs" />
     <Compile Include="NextActionRoutingTests.fs" />

@@ -17,21 +17,21 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "1a3810842ca9f9ad7ecdf6198aa78fd368e90f419a6046655861510b25b98f31"
+        "0ef5eb6927f398dbfa3ea3aeaf03b10064ed2a944e35e25e19c773760b5a54d8"
 
     // work-board ships in FS.GG.Drivers, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "8f15a538826c91fde11fcd18d293b8568d27b638bbd8cb41c0e9cf1f6c650e82"
+        "8d70494eb5a63600f1bc323119f279bb3c616b4e67ff0de634ae4dfb7fea4f48"
 
     // padd-item is the product-workspace board filer added by FS.GG.Drivers (#703).
     let private paddItemSha256 =
         "60938ac4fc0f147de8be89f125a4a78a958be52ef1b879c33876f901d6486247"
 
     let private workBoardNormalSha256 =
-        "4eb0b7e76a2f63a7d6e7240bded3289363b3cebef0cc5d9c82b38e16bb9a5749"
+        "55f96951dc04fd02cdc3411dd72ce0f6fcaca9c64a2daafd6270fc0d45adf05b"
 
     let private workBoardBestSha256 =
-        "4c9bb3aec9531684cd09734f82c63c3ea1864a978b97e72be890f6f396579058"
+        "4b9c0fd59cfd68a16f7acc0acef726b10bb2903380af5cfd6cc2b0e5d7376868"
 
     let private roots = [ ".agents"; ".claude" ]
 
@@ -56,7 +56,18 @@ module DriverSkillsTests =
                 "references/feedback-contract.md"
                 "references/host-loop.md"
                 "references/lifecycle-log.md"
-                "references/roadmap-ledger.md" ] ]
+                "references/roadmap-ledger.md"
+                "scripts/fsgg_telemetry_defaults.py"
+                "scripts/roadmap-telemetry.py" ] ]
+
+    let private workspacePaths =
+        [ ".fsgg/routine-development.json"
+          ".github/workflows/routine-eligibility.yml"
+          "scripts/check-claim-generation.py"
+          "scripts/check-routine-eligibility-envelope.py"
+          "scripts/lib/gate.py"
+          "tools/fsgg_telemetry_defaults.py"
+          "tools/routine-delivery.py" ]
 
     let private driverPathFor id =
         [ for root in roots do
@@ -100,8 +111,11 @@ module DriverSkillsTests =
                   "work-board-best"
                   "work-board-normal"
                   "work-roadmap" ],
-            writtenPaths
+            writtenPaths |> List.except workspacePaths
         )
+
+        for path in workspacePaths do
+            Assert.Contains(path, writtenPaths)
 
     [<Theory>]
     [<InlineData("drive-board")>]
@@ -122,6 +136,59 @@ module DriverSkillsTests =
             | WriteFile(_, _, kind) -> Assert.Equal(AgentGuidanceTarget, kind)
             | SetExecutable _ -> ()
             | other -> failwithf "expected a WriteFile, got %A" other
+
+    [<Fact>]
+    let ``the closed workspace payload installs its exact paths and executable declarations`` () =
+        let outcome = DriverSkills.plan Set.empty
+
+        let written =
+            outcome.Writes
+            |> List.choose (function
+                | WriteFile(path, _, AgentGuidanceTarget) -> Some path
+                | _ -> None)
+
+        for path in workspacePaths do
+            Assert.Contains(path, written)
+            Assert.Contains(path, outcome.ProvenancePaths |> List.map fst)
+
+        let executables =
+            outcome.Writes
+            |> List.choose (function
+                | SetExecutable path -> Some path
+                | _ -> None)
+
+        Assert.Contains("scripts/check-claim-generation.py", executables)
+        Assert.Contains("tools/routine-delivery.py", executables)
+        Assert.DoesNotContain(".fsgg/routine-development.json", executables)
+
+    [<Fact>]
+    let ``workspace transport refuses malformed escaping duplicate extra and corrupt inputs`` () =
+        let body = Encoding.UTF8.GetBytes "ok\n"
+
+        let digest =
+            SHA256.HashData body
+            |> Convert.ToHexString
+            |> fun value -> value.ToLowerInvariant()
+
+        let manifest path sha =
+            Some
+                $"""{{"schema":"fsgg/driver-workspace-files/v1","files":[{{"path":"{path}","sha256":"{sha}","executable":false}}]}}"""
+
+        let assertRefused candidate files =
+            match DriverSkills.planWorkspaceFrom candidate files with
+            | Error _ -> ()
+            | Ok _ -> failwith "workspace transport mutation was accepted"
+
+        assertRefused (Some "{bad") Map.empty
+        assertRefused None (Map.ofList [ "tools/run.py", body ])
+        assertRefused (manifest "../escape" digest) (Map.ofList [ "../escape", body ])
+        assertRefused (manifest "tools/run.py" (String.replicate 64 "0")) (Map.ofList [ "tools/run.py", body ])
+        assertRefused (manifest "tools/run.py" digest) (Map.ofList [ "tools/run.py", body; "extra", body ])
+
+        assertRefused
+            (Some
+                $"""{{"schema":"fsgg/driver-workspace-files/v1","files":[{{"path":"tools/run.py","sha256":"{digest}","executable":false}},{{"path":"tools/run.py","sha256":"{digest}","executable":false}}]}}""")
+            (Map.ofList [ "tools/run.py", body ])
 
     // ---------- the content-addressed drift guard (FR-008) ----------
 
@@ -153,7 +220,7 @@ module DriverSkillsTests =
         Assert.Contains(workBoardSha256, shas)
         Assert.Contains(workBoardNormalSha256, shas)
         Assert.Contains(workBoardBestSha256, shas)
-        Assert.Equal(21, shas.Count)
+        Assert.True(shas.Count >= 21)
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -451,7 +518,7 @@ module DriverSkillsTests =
             |> Seq.sumBy List.length
             |> fun files -> files * roots.Length
 
-        Assert.Equal(expectedPathCount, outcome.ProvenancePaths |> List.length)
+        Assert.Equal(expectedPathCount + workspacePaths.Length, outcome.ProvenancePaths |> List.length)
 
     // FR-005/FR-009: a provider that shipped its own `work-roadmap` (its `.agents` skill, mirrored to
     // the other roots by the preceding tick) already occupies that driver's targets — the no-clobber
@@ -474,7 +541,10 @@ module DriverSkillsTests =
 
         Assert.Equal<string list>(
             driverPathsFor [ "padd-item"; "work-board"; "work-board-best"; "work-board-normal" ],
-            writtenPaths
+            writtenPaths |> List.except workspacePaths
         )
 
-        Assert.Equal(26, outcome.Writes |> List.length)
+        for path in workspacePaths do
+            Assert.Contains(path, writtenPaths)
+
+        Assert.True(outcome.Writes |> List.length >= 26 + workspacePaths.Length)

@@ -24,6 +24,7 @@
     <Compile Include="CommandWorkflow/DriverSkills.fs" />
     <Compile Include="CommandWorkflow/GameSkills.fs" />
     <Compile Include="CommandWorkflow/RenderingSkills.fs" />
+    <Compile Include="CommandWorkflow/AudioSkills.fs" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fsi" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fs" />
     <Compile Include="CommandWorkflow/Drift.fs" />
@@ -93,6 +94,13 @@
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-typed-migrate/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-typed-migrate" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="$(FsggAudioSkillsContentDir)/skill-manifest.json" LogicalName="AudioSkill.manifest" />
+    <EmbeddedResource Include="$(FsggAudioSkillsContentDir)/skills/**/*">
+      <LogicalName>AudioSkill.skill/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <!-- 108 / ADR-0054 §Byte-transport: the delivered `FS.GG.Drivers` bytes — the
        `driver-skill-manifest.json` and every file below each `skills/<id>/` — linked from the pinned
        package's restored content ($(FsggDriversContentDir)) as embedded resources, so the
@@ -103,6 +111,10 @@
     <EmbeddedResource Include="$(FsggDriversContentDir)/driver-skill-manifest.json" LogicalName="Driver.manifest" />
     <EmbeddedResource Include="$(FsggDriversContentDir)/skills/**/*">
       <LogicalName>Driver.skill/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(FsggDriversWorkspaceContentDir)/workspace-files.json" LogicalName="Driver.workspace.manifest" />
+    <EmbeddedResource Include="$(FsggDriversWorkspaceContentDir)/files/**/*">
+      <LogicalName>Driver.workspace.file/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 
@@ -157,5 +169,6 @@
     <PackageReference Include="FS.GG.Drivers" GeneratePathProperty="true" />
     <PackageReference Include="FS.GG.Game.Skills" GeneratePathProperty="true" />
     <PackageReference Include="FS.GG.Rendering.Skills" GeneratePathProperty="true" />
+    <PackageReference Include="FS.GG.Audio.Skills" GeneratePathProperty="true" />
   </ItemGroup>
 </Project>

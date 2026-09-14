@@ -2,23 +2,29 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "FS.GG.Audio.Skills": {
+        "type": "Direct",
+        "requested": "[0.1.0, )",
+        "resolved": "0.1.0",
+        "contentHash": "y46khxa4cMAuQ1yYdQTDR+4yR9omo7ZkTkGIVAnrgZGY6xcVQ7JThVheBHkum6rQpqek3ftV/gCjU2sJNR7HEA=="
+      },
       "FS.GG.Drivers": {
         "type": "Direct",
-        "requested": "[0.87.0, )",
-        "resolved": "0.87.0",
-        "contentHash": "5dQGjQdZmfK7Ice/JCYwieulbdH7FfxsIwRrJTDa8UxmTBGWaky1kfoDeZGCJ4Qqapry5BFm0ju1hr82czKC/w=="
+        "requested": "[0.89.0, )",
+        "resolved": "0.89.0",
+        "contentHash": "9/9Q/gS0E+c3N+ARuJ5PfxcGKMbHeK1vK/QnoigkFujQslfpB1TnRuqhgzS2pi+qOBIYjWD8Uu8YCr15+vXrsw=="
       },
       "FS.GG.Game.Skills": {
         "type": "Direct",
-        "requested": "[0.7.0, )",
-        "resolved": "0.7.0",
-        "contentHash": "XxWHqYPxezfZcY7wXkUE3KGzl8dak7eViir0TRCouSVgSkBbVkD8/UxXLZUyGcsTaz5dMM/jBtbsAE6TqGJEhA=="
+        "requested": "[0.9.0, )",
+        "resolved": "0.9.0",
+        "contentHash": "qA3f2ypjVVoaNwmwvrBsJx4VFSx1tUZ3zqv+lAd2nNaWL4nA3dNor9rS449+hRBDFr+UAzZnPBzkyrUEUrn+qg=="
       },
       "FS.GG.Rendering.Skills": {
         "type": "Direct",
-        "requested": "[0.1.1, )",
-        "resolved": "0.1.1",
-        "contentHash": "0duVp0ny1TUtcuIbWDU1h8QfY00UFfZknIUuQ0qtDPSavz0bV6AZNlN4ISgvQCJe3qWBc7IAHH1mEd698ja5fQ=="
+        "requested": "[0.2.0, )",
+        "resolved": "0.2.0",
+        "contentHash": "VA1vB24HV1vGjjx8ySqZs7gZXVbEKdAsLglnCEhO/LyjN5Vi8gf/R+vE+R5wGxzGG6q6LUv55hDjT4th0WSvoQ=="
       },
       "FSharp.Core": {
         "type": "Direct",

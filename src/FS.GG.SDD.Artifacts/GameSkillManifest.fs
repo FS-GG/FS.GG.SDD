@@ -108,29 +108,22 @@ module ProductPredicate =
 
     let evaluate (predicate: string) (parameters: Map<string, string>) : bool option =
         let predicate = predicate.Trim()
-        let hasAnd = predicate.Contains(" and ")
-        let hasOr = predicate.Contains(" or ")
-
-        let combine (separator: string) (fold: bool option list -> bool option) =
-            let results =
-                predicate.Split([| separator |], StringSplitOptions.None)
-                |> Array.toList
-                |> List.map (evaluateAtom parameters)
-
-            if results |> List.exists Option.isNone then
-                None
-            else
-                fold results
 
         if String.IsNullOrWhiteSpace predicate then
             None
-        elif hasAnd && hasOr then
-            // Mixed connectives — precedence is ambiguous without parentheses; fail closed
-            // rather than guess (FR-004).
-            None
-        elif hasAnd then
-            combine " and " (fun rs -> Some(rs |> List.forall (fun r -> r = Some true)))
-        elif hasOr then
-            combine " or " (fun rs -> Some(rs |> List.exists (fun r -> r = Some true)))
         else
-            evaluateAtom parameters predicate
+            // ADR-0017's canonical predicate grammar uses ordinary boolean precedence: `and`
+            // binds within an `or` clause. Parsing it as disjunctive normal form keeps evaluation
+            // deterministic without adding parentheses or a second expression language.
+            let clauses =
+                predicate.Split([| " or " |], StringSplitOptions.None)
+                |> Array.toList
+                |> List.map (fun clause ->
+                    clause.Split([| " and " |], StringSplitOptions.None)
+                    |> Array.toList
+                    |> List.map (evaluateAtom parameters))
+
+            if clauses |> List.collect id |> List.exists Option.isNone then
+                None
+            else
+                clauses |> List.exists (List.forall (fun result -> result = Some true)) |> Some

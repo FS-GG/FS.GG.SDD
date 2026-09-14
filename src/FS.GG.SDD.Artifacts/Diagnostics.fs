@@ -637,6 +637,75 @@ module Diagnostics =
             [ message ]
         |> markToolDefect
 
+    // SVG-WORKSPACE-01.2: Audio is an independent owner/package channel.  Keep its failures
+    // distinguishable from Rendering so the operator is sent to the package that actually owns
+    // the malformed or mismatched bytes.
+    let scaffoldAudioSkillVerifyFailed (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.audioSkillVerifyFailed"
+            DiagnosticError
+            None
+            None
+            $"audio-owned skill(s) failed the content-addressed verify and were not materialized: {rendered}."
+            "The embedded audio-skills package bytes do not match their manifest sha256. Rebuild/republish the CLI from a coherent audio-skills package pin; the skill was not written or recorded as materialized."
+            ordered
+        |> markToolDefect
+
+    let scaffoldAudioSkillPredicateUnevaluated (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.audioSkillPredicateUnevaluated"
+            DiagnosticWarning
+            None
+            None
+            $"audio-owned skill(s) skipped because their `materializes-when` predicate was not evaluable by this CLI: {rendered}."
+            "Upgrade `fsgg-sdd` to a version that understands the predicate, or adjust the delivered audio-skills manifest; the row was skipped fail-closed."
+            ordered
+
+    let scaffoldAudioSkillNamespaceCollision (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.audioSkillNamespaceCollision"
+            DiagnosticError
+            None
+            None
+            $"audio-owned skill(s) rejected because their id collides with the reserved seeded `fs-gg-sdd-*` namespace: {rendered}."
+            "Fix the audio-skills package manifest to use a non-reserved id; the row was not materialized."
+            ordered
+        |> markToolDefect
+
+    let scaffoldAudioSkillManifestMalformed (message: string) =
+        create
+            "scaffold.audioSkillManifestMalformed"
+            DiagnosticError
+            None
+            None
+            $"The embedded audio-skills package manifest is malformed: {message}."
+            "Rebuild/republish the CLI from a coherent audio-skills package pin; no audio-owned skill was materialized."
+            [ message ]
+        |> markToolDefect
+
+    let scaffoldOwnerSkillCollision (entries: string list) =
+        let ordered = entries |> List.distinct |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.ownerSkillCollision"
+            DiagnosticError
+            None
+            None
+            $"selected owner-skill packages claim the same target with different ownership: {rendered}."
+            "Fix the owner manifests or their predicates so the target has one selected owner. The conflicting later channel was withheld and the scaffold is refused."
+            ordered
+        |> markToolDefect
+
     // FS.GG.SDD#864, and it has no counterpart in the sibling owner-skill seam because the established package has never had one
     // to report: the established owner-skills package ships exactly one file per skill.
     //
@@ -669,9 +738,8 @@ module Diagnostics =
     // FS.GG.SDD#864, and likewise with no counterpart in the sibling owner-skill seam: before a fourth channel existed
     // there was no second product channel to collide WITH.
     //
-    // Measured on the pinned packages: `fs-gg-collision`, `fs-gg-grids`, `fs-gg-line-drawing` and
-    // `fs-gg-visibility` are shipped by BOTH the established owner-skills package and the rendering-skills package
-    // 0.1.0, with different bodies and the identical profile-gated predicate.
+    // Some legacy ids are shipped by BOTH established owner-skill packages with different bodies.
+    // Their predicates can overlap, so a receiver must still resolve one path to one selected owner.
     // `.github`'s `registry/skills.yml` carries exactly one row for each, `owner: fs-gg-rendering`,
     // whose sha256 is the rendering owner's — so on the registry's own reading the established package is
     // shipping four ids it does not own.

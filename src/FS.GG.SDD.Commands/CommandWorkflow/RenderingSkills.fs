@@ -18,7 +18,7 @@ open FS.GG.SDD.Artifacts
 /// embedded resources at build time (`RenderingSkill.manifest` / `RenderingSkill.skill/<id>/<file>`),
 /// so the materialize reads **compiled-in bytes** — never the NuGet cache, an owner-repo clone,
 /// or the network — which is what makes scaffold time offline (FR-002). This mirrors the
-/// `GameSkills` seam, one owner over: the same schema-v1 owner manifest shape (parsed by the
+/// `GameSkills` seam, one owner over: the same owner manifest shape (parsed by the
 /// shape-modelling `GameSkillManifest`, which names no particular owner), the same
 /// `ProductPredicate` evaluated against the scaffold PARAMETER set, the same content-addressed
 /// verify before any write, the same no-clobber `AgentGuidanceTarget` writes, and the same four
@@ -27,27 +27,16 @@ open FS.GG.SDD.Artifacts
 /// TWO THINGS THIS CHANNEL MUST DO THAT THE ESTABLISHED OWNER-SKILL CHANNEL NEVER HAD TO, both forced by measured
 /// facts about the packages rather than by taste:
 ///
-/// 1. **Undeliverable sidecars.** the pinned rendering-skills package ships six files that are not
-///    `SKILL.md`, across three skills. Its manifest is schemaVersion 1 and records ONE `sha256` per
-///    skill — the canonical digest of `SKILL.md`, per its own `resolvablePath`. A sidecar therefore
-///    carries no declared digest, and ADR-0014 fail-closed means it cannot be written: a channel
-///    that materializes an unverified body has stopped being a verified channel. So this channel
-///    writes exactly the manifest-verified `SKILL.md` of each row — the shape FS.GG.SDD#864 asked
-///    for — and reports the withheld files through `undeliverableSidecars` rather than dropping them
-///    silently. That report matters concretely: `fs-gg-feedback-report`'s own body instructs the
-///    reader to run `.agents/skills/fs-gg-feedback-report/scripts/feedback-tool.fsx` in six separate
-///    places, and under this manifest schema that path cannot arrive. The gap's root cause is one
-///    layer down and in another repository — the producer's manifest schema, not this consumer — so
-///    it is reported here and filed there, never papered over by writing unverified bytes.
+/// 1. **Verified sidecars.** schema-v1 packages could declare only a canonical `SKILL.md` digest,
+///    so this channel withheld undeclared sidecars and reported them. Schema v2 closes each row
+///    with per-file digests, allowing the current Rendering package to deliver those sidecars
+///    atomically while preserving the same fail-closed behavior for legacy v1 input.
 ///
-///    The remedy is already modelled in this codebase: `FS.GG.Drivers`' manifest is schemaVersion 2
-///    and declares a per-file `files` array, which is exactly why `DriverSkills` CAN carry a closed
-///    multi-file directory transport. When the rendering-skills package publishes a v2 manifest, the
-///    sidecars become declarable and this channel can begin writing them; the embedded bytes are
-///    already here waiting.
+///    The schema-v2 `files` array matches the established `FS.GG.Drivers` closed-directory
+///    transport: any missing, extra, malformed, or digest-mismatched byte refuses the whole row.
 ///
-/// 2. **Cross-channel id collision.** Four ids — `fs-gg-collision`, `fs-gg-grids`,
-///    `fs-gg-line-drawing`, `fs-gg-visibility` — are shipped by BOTH pinned owner-skill packages, with DIFFERENT bodies and the identical profile-gated predicate. Unresolved, a scaffold on the shared profile would emit two writes for one
+/// 2. **Cross-channel id collision.** Some legacy ids are shipped by both pinned owner-skill
+///    packages with different bodies and overlapping predicates. Unresolved, a matching scaffold would emit two writes for one
 ///    path (the no-clobber write silently keeping the first) while provenance recorded that path
 ///    under two owners with two different digests — precisely the unattributed/over-claimed path
 ///    that made .github#2380 an investigation instead of a lookup. This channel therefore YIELDS:

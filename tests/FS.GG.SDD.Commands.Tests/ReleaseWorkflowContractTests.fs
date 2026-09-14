@@ -13,6 +13,10 @@ module ReleaseWorkflowContractTests =
         Path.Combine(TestSupport.repoRoot, ".github", "workflows", "gate.yml")
         |> File.ReadAllText
 
+    let private svgWorkspaceQuintAcceptance =
+        Path.Combine(TestSupport.repoRoot, "tests", "quint-svg-workspace-installed-acceptance.sh")
+        |> File.ReadAllText
+
     let private contract =
         Path.Combine(TestSupport.repoRoot, "specs", "044-publish-cli-tool", "contracts", "release-workflow.md")
         |> File.ReadAllText
@@ -88,10 +92,25 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
         Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", publish)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", publish)
-        Assert.Contains("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
+        Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", publish)
+        Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
+        Assert.Contains("/usr/bin/unshare --user --map-root-user --net", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"13\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"20\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"22\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("17 fail-closed mutations passed", svgWorkspaceQuintAcceptance)
+        Assert.Contains("offline acceptance requires a real user and network namespace", svgWorkspaceQuintAcceptance)
+        Assert.Contains("FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE", svgWorkspaceQuintAcceptance)
+        Assert.Contains("replacement-rollback-decision-lock", svgWorkspaceQuintAcceptance)
         Assert.Contains("quint-q3-public.junit.xml", publish)
+        Assert.Contains("artifacts/feed-readback/*.nupkg", publish)
+        Assert.Contains("for attempt in $(seq 1 40)", publish)
         Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", gateWorkflow)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", gateWorkflow)
+        Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", gateWorkflow)
+        Assert.Contains("Q2_EXACT_IR_JUNIT_OUT", gateWorkflow)
+        Assert.DoesNotContain("bash tests/quint-q2-compiler-acceptance.sh", gateWorkflow)
+        Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", gateWorkflow)
 
         let orgFeed =
             publish.IndexOf("https://nuget.pkg.github.com/FS-GG/index.json", StringComparison.Ordinal)
@@ -102,3 +121,14 @@ module ReleaseWorkflowContractTests =
         Assert.True(orgFeed >= 0 && publicFeed > orgFeed, "the org feed must be pushed before nuget.org")
         Assert.Contains("three independently consumable packages", contract)
         Assert.Contains("| `publish-artifacts` |", contract)
+
+    [<Fact>]
+    let ``release has a source-bound read-only dual-feed resume`` () =
+        Assert.Contains("readback_version:", workflow)
+        Assert.Contains("inputs.readback_version != ''", workflow)
+        Assert.Contains("git rev-parse \"refs/tags/v$VERSION^{commit}\"", workflow)
+        Assert.Contains("for attempt in $(seq 1 40)", workflow)
+        Assert.Contains("RepositoryCommit", workflow)
+        Assert.Contains("artifacts/feed-readback/$id.github.nupkg.payloads", workflow)
+        Assert.Contains("artifacts/feed-readback/$id.nuget.nupkg.payloads", workflow)
+        Assert.Contains("artifacts/feed-readback/*", workflow)
