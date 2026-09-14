@@ -70,6 +70,7 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillManifestMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillNamespaceCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillPredicateUnevaluated
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldOwnerSkillCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldInvalidParamKey
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed

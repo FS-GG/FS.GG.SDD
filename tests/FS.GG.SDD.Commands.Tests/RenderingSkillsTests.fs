@@ -297,6 +297,15 @@ module RenderingSkillsTests =
         Assert.Empty(HandlersScaffold.renderingSkillDiagnostics rendering)
 
     [<Fact>]
+    let ``only the declared legacy Game Rendering collisions may yield`` () =
+        let unexpected =
+            { RenderingSkills.empty with YieldedIds = [ "fs-gg-unrelated-owner-conflict" ] }
+
+        let diagnostic = Assert.Single(HandlersScaffold.renderingSkillDiagnostics unexpected)
+        Assert.Equal("scaffold.ownerSkillCollision", diagnostic.Id)
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticSeverity.DiagnosticError, diagnostic.Severity)
+
+    [<Fact>]
     let ``every fail-closed class reaches an operator under its own diagnostic id`` () =
         // One id per class, and DISTINCT ids rather than a reused sibling-seam id, so a failure tells
         // an operator which package to go and fix. Each outcome shape is fed to the production

@@ -158,6 +158,7 @@ module Diagnostics =
     val scaffoldAudioSkillPredicateUnevaluated: ids: string list -> Diagnostic
     val scaffoldAudioSkillNamespaceCollision: ids: string list -> Diagnostic
     val scaffoldAudioSkillManifestMalformed: message: string -> Diagnostic
+    val scaffoldOwnerSkillCollision: entries: string list -> Diagnostic
 
     /// ADR-0063 tail / FS.GG.SDD#739: `ProductSkillManifest.amend` refused to rewrite the product
     /// `skill-manifest.json`, so the materialized skills are left undeclared in it. A WARNING, not an

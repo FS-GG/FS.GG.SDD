@@ -641,7 +641,13 @@ module internal HandlersScaffold =
     // no withheld files and no yield). Same three classes as the driver/owner-skill seams — manifest defect
     // and namespace-collision/verify failures are tool-defect errors, an unevaluable predicate is a
     // non-blocking advisory — plus the two this channel is the first to need.
+    let private acceptedGameRenderingSharedIds =
+        Set.ofList [ "fs-gg-collision"; "fs-gg-grids"; "fs-gg-line-drawing"; "fs-gg-visibility" ]
+
     let renderingSkillDiagnostics (outcome: RenderingSkills.RenderingSkillOutcome) : Diagnostic list =
+        let acceptedYields = outcome.YieldedIds |> List.filter acceptedGameRenderingSharedIds.Contains
+        let unexpectedYields = outcome.YieldedIds |> List.filter (acceptedGameRenderingSharedIds.Contains >> not)
+
         [ yield!
               outcome.ManifestError
               |> Option.map DiagnosticsModule.scaffoldRenderingSkillManifestMalformed
@@ -652,8 +658,10 @@ module internal HandlersScaffold =
               yield DiagnosticsModule.scaffoldRenderingSkillVerifyFailed outcome.VerifyFailedIds
           if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
               yield DiagnosticsModule.scaffoldRenderingSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
-          if not (List.isEmpty outcome.YieldedIds) then
-              yield DiagnosticsModule.scaffoldRenderingSkillChannelYielded outcome.YieldedIds
+          if not (List.isEmpty acceptedYields) then
+              yield DiagnosticsModule.scaffoldRenderingSkillChannelYielded acceptedYields
+          if not (List.isEmpty unexpectedYields) then
+              yield DiagnosticsModule.scaffoldOwnerSkillCollision unexpectedYields
           if not (List.isEmpty outcome.UndeliverableSidecars) then
               yield DiagnosticsModule.scaffoldRenderingSkillSidecarsUndeclared outcome.UndeliverableSidecars ]
 
@@ -667,7 +675,9 @@ module internal HandlersScaffold =
           if not (List.isEmpty outcome.VerifyFailedIds) then
               yield DiagnosticsModule.scaffoldAudioSkillVerifyFailed outcome.VerifyFailedIds
           if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
-              yield DiagnosticsModule.scaffoldAudioSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
+              yield DiagnosticsModule.scaffoldAudioSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
+          if not (List.isEmpty outcome.YieldedIds) then
+              yield DiagnosticsModule.scaffoldOwnerSkillCollision outcome.YieldedIds ]
 
     let plannedAudioSkillOutcome
         (producedPaths: string list)
@@ -676,7 +686,23 @@ module internal HandlersScaffold =
         =
         let outcome = AudioSkills.plan effective
         let occupied = Set.ofList (producedPaths @ plannedMirroredPaths producedPaths @ earlierOwnerPaths)
-        let kept = outcome.ProvenancePaths |> List.filter (fun (path, _) -> not (occupied.Contains path))
+        // Refuse an owner collision as one skill-sized unit. If even a sidecar path overlaps an
+        // earlier selected owner, withholding only that path would materialize a partial skill and
+        // let the manifest union claim a file set that is not on disk.
+        let yieldedIds =
+            outcome.ProvenancePaths
+            |> List.filter (fun (path, _) -> occupied.Contains path)
+            |> List.choose (fst >> Fsgg.SkillMirror.skillIdOfPath)
+            |> List.distinct
+            |> List.sort
+
+        let yielded = Set.ofList yieldedIds
+
+        let kept =
+            outcome.ProvenancePaths
+            |> List.filter (fun (path, _) ->
+                Fsgg.SkillMirror.skillIdOfPath path
+                |> Option.forall (yielded.Contains >> not))
         let keptPaths = kept |> List.map fst |> Set.ofList
 
         { outcome with
@@ -687,7 +713,8 @@ module internal HandlersScaffold =
             MaterializedIds =
                 kept
                 |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
-                |> List.distinct }
+                |> List.distinct
+            YieldedIds = yieldedIds }
 
     // ----- product skill-manifest union (ADR-0063 tail / skill-union coherence) -----
 

@@ -49,6 +49,21 @@ module AudioSkillsTests =
         Assert.Empty outcome.PredicateUnevaluatedIds
 
     [<Fact>]
+    let ``selected Audio owner collision refuses the complete skill instead of silently deduplicating`` () =
+        let occupied = ".agents/skills/fs-gg-browser-audio/SKILL.md"
+        let outcome =
+            HandlersScaffold.plannedAudioSkillOutcome [ occupied ] (parameters "fable-game") []
+
+        Assert.Empty outcome.Writes
+        Assert.Empty outcome.ProvenancePaths
+        Assert.Empty outcome.MaterializedIds
+        Assert.Equal<string list>([ "fs-gg-browser-audio" ], outcome.YieldedIds)
+
+        let diagnostic = Assert.Single(HandlersScaffold.audioSkillDiagnostics outcome)
+        Assert.Equal("scaffold.ownerSkillCollision", diagnostic.Id)
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticSeverity.DiagnosticError, diagnostic.Severity)
+
+    [<Fact>]
     let ``Audio package failures retain Audio ownership in operator diagnostics`` () =
         let cases =
             [ { RenderingSkills.empty with ManifestError = Some "boom" },
@@ -58,7 +73,9 @@ module AudioSkillsTests =
               { RenderingSkills.empty with VerifyFailedIds = [ "fs-gg-browser-audio" ] },
               "scaffold.audioSkillVerifyFailed"
               { RenderingSkills.empty with PredicateUnevaluatedIds = [ "fs-gg-browser-audio" ] },
-              "scaffold.audioSkillPredicateUnevaluated" ]
+              "scaffold.audioSkillPredicateUnevaluated"
+              { RenderingSkills.empty with YieldedIds = [ "fs-gg-browser-audio" ] },
+              "scaffold.ownerSkillCollision" ]
 
         for outcome, expected in cases do
             let diagnostics = HandlersScaffold.audioSkillDiagnostics outcome

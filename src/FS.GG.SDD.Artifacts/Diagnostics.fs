@@ -692,6 +692,20 @@ module Diagnostics =
             [ message ]
         |> markToolDefect
 
+    let scaffoldOwnerSkillCollision (entries: string list) =
+        let ordered = entries |> List.distinct |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.ownerSkillCollision"
+            DiagnosticError
+            None
+            None
+            $"selected owner-skill packages claim the same target with different ownership: {rendered}."
+            "Fix the owner manifests or their predicates so the target has one selected owner. The conflicting later channel was withheld and the scaffold is refused."
+            ordered
+        |> markToolDefect
+
     // FS.GG.SDD#864, and it has no counterpart in the sibling owner-skill seam because the established package has never had one
     // to report: the established owner-skills package ships exactly one file per skill.
     //
