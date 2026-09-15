@@ -31,7 +31,7 @@ sources:
 tasks:
   - id: T001
     title: Define the public workspace lifecycle contract
-    status: pending
+    status: done
     owner: sdd
     dependencies: []
     requirements: [FR-001, FR-002, FR-003]
@@ -41,7 +41,7 @@ tasks:
     requiredEvidence: [EV001]
   - id: T002
     title: Exercise semantic validation, diff, reconciliation, and reduction
-    status: pending
+    status: done
     owner: sdd
     dependencies: [T001]
     requirements: [FR-004, FR-005]
@@ -51,7 +51,7 @@ tasks:
     requiredEvidence: [EV002]
   - id: T003
     title: Implement the typed workspace lifecycle kernel
-    status: pending
+    status: done
     owner: sdd
     dependencies: [T001, T002]
     requirements: [FR-001, FR-002, FR-003, FR-004, FR-005]
@@ -61,7 +61,7 @@ tasks:
     requiredEvidence: [EV003]
   - id: T004
     title: Implement dry-run legacy migration planning
-    status: pending
+    status: done
     owner: sdd
     dependencies: [T001, T002]
     requirements: [FR-006, FR-007]
@@ -71,7 +71,7 @@ tasks:
     requiredEvidence: [EV004]
   - id: T005
     title: Add and execute the literate Quint lifecycle model
-    status: pending
+    status: done
     owner: sdd
     dependencies: [T001]
     requirements: [FR-008]
@@ -81,7 +81,7 @@ tasks:
     requiredEvidence: [EV005]
   - id: T006
     title: Make omitted Typed SDD backend selection Quint
-    status: pending
+    status: done
     owner: sdd
     dependencies: [T003]
     requirements: [FR-009]
@@ -91,7 +91,7 @@ tasks:
     requiredEvidence: [EV006]
   - id: T007
     title: Align projections, installed skills, docs, and package assets
-    status: pending
+    status: done
     owner: sdd
     dependencies: [T003, T004, T005, T006]
     requirements: [FR-010]
@@ -101,7 +101,7 @@ tasks:
     requiredEvidence: [EV007]
   - id: T008
     title: Record release-readiness and migration evidence
-    status: pending
+    status: done
     owner: sdd
     dependencies: [T002, T003, T004, T005, T006, T007]
     requirements: [FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010]
