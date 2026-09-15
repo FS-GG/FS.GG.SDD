@@ -95,7 +95,7 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", publish)
         Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net", svgWorkspaceQuintAcceptance)
-        Assert.Contains("tests=\"13\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"16\" failures=\"0\"", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"20\" failures=\"0\"", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"22\" failures=\"0\"", svgWorkspaceQuintAcceptance)
         Assert.Contains("17 fail-closed mutations passed", svgWorkspaceQuintAcceptance)

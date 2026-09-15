@@ -107,7 +107,9 @@ module TypedSddCommandTests =
                       "--agent"
                       "tern"
                       "--session"
-                      "s1" ]
+                      "s1"
+                      "--backend"
+                      "fsharp-specification-v1" ]
 
             Assert.Equal(0, code)
 
@@ -124,6 +126,27 @@ module TypedSddCommandTests =
 
             Assert.Equal(1, editCode)
             Assert.Contains("typedSdd.directCanonicalEdit", edited))
+
+    [<Fact>]
+    let ``omitted author backend selects Quint`` () =
+        inTemp (fun root ->
+            let code, report, _ =
+                run
+                    root
+                    [ "typed-sdd"
+                      "author"
+                      "--root"
+                      root
+                      "--work"
+                      "demo"
+                      "--agent"
+                      "tern"
+                      "--session"
+                      "default-quint" ]
+
+            Assert.Equal(1, code)
+            Assert.Contains("typedSdd.v2.cacheRequired", report)
+            Assert.False(File.Exists(Path.Combine(root, "work", "demo", "specification.fsx"))))
 
     [<Fact>]
     let ``inspect dispatches explicit manifest v2 and rejects edited Quint artifacts`` () =
@@ -372,7 +395,9 @@ module TypedSddCommandTests =
                       "--agent"
                       "a"
                       "--session"
-                      "s" ]
+                      "s"
+                      "--backend"
+                      "fsharp-specification-v1" ]
 
             Assert.Equal(1, code)
             Assert.Contains("typedSdd.workInvalid", stdout)
@@ -418,6 +443,8 @@ module TypedSddCommandTests =
                       "demo"
                       "--source"
                       "work/demo/spec.md"
+                      "--backend"
+                      "fsharp-specification-v1"
                       "--accept" ]
 
             Assert.Equal(0, code)
@@ -456,6 +483,8 @@ module TypedSddCommandTests =
                           "demo"
                           "--source"
                           "work/demo/spec.md"
+                          "--backend"
+                          "fsharp-specification-v1"
                           "--accept" ]
 
                 Assert.Equal(0, code)
@@ -496,7 +525,9 @@ module TypedSddCommandTests =
                       "--agent"
                       "tern"
                       "--session"
-                      "v1" ]
+                      "v1"
+                      "--backend"
+                      "fsharp-specification-v1" ]
 
             Assert.Equal(0, v1Code)
 
@@ -606,7 +637,9 @@ module TypedSddCommandTests =
                       "--agent"
                       "a"
                       "--session"
-                      "s" ]
+                      "s"
+                      "--backend"
+                      "fsharp-specification-v1" ]
 
             Assert.Equal(0, authorCode)
             let specificationPath = Path.Combine(root, "work", "demo", "spec.md")
@@ -652,7 +685,9 @@ module TypedSddCommandTests =
                       "--agent"
                       "a"
                       "--session"
-                      "s" ]
+                      "s"
+                      "--backend"
+                      "fsharp-specification-v1" ]
 
             Assert.Equal(0, authorCode)
             let canonicalPath = Path.Combine(root, "work", "demo", "specification.fsx")

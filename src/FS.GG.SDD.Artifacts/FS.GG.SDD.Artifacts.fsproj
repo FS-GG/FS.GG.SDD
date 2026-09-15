@@ -45,6 +45,8 @@
     <Compile Include="TypedSpecifications/QuintCompiler.fs" />
     <Compile Include="TypedSpecifications/TypedLifecycleV2.fsi" />
     <Compile Include="TypedSpecifications/TypedLifecycleV2.fs" />
+    <Compile Include="TypedSpecifications/WorkspaceLifecycle.fsi" />
+    <Compile Include="TypedSpecifications/WorkspaceLifecycle.fs" />
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />
@@ -119,6 +121,7 @@
     <None Include="TypedSpecifications/Fable/FS.GG.SDD.Artifacts.fsproj" Pack="true" PackagePath="fable/FS.GG.SDD.Artifacts.fsproj" />
     <None Include="TypedSpecifications/Fable/SpecificationKernel.fs" Pack="true" PackagePath="fable/SpecificationKernel.fs" />
     <None Include="TypedSpecifications/QuintAssets/q1-identity-manifest.json" Pack="true" PackagePath="quint/q1-identity-manifest.json" />
+    <None Include="TypedSpecifications/QuintAssets/workspace-lifecycle.md" Pack="true" PackagePath="quint/workspace-lifecycle.md" />
     <None Include="TypedSpecifications/QuintAssets/lmt/main.go" Pack="true" PackagePath="quint/lmt/main.go" />
     <None Include="TypedSpecifications/QuintAssets/lmt/LICENSE" Pack="true" PackagePath="quint/lmt/" />
   </ItemGroup>

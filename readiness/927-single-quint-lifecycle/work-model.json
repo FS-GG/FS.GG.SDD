@@ -1,0 +1,1071 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.2.0",
+  "workId": "927-single-quint-lifecycle",
+  "project": {
+    "id": "fs.gg.sdd-833",
+    "defaultWorkRoot": "work",
+    "profile": null
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      }
+    },
+    {
+      "path": "work/927-single-quint-lifecycle/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "bdfaa9763ef49e55873dcbf34f230dc0304b01e1a3b9e0ec600d464d9920792f"
+      }
+    },
+    {
+      "path": "work/927-single-quint-lifecycle/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "76f57836cdfd3dfe60eec538231959bdf5190a35f50c2d79a8687a551734f250"
+      }
+    },
+    {
+      "path": "work/927-single-quint-lifecycle/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "d94d66e93d991e7c20c9f4412f94719d735e4d701d202ab20eacceef43a05c72"
+      }
+    },
+    {
+      "path": "work/927-single-quint-lifecycle/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "625ae2755f3521d4be793018d49946ccc1b5c7484010c6e3ec3c71b82d755b76"
+      }
+    },
+    {
+      "path": "work/927-single-quint-lifecycle/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "bc9271fa0dad56388caade41928dfa07a15b33a1e0367a6a4d30166a395b3eed"
+      }
+    },
+    {
+      "path": "work/927-single-quint-lifecycle/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "edf4def17c536235d07bd74d94ec9ff42e4107981f1a9f3bada3fb9350149ba0"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "927-single-quint-lifecycle",
+    "title": "Single Quint-backed workspace lifecycle",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "performanceIntent": null,
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "The public contract MUST represent all seven workspace module kinds with stable IDs and deterministic canonical fingerprints. (Stories: US-001, US-004; Acceptance: AC-001, AC-004)",
+      "text": "The public contract MUST represent all seven workspace module kinds with stable IDs and deterministic canonical fingerprints. (Stories: US-001, US-004; Acceptance: AC-001, AC-004)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 42,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001",
+        "T003",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV001",
+        "EV003",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "title": "Every proposal MUST bind an exact issue identity, prose digest, base fingerprint, authoring depth, and one disposition: CoherentDelta, NoSemanticChange, AcceptedOpaque, Ambiguous, Contradictory, or Stale. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "text": "Every proposal MUST bind an exact issue identity, prose digest, base fingerprint, authoring depth, and one disposition: CoherentDelta, NoSemanticChange, AcceptedOpaque, Ambiguous, Contradictory, or Stale. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 43,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001",
+        "T003",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV001",
+        "EV003",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "title": "AcceptedOpaque MUST name debt, affected subjects, reason, responsible human, and evidence; it may never be inferred from a failed formalization. (Stories: US-002; Acceptance: AC-002)",
+      "text": "AcceptedOpaque MUST name debt, affected subjects, reason, responsible human, and evidence; it may never be inferred from a failed formalization. (Stories: US-002; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 44,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001",
+        "T003",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV001",
+        "EV003",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "title": "Creating, classifying, or reconciling a proposal MUST NOT mutate accepted authority. Only explicit human acceptance may reduce an eligible exact-base proposal. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "text": "Creating, classifying, or reconciling a proposal MUST NOT mutate accepted authority. Only explicit human acceptance may reduce an eligible exact-base proposal. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 45,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002",
+        "T003",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV002",
+        "EV003",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "title": "Semantic reconciliation MUST deterministically detect overlapping edits, duplicate declarations, removed/renamed identities, dangling references, changed assumptions, stale bases, and stale evidence. (Stories: US-002; Acceptance: AC-002)",
+      "text": "Semantic reconciliation MUST deterministically detect overlapping edits, duplicate declarations, removed/renamed identities, dangling references, changed assumptions, stale bases, and stale evidence. (Stories: US-002; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 46,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002",
+        "T003",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV002",
+        "EV003",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-006",
+      "title": "Migration MUST be dry-run-first, bind original bytes by digest, retain rollback inventory, and refuse writes until every source classification and human decision is complete. (Stories: US-003; Acceptance: AC-003)",
+      "text": "Migration MUST be dry-run-first, bind original bytes by digest, retain rollback inventory, and refuse writes until every source classification and human decision is complete. (Stories: US-003; Acceptance: AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 47,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV004",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "title": "The compatibility window MUST preserve inspection and explicit migration of none, sdd, typed-sdd, and spec-kit without token aliasing or destructive scaffold reruns. (Stories: US-003; Acceptance: AC-003)",
+      "text": "The compatibility window MUST preserve inspection and explicit migration of none, sdd, typed-sdd, and spec-kit without token aliasing or destructive scaffold reruns. (Stories: US-003; Acceptance: AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 48,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV004",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "title": "The package MUST carry one literate Quint lifecycle model with reachable proposal and acceptance actions plus invariants for immutable issue filing, exact-base acceptance, coherent accepted authority, and monotonic revisions. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "text": "The package MUST carry one literate Quint lifecycle model with reachable proposal and acceptance actions plus invariants for immutable issue filing, exact-base acceptance, coherent accepted authority, and monotonic revisions. (Stories: US-001, US-002; Acceptance: AC-001, AC-002)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 49,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T005",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV005",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-009",
+      "title": "Typed SDD authoring and migration MUST select quint-specification-v1 when backend is omitted, while explicit fsharp-specification-v1 remains supported for compatibility. (Stories: US-004; Acceptance: AC-004)",
+      "text": "Typed SDD authoring and migration MUST select quint-specification-v1 when backend is omitted, while explicit fsharp-specification-v1 remains supported for compatibility. (Stories: US-004; Acceptance: AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 50,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T006",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV006",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-010",
+      "title": "CLI, JSON, plain/rich projection, installed skills, and package-only tests MUST share the typed kernel and stable diagnostics; no skill may implement a second semantic reducer. (Stories: US-001, US-002, US-003, US-004; Acceptance: AC-001, AC-002, AC-003, AC-004)",
+      "text": "CLI, JSON, plain/rich projection, installed skills, and package-only tests MUST share the typed kernel and stable diagnostics; no skill may implement a second semantic reducer. (Stories: US-001, US-002, US-003, US-004; Acceptance: AC-001, AC-002, AC-003, AC-004)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-002",
+        "AC-003",
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/927-single-quint-lifecycle/spec.md",
+      "sourceLocation": {
+        "line": 51,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T007",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV007",
+        "EV008"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "Use one cohesive shared-state Quint record; proposals operate against accepted state and do not exchange messages, so Choreo would add no semantic value.",
+      "decision": "Use one cohesive shared-state Quint record; proposals operate against accepted state and do not exchange messages, so Choreo would add no semantic value.",
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/927-single-quint-lifecycle/clarifications.md",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      },
+      "linkedTaskIds": []
+    },
+    {
+      "id": "DEC-002",
+      "title": "Preserve the maintainer-approved six dispositions exactly. ImplementationChange, OperationalChange, and EvidenceChange are represented as reasons within NoSemanticChange rather than rival semantic dispositions.",
+      "decision": "Preserve the maintainer-approved six dispositions exactly. ImplementationChange, OperationalChange, and EvidenceChange are represented as reasons within NoSemanticChange rather than rival semantic dispositions.",
+      "requirementRefs": [
+        "FR-002",
+        "FR-003"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/927-single-quint-lifecycle/clarifications.md",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      },
+      "linkedTaskIds": []
+    },
+    {
+      "id": "DEC-003",
+      "title": "New omitted paths converge on typed-sdd/quint. Legacy tokens remain explicit compatibility selections and never alias to the new default.",
+      "decision": "New omitted paths converge on typed-sdd/quint. Legacy tokens remain explicit compatibility selections and never alias to the new default.",
+      "requirementRefs": [
+        "FR-007",
+        "FR-009"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/927-single-quint-lifecycle/clarifications.md",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      },
+      "linkedTaskIds": []
+    },
+    {
+      "id": "DEC-004",
+      "title": "A human acceptance receipt is mandatory for CoherentDelta, NoSemanticChange, and AcceptedOpaque; all other dispositions are non-reducible.",
+      "decision": "A human acceptance receipt is mandatory for CoherentDelta, NoSemanticChange, and AcceptedOpaque; all other dispositions are non-reducible.",
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/927-single-quint-lifecycle/clarifications.md",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      },
+      "linkedTaskIds": []
+    },
+    {
+      "id": "DEC-005",
+      "title": "Migration planning is pure and dry-run-first. Effectful application remains at the existing atomic Typed SDD migration boundary.",
+      "decision": "Migration planning is pure and dry-run-first. Effectful application remains at the existing atomic Typed SDD migration boundary.",
+      "requirementRefs": [
+        "FR-006"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/927-single-quint-lifecycle/clarifications.md",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      },
+      "linkedTaskIds": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Define the public workspace lifecycle contract",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "AC-004",
+        "DEC-002",
+        "PC-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Exercise semantic validation, diff, reconciliation, and reduction",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [
+        "FR-004",
+        "FR-005"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "DEC-004",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "automated-tests"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Implement the typed workspace lifecycle kernel",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001",
+        "T002"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "AC-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Implement dry-run legacy migration planning",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001",
+        "T002"
+      ],
+      "requirements": [
+        "FR-006",
+        "FR-007"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "DEC-005",
+        "PD-003",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Add and execute the literate Quint lifecycle model",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [
+        "FR-008"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "DEC-001",
+        "PD-004",
+        "VO-002"
+      ],
+      "requiredSkills": [
+        "quint"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Make omitted Typed SDD backend selection Quint",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T003"
+      ],
+      "requirements": [
+        "FR-009"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-004",
+        "DEC-003",
+        "PD-005",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "T007",
+      "title": "Align projections, installed skills, docs, and package assets",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T003",
+        "T004",
+        "T005",
+        "T006"
+      ],
+      "requirements": [
+        "FR-010"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "GV-001",
+        "VO-003"
+      ],
+      "requiredSkills": [
+        "documentation",
+        "packaging"
+      ],
+      "requiredEvidence": [
+        "EV007"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "T008",
+      "title": "Record release-readiness and migration evidence",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PM-001",
+        "VO-001",
+        "VO-002",
+        "VO-003"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV008"
+      ],
+      "source": "work/927-single-quint-lifecycle/tasks.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [
+        "FR-001",
+        "FR-002",
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [
+        "FR-004",
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [
+        "FR-006",
+        "FR-007"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [
+        "FR-009"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV007",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T007",
+      "taskRefs": [
+        "T007"
+      ],
+      "requirementRefs": [
+        "FR-010"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV008",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T008",
+      "taskRefs": [
+        "T008"
+      ],
+      "requirementRefs": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010"
+      ],
+      "artifactRefs": [
+        "readiness/927-single-quint-lifecycle/workspace-lifecycle.trx",
+        "src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/927-single-quint-lifecycle/evidence.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/927-single-quint-lifecycle/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "1.8.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/927-single-quint-lifecycle/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "bdfaa9763ef49e55873dcbf34f230dc0304b01e1a3b9e0ec600d464d9920792f"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/927-single-quint-lifecycle/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "76f57836cdfd3dfe60eec538231959bdf5190a35f50c2d79a8687a551734f250"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/927-single-quint-lifecycle/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "d94d66e93d991e7c20c9f4412f94719d735e4d701d202ab20eacceef43a05c72"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/927-single-quint-lifecycle/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "625ae2755f3521d4be793018d49946ccc1b5c7484010c6e3ec3c71b82d755b76"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/927-single-quint-lifecycle/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "bc9271fa0dad56388caade41928dfa07a15b33a1e0367a6a4d30166a395b3eed"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/927-single-quint-lifecycle/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "edf4def17c536235d07bd74d94ec9ff42e4107981f1a9f3bada3fb9350149ba0"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "2da44307be15eb5296d05411224db7302092055c884266f2282806908c036dd5"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}

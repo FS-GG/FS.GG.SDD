@@ -8,9 +8,11 @@ description: Authority, provenance, migration, and failure contracts for the Typ
 
 # Typed SDD lifecycle
 
-Typed SDD is an additive representation backend for the existing SDD lifecycle. Manifest v1 keeps
-the F# authority unchanged; manifest v2 explicitly selects the hermetic `quint-specification-v1`
-authority. Both use the same charter-through-ship stages. Standard SDD remains the omitted default.
+Typed SDD has one Quint-backed workspace lifecycle. Manifest v2 is the omitted backend and selects
+the hermetic `quint-specification-v1` authority; manifest v1 keeps the F# authority available only by
+explicit compatibility selection during the 2.x window. Both use the same charter-through-ship stages.
+Provider lifecycle tokens remain distinct; their downstream omitted default changes only after the
+separately evidenced `OperatingV2` cutover.
 
 ## Authority flow
 
@@ -39,8 +41,9 @@ exact lmt + Quint twice --> typed-effect-bound Q2 compiler
 ```
 
 `cref:T:FS.GG.SDD.Artifacts.TypedSpecifications.LifecycleLane` represents the four accepted tokens:
-`none`, `sdd`, `typed-sdd`, and legacy `spec-kit`. They never alias. An omitted value resolves to
-`sdd`. `cref:T:FS.GG.SDD.Artifacts.TypedSpecifications.TypedAuthorityManifest` binds the selected
+`none`, `sdd`, `typed-sdd`, and legacy `spec-kit`. They never alias. An omitted Typed SDD backend
+resolves to Quint; an omitted provider lifecycle still resolves to `sdd` until the `OperatingV2`
+rollout. `cref:T:FS.GG.SDD.Artifacts.TypedSpecifications.TypedAuthorityManifest` binds the selected
 backend to the compiler/package/extension identity, canonical source digest, projection digests,
 authoring receipt, and optional rollback source digest.
 
@@ -67,10 +70,11 @@ string, tuple, record, variant, list, set, or map values.
 fsgg-sdd typed-sdd provision --cache /qualified/quint-cache \
   --quint /acquired/quint-linux-amd64 --lmt /built/lmt
 
-fsgg-sdd typed-sdd author --work demo --title "Demo" --agent tern-001 --session session-1
+fsgg-sdd typed-sdd author --work demo --title "Demo" --agent tern-001 --session session-1 \
+  --cache /preseeded/quint-cache
 fsgg-sdd typed-sdd inspect --work demo
 
-# Explicit Quint v2; authoring performs no acquisition or moving tool resolution.
+# Explicit spelling is equivalent to the omitted Quint backend.
 fsgg-sdd typed-sdd author --work demo --title "Demo" \
   --agent tern-001 --session session-1 \
   --backend quint-specification-v1 --cache /preseeded/quint-cache
@@ -116,8 +120,8 @@ fsgg-sdd typed-sdd migrate --work demo --source work/demo/spec.md
 The classification is `Migrated` for losslessly representable content, `Ambiguous` when an authored
 reference requires a decision, or `Unsupported` for constructs outside the published extension. The
 report includes locations or a semantic diff and the rollback source digest. Only after reviewing a
-`Migrated` report should the command be repeated with `--accept`. For Quint v2, add the explicit
-backend, cache, agent, and session arguments used by authoring. The qualified migration accepts only
+`Migrated` report should the command be repeated with `--accept`. For Quint v2, add the cache, agent,
+and session arguments used by authoring; the backend may be omitted. The qualified migration accepts only
 the closed requirements/evidence extension. Every v1 identity is lowered into the bounded compiled
 catalogue, references become relationships and acceptance action effects, and semantic text is retained
 as non-executable compatibility metadata. The raw Q1 Quint module remains the fixed executable slice;

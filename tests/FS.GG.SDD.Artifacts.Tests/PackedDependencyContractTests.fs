@@ -176,6 +176,11 @@ module PackedDependencyContractTests =
                 entry "quint/lmt/LICENSE" |> digest
             )
 
+            Assert.Equal(
+                "1ad5598236fe2bb7933aafd8f13d40e367d85fdf451320e793432052d02f69a0",
+                entry "quint/workspace-lifecycle.md" |> digest
+            )
+
             use reader = new StreamReader((entry "quint/q1-identity-manifest.json").Open())
             let receipt = reader.ReadToEnd()
             Assert.Contains("driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c", receipt)

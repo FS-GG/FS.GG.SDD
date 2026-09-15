@@ -79,7 +79,7 @@ cli="$scratch/tool/fsgg-sdd"
 current_stage='installed-provisioning'
 profile1="$scratch/profile1-retained"
 "$cli" typed-sdd author --root "$profile1" --work legacy --title Legacy \
-  --agent acceptance --session profile1 >"$scratch/profile1-author.json"
+  --agent acceptance --session profile1 --backend fsharp-specification-v1 >"$scratch/profile1-author.json"
 "$cli" typed-sdd inspect --root "$profile1" --work legacy >"$scratch/profile1-before.json"
 find "$profile1" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/profile1.before"
 
@@ -323,7 +323,7 @@ migration="$scratch/migration"
 current_stage='v1-migration'
 mkdir -p "$migration"
 "$cli" typed-sdd author --root "$migration" --work demo --title 'Unrelated legacy identifiers' \
-  --agent acceptance --session v1 >/dev/null
+  --agent acceptance --session v1 --backend fsharp-specification-v1 >/dev/null
 find "$migration" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/v1.before"
 "$cli" typed-sdd migrate --root "$migration" --work demo --source work/demo/spec.md \
   --backend quint-specification-v1 --cache "$scratch/cache" --agent acceptance --session migration \

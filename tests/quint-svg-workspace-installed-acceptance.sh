@@ -88,7 +88,7 @@ package_origin="${SVG_WORKSPACE_PACKAGE_ORIGIN:?package origin is required}"
 
 profile1="$scratch/profile1"
 "$cli" typed-sdd author --root "$profile1" --work legacy --title Legacy \
-  --agent acceptance --session retained >"$scratch/profile1-author.json"
+  --agent acceptance --session retained --backend fsharp-specification-v1 >"$scratch/profile1-author.json"
 "$cli" typed-sdd inspect --root "$profile1" --work legacy >"$scratch/profile1-before.json"
 find "$profile1" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/profile1.before"
 
@@ -113,6 +113,20 @@ grep -F 'github:driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c' "$scratch/
 cache="$scratch/cache/objects"
 [[ "$(sha "$cache/939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f")" == '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' ]] || fail 'cached Quint drifted'
 [[ "$(sha "$cache/37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10")" == '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' ]] || fail 'cached lmt drifted'
+
+lifecycle_model="$scratch/workspace-lifecycle-model"
+mkdir -p "$lifecycle_model"
+cp "$repo_root/src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md" "$lifecycle_model/"
+(
+  cd "$lifecycle_model"
+  "$LMT_BIN" workspace-lifecycle.md
+  "$QUINT_BIN" typecheck workspace-lifecycle.qnt >/dev/null
+  "$QUINT_BIN" test workspace-lifecycle.qnt --main WorkspaceLifecycleTests --seed=927 --backend typescript >/dev/null
+  "$QUINT_BIN" run workspace-lifecycle.qnt --main WorkspaceLifecycle --max-samples=100 --max-steps=6 --seed=927 \
+    --backend typescript \
+    --invariants filingIsImmutable acceptedAuthorityIsCoherent acceptedRevisionIsMonotonic \
+      acceptedFingerprintTracksRevision acceptanceUsesExactBase staleProposalCannotAccept >/dev/null
+)
 
 "$cli" typed-sdd provision --cache "$scratch/cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" >"$scratch/provision-repeat.json"
 cmp "$scratch/provision.json" "$scratch/provision-repeat.json" >/dev/null || fail 'repeat provisioning report drifted'
@@ -293,7 +307,7 @@ cmp "$scratch/profile1-before.json" "$scratch/profile1-after.json" >/dev/null ||
 
 migration="$scratch/migration"
 mkdir -p "$migration"
-"$cli" typed-sdd author --root "$migration" --work demo --title 'Neutral legacy authority' --agent acceptance --session v1 >/dev/null
+"$cli" typed-sdd author --root "$migration" --work demo --title 'Neutral legacy authority' --agent acceptance --session v1 --backend fsharp-specification-v1 >/dev/null
 find "$migration" -type f -print0 | sort -z | xargs -0 sha256sum >"$scratch/v1.before"
 "$cli" typed-sdd migrate --root "$migration" --work demo --source work/demo/spec.md \
   --backend quint-specification-v1 --cache "$scratch/cache" --agent acceptance --session migration >"$scratch/migrate-preflight.json"
@@ -339,7 +353,7 @@ cmp "$scratch/v1.before" "$scratch/v1.after" >/dev/null || fail 'rollback did no
 mkdir -p "$(dirname "${Q2_JUNIT_OUT:-$scratch/q2.xml}")" "$(dirname "${Q3_JUNIT_OUT:-$scratch/q3.xml}")"
 cat >"${Q2_JUNIT_OUT:-$scratch/q2.xml}" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
-<testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ2" tests="13" failures="0">
+<testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ2" tests="16" failures="0">
   <testcase classname="SvgWorkspaceQuintQ2" name="PACKAGE_ORIGIN-installed-before-isolation" />
   <testcase classname="SvgWorkspaceQuintQ2" name="real-network-namespace-isolation" />
   <testcase classname="SvgWorkspaceQuintQ2" name="exact-content-addressed-tools" />
@@ -353,6 +367,9 @@ cat >"${Q2_JUNIT_OUT:-$scratch/q2.xml}" <<'EOF'
   <testcase classname="SvgWorkspaceQuintQ2" name="dotnet-fable-parity" />
   <testcase classname="SvgWorkspaceQuintQ2" name="fable-independent-mutation" />
   <testcase classname="SvgWorkspaceQuintQ2" name="contract-digest-closure" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="workspace-lifecycle-lmt-extraction-and-typecheck" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="workspace-lifecycle-behavioral-witnesses" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="workspace-lifecycle-sampled-invariants" />
 </testsuite>
 EOF
 sed -i "s/PACKAGE_ORIGIN/$package_origin/" "${Q2_JUNIT_OUT:-$scratch/q2.xml}"
