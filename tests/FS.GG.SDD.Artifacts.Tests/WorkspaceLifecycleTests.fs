@@ -5,8 +5,11 @@ open FS.GG.SDD.Artifacts.TypedSpecifications
 open Xunit
 
 module WorkspaceLifecycleTests =
-    let private id value = SpecificationId.create value |> Result.defaultWith failwith
+    let private id value =
+        SpecificationId.create value |> Result.defaultWith failwith
+
     let private hash character = String(character, 64)
+
     let private expectError result =
         match result with
         | Error findings -> findings
@@ -24,7 +27,13 @@ module WorkspaceLifecycleTests =
         { SchemaVersion = 1
           Revision = 7L
           Modules =
-            [ moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'a') [] [ "users require deterministic state" ] [ "EVID-001" ]
+            [ moduleOf
+                  "PROD-001"
+                  WorkspaceModuleKind.ProductSpecification
+                  (hash 'a')
+                  []
+                  [ "users require deterministic state" ]
+                  [ "EVID-001" ]
               moduleOf "EVID-001" WorkspaceModuleKind.EvidenceRequirement (hash 'b') [] [] []
               moduleOf "DECIS-001" WorkspaceModuleKind.Decision (hash 'c') [ "PROD-001" ] [] [] ] }
 
@@ -32,7 +41,9 @@ module WorkspaceLifecycleTests =
         { SchemaVersion = 1
           IssueRef = "FS-GG/FS.GG.SDD#927"
           ProseSha256 = hash 'd'
-          BaseFingerprint = WorkspaceLifecycle.fingerprint accepted |> Result.defaultWith (sprintf "%A" >> failwith)
+          BaseFingerprint =
+            WorkspaceLifecycle.fingerprint accepted
+            |> Result.defaultWith (sprintf "%A" >> failwith)
           AuthoringDepth = AuthoringDepth.Freeform
           Changes = changes
           Disposition = disposition
@@ -63,7 +74,13 @@ module WorkspaceLifecycleTests =
                     moduleOf (sprintf "MODUL-%03d" (index + 1)) kind (hash (char (int 'a' + (index % 6)))) [] [] []) }
 
         Assert.Empty(WorkspaceLifecycle.validate model)
-        Assert.Equal(WorkspaceLifecycle.fingerprint model, WorkspaceLifecycle.fingerprint { model with Modules = List.rev model.Modules })
+
+        Assert.Equal(
+            WorkspaceLifecycle.fingerprint model,
+            WorkspaceLifecycle.fingerprint
+                { model with
+                    Modules = List.rev model.Modules }
+        )
 
     [<Fact>]
     let ``proposal inspection never mutates accepted authority`` () =
@@ -82,16 +99,32 @@ module WorkspaceLifecycleTests =
               ResponsibleHuman = ""
               EvidenceRefs = [] }
 
-        let findings = proposal [] (ProposalDisposition.AcceptedOpaque opaque) |> WorkspaceLifecycle.validateProposal accepted
+        let findings =
+            proposal [] (ProposalDisposition.AcceptedOpaque opaque)
+            |> WorkspaceLifecycle.validateProposal accepted
+
         Assert.Contains(findings, fun item -> item.Code = "WORKSPACE-OPAQUE-DEBT")
         Assert.Contains(findings, fun item -> item.Code = "WORKSPACE-OPAQUE-EVIDENCE")
 
     [<Fact>]
     let ``disjoint exact-base proposals reconcile deterministically`` () =
-        let product = moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'e') [] [ "users require deterministic state" ] [ "EVID-001" ]
-        let decision = moduleOf "DECIS-002" WorkspaceModuleKind.Decision (hash 'f') [ "PROD-001" ] [] []
-        let left = proposal [ WorkspaceChange.Upsert product ] ProposalDisposition.CoherentDelta
-        let right = proposal [ WorkspaceChange.Upsert decision ] ProposalDisposition.CoherentDelta
+        let product =
+            moduleOf
+                "PROD-001"
+                WorkspaceModuleKind.ProductSpecification
+                (hash 'e')
+                []
+                [ "users require deterministic state" ]
+                [ "EVID-001" ]
+
+        let decision =
+            moduleOf "DECIS-002" WorkspaceModuleKind.Decision (hash 'f') [ "PROD-001" ] [] []
+
+        let left =
+            proposal [ WorkspaceChange.Upsert product ] ProposalDisposition.CoherentDelta
+
+        let right =
+            proposal [ WorkspaceChange.Upsert decision ] ProposalDisposition.CoherentDelta
 
         match WorkspaceLifecycle.reconcile accepted left right with
         | Reconciled(model, changes) ->
@@ -102,35 +135,68 @@ module WorkspaceLifecycleTests =
 
     [<Fact>]
     let ``overlap rename-delete dangling and stale inputs fail closed`` () =
-        let changedA = moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'e') [] [] [ "EVID-001" ]
-        let changedB = moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'f') [] [] [ "EVID-001" ]
-        let overlap = WorkspaceLifecycle.reconcile accepted (proposal [ WorkspaceChange.Upsert changedA ] ProposalDisposition.CoherentDelta) (proposal [ WorkspaceChange.Upsert changedB ] ProposalDisposition.CoherentDelta)
+        let changedA =
+            moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'e') [] [] [ "EVID-001" ]
+
+        let changedB =
+            moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'f') [] [] [ "EVID-001" ]
+
+        let overlap =
+            WorkspaceLifecycle.reconcile
+                accepted
+                (proposal [ WorkspaceChange.Upsert changedA ] ProposalDisposition.CoherentDelta)
+                (proposal [ WorkspaceChange.Upsert changedB ] ProposalDisposition.CoherentDelta)
+
         match overlap with
         | Conflicted findings -> Assert.Contains(findings, fun item -> item.Code = "WORKSPACE-MERGE-OVERLAP")
         | _ -> Assert.Fail "expected overlap conflict"
 
-        let dangling = proposal [ WorkspaceChange.Remove(id "PROD-001") ] ProposalDisposition.CoherentDelta
+        let dangling =
+            proposal [ WorkspaceChange.Remove(id "PROD-001") ] ProposalDisposition.CoherentDelta
+
         let findings = WorkspaceLifecycle.reduce accepted dangling receipt |> expectError
         Assert.Contains(findings, fun item -> item.Code = "WORKSPACE-REFERENCE-DANGLING")
 
-        let renameDelete = WorkspaceLifecycle.reconcile accepted (proposal [ WorkspaceChange.Rename(id "PROD-001", id "PROD-002") ] ProposalDisposition.CoherentDelta) dangling
+        let renameDelete =
+            WorkspaceLifecycle.reconcile
+                accepted
+                (proposal [ WorkspaceChange.Rename(id "PROD-001", id "PROD-002") ] ProposalDisposition.CoherentDelta)
+                dangling
+
         match renameDelete with
         | Conflicted findings -> Assert.Contains(findings, fun item -> item.Code = "WORKSPACE-MERGE-RENAME-DELETE")
         | _ -> Assert.Fail "expected rename/delete conflict"
 
-        let stale = { proposal [] ProposalDisposition.CoherentDelta with BaseFingerprint = hash '0' }
-        Assert.Contains(WorkspaceLifecycle.validateProposal accepted stale, fun item -> item.Code = "WORKSPACE-PROPOSAL-STALE")
+        let stale =
+            { proposal [] ProposalDisposition.CoherentDelta with
+                BaseFingerprint = hash '0' }
+
+        Assert.Contains(
+            WorkspaceLifecycle.validateProposal accepted stale,
+            fun item -> item.Code = "WORKSPACE-PROPOSAL-STALE"
+        )
 
     [<Fact>]
     let ``only eligible human-accepted proposals reduce exact-base state`` () =
-        let added = moduleOf "WORKC-001" WorkspaceModuleKind.WorkChange (hash 'e') [ "PROD-001" ] [] []
-        let coherent = proposal [ WorkspaceChange.Upsert added ] ProposalDisposition.CoherentDelta
-        let reduced = WorkspaceLifecycle.reduce accepted coherent receipt |> Result.defaultWith (sprintf "%A" >> failwith)
+        let added =
+            moduleOf "WORKC-001" WorkspaceModuleKind.WorkChange (hash 'e') [ "PROD-001" ] [] []
+
+        let coherent =
+            proposal [ WorkspaceChange.Upsert added ] ProposalDisposition.CoherentDelta
+
+        let reduced =
+            WorkspaceLifecycle.reduce accepted coherent receipt
+            |> Result.defaultWith (sprintf "%A" >> failwith)
+
         Assert.Equal(8L, reduced.Revision)
         Assert.Contains(reduced.Modules, fun item -> item.Id = id "WORKC-001")
 
         let ambiguous = proposal [] (ProposalDisposition.Ambiguous "unresolved")
-        Assert.Contains(WorkspaceLifecycle.reduce accepted ambiguous receipt |> expectError, fun item -> item.Code = "WORKSPACE-PROPOSAL-NONREDUCIBLE")
+
+        Assert.Contains(
+            WorkspaceLifecycle.reduce accepted ambiguous receipt |> expectError,
+            fun item -> item.Code = "WORKSPACE-PROPOSAL-NONREDUCIBLE"
+        )
 
     [<Fact>]
     let ``semantic diff exposes changed assumptions and duplicate edits refuse`` () =
@@ -139,10 +205,16 @@ module WorkspaceLifecycleTests =
                 Modules =
                     accepted.Modules
                     |> List.map (fun item ->
-                        if item.Id = id "PROD-001" then { item with Assumptions = [ "a newer assumption" ] }
-                        else item) }
+                        if item.Id = id "PROD-001" then
+                            { item with
+                                Assumptions = [ "a newer assumption" ] }
+                        else
+                            item) }
 
-        let diff = WorkspaceLifecycle.semanticDiff accepted changed |> Result.defaultWith (sprintf "%A" >> failwith)
+        let diff =
+            WorkspaceLifecycle.semanticDiff accepted changed
+            |> Result.defaultWith (sprintf "%A" >> failwith)
+
         Assert.Contains(diff, fun item -> item.Subject = id "PROD-001" && item.Summary = "change assumptions")
 
         let duplicate =
@@ -151,7 +223,10 @@ module WorkspaceLifecycleTests =
                   WorkspaceChange.Remove(id "DECIS-001") ]
                 ProposalDisposition.CoherentDelta
 
-        Assert.Contains(WorkspaceLifecycle.validateProposal accepted duplicate, fun item -> item.Code = "WORKSPACE-CHANGE-DUPLICATE")
+        Assert.Contains(
+            WorkspaceLifecycle.validateProposal accepted duplicate,
+            fun item -> item.Code = "WORKSPACE-CHANGE-DUPLICATE"
+        )
 
     [<Fact>]
     let ``migration stays dry-run until every source and decision is complete`` () =
@@ -167,7 +242,9 @@ module WorkspaceLifecycleTests =
                 Classification = LegacyMigrationClassification.Ambiguous "heading has two meanings"
                 TargetPath = None } ]
 
-        let incomplete, findings = WorkspaceMigration.plan "quint-specification-v1" (hash 'c') sources []
+        let incomplete, findings =
+            WorkspaceMigration.plan "quint-specification-v1" (hash 'c') sources []
+
         Assert.False incomplete.ReadyToApply
         Assert.Contains(findings, fun item -> item.Code = "WORKSPACE-MIGRATION-DECISION")
 
@@ -175,9 +252,13 @@ module WorkspaceLifecycleTests =
             sources
             |> List.map (fun item ->
                 if item.Path.StartsWith("specs/", StringComparison.Ordinal) then
-                    { item with Classification = LegacyMigrationClassification.Preserved }
-                else item)
+                    { item with
+                        Classification = LegacyMigrationClassification.Preserved }
+                else
+                    item)
 
-        let complete, completeFindings = WorkspaceMigration.plan "quint-specification-v1" (hash 'c') completeSources [ receipt ]
+        let complete, completeFindings =
+            WorkspaceMigration.plan "quint-specification-v1" (hash 'c') completeSources [ receipt ]
+
         Assert.True complete.ReadyToApply
         Assert.Empty completeFindings
