@@ -19,6 +19,9 @@ open Xunit
 /// Each test below names the acceptance criterion it discharges. The negative cases are not decoration:
 /// a gate asserted only to pass on good input is the failure mode #266 keeps measuring, so every
 /// positive case here has a negative twin proving the same gate can fail.
+// `runVerify` and `runShip` probe candidate membership through PATH-resolved git. Keep those probes
+// out of the process-global PATH mutation windows exercised by the CLI failure tests.
+[<Collection("ProcessGlobalEnv")>]
 module RecordDischargedObligationTests =
     let private workId = "011-evidence-command"
     let private title = "Evidence Command"
