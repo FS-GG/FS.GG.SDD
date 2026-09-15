@@ -550,7 +550,7 @@ module TypedSdd =
             Error
                 [ diagnostic
                       "typedSdd.v2.cacheRequired"
-                      "Explicit Quint authoring requires a caller-selected local cache."
+                      "Quint authoring requires a caller-selected local cache."
                       "Pass --cache <path> containing objects/<qualified-sha256>; no acquisition is performed." ]
         | Some cache when not (Directory.Exists cache) ->
             Error
@@ -828,7 +828,7 @@ module TypedSdd =
                               "Pass --agent <id> --session <id>." ] }
             else
                 let backend =
-                    optionValue "--backend" args |> Option.defaultValue "fsharp-specification-v1"
+                    optionValue "--backend" args |> Option.defaultValue "quint-specification-v1"
 
                 if backend = "quint" || backend = "quint-specification-v1" then
                     match authorQuint args workId agent session with
@@ -1089,7 +1089,7 @@ module TypedSdd =
                           $"lifecycle notes: {extension.LifecycleNotes.Length}" ]
 
                     let backend =
-                        optionValue "--backend" args |> Option.defaultValue "fsharp-specification-v1"
+                        optionValue "--backend" args |> Option.defaultValue "quint-specification-v1"
 
                     if backend = "quint" || backend = "quint-specification-v1" then
                         match migrationPayload extension with

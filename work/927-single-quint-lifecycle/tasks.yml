@@ -1,0 +1,111 @@
+schemaVersion: 1
+work:
+  id: 927-single-quint-lifecycle
+  title: "Single Quint-backed workspace lifecycle"
+  stage: tasks
+  status: tasksReady
+  sourceSpec: work/927-single-quint-lifecycle/spec.md
+  sourceClarifications: work/927-single-quint-lifecycle/clarifications.md
+  sourceChecklist: work/927-single-quint-lifecycle/checklist.md
+  sourcePlan: work/927-single-quint-lifecycle/plan.md
+  publicOrToolFacingImpact: true
+
+sources:
+  - label: spec
+    path: work/927-single-quint-lifecycle/spec.md
+    digest: bc9271fa0dad56388caade41928dfa07a15b33a1e0367a6a4d30166a395b3eed
+    schemaVersion: 1
+  - label: clarifications
+    path: work/927-single-quint-lifecycle/clarifications.md
+    digest: 76f57836cdfd3dfe60eec538231959bdf5190a35f50c2d79a8687a551734f250
+    schemaVersion: 1
+  - label: checklist
+    path: work/927-single-quint-lifecycle/checklist.md
+    digest: bdfaa9763ef49e55873dcbf34f230dc0304b01e1a3b9e0ec600d464d9920792f
+    schemaVersion: 1
+  - label: plan
+    path: work/927-single-quint-lifecycle/plan.md
+    digest: 625ae2755f3521d4be793018d49946ccc1b5c7484010c6e3ec3c71b82d755b76
+    schemaVersion: 1
+
+tasks:
+  - id: T001
+    title: Define the public workspace lifecycle contract
+    status: pending
+    owner: sdd
+    dependencies: []
+    requirements: [FR-001, FR-002, FR-003]
+    decisions: []
+    sourceIds: [AC-001, AC-002, AC-004, DEC-002, PC-001, PD-001]
+    requiredSkills: [fsharp]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Exercise semantic validation, diff, reconciliation, and reduction
+    status: pending
+    owner: sdd
+    dependencies: [T001]
+    requirements: [FR-004, FR-005]
+    decisions: []
+    sourceIds: [AC-001, AC-002, DEC-004, PD-002]
+    requiredSkills: [automated-tests]
+    requiredEvidence: [EV002]
+  - id: T003
+    title: Implement the typed workspace lifecycle kernel
+    status: pending
+    owner: sdd
+    dependencies: [T001, T002]
+    requirements: [FR-001, FR-002, FR-003, FR-004, FR-005]
+    decisions: []
+    sourceIds: [AC-001, AC-002, AC-004]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV003]
+  - id: T004
+    title: Implement dry-run legacy migration planning
+    status: pending
+    owner: sdd
+    dependencies: [T001, T002]
+    requirements: [FR-006, FR-007]
+    decisions: []
+    sourceIds: [AC-003, DEC-005, PD-003, PM-001]
+    requiredSkills: [fsharp, implementation, automated-tests]
+    requiredEvidence: [EV004]
+  - id: T005
+    title: Add and execute the literate Quint lifecycle model
+    status: pending
+    owner: sdd
+    dependencies: [T001]
+    requirements: [FR-008]
+    decisions: []
+    sourceIds: [AC-001, AC-002, DEC-001, PD-004, VO-002]
+    requiredSkills: [quint]
+    requiredEvidence: [EV005]
+  - id: T006
+    title: Make omitted Typed SDD backend selection Quint
+    status: pending
+    owner: sdd
+    dependencies: [T003]
+    requirements: [FR-009]
+    decisions: []
+    sourceIds: [AC-004, DEC-003, PD-005, PM-001]
+    requiredSkills: [fsharp, implementation, automated-tests]
+    requiredEvidence: [EV006]
+  - id: T007
+    title: Align projections, installed skills, docs, and package assets
+    status: pending
+    owner: sdd
+    dependencies: [T003, T004, T005, T006]
+    requirements: [FR-010]
+    decisions: []
+    sourceIds: [GV-001, VO-003]
+    requiredSkills: [documentation, packaging]
+    requiredEvidence: [EV007]
+  - id: T008
+    title: Record release-readiness and migration evidence
+    status: pending
+    owner: sdd
+    dependencies: [T002, T003, T004, T005, T006, T007]
+    requirements: [FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010]
+    decisions: []
+    sourceIds: [VO-001, VO-002, VO-003, PC-001, PM-001]
+    requiredSkills: [automated-tests, readiness-evidence]
+    requiredEvidence: [EV008]

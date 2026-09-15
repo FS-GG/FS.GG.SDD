@@ -1,0 +1,190 @@
+schemaVersion: 1
+workId: 927-single-quint-lifecycle
+stage: evidence
+status: needsEvidenceCorrection
+sourceSpec: work/927-single-quint-lifecycle/spec.md
+sourceClarifications: work/927-single-quint-lifecycle/clarifications.md
+sourceChecklist: work/927-single-quint-lifecycle/checklist.md
+sourcePlan: work/927-single-quint-lifecycle/plan.md
+sourceTasks: work/927-single-quint-lifecycle/tasks.yml
+sourceAnalysis: readiness/927-single-quint-lifecycle/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/927-single-quint-lifecycle/analysis.json
+    digest: a082831e3d40ac1b5cd80a21f5a0c6df7b1907b5906850813e0d788ff8628a08
+    schemaVersion: 1
+  - label: checklist
+    path: work/927-single-quint-lifecycle/checklist.md
+    digest: bdfaa9763ef49e55873dcbf34f230dc0304b01e1a3b9e0ec600d464d9920792f
+    schemaVersion: 1
+  - label: clarifications
+    path: work/927-single-quint-lifecycle/clarifications.md
+    digest: 76f57836cdfd3dfe60eec538231959bdf5190a35f50c2d79a8687a551734f250
+    schemaVersion: 1
+  - label: plan
+    path: work/927-single-quint-lifecycle/plan.md
+    digest: 625ae2755f3521d4be793018d49946ccc1b5c7484010c6e3ec3c71b82d755b76
+    schemaVersion: 1
+  - label: spec
+    path: work/927-single-quint-lifecycle/spec.md
+    digest: bc9271fa0dad56388caade41928dfa07a15b33a1e0367a6a4d30166a395b3eed
+    schemaVersion: 1
+  - label: tasks
+    path: work/927-single-quint-lifecycle/tasks.yml
+    digest: 184bf77bed2e7fc0d797cc0bfb1b9d0f15051da57f7189c58155d42a391b117d
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001, FR-002, FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-004, FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV002]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-001, FR-002, FR-003, FR-004, FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV003]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-006, FR-007]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV004]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-008]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV005]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: [FR-009]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV006]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: [FR-010]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV007]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: [FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV008]
+    artifacts: [readiness/927-single-quint-lifecycle/workspace-lifecycle.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs, src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace-lifecycle.md]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceLifecycleTests.fs
+    result: pass
+    synthetic: false
+    notes: [Typed kernel tests passed; the exact Quint model is enforced in package acceptance.]
+lifecycleNotes:
+  - "Next lifecycle action: verify."
