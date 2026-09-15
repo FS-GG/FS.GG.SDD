@@ -1,0 +1,254 @@
+schemaVersion: 1
+workId: 934-model-reconciliation
+stage: evidence
+status: evidenceReady
+sourceSpec: work/934-model-reconciliation/spec.md
+sourceClarifications: work/934-model-reconciliation/clarifications.md
+sourceChecklist: work/934-model-reconciliation/checklist.md
+sourcePlan: work/934-model-reconciliation/plan.md
+sourceTasks: work/934-model-reconciliation/tasks.yml
+sourceAnalysis: readiness/934-model-reconciliation/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/934-model-reconciliation/analysis.json
+    digest: 2d8783e8e9c282b89efcf54920d1dae27469f7e536456d6afbaec60d78440cfd
+    schemaVersion: 1
+  - label: checklist
+    path: work/934-model-reconciliation/checklist.md
+    digest: 087b8a05f185299024a7254c442c937992f1df132d3970d22e01aa684cff9ff4
+    schemaVersion: 1
+  - label: clarifications
+    path: work/934-model-reconciliation/clarifications.md
+    digest: dd8e9c42ac009095d78219ab6d7126696c055c7a00fa8645b2a182c00bdf07d1
+    schemaVersion: 1
+  - label: plan
+    path: work/934-model-reconciliation/plan.md
+    digest: 82b03fb38f628f667ba3aa9b06455f19cf82b3e1969d6d739cb7de5829f3e50f
+    schemaVersion: 1
+  - label: spec
+    path: work/934-model-reconciliation/spec.md
+    digest: 725374dcec97a1ccfe1ef28d7cc2ad2421d262f94d42fe0994103da1d9481379
+    schemaVersion: 1
+  - label: tasks
+    path: work/934-model-reconciliation/tasks.yml
+    digest: 4c1994dabe520e1ceb1a0646715cb2069db11eb3cd94531f70642623514eab97
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: [AC-001]
+    clarificationDecisionRefs: [DEC-001]
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [readiness/934-model-reconciliation/workspace-correspondence.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/workspace-correspondence.trx
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 14
+      failed: 0
+      skipped: 0
+    notes: [Strict model codec and deterministic round-trip tests passed.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002, FR-003]
+    acceptanceScenarioRefs: [AC-001, AC-002]
+    clarificationDecisionRefs: [DEC-003]
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002, PD-003]
+    obligationRefs: [EV002]
+    artifacts: [readiness/934-model-reconciliation/workspace-correspondence.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/workspace-correspondence.trx
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 14
+      failed: 0
+      skipped: 0
+    notes: [Order independence and conflict-without-candidate controls passed.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-004, FR-005]
+    acceptanceScenarioRefs: [AC-003, AC-004]
+    clarificationDecisionRefs: [DEC-002, DEC-003]
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004, PD-005]
+    obligationRefs: [EV003]
+    artifacts: [readiness/934-model-reconciliation/workspace-correspondence.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/workspace-correspondence.trx
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 14
+      failed: 0
+      skipped: 0
+    notes: [All seven outcomes and forged-fingerprint refusal passed.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-006]
+    acceptanceScenarioRefs: [AC-004]
+    clarificationDecisionRefs: [DEC-004]
+    checklistResultRefs: []
+    planDecisionRefs: [PD-006]
+    obligationRefs: [EV004]
+    artifacts: [readiness/934-model-reconciliation/workspace-correspondence.trx, tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/workspace-correspondence.trx
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 14
+      failed: 0
+      skipped: 0
+    notes: [Selective impact traversal retained global integrity refusal.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-007]
+    acceptanceScenarioRefs: [AC-003, AC-005]
+    clarificationDecisionRefs: [DEC-005]
+    checklistResultRefs: []
+    planDecisionRefs: [PD-007]
+    obligationRefs: [EV005]
+    artifacts: [readiness/934-model-reconciliation/typed-sdd-cli.trx, tests/FS.GG.SDD.Cli.Tests/TypedSddCommandTests.fs]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Cli.Tests/TypedSddCommandTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/typed-sdd-cli.trx
+      digest: "sha256:aaf732d469f571d1cdebe98b582b8b83bc636f65ad74bbecf0da0786b1c4031f"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 15
+      failed: 0
+      skipped: 0
+    notes: [JSON plain and rich CLI projections passed from one typed result.]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: [FR-008]
+    acceptanceScenarioRefs: [AC-005]
+    clarificationDecisionRefs: [DEC-006]
+    checklistResultRefs: []
+    planDecisionRefs: [PD-008]
+    obligationRefs: [EV006]
+    artifacts: [".claude/skills/fs-gg-sdd-typed-correspond/SKILL.md", ".claude/skills/fs-gg-sdd-typed-reconcile/SKILL.md", readiness/934-model-reconciliation/seeded-skills.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Commands.Tests/SeededSkillsTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/seeded-skills.trx
+      digest: "sha256:2c485b6aeb5188cc69d3542dbac43dcf15f658755e3e6303f15ff958c25573cd"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 47
+      failed: 0
+      skipped: 0
+    notes: [Both focused skills validated and seed byte parity passed.]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: [FR-007, FR-008]
+    acceptanceScenarioRefs: [AC-005]
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV007]
+    artifacts: [docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/WorkspaceLifecycle.fsi, docs/typed-sdd-lifecycle.md, readiness/934-model-reconciliation/seeded-skills.trx]
+    sourceRefs:
+      - kind: verification
+        path: tests/FS.GG.SDD.Commands.Tests/ProcessSkillManifestTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/seeded-skills.trx
+      digest: "sha256:2c485b6aeb5188cc69d3542dbac43dcf15f658755e3e6303f15ff958c25573cd"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 47
+      failed: 0
+      skipped: 0
+    notes: [Manifest, and API surface checks passed., docs, golden]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: [FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008]
+    acceptanceScenarioRefs: [AC-001, AC-002, AC-003, AC-004, AC-005]
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV008]
+    artifacts: [readiness/934-model-reconciliation/package-exact-ir.xml, readiness/934-model-reconciliation/package-q2.xml, readiness/934-model-reconciliation/package-q3.xml, readiness/934-model-reconciliation/package-toolchain.json, readiness/934-model-reconciliation/seeded-skills.trx, readiness/934-model-reconciliation/typed-sdd-cli.trx, readiness/934-model-reconciliation/workspace-correspondence.trx, tests/quint-svg-workspace-installed-acceptance.sh]
+    sourceRefs:
+      - kind: verification
+        path: tests/quint-svg-workspace-installed-acceptance.sh
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/934-model-reconciliation/package-q3.xml
+      digest: "sha256:27567bf2188fe7f12c042f808428aaf54f98a359ee36ddd2896191f687e35ade"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 22
+      failed: 0
+      skipped: 0
+    notes: [Focused library and CLI tests, and the complete installed package-only Quint workspace acceptance passed., seed parity, surface checks]
+lifecycleNotes:
+  - "Next lifecycle action: verify."

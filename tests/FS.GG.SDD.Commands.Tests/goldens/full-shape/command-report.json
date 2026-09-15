@@ -213,6 +213,19 @@
       "diagnosticIds": []
     },
     {
+      "path": ".agents/skills/fs-gg-sdd-typed-correspond/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "2788d51db70b048736e7a2b1081e0cac55a614dd09814c0c510de0e9b2ec720f"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
       "path": ".agents/skills/fs-gg-sdd-typed-inspect/SKILL.md",
       "kind": "agentGuidance",
       "ownership": "authored",
@@ -234,6 +247,19 @@
       "afterDigest": {
         "algorithm": "sha256",
         "value": "5e99051e9d179c256fcbe4d449f417183b6b9b05a2bc9107c421c9c867067584"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-typed-reconcile/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "b237b94b6f50b3c658d20b14264df23ccbb4cc21a556ed5e262b8a559fb6f546"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -460,6 +486,19 @@
       "diagnosticIds": []
     },
     {
+      "path": ".claude/skills/fs-gg-sdd-typed-correspond/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "2788d51db70b048736e7a2b1081e0cac55a614dd09814c0c510de0e9b2ec720f"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
       "path": ".claude/skills/fs-gg-sdd-typed-inspect/SKILL.md",
       "kind": "agentGuidance",
       "ownership": "authored",
@@ -481,6 +520,19 @@
       "afterDigest": {
         "algorithm": "sha256",
         "value": "5e99051e9d179c256fcbe4d449f417183b6b9b05a2bc9107c421c9c867067584"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-typed-reconcile/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "b237b94b6f50b3c658d20b14264df23ccbb4cc21a556ed5e262b8a559fb6f546"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -594,7 +646,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "9174b7d8b8d343ae75e04de8b2e25c4f326a6fadcb83df824173a13af7bc22cc"
+        "value": "6eba1cea6821b1f2a0541dfb4f86f698cb22823f0bfa7a84b48af653c8c4104a"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []

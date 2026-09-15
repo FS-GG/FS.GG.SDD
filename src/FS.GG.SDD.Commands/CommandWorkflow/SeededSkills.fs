@@ -40,8 +40,10 @@ module internal SeededSkills =
           "fs-gg-sdd-tasks"
           "fs-gg-sdd-troubleshooting"
           "fs-gg-sdd-typed-author"
+          "fs-gg-sdd-typed-correspond"
           "fs-gg-sdd-typed-inspect"
           "fs-gg-sdd-typed-migrate"
+          "fs-gg-sdd-typed-reconcile"
           "fs-gg-sdd-validate"
           "fs-gg-sdd-verify" ]
         |> List.sort

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ2" tests="16" failures="0">
+  <testcase classname="SvgWorkspaceQuintQ2" name="candidate-package-installed-before-isolation" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="real-network-namespace-isolation" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="exact-content-addressed-tools" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="neutral-model-lmt-extraction" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="neutral-model-quint-typecheck" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="two-isolated-author-roots" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="profile2-author-inspect" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="neutral-general-authority-facts" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="action-effect-correspondence" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="canonical-receipt-parity" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="dotnet-fable-parity" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="fable-independent-mutation" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="contract-digest-closure" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="workspace-lifecycle-lmt-extraction-and-typecheck" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="workspace-lifecycle-behavioral-witnesses" />
+  <testcase classname="SvgWorkspaceQuintQ2" name="workspace-lifecycle-sampled-invariants" />
+</testsuite>

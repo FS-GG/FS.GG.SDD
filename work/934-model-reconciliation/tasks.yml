@@ -1,0 +1,116 @@
+schemaVersion: 1
+work:
+  id: 934-model-reconciliation
+  title: "Quint model reconciliation and implementation correspondence"
+  stage: tasks
+  status: tasksReady
+  sourceSpec: work/934-model-reconciliation/spec.md
+  sourceClarifications: work/934-model-reconciliation/clarifications.md
+  sourceChecklist: work/934-model-reconciliation/checklist.md
+  sourcePlan: work/934-model-reconciliation/plan.md
+  publicOrToolFacingImpact: true
+
+sources:
+  - label: spec
+    path: work/934-model-reconciliation/spec.md
+    digest: 725374dcec97a1ccfe1ef28d7cc2ad2421d262f94d42fe0994103da1d9481379
+    schemaVersion: 1
+  - label: clarifications
+    path: work/934-model-reconciliation/clarifications.md
+    digest: dd8e9c42ac009095d78219ab6d7126696c055c7a00fa8645b2a182c00bdf07d1
+    schemaVersion: 1
+  - label: checklist
+    path: work/934-model-reconciliation/checklist.md
+    digest: 087b8a05f185299024a7254c442c937992f1df132d3970d22e01aa684cff9ff4
+    schemaVersion: 1
+  - label: plan
+    path: work/934-model-reconciliation/plan.md
+    digest: 82b03fb38f628f667ba3aa9b06455f19cf82b3e1969d6d739cb7de5829f3e50f
+    schemaVersion: 1
+tasks:
+  - id: T001
+    title: Add strict WorkspaceModel and ChangeProposal codecs
+    status: done
+    owner: sdd
+    dependencies: []
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    sourceIds: [AC-001, FR-001, PD-001, DEC-001, PC-001]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Expose deterministic reconciliation reports and negative controls
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: [FR-002, FR-003]
+    decisions: [DEC-003]
+    sourceIds: [AC-001, AC-002, FR-002, FR-003, PD-002, PD-003, DEC-003, VO-001]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV002]
+  - id: T003
+    title: Add fingerprint-bound correspondence model and seven outcomes
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: [FR-004, FR-005]
+    decisions: [DEC-002, DEC-003]
+    sourceIds: [AC-003, AC-004, FR-004, FR-005, PD-004, PD-005, DEC-002, DEC-003, VO-002]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV003]
+  - id: T004
+    title: Derive selective correspondence from contract impacts
+    status: done
+    owner: sdd
+    dependencies: [T003]
+    requirements: [FR-006]
+    decisions: [DEC-004]
+    sourceIds: [AC-004, FR-006, PD-006, DEC-004, VO-002]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV004]
+  - id: T005
+    title: Add CLI JSON plain and rich projections
+    status: done
+    owner: sdd
+    dependencies: [T002, T003, T004]
+    requirements: [FR-007]
+    decisions: [DEC-005]
+    sourceIds: [AC-003, AC-005, FR-007, PD-007, DEC-005, PC-001, VO-003]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV005]
+  - id: T006
+    title: Author and seed focused reconciliation and correspondence skills
+    status: done
+    owner: sdd
+    dependencies: [T005]
+    requirements: [FR-008]
+    decisions: [DEC-006]
+    sourceIds: [AC-005, FR-008, PD-008, DEC-006, GV-001]
+    requiredSkills: [skill-authoring, deterministic-json]
+    requiredEvidence: [EV006]
+  - id: T007
+    title: Update public baselines documentation and additive migration posture
+    status: done
+    owner: sdd
+    dependencies: [T005, T006]
+    requirements: [FR-007, FR-008]
+    decisions: []
+    sourceIds: [FR-007, FR-008, PC-001, PM-001, GV-001]
+    requiredSkills: [schema-versioning, documentation]
+    requiredEvidence: [EV007]
+  - id: T008
+    title: Run focused full and package-only verification
+    status: done
+    owner: sdd
+    dependencies: [T002, T003, T004, T005, T006, T007]
+    requirements: [FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008]
+    decisions: []
+    sourceIds: [AC-001, AC-002, AC-003, AC-004, AC-005, VO-001, VO-002, VO-003]
+    requiredSkills: [automated-tests, readiness-evidence]
+    requiredEvidence: [EV008]
+acceptedDeferrals: []
+findings: []
+advisoryNotes:
+  - "Optional Governance pointers remain compatibility facts only."
+lifecycleNotes:
+  - "Next lifecycle action: fsgg-sdd analyze --work 934-model-reconciliation."

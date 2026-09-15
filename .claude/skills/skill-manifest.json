@@ -197,6 +197,19 @@
       ]
     },
     {
+      "id": "fs-gg-sdd-typed-correspond",
+      "scope": "process",
+      "sha256": "2788d51db70b048736e7a2b1081e0cac55a614dd09814c0c510de0e9b2ec720f",
+      "resolvablePath": ".agents/skills/fs-gg-sdd-typed-correspond/SKILL.md",
+      "materializes-when": "always",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2788d51db70b048736e7a2b1081e0cac55a614dd09814c0c510de0e9b2ec720f"
+        }
+      ]
+    },
+    {
       "id": "fs-gg-sdd-typed-inspect",
       "scope": "process",
       "sha256": "acf98b050f401ad583b2c4e651f8b090921c0df3b350f16a1ae4d9d0543bd266",
@@ -219,6 +232,19 @@
         {
           "path": "SKILL.md",
           "sha256": "5e99051e9d179c256fcbe4d449f417183b6b9b05a2bc9107c421c9c867067584"
+        }
+      ]
+    },
+    {
+      "id": "fs-gg-sdd-typed-reconcile",
+      "scope": "process",
+      "sha256": "b237b94b6f50b3c658d20b14264df23ccbb4cc21a556ed5e262b8a559fb6f546",
+      "resolvablePath": ".agents/skills/fs-gg-sdd-typed-reconcile/SKILL.md",
+      "materializes-when": "always",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b237b94b6f50b3c658d20b14264df23ccbb4cc21a556ed5e262b8a559fb6f546"
         }
       ]
     },

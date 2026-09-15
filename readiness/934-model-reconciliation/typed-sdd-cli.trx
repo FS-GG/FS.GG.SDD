@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="6a81469d-5211-4251-b011-9b905722bf1b" name="@9b87d498da98 2026-09-15 18:42:35" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-15T18:42:35.3890625+02:00" queuing="2026-09-15T18:42:35.3890625+02:00" start="2026-09-15T18:42:33.5263749+02:00" finish="2026-09-15T18:42:56.0398639+02:00" />
+  <TestSettings name="default" id="827a3a48-fdac-4f1f-acf2-1d91879b15db">
+    <Deployment runDeploymentRoot="_9b87d498da98_2026-09-15_18_42_35" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d39b76c9-2ae8-4f64-a7ef-0359f09ada26" testId="8cf99616-cc99-99ed-e81d-fc598e8a3423" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.Quint author cannot bypass v1 migration or accept multiline source skew" computerName="9b87d498da98" duration="00:00:01.7746511" startTime="2026-09-15T18:42:42.6790075+02:00" endTime="2026-09-15T18:42:44.4536448+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d39b76c9-2ae8-4f64-a7ef-0359f09ada26" />
+    <UnitTestResult executionId="9e3f3c5e-4bc5-4ccd-932e-bee2e1855476" testId="84e1303c-1fe0-8c6c-f8d9-ba39a9b2518b" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.author inspect and direct-edit diagnostic form one stable authority flow" computerName="9b87d498da98" duration="00:00:04.8943133" startTime="2026-09-15T18:42:44.4541227+02:00" endTime="2026-09-15T18:42:49.3481169+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9e3f3c5e-4bc5-4ccd-932e-bee2e1855476" />
+    <UnitTestResult executionId="b937033a-efb3-4820-be6d-d81effffface" testId="faa2ce43-f5f4-a044-75a3-9cafba6323ff" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.author requires an agent receipt and writes nothing when unavailable" computerName="9b87d498da98" duration="00:00:00.1175936" startTime="2026-09-15T18:42:34.1523782+02:00" endTime="2026-09-15T18:42:34.2760253+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b937033a-efb3-4820-be6d-d81effffface" />
+    <UnitTestResult executionId="08769c75-ddfd-4f09-8edd-fb5c5180d0bc" testId="14c9df6b-530b-09e6-4959-fe718fe70fcd" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.failed rollback restores the prior typed markdown authority" computerName="9b87d498da98" duration="00:00:01.7888397" startTime="2026-09-15T18:42:53.7804470+02:00" endTime="2026-09-15T18:42:55.5692235+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="08769c75-ddfd-4f09-8edd-fb5c5180d0bc" />
+    <UnitTestResult executionId="f978167f-507e-47e0-aef7-967dcdbf3a8b" testId="66a23c1f-c549-ddc9-1ac0-9f4ef049b63b" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.shared lifecycle command blocks when typed authority projection is stale" computerName="9b87d498da98" duration="00:00:03.7632269" startTime="2026-09-15T18:42:49.3487736+02:00" endTime="2026-09-15T18:42:53.1114960+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f978167f-507e-47e0-aef7-967dcdbf3a8b" />
+    <UnitTestResult executionId="0d48522c-b8b5-4739-a5fd-fdd91d40f34c" testId="c590ba9c-7a7d-14fc-8f0f-ea43f8655e1c" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.omitted author backend selects Quint" computerName="9b87d498da98" duration="00:00:00.0665991" startTime="2026-09-15T18:42:53.1119575+02:00" endTime="2026-09-15T18:42:53.1782952+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0d48522c-b8b5-4739-a5fd-fdd91d40f34c" />
+    <UnitTestResult executionId="022a5c2f-d6ea-4d12-812e-7c06cf01b9ea" testId="f341a6bb-67de-18e4-4a26-735d9e6cb197" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.reconcile projects one successful typed result as json plain and rich" computerName="9b87d498da98" duration="00:00:00.3826327" startTime="2026-09-15T18:42:53.1785148+02:00" endTime="2026-09-15T18:42:53.5610869+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="022a5c2f-d6ea-4d12-812e-7c06cf01b9ea" />
+    <UnitTestResult executionId="76b099c9-6aa1-4781-9e59-1008c69f1dca" testId="e99b692a-300e-7268-a792-6019235b59c3" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.migration analysis classifies supported input and performs no preaccept write" computerName="9b87d498da98" duration="00:00:00.1798485" startTime="2026-09-15T18:42:41.8581185+02:00" endTime="2026-09-15T18:42:42.0378479+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="76b099c9-6aa1-4781-9e59-1008c69f1dca" />
+    <UnitTestResult executionId="b4fc5286-66dd-44c3-b572-5f5c60375763" testId="d8b63f76-ecd8-85c0-6544-e2d7465d26af" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.unknown typed option fails closed" computerName="9b87d498da98" duration="00:00:00.2190222" startTime="2026-09-15T18:42:53.5619036+02:00" endTime="2026-09-15T18:42:53.7802584+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b4fc5286-66dd-44c3-b572-5f5c60375763" />
+    <UnitTestResult executionId="4cf2b398-d8c4-4c84-a699-2ab7428cabd5" testId="c2d6a30e-717a-de0c-8439-61069660b218" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.correspond projects fingerprints and fails when an obligation is unsatisfied" computerName="9b87d498da98" duration="00:00:00.6408074" startTime="2026-09-15T18:42:42.0382458+02:00" endTime="2026-09-15T18:42:42.6787819+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4cf2b398-d8c4-4c84-a699-2ab7428cabd5" />
+    <UnitTestResult executionId="ffb973d9-87c4-4ad5-a071-6312a4eef459" testId="a8422490-8bbe-79bc-7760-c9b36461f056" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.doctor and upgrade execute canonical F sharp and block a runtime failure" computerName="9b87d498da98" duration="00:00:05.5463742" startTime="2026-09-15T18:42:34.2874263+02:00" endTime="2026-09-15T18:42:39.8225109+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ffb973d9-87c4-4ad5-a071-6312a4eef459" />
+    <UnitTestResult executionId="2a2edd8a-d943-4168-b30c-bfe157e4da24" testId="02a2f783-5c3e-6231-07ea-3ceda14da0d9" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.accepted migration preserves semantic inventory and explicit rollback restores source" computerName="9b87d498da98" duration="00:00:01.8430041" startTime="2026-09-15T18:42:39.9439738+02:00" endTime="2026-09-15T18:42:41.7868245+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2a2edd8a-d943-4168-b30c-bfe157e4da24" />
+    <UnitTestResult executionId="83274d59-1b55-4d46-b882-6ae685144dd8" testId="12e58d36-d81f-8503-1dc8-a1eec073c885" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.inspect dispatches explicit manifest v2 and rejects edited Quint artifacts" computerName="9b87d498da98" duration="00:00:00.4054037" startTime="2026-09-15T18:42:55.5693765+02:00" endTime="2026-09-15T18:42:55.9747637+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="83274d59-1b55-4d46-b882-6ae685144dd8" />
+    <UnitTestResult executionId="f19d52c5-2d29-4d6f-9121-cf1b043f924d" testId="4d437ba9-f8aa-59f9-a3be-bbf5651297a0" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.work and source traversal are rejected without writes outside root" computerName="9b87d498da98" duration="00:00:00.1210252" startTime="2026-09-15T18:42:39.8240205+02:00" endTime="2026-09-15T18:42:39.9436421+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f19d52c5-2d29-4d6f-9121-cf1b043f924d" />
+    <UnitTestResult executionId="b729c9a0-996b-43a9-8d08-6153db5d62aa" testId="24041b33-28c8-6412-cf2d-727b45c662d2" testName="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.general Quint authoring requires explicit source and selector inputs" computerName="9b87d498da98" duration="00:00:00.0708429" startTime="2026-09-15T18:42:41.7871336+02:00" endTime="2026-09-15T18:42:41.8577693+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b729c9a0-996b-43a9-8d08-6153db5d62aa" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.doctor and upgrade execute canonical F sharp and block a runtime failure" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="a8422490-8bbe-79bc-7760-c9b36461f056">
+      <Execution id="ffb973d9-87c4-4ad5-a071-6312a4eef459" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="doctor and upgrade execute canonical F sharp and block a runtime failure" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.accepted migration preserves semantic inventory and explicit rollback restores source" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="02a2f783-5c3e-6231-07ea-3ceda14da0d9">
+      <Execution id="2a2edd8a-d943-4168-b30c-bfe157e4da24" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="accepted migration preserves semantic inventory and explicit rollback restores source" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.inspect dispatches explicit manifest v2 and rejects edited Quint artifacts" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="12e58d36-d81f-8503-1dc8-a1eec073c885">
+      <Execution id="83274d59-1b55-4d46-b882-6ae685144dd8" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="inspect dispatches explicit manifest v2 and rejects edited Quint artifacts" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.omitted author backend selects Quint" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="c590ba9c-7a7d-14fc-8f0f-ea43f8655e1c">
+      <Execution id="0d48522c-b8b5-4739-a5fd-fdd91d40f34c" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="omitted author backend selects Quint" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.Quint author cannot bypass v1 migration or accept multiline source skew" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="8cf99616-cc99-99ed-e81d-fc598e8a3423">
+      <Execution id="d39b76c9-2ae8-4f64-a7ef-0359f09ada26" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="Quint author cannot bypass v1 migration or accept multiline source skew" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.correspond projects fingerprints and fails when an obligation is unsatisfied" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="c2d6a30e-717a-de0c-8439-61069660b218">
+      <Execution id="4cf2b398-d8c4-4c84-a699-2ab7428cabd5" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="correspond projects fingerprints and fails when an obligation is unsatisfied" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.author requires an agent receipt and writes nothing when unavailable" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="faa2ce43-f5f4-a044-75a3-9cafba6323ff">
+      <Execution id="b937033a-efb3-4820-be6d-d81effffface" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="author requires an agent receipt and writes nothing when unavailable" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.migration analysis classifies supported input and performs no preaccept write" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="e99b692a-300e-7268-a792-6019235b59c3">
+      <Execution id="76b099c9-6aa1-4781-9e59-1008c69f1dca" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="migration analysis classifies supported input and performs no preaccept write" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.author inspect and direct-edit diagnostic form one stable authority flow" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="84e1303c-1fe0-8c6c-f8d9-ba39a9b2518b">
+      <Execution id="9e3f3c5e-4bc5-4ccd-932e-bee2e1855476" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="author inspect and direct-edit diagnostic form one stable authority flow" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.reconcile projects one successful typed result as json plain and rich" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="f341a6bb-67de-18e4-4a26-735d9e6cb197">
+      <Execution id="022a5c2f-d6ea-4d12-812e-7c06cf01b9ea" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="reconcile projects one successful typed result as json plain and rich" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.work and source traversal are rejected without writes outside root" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="4d437ba9-f8aa-59f9-a3be-bbf5651297a0">
+      <Execution id="f19d52c5-2d29-4d6f-9121-cf1b043f924d" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="work and source traversal are rejected without writes outside root" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.unknown typed option fails closed" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="d8b63f76-ecd8-85c0-6544-e2d7465d26af">
+      <Execution id="b4fc5286-66dd-44c3-b572-5f5c60375763" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="unknown typed option fails closed" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.shared lifecycle command blocks when typed authority projection is stale" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="66a23c1f-c549-ddc9-1ac0-9f4ef049b63b">
+      <Execution id="f978167f-507e-47e0-aef7-967dcdbf3a8b" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="shared lifecycle command blocks when typed authority projection is stale" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.failed rollback restores the prior typed markdown authority" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="14c9df6b-530b-09e6-4959-fe718fe70fcd">
+      <Execution id="08769c75-ddfd-4f09-8edd-fb5c5180d0bc" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="failed rollback restores the prior typed markdown authority" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Cli.Tests.TypedSddCommandTests.general Quint authoring requires explicit source and selector inputs" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.cli.tests/bin/debug/net10.0/fs.gg.sdd.cli.tests.dll" id="24041b33-28c8-6412-cf2d-727b45c662d2">
+      <Execution id="b729c9a0-996b-43a9-8d08-6153db5d62aa" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Cli.Tests/bin/Debug/net10.0/FS.GG.SDD.Cli.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Cli.Tests.TypedSddCommandTests" name="general Quint authoring requires explicit source and selector inputs" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="8cf99616-cc99-99ed-e81d-fc598e8a3423" executionId="d39b76c9-2ae8-4f64-a7ef-0359f09ada26" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="84e1303c-1fe0-8c6c-f8d9-ba39a9b2518b" executionId="9e3f3c5e-4bc5-4ccd-932e-bee2e1855476" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="faa2ce43-f5f4-a044-75a3-9cafba6323ff" executionId="b937033a-efb3-4820-be6d-d81effffface" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="14c9df6b-530b-09e6-4959-fe718fe70fcd" executionId="08769c75-ddfd-4f09-8edd-fb5c5180d0bc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="66a23c1f-c549-ddc9-1ac0-9f4ef049b63b" executionId="f978167f-507e-47e0-aef7-967dcdbf3a8b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c590ba9c-7a7d-14fc-8f0f-ea43f8655e1c" executionId="0d48522c-b8b5-4739-a5fd-fdd91d40f34c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f341a6bb-67de-18e4-4a26-735d9e6cb197" executionId="022a5c2f-d6ea-4d12-812e-7c06cf01b9ea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e99b692a-300e-7268-a792-6019235b59c3" executionId="76b099c9-6aa1-4781-9e59-1008c69f1dca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d8b63f76-ecd8-85c0-6544-e2d7465d26af" executionId="b4fc5286-66dd-44c3-b572-5f5c60375763" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c2d6a30e-717a-de0c-8439-61069660b218" executionId="4cf2b398-d8c4-4c84-a699-2ab7428cabd5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a8422490-8bbe-79bc-7760-c9b36461f056" executionId="ffb973d9-87c4-4ad5-a071-6312a4eef459" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="02a2f783-5c3e-6231-07ea-3ceda14da0d9" executionId="2a2edd8a-d943-4168-b30c-bfe157e4da24" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="12e58d36-d81f-8503-1dc8-a1eec073c885" executionId="83274d59-1b55-4d46-b882-6ae685144dd8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4d437ba9-f8aa-59f9-a3be-bbf5651297a0" executionId="f19d52c5-2d29-4d6f-9121-cf1b043f924d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="24041b33-28c8-6412-cf2d-727b45c662d2" executionId="b729c9a0-996b-43a9-8d08-6153db5d62aa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="15" executed="15" passed="15" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.12)
+[xUnit.net 00:00:00.11]   Discovering: FS.GG.SDD.Cli.Tests
+[xUnit.net 00:00:00.20]   Discovered:  FS.GG.SDD.Cli.Tests
+[xUnit.net 00:00:00.22]   Starting:    FS.GG.SDD.Cli.Tests
+[xUnit.net 00:00:22.07]   Finished:    FS.GG.SDD.Cli.Tests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
