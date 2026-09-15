@@ -19,15 +19,15 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`1.8.0`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.0.0`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
 - `FS.GG.SDD.Cli` (the `fsgg-sdd` CLI)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "1.8.0"` and
-`generatorVersion.version = "1.8.0"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.0.0"` and
+`generatorVersion.version = "2.0.0"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
@@ -53,7 +53,7 @@ applied to the set of public-contract changes between them.
 For historical `0.x` releases, SemVer allowed a `0.y.z` line to introduce a
 breaking change on a **minor** bump. This is stated explicitly so early adopters
 can interpret those versions. A migration note was **still required** for any
-breaking change, pre-1.0 included. The current `1.x` line follows ordinary SemVer.
+breaking change, pre-1.0 included. The current `2.x` line follows ordinary SemVer.
 
 ## Schema-version vs contract-version divergence
 
