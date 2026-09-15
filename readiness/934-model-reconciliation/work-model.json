@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "23e108cab121bcd1bb7c7cdbc041e71826f73f873720ee965376c78a4ba2cf0b"
+        "value": "21dc828049c6bef13d349ae425ed1c04fcce0cf0681e6565dc9d3eeb1b58ec68"
       }
     },
     {
@@ -733,7 +733,7 @@
   "evidence": [
     {
       "id": "EV001",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T001",
       "taskRefs": [
@@ -742,8 +742,11 @@
       "requirementRefs": [
         "FR-001"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "readiness/934-model-reconciliation/workspace-correspondence.trx",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -757,7 +760,7 @@
     },
     {
       "id": "EV002",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T002",
       "taskRefs": [
@@ -767,8 +770,11 @@
         "FR-002",
         "FR-003"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "readiness/934-model-reconciliation/workspace-correspondence.trx",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -782,7 +788,7 @@
     },
     {
       "id": "EV003",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T003",
       "taskRefs": [
@@ -792,8 +798,11 @@
         "FR-004",
         "FR-005"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "readiness/934-model-reconciliation/workspace-correspondence.trx",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -807,7 +816,7 @@
     },
     {
       "id": "EV004",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T004",
       "taskRefs": [
@@ -816,8 +825,11 @@
       "requirementRefs": [
         "FR-006"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "readiness/934-model-reconciliation/workspace-correspondence.trx",
+        "tests/FS.GG.SDD.Artifacts.Tests/WorkspaceCorrespondenceTests.fs"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -831,7 +843,7 @@
     },
     {
       "id": "EV005",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T005",
       "taskRefs": [
@@ -840,8 +852,11 @@
       "requirementRefs": [
         "FR-007"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "readiness/934-model-reconciliation/typed-sdd-cli.trx",
+        "tests/FS.GG.SDD.Cli.Tests/TypedSddCommandTests.fs"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -855,7 +870,7 @@
     },
     {
       "id": "EV006",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T006",
       "taskRefs": [
@@ -864,8 +879,12 @@
       "requirementRefs": [
         "FR-008"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        ".claude/skills/fs-gg-sdd-typed-correspond/SKILL.md",
+        ".claude/skills/fs-gg-sdd-typed-reconcile/SKILL.md",
+        "readiness/934-model-reconciliation/seeded-skills.trx"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -879,7 +898,7 @@
     },
     {
       "id": "EV007",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T007",
       "taskRefs": [
@@ -889,8 +908,12 @@
         "FR-007",
         "FR-008"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "docs/api-surface/FS.GG.SDD.Artifacts/TypedSpecifications/WorkspaceLifecycle.fsi",
+        "docs/typed-sdd-lifecycle.md",
+        "readiness/934-model-reconciliation/seeded-skills.trx"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -904,7 +927,7 @@
     },
     {
       "id": "EV008",
-      "kind": "missing",
+      "kind": "verification",
       "subjectType": "task",
       "subjectId": "T008",
       "taskRefs": [
@@ -920,8 +943,17 @@
         "FR-007",
         "FR-008"
       ],
-      "artifactRefs": [],
-      "result": "missing",
+      "artifactRefs": [
+        "readiness/934-model-reconciliation/package-exact-ir.xml",
+        "readiness/934-model-reconciliation/package-q2.xml",
+        "readiness/934-model-reconciliation/package-q3.xml",
+        "readiness/934-model-reconciliation/package-toolchain.json",
+        "readiness/934-model-reconciliation/seeded-skills.trx",
+        "readiness/934-model-reconciliation/typed-sdd-cli.trx",
+        "readiness/934-model-reconciliation/workspace-correspondence.trx",
+        "tests/quint-svg-workspace-installed-acceptance.sh"
+      ],
+      "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
@@ -988,7 +1020,7 @@
           "path": "work/934-model-reconciliation/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "23e108cab121bcd1bb7c7cdbc041e71826f73f873720ee965376c78a4ba2cf0b"
+            "value": "21dc828049c6bef13d349ae425ed1c04fcce0cf0681e6565dc9d3eeb1b58ec68"
           },
           "schemaVersion": 1
         },
@@ -1019,7 +1051,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "9f1eb1e192f79896b6b13e28f28a2ed354cb45a110b0af8700fd36d2e3ac6e8f"
+        "value": "eeb9d98fa210d5199bd33eac603c8a433fcf5e211d88278c29b700fd24eee0e3"
       },
       "currency": "current"
     }
