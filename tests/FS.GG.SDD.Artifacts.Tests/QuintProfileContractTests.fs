@@ -248,8 +248,8 @@ module QuintProfileContractTests =
             |> QuintGeneralProfile.adaptTypedEffectJson
             |> expectOk
 
-        Assert.Equal([ "EXPORT-Rules" ], adapted.Exports |> List.map _.Id)
-        Assert.Equal([ "RULE-A"; "RULE-B" ], adapted.Catalogue |> List.map _.Id)
+        Assert.Equal<string list>([ "EXPORT-Rules" ], adapted.Exports |> List.map _.Id)
+        Assert.Equal<string list>([ "RULE-A"; "RULE-B" ], adapted.Catalogue |> List.map _.Id)
 
         let effect = Assert.Single adapted.ActionEffects
         Assert.Equal("ACT-Step", effect.ActionId)
