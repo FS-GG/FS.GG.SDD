@@ -104,7 +104,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("1.8.x", entry.SddVersionLine)
+        Assert.Equal("2.0.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -230,21 +230,13 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 1.8.0 is additive, so it carries no migration note (`migrationNoteRequired Additive =
-    // false`). The obvious edit when an earlier note came out was to swap `exactlyOne` for
-    // `Assert.Empty` — and that would have SILENTLY DELETED the only guard in the repo that says
-    // a note must be FOR this release and must EXIST ON DISK. Those checks were written against
-    // `exactlyOne`, so they die with it, and nothing would notice until the next BREAKING release
-    // shipped a note pointing at a file nobody wrote.
+    // 2.0.0 changes the omitted typed-sdd author backend and therefore carries a migration note.
     //
-    // So the well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It is
-    // vacuous today — that is the point: it costs nothing now and is already standing, unedited,
-    // the moment a note comes back. A guard that has to be re-derived at exactly the moment it
-    // first matters is a guard that is not there.
+    // The well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It was
+    // intentionally present while additive releases made it vacuous, and this release now exercises
+    // it against the real note without changing the predicate at the moment it first matters.
     /// The well-formedness obligation on a migration note, as a PREDICATE rather than a pile of
-    /// asserts — so it can be run against a release that HAS one. `Assert.All` over this release's
-    /// (empty) `Migrations` proves nothing, and a guard that is only ever evaluated vacuously is
-    /// indistinguishable from a guard that is wrong.
+    /// asserts — so it can be run against any release that has one.
     let private noteDefects (identityVersion: string) (note: MigrationNoteRef) =
         [
           // a note whose version drifts from identity advertises a migration that this artifact
@@ -295,12 +287,13 @@ module ReleaseContractTests =
                     Path = "docs/release/migrations/9.9.9.md" } // names a file nobody wrote
         )
 
-    // ...and the classification of THIS release, pinned separately. The 1.0.1 patch republishes
-    // the #857 determinism fix without a breaking public-contract change.
+    // ...and the classification of THIS release, pinned separately.
     [<Fact>]
-    let ``T023 this patch release carries no migration note`` () =
-        Assert.False(migrationNoteRequired Clarifying)
-        Assert.Empty release.Migrations
+    let ``T023 this major release carries its migration note`` () =
+        Assert.True(migrationNoteRequired Breaking)
+        let note = Assert.Single release.Migrations
+        Assert.Equal("2.0.0", note.Version)
+        Assert.Empty(noteDefects release.Identity.Version note)
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =

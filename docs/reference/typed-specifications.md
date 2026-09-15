@@ -8,9 +8,10 @@ description: The typed specification kernel, requirements extension, canonical m
 
 # Typed Specifications
 
-`FS.GG.SDD.Artifacts` 1.8.0 provides the namespace
-`FS.GG.SDD.Artifacts.TypedSpecifications`. It is an additive package API; existing
-Standard SDD Markdown, commands, schemas, defaults, and exit codes are unchanged.
+`FS.GG.SDD.Artifacts` 2.0.0 provides the namespace
+`FS.GG.SDD.Artifacts.TypedSpecifications`. Existing Standard SDD Markdown and schemas remain
+supported. The omitted `typed-sdd author --backend` default now selects Quint; see the
+[2.0.0 migration note](../release/migrations/2.0.0.md) for the explicit compatibility form.
 
 The authority is `SpecificationModel<'extension>`. Builders are authoring
 conveniences and Markdown/JSON projections are generated views. Neither is a

@@ -250,7 +250,7 @@ module ReleaseContract =
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "1.8.x"
+            [ { SddVersionLine = "2.0.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -1136,8 +1136,13 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // This patch has no breaking public-contract change, so it declares no migration note.
-          Migrations = [] }
+          // 2.0.0 changes the omitted typed-sdd author backend from F# to Quint. Explicit F#
+          // selection remains available throughout the compatibility window.
+          Migrations =
+            [ { Version = "2.0.0"
+                Path = "docs/release/migrations/2.0.0.md"
+                BreakingChanges =
+                  [ "typed-sdd author now selects quint-specification-v1 when --backend is omitted; pass --backend fsharp-specification-v1 to preserve the prior authority format during the 2.x compatibility window." ] } ] }
 
     // ---- canonical serialization ----
 
