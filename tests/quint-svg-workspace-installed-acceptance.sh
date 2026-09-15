@@ -121,8 +121,9 @@ cp "$repo_root/src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace
   cd "$lifecycle_model"
   "$LMT_BIN" workspace-lifecycle.md
   "$QUINT_BIN" typecheck workspace-lifecycle.qnt >/dev/null
-  "$QUINT_BIN" test workspace-lifecycle.qnt --main WorkspaceLifecycleTests --seed=927 >/dev/null
+  "$QUINT_BIN" test workspace-lifecycle.qnt --main WorkspaceLifecycleTests --seed=927 --backend typescript >/dev/null
   "$QUINT_BIN" run workspace-lifecycle.qnt --main WorkspaceLifecycle --max-samples=100 --max-steps=6 --seed=927 \
+    --backend typescript \
     --invariants filingIsImmutable acceptedAuthorityIsCoherent acceptedRevisionIsMonotonic \
       acceptedFingerprintTracksRevision acceptanceUsesExactBase staleProposalCannotAccept >/dev/null
 )
