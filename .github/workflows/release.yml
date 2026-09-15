@@ -318,7 +318,7 @@ jobs:
             --skip-duplicate
 
   publish-artifacts:
-    name: Build and retain coherent FS.GG.SDD 1.x candidate once
+    name: Build and retain coherent FS.GG.SDD candidate once
     needs: [resolve-versions, artifacts-tests, cli-tests]
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
