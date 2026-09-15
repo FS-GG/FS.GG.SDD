@@ -37,8 +37,10 @@ module CompositionAcceptanceTests =
           "fs-gg-sdd-tasks"
           "fs-gg-sdd-troubleshooting"
           "fs-gg-sdd-typed-author"
+          "fs-gg-sdd-typed-correspond"
           "fs-gg-sdd-typed-inspect"
           "fs-gg-sdd-typed-migrate"
+          "fs-gg-sdd-typed-reconcile"
           "fs-gg-sdd-validate"
           "fs-gg-sdd-verify" ]
 
@@ -223,7 +225,7 @@ module CompositionAcceptanceTests =
     // run additionally proves none of these paths is recorded as generatedProduct (INV-5).
     [<Fact>]
     let ``the skeleton-shape surface accounts for all seeded skill files`` () =
-        Assert.Equal(38, List.length seededSkillPaths)
+        Assert.Equal(42, List.length seededSkillPaths)
 
         for path in seededSkillPaths do
             Assert.True(Set.contains path skeletonPaths, $"Skeleton-shape surface is missing {path}.")

@@ -1,0 +1,1029 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.2.0",
+  "workId": "934-model-reconciliation",
+  "project": {
+    "id": "fs.gg.sdd-833",
+    "defaultWorkRoot": "work",
+    "profile": null
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      }
+    },
+    {
+      "path": "work/934-model-reconciliation/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "087b8a05f185299024a7254c442c937992f1df132d3970d22e01aa684cff9ff4"
+      }
+    },
+    {
+      "path": "work/934-model-reconciliation/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "dd8e9c42ac009095d78219ab6d7126696c055c7a00fa8645b2a182c00bdf07d1"
+      }
+    },
+    {
+      "path": "work/934-model-reconciliation/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "23e108cab121bcd1bb7c7cdbc041e71826f73f873720ee965376c78a4ba2cf0b"
+      }
+    },
+    {
+      "path": "work/934-model-reconciliation/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "82b03fb38f628f667ba3aa9b06455f19cf82b3e1969d6d739cb7de5829f3e50f"
+      }
+    },
+    {
+      "path": "work/934-model-reconciliation/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "725374dcec97a1ccfe1ef28d7cc2ad2421d262f94d42fe0994103da1d9481379"
+      }
+    },
+    {
+      "path": "work/934-model-reconciliation/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "4c1994dabe520e1ceb1a0646715cb2069db11eb3cd94531f70642623514eab97"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "934-model-reconciliation",
+    "title": "Quint model reconciliation and implementation correspondence",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "performanceIntent": null,
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "Reconciliation MUST consume one valid accepted \u0060WorkspaceModel\u0060 and revision-bound \u0060ChangeProposal\u0060 values and MUST remain pure. (Stories: US-001; Acceptance: AC-001)",
+      "text": "Reconciliation MUST consume one valid accepted \u0060WorkspaceModel\u0060 and revision-bound \u0060ChangeProposal\u0060 values and MUST remain pure. (Stories: US-001; Acceptance: AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 40,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV001",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "title": "Reconciliation MUST compute an order-independent semantic three-way merge and MUST distinguish compatible, duplicate, overlapping, stale, assumption-conflicting, rename/delete, dangling, and ambiguous inputs. (Stories: US-001; Acceptance: AC-001, AC-002)",
+      "text": "Reconciliation MUST compute an order-independent semantic three-way merge and MUST distinguish compatible, duplicate, overlapping, stale, assumption-conflicting, rename/delete, dangling, and ambiguous inputs. (Stories: US-001; Acceptance: AC-001, AC-002)",
+      "acceptanceCriteria": [
+        "AC-001",
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 41,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV002",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "title": "A reconciliation refusal MUST return no candidate model and MUST retain stable path-addressed diagnostics for every detectable conflict. (Stories: US-001; Acceptance: AC-002)",
+      "text": "A reconciliation refusal MUST return no candidate model and MUST retain stable path-addressed diagnostics for every detectable conflict. (Stories: US-001; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 42,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV002",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "title": "Correspondence MUST derive obligation coverage solely from the accepted model and fingerprinted observations of generated contracts, declared source bindings, tests, and evidence receipts. (Stories: US-002; Acceptance: AC-003)",
+      "text": "Correspondence MUST derive obligation coverage solely from the accepted model and fingerprinted observations of generated contracts, declared source bindings, tests, and evidence receipts. (Stories: US-002; Acceptance: AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 43,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV003",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "title": "Correspondence MUST distinguish satisfied, missing, stale, contradicted, ambiguous, unsupported, and unobserved results and MUST fail closed on incomplete or forged input. (Stories: US-002; Acceptance: AC-003, AC-004)",
+      "text": "Correspondence MUST distinguish satisfied, missing, stale, contradicted, ambiguous, unsupported, and unobserved results and MUST fail closed on incomplete or forged input. (Stories: US-002; Acceptance: AC-003, AC-004)",
+      "acceptanceCriteria": [
+        "AC-003",
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 44,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV003",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-006",
+      "title": "Selective correspondence MUST derive impacted obligations from the compiled impact graph and MUST never suppress a global integrity diagnostic. (Stories: US-002; Acceptance: AC-004)",
+      "text": "Selective correspondence MUST derive impacted obligations from the compiled impact graph and MUST never suppress a global integrity diagnostic. (Stories: US-002; Acceptance: AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 45,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV004",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "title": "Machine JSON and plain/rich human projections MUST derive from one typed report and preserve source locations, fingerprints, bindings, explanations, and provenance. (Stories: US-002, US-003; Acceptance: AC-003, AC-005)",
+      "text": "Machine JSON and plain/rich human projections MUST derive from one typed report and preserve source locations, fingerprints, bindings, explanations, and provenance. (Stories: US-002, US-003; Acceptance: AC-003, AC-005)",
+      "acceptanceCriteria": [
+        "AC-003",
+        "AC-005"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 46,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T005",
+        "T007",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV005",
+        "EV007",
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "title": "The producer MUST embed and seed focused reconciliation and correspondence skills byte-identically into \u0060.claude/skills\u0060 and \u0060.agents/skills\u0060, with no copied semantic implementation. (Stories: US-003; Acceptance: AC-005)",
+      "text": "The producer MUST embed and seed focused reconciliation and correspondence skills byte-identically into \u0060.claude/skills\u0060 and \u0060.agents/skills\u0060, with no copied semantic implementation. (Stories: US-003; Acceptance: AC-005)",
+      "acceptanceCriteria": [
+        "AC-005"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/934-model-reconciliation/spec.md",
+      "sourceLocation": {
+        "line": 47,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T006",
+        "T007",
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV006",
+        "EV007",
+        "EV008"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "Extend the public workspace lifecycle kernel with deterministic JSON codecs for \u0060WorkspaceModel\u0060 and \u0060ChangeProposal\u0060; CLI workflows consume those exact bytes rather than reconstructing records from prose.",
+      "decision": "Extend the public workspace lifecycle kernel with deterministic JSON codecs for \u0060WorkspaceModel\u0060 and \u0060ChangeProposal\u0060; CLI workflows consume those exact bytes rather than reconstructing records from prose.",
+      "requirementRefs": [
+        "FR-001",
+        "FR-002"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/934-model-reconciliation/clarifications.md",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ]
+    },
+    {
+      "id": "DEC-002",
+      "title": "One correspondence observation names an obligation, observation kind, observed fingerprint, source bindings, test bindings, evidence references, and an explanation. The accepted model fingerprint and observation-set fingerprint bind the complete report.",
+      "decision": "One correspondence observation names an obligation, observation kind, observed fingerprint, source bindings, test bindings, evidence references, and an explanation. The accepted model fingerprint and observation-set fingerprint bind the complete report.",
+      "requirementRefs": [
+        "FR-004",
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/934-model-reconciliation/clarifications.md",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003"
+      ]
+    },
+    {
+      "id": "DEC-003",
+      "title": "Classification precedence is integrity-first: malformed or contradictory observations refuse the report globally; otherwise each obligation is classified distinctly without collapsing missing, stale, ambiguous, unsupported, or unobserved into failure.",
+      "decision": "Classification precedence is integrity-first: malformed or contradictory observations refuse the report globally; otherwise each obligation is classified distinctly without collapsing missing, stale, ambiguous, unsupported, or unobserved into failure.",
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/934-model-reconciliation/clarifications.md",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002",
+        "T003"
+      ]
+    },
+    {
+      "id": "DEC-004",
+      "title": "Selective checking accepts changed subject ids and follows the compiled contract relationship/impact graph to obligations. Global catalogue/fingerprint diagnostics are always retained even when no selected obligation is impacted.",
+      "decision": "Selective checking accepts changed subject ids and follows the compiled contract relationship/impact graph to obligations. Global catalogue/fingerprint diagnostics are always retained even when no selected obligation is impacted.",
+      "requirementRefs": [
+        "FR-006"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/934-model-reconciliation/clarifications.md",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004"
+      ]
+    },
+    {
+      "id": "DEC-005",
+      "title": "Stable JSON is the machine contract. Plain and rich output are presentation projections over the same report; the rich view adds navigation labels but no stored coverage state or percentage authority.",
+      "decision": "Stable JSON is the machine contract. Plain and rich output are presentation projections over the same report; the rich view adds navigation labels but no stored coverage state or percentage authority.",
+      "requirementRefs": [
+        "FR-007"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/934-model-reconciliation/clarifications.md",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T005"
+      ]
+    },
+    {
+      "id": "DEC-006",
+      "title": "Ship two focused skills, \u0060fs-gg-sdd-typed-reconcile\u0060 and \u0060fs-gg-sdd-typed-correspond\u0060, because their inputs, stopping conditions, and mutation boundaries differ materially.",
+      "decision": "Ship two focused skills, \u0060fs-gg-sdd-typed-reconcile\u0060 and \u0060fs-gg-sdd-typed-correspond\u0060, because their inputs, stopping conditions, and mutation boundaries differ materially.",
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [],
+      "source": "work/934-model-reconciliation/clarifications.md",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T006"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Add strict WorkspaceModel and ChangeProposal codecs",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ],
+      "decisions": [
+        "DEC-001"
+      ],
+      "sourceIds": [
+        "AC-001",
+        "DEC-001",
+        "FR-001",
+        "PC-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Expose deterministic reconciliation reports and negative controls",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [
+        "FR-002",
+        "FR-003"
+      ],
+      "decisions": [
+        "DEC-003"
+      ],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "DEC-003",
+        "FR-002",
+        "FR-003",
+        "PD-002",
+        "PD-003",
+        "VO-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Add fingerprint-bound correspondence model and seven outcomes",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [
+        "FR-004",
+        "FR-005"
+      ],
+      "decisions": [
+        "DEC-002",
+        "DEC-003"
+      ],
+      "sourceIds": [
+        "AC-003",
+        "AC-004",
+        "DEC-002",
+        "DEC-003",
+        "FR-004",
+        "FR-005",
+        "PD-004",
+        "PD-005",
+        "VO-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Derive selective correspondence from contract impacts",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T003"
+      ],
+      "requirements": [
+        "FR-006"
+      ],
+      "decisions": [
+        "DEC-004"
+      ],
+      "sourceIds": [
+        "AC-004",
+        "DEC-004",
+        "FR-006",
+        "PD-006",
+        "VO-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Add CLI JSON plain and rich projections",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T002",
+        "T003",
+        "T004"
+      ],
+      "requirements": [
+        "FR-007"
+      ],
+      "decisions": [
+        "DEC-005"
+      ],
+      "sourceIds": [
+        "AC-003",
+        "AC-005",
+        "DEC-005",
+        "FR-007",
+        "PC-001",
+        "PD-007",
+        "VO-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Author and seed focused reconciliation and correspondence skills",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T005"
+      ],
+      "requirements": [
+        "FR-008"
+      ],
+      "decisions": [
+        "DEC-006"
+      ],
+      "sourceIds": [
+        "AC-005",
+        "DEC-006",
+        "FR-008",
+        "GV-001",
+        "PD-008"
+      ],
+      "requiredSkills": [
+        "deterministic-json",
+        "skill-authoring"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "T007",
+      "title": "Update public baselines documentation and additive migration posture",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T005",
+        "T006"
+      ],
+      "requirements": [
+        "FR-007",
+        "FR-008"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "FR-007",
+        "FR-008",
+        "GV-001",
+        "PC-001",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "documentation",
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV007"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "T008",
+      "title": "Run focused full and package-only verification",
+      "status": "done",
+      "owner": "sdd",
+      "dependencies": [
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007"
+      ],
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "AC-002",
+        "AC-003",
+        "AC-004",
+        "AC-005",
+        "VO-001",
+        "VO-002",
+        "VO-003"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV008"
+      ],
+      "source": "work/934-model-reconciliation/tasks.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [
+        "FR-002",
+        "FR-003"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [
+        "FR-004",
+        "FR-005"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [
+        "FR-006"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [
+        "FR-007"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV007",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T007",
+      "taskRefs": [
+        "T007"
+      ],
+      "requirementRefs": [
+        "FR-007",
+        "FR-008"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV008",
+      "kind": "missing",
+      "subjectType": "task",
+      "subjectId": "T008",
+      "taskRefs": [
+        "T008"
+      ],
+      "requirementRefs": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008"
+      ],
+      "artifactRefs": [],
+      "result": "missing",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/934-model-reconciliation/evidence.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/934-model-reconciliation/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "1.8.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/934-model-reconciliation/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "087b8a05f185299024a7254c442c937992f1df132d3970d22e01aa684cff9ff4"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/934-model-reconciliation/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "dd8e9c42ac009095d78219ab6d7126696c055c7a00fa8645b2a182c00bdf07d1"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/934-model-reconciliation/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "23e108cab121bcd1bb7c7cdbc041e71826f73f873720ee965376c78a4ba2cf0b"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/934-model-reconciliation/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "82b03fb38f628f667ba3aa9b06455f19cf82b3e1969d6d739cb7de5829f3e50f"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/934-model-reconciliation/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "725374dcec97a1ccfe1ef28d7cc2ad2421d262f94d42fe0994103da1d9481379"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/934-model-reconciliation/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "4c1994dabe520e1ceb1a0646715cb2069db11eb3cd94531f70642623514eab97"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "9f1eb1e192f79896b6b13e28f28a2ed354cb45a110b0af8700fd36d2e3ac6e8f"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}

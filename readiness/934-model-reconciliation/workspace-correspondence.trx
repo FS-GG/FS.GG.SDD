@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="5d5c6805-d0f1-4cfe-84ae-c96147cc5191" name="@9b87d498da98 2026-09-15 18:09:54" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-15T18:09:54.8554286+02:00" queuing="2026-09-15T18:09:54.8554287+02:00" start="2026-09-15T18:09:54.1637657+02:00" finish="2026-09-15T18:09:54.9139880+02:00" />
+  <TestSettings name="default" id="03577366-537a-4ecb-b4be-d44da88dec03">
+    <Deployment runDeploymentRoot="_9b87d498da98_2026-09-15_18_09_54" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="66bb2f21-4bba-41c6-a720-8e01a7d02386" testId="2a46ef1e-c0fb-4fe5-480d-401fefbfe6b6" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.disjoint exact-base proposals reconcile deterministically" computerName="9b87d498da98" duration="00:00:00.0022158" startTime="2026-09-15T18:09:54.8187182+02:00" endTime="2026-09-15T18:09:54.8187667+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66bb2f21-4bba-41c6-a720-8e01a7d02386" />
+    <UnitTestResult executionId="39471518-d892-4936-9f03-1262bea64e72" testId="10a1ab04-0e8a-19ce-f761-23896e3c6137" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.workspace codecs are canonical strict and round trip" computerName="9b87d498da98" duration="00:00:00.0106958" startTime="2026-09-15T18:09:54.8439941+02:00" endTime="2026-09-15T18:09:54.8545095+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="39471518-d892-4936-9f03-1262bea64e72" />
+    <UnitTestResult executionId="17db5b20-968b-48e6-bc7d-9f6fa594504f" testId="499bc821-6d9b-f38f-498c-791baefea2b4" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.forged global input fails closed even for selective correspondence" computerName="9b87d498da98" duration="00:00:00.0473965" startTime="2026-09-15T18:09:54.7508532+02:00" endTime="2026-09-15T18:09:54.8019962+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="17db5b20-968b-48e6-bc7d-9f6fa594504f" />
+    <UnitTestResult executionId="abf39b42-3c13-4ffa-8bcb-ae599315e801" testId="63f12aaa-90f3-21fe-3fc9-680049b84101" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.semantic diff exposes changed assumptions and duplicate edits refuse" computerName="9b87d498da98" duration="00:00:00.0081092" startTime="2026-09-15T18:09:54.8191542+02:00" endTime="2026-09-15T18:09:54.8206941+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="abf39b42-3c13-4ffa-8bcb-ae599315e801" />
+    <UnitTestResult executionId="9b081f74-f5d0-4e6a-8d19-64e84f3dc920" testId="115b2e2e-5aff-7104-5300-52f82573ca53" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.all seven module kinds have stable canonical fingerprints" computerName="9b87d498da98" duration="00:00:00.0032523" startTime="2026-09-15T18:09:54.7955545+02:00" endTime="2026-09-15T18:09:54.7979346+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9b081f74-f5d0-4e6a-8d19-64e84f3dc920" />
+    <UnitTestResult executionId="70cde6cf-3cdc-42e6-a39a-bd8f8de58fc7" testId="10b9aba2-ccfb-9735-b916-aee10db80138" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.only eligible human-accepted proposals reduce exact-base state" computerName="9b87d498da98" duration="00:00:00.0027918" startTime="2026-09-15T18:09:54.8073694+02:00" endTime="2026-09-15T18:09:54.8101342+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="70cde6cf-3cdc-42e6-a39a-bd8f8de58fc7" />
+    <UnitTestResult executionId="6fbbac7f-4dda-4ba8-ad13-e3042cb42f9c" testId="7e7125bf-f79c-8861-4e14-3f0fab757e8e" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.proposal inspection never mutates accepted authority" computerName="9b87d498da98" duration="00:00:00.0113094" startTime="2026-09-15T18:09:54.7934177+02:00" endTime="2026-09-15T18:09:54.7946519+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6fbbac7f-4dda-4ba8-ad13-e3042cb42f9c" />
+    <UnitTestResult executionId="1a49d22a-1d57-4ebd-90dd-b76bb2451b9e" testId="47dc23f5-ab14-024a-5f41-514293bce909" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.selective correspondence follows compiled impact relationships" computerName="9b87d498da98" duration="00:00:00.0085313" startTime="2026-09-15T18:09:54.8353663+02:00" endTime="2026-09-15T18:09:54.8437213+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1a49d22a-1d57-4ebd-90dd-b76bb2451b9e" />
+    <UnitTestResult executionId="3f88058a-7672-4365-8954-d5ef30e527cf" testId="a4aa2e81-1465-9ec1-fd44-06a7183a8539" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.reconciliation is order independent and conflicts have no candidate" computerName="9b87d498da98" duration="00:00:00.0066966" startTime="2026-09-15T18:09:54.8022168+02:00" endTime="2026-09-15T18:09:54.8087681+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3f88058a-7672-4365-8954-d5ef30e527cf" />
+    <UnitTestResult executionId="82b7b40a-d67d-4a96-bd0d-1ef2968fb1bb" testId="6368990b-fe86-424f-28fd-b6abe1e1bb21" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.correspondence preserves all seven outcomes from one typed report" computerName="9b87d498da98" duration="00:00:00.0261682" startTime="2026-09-15T18:09:54.8089443+02:00" endTime="2026-09-15T18:09:54.8350907+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="82b7b40a-d67d-4a96-bd0d-1ef2968fb1bb" />
+    <UnitTestResult executionId="84836fd5-38f1-4c45-ab05-d4e9ab854690" testId="3751b132-c269-1e02-4cfa-ed75bacd3716" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.overlap rename-delete dangling and stale inputs fail closed" computerName="9b87d498da98" duration="00:00:00.0086112" startTime="2026-09-15T18:09:54.7982012+02:00" endTime="2026-09-15T18:09:54.8066568+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="84836fd5-38f1-4c45-ab05-d4e9ab854690" />
+    <UnitTestResult executionId="75ba044c-dfa9-4b8d-aa4a-ebf3970be5e6" testId="c86064aa-f1f1-099e-eac1-cfceb1d166cd" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.migration stays dry-run until every source and decision is complete" computerName="9b87d498da98" duration="00:00:00.0263074" startTime="2026-09-15T18:09:54.7521585+02:00" endTime="2026-09-15T18:09:54.7832138+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="75ba044c-dfa9-4b8d-aa4a-ebf3970be5e6" />
+    <UnitTestResult executionId="70cac275-a5da-4c84-b79e-9ff1c005743f" testId="3d5f17b8-8a1d-87c4-702b-7e579407426b" testName="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.accepted opaque requires complete debt ownership and evidence" computerName="9b87d498da98" duration="00:00:00.0005593" startTime="2026-09-15T18:09:54.8068501+02:00" endTime="2026-09-15T18:09:54.8072443+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="70cac275-a5da-4c84-b79e-9ff1c005743f" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.only eligible human-accepted proposals reduce exact-base state" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="10b9aba2-ccfb-9735-b916-aee10db80138">
+      <Execution id="70cde6cf-3cdc-42e6-a39a-bd8f8de58fc7" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="only eligible human-accepted proposals reduce exact-base state" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.forged global input fails closed even for selective correspondence" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="499bc821-6d9b-f38f-498c-791baefea2b4">
+      <Execution id="17db5b20-968b-48e6-bc7d-9f6fa594504f" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests" name="forged global input fails closed even for selective correspondence" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.semantic diff exposes changed assumptions and duplicate edits refuse" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="63f12aaa-90f3-21fe-3fc9-680049b84101">
+      <Execution id="abf39b42-3c13-4ffa-8bcb-ae599315e801" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="semantic diff exposes changed assumptions and duplicate edits refuse" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.all seven module kinds have stable canonical fingerprints" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="115b2e2e-5aff-7104-5300-52f82573ca53">
+      <Execution id="9b081f74-f5d0-4e6a-8d19-64e84f3dc920" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="all seven module kinds have stable canonical fingerprints" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.accepted opaque requires complete debt ownership and evidence" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="3d5f17b8-8a1d-87c4-702b-7e579407426b">
+      <Execution id="70cac275-a5da-4c84-b79e-9ff1c005743f" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="accepted opaque requires complete debt ownership and evidence" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.reconciliation is order independent and conflicts have no candidate" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="a4aa2e81-1465-9ec1-fd44-06a7183a8539">
+      <Execution id="3f88058a-7672-4365-8954-d5ef30e527cf" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests" name="reconciliation is order independent and conflicts have no candidate" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.correspondence preserves all seven outcomes from one typed report" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="6368990b-fe86-424f-28fd-b6abe1e1bb21">
+      <Execution id="82b7b40a-d67d-4a96-bd0d-1ef2968fb1bb" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests" name="correspondence preserves all seven outcomes from one typed report" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.disjoint exact-base proposals reconcile deterministically" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="2a46ef1e-c0fb-4fe5-480d-401fefbfe6b6">
+      <Execution id="66bb2f21-4bba-41c6-a720-8e01a7d02386" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="disjoint exact-base proposals reconcile deterministically" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.overlap rename-delete dangling and stale inputs fail closed" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="3751b132-c269-1e02-4cfa-ed75bacd3716">
+      <Execution id="84836fd5-38f1-4c45-ab05-d4e9ab854690" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="overlap rename-delete dangling and stale inputs fail closed" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.selective correspondence follows compiled impact relationships" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="47dc23f5-ab14-024a-5f41-514293bce909">
+      <Execution id="1a49d22a-1d57-4ebd-90dd-b76bb2451b9e" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests" name="selective correspondence follows compiled impact relationships" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.proposal inspection never mutates accepted authority" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="7e7125bf-f79c-8861-4e14-3f0fab757e8e">
+      <Execution id="6fbbac7f-4dda-4ba8-ad13-e3042cb42f9c" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="proposal inspection never mutates accepted authority" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests.migration stays dry-run until every source and decision is complete" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="c86064aa-f1f1-099e-eac1-cfceb1d166cd">
+      <Execution id="75ba044c-dfa9-4b8d-aa4a-ebf3970be5e6" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceLifecycleTests" name="migration stays dry-run until every source and decision is complete" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests.workspace codecs are canonical strict and round trip" storage="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/fs.gg.sdd.artifacts.tests/bin/debug/net10.0/fs.gg.sdd.artifacts.tests.dll" id="10a1ab04-0e8a-19ce-f761-23896e3c6137">
+      <Execution id="39471518-d892-4936-9f03-1262bea64e72" />
+      <TestMethod codeBase="/home/developer/projects/.worktrees/sdd-934-reconciliation/tests/FS.GG.SDD.Artifacts.Tests/bin/Debug/net10.0/FS.GG.SDD.Artifacts.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Artifacts.Tests.WorkspaceCorrespondenceTests" name="workspace codecs are canonical strict and round trip" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="2a46ef1e-c0fb-4fe5-480d-401fefbfe6b6" executionId="66bb2f21-4bba-41c6-a720-8e01a7d02386" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="10a1ab04-0e8a-19ce-f761-23896e3c6137" executionId="39471518-d892-4936-9f03-1262bea64e72" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="499bc821-6d9b-f38f-498c-791baefea2b4" executionId="17db5b20-968b-48e6-bc7d-9f6fa594504f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="63f12aaa-90f3-21fe-3fc9-680049b84101" executionId="abf39b42-3c13-4ffa-8bcb-ae599315e801" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="115b2e2e-5aff-7104-5300-52f82573ca53" executionId="9b081f74-f5d0-4e6a-8d19-64e84f3dc920" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="10b9aba2-ccfb-9735-b916-aee10db80138" executionId="70cde6cf-3cdc-42e6-a39a-bd8f8de58fc7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7e7125bf-f79c-8861-4e14-3f0fab757e8e" executionId="6fbbac7f-4dda-4ba8-ad13-e3042cb42f9c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="47dc23f5-ab14-024a-5f41-514293bce909" executionId="1a49d22a-1d57-4ebd-90dd-b76bb2451b9e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a4aa2e81-1465-9ec1-fd44-06a7183a8539" executionId="3f88058a-7672-4365-8954-d5ef30e527cf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6368990b-fe86-424f-28fd-b6abe1e1bb21" executionId="82b7b40a-d67d-4a96-bd0d-1ef2968fb1bb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3751b132-c269-1e02-4cfa-ed75bacd3716" executionId="84836fd5-38f1-4c45-ab05-d4e9ab854690" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c86064aa-f1f1-099e-eac1-cfceb1d166cd" executionId="75ba044c-dfa9-4b8d-aa4a-ebf3970be5e6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3d5f17b8-8a1d-87c4-702b-7e579407426b" executionId="70cac275-a5da-4c84-b79e-9ff1c005743f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="13" executed="13" passed="13" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.12)
+[xUnit.net 00:00:00.10]   Discovering: FS.GG.SDD.Artifacts.Tests
+[xUnit.net 00:00:00.20]   Discovered:  FS.GG.SDD.Artifacts.Tests
+[xUnit.net 00:00:00.23]   Starting:    FS.GG.SDD.Artifacts.Tests
+[xUnit.net 00:00:00.36]   Finished:    FS.GG.SDD.Artifacts.Tests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

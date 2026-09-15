@@ -715,3 +715,83 @@ module TypedSddCommandTests =
                 let code, report, _ = run root args
                 Assert.NotEqual(0, code)
                 Assert.Contains("typedSdd.compilationFailed", report))
+
+    [<Fact>]
+    let ``reconcile projects one successful typed result as json plain and rich`` () =
+        inTemp (fun root ->
+            let identifier value =
+                SpecificationId.create value |> Result.defaultWith failwith
+
+            let digest character = String(character, 64)
+
+            let accepted =
+                { SchemaVersion = 1
+                  Revision = 4L
+                  Modules =
+                    [ { Id = identifier "EVID-001"
+                        Kind = WorkspaceModuleKind.EvidenceRequirement
+                        ContentSha256 = digest 'a'
+                        References = []
+                        Assumptions = []
+                        EvidenceObligationIds = [] } ] }
+
+            let fingerprint =
+                WorkspaceLifecycle.fingerprint accepted
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+
+            let proposal identifierText character =
+                { SchemaVersion = 1
+                  IssueRef = "FS-GG/FS.GG.SDD#934"
+                  ProseSha256 = digest 'b'
+                  BaseFingerprint = fingerprint
+                  AuthoringDepth = AuthoringDepth.DirectQuint
+                  Changes =
+                    [ WorkspaceChange.Upsert
+                          { Id = identifier identifierText
+                            Kind = WorkspaceModuleKind.Decision
+                            ContentSha256 = digest character
+                            References = []
+                            Assumptions = []
+                            EvidenceObligationIds = [] } ]
+                  Disposition = ProposalDisposition.CoherentDelta
+                  EvidenceFingerprint = None }
+
+            File.WriteAllText(
+                Path.Combine(root, "accepted.json"),
+                WorkspaceLifecycle.serializeModel accepted
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+            )
+
+            File.WriteAllText(
+                Path.Combine(root, "left.json"),
+                WorkspaceLifecycle.serializeProposal accepted (proposal "DECIS-001" 'c')
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+            )
+
+            File.WriteAllText(
+                Path.Combine(root, "right.json"),
+                WorkspaceLifecycle.serializeProposal accepted (proposal "DECIS-002" 'd')
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+            )
+
+            for flag, expected in
+                [ "--json", "\"outcome\":\"succeeded\""
+                  "--plain", "reconcile: succeeded"
+                  "--rich", "# Reconciliation succeeded" ] do
+                let code, output, _ =
+                    run
+                        root
+                        [ "typed-sdd"
+                          "reconcile"
+                          "--root"
+                          root
+                          "--accepted"
+                          "accepted.json"
+                          "--left"
+                          "left.json"
+                          "--right"
+                          "right.json"
+                          flag ]
+
+                Assert.Equal(0, code)
+                Assert.Contains(expected, output))

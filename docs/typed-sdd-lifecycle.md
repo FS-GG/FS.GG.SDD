@@ -74,6 +74,15 @@ fsgg-sdd typed-sdd author --work demo --title "Demo" --agent tern-001 --session 
   --cache /preseeded/quint-cache
 fsgg-sdd typed-sdd inspect --work demo
 
+# Pure three-way reconciliation over one accepted workspace model and two exact-base proposals.
+fsgg-sdd typed-sdd reconcile --accepted workspace.json \
+  --left proposal-a.json --right proposal-b.json --rich
+
+# Fingerprint-bound correspondence; omit --changed for the complete report.
+fsgg-sdd typed-sdd correspond --accepted workspace.json \
+  --contract compiled-contract.json --observations observations.json \
+  --changed PROD-001,DECIS-002 --json
+
 # Explicit spelling is equivalent to the omitted Quint backend.
 fsgg-sdd typed-sdd author --work demo --title "Demo" \
   --agent tern-001 --session session-1 \
@@ -95,9 +104,28 @@ correspondence test—the generic host never executes a domain algorithm hidden 
 
 After editing an existing `specification.fsx`, repeat `author` with `--accept` and a fresh agent/session
 receipt. The command compiles the edited authority before atomically replacing its projections and
-manifest. The seeded `fs-gg-sdd-typed-author`, `fs-gg-sdd-typed-inspect`, and
-`fs-gg-sdd-typed-migrate` skills are embedded in the Commands assembly and materialized into every
+manifest. The seeded `fs-gg-sdd-typed-author`, `fs-gg-sdd-typed-inspect`,
+`fs-gg-sdd-typed-migrate`, `fs-gg-sdd-typed-reconcile`, and
+`fs-gg-sdd-typed-correspond` skills are embedded in the Commands assembly and materialized into every
 configured agent-skill root by init, scaffold, refresh, and upgrade.
+
+## Reconciliation and correspondence
+
+`WorkspaceLifecycle` encodes and decodes strict schema-v1 workspace models and change proposals.
+Reconciliation is an order-independent pure three-way merge against the exact accepted fingerprint.
+Compatible disjoint proposals yield one candidate and sorted semantic changes. Stale bases,
+overlapping or duplicate declarations, conflicting assumptions, rename/delete pairs, dangling
+identities, and non-reducible dispositions return every deterministic diagnostic and structurally
+cannot carry a candidate. Producing a candidate is not human acceptance and does not mutate authority.
+
+`WorkspaceCorrespondence` derives one report from the accepted model, a validated profile-2 compiled
+contract, and canonical fingerprint-bound observations. Each accepted evidence obligation remains
+distinctly `satisfied`, `missing`, `stale`, `contradicted`, `ambiguous`, `unsupported`, or
+`unobserved`; these states are not collapsed into a percentage. Selective checking follows compiled
+relationships and impact subjects from `--changed`, while global catalogue, schema, duplicate,
+binding, and fingerprint checks always run first. A forged or incomplete global input blocks the
+report. JSON, plain, and rich output are projections of the same typed report; none is editable
+coverage authority.
 
 The v2 cache layout is `objects/<sha256>`. Follow the exact acquisition and build recipe in
 [Typed SDD tool provisioning](reference/typed-sdd-provisioning.md), then let the installed `provision`

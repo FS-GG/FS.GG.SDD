@@ -86,6 +86,15 @@ cli="$scratch/tool/fsgg-sdd"
 [[ -x "$cli" ]] || fail 'public CLI was not installed before network isolation'
 package_origin="${SVG_WORKSPACE_PACKAGE_ORIGIN:?package origin is required}"
 
+seed_root="$scratch/seeded-skills"
+"$cli" init --root "$seed_root" >/dev/null
+for skill in fs-gg-sdd-typed-reconcile fs-gg-sdd-typed-correspond; do
+  cmp "$repo_root/.claude/skills/$skill/SKILL.md" "$seed_root/.claude/skills/$skill/SKILL.md" >/dev/null \
+    || fail "$skill Claude seed bytes drifted"
+  cmp "$seed_root/.claude/skills/$skill/SKILL.md" "$seed_root/.agents/skills/$skill/SKILL.md" >/dev/null \
+    || fail "$skill agent-root seed bytes differ"
+done
+
 profile1="$scratch/profile1"
 "$cli" typed-sdd author --root "$profile1" --work legacy --title Legacy \
   --agent acceptance --session retained --backend fsharp-specification-v1 >"$scratch/profile1-author.json"

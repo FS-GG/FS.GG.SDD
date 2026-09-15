@@ -166,3 +166,20 @@ typed Quint record fields; profile 2 refuses semantic metadata supplied by the h
 so those facts cannot quietly migrate into a sidecar. Specification display identity
 and provenance digests remain host-derived because hashing the compilation that
 contains its own digest would be circular.
+
+## Workspace reconciliation and implementation correspondence
+
+`WorkspaceLifecycle.serializeModel`, `deserializeModel`, `serializeProposal`, and
+`deserializeProposal` define strict deterministic JSON boundaries around the accepted workspace and
+its exact-base proposals. Unknown fields, duplicate fields, unsupported discriminators, malformed
+identifiers, and invalid semantic models fail closed. `WorkspaceLifecycle.reconcile` remains pure and
+returns either an order-independent candidate with sorted semantic changes or diagnostics in a union
+case that cannot contain a candidate.
+
+`WorkspaceCorrespondence.evaluate` accepts only a validated `QuintCompiledContractV2` whose catalogue
+covers the accepted workspace. Observations bind the accepted fingerprint, obligation fingerprint,
+generated contract, source, test, and evidence facts. The report records the accepted and complete
+observation-set fingerprints and classifies every selected evidence obligation through the closed
+seven-state vocabulary. `CorrespondenceScope.ImpactedBy` traverses compiled relationships and declared
+impact subjects, but it never filters global integrity diagnostics. `serializeReport`, `renderPlain`,
+and `renderRich` are deterministic projections over that single typed result.

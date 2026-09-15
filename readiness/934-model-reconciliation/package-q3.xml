@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ3" tests="22" failures="0">
+  <testcase classname="SvgWorkspaceQuintQ3" name="fresh-cache-install-before-isolation" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="installed-staged-provisioning" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="wrong-tool-refusal" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="wrong-profile-refusal" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="modified-cache-provision-refusal" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="modified-cache-author-refusal" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="duplicate-provisioning-idempotence" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="concurrent-provisioning" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="invalid-cache-path-refusal" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="cache-source-alias-idempotence" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="executable-mode-repair" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="neutral-general-profile-authority" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="author-crash-recovery-every-boundary" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="concurrent-inspect-transaction-lock" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="missing-cache-no-write" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="freshness-refusal" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="typed-effect-semantic-closure" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="profile1-retention" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="migration-preflight-no-write" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="accepted-bounded-migration" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="replacement-rollback-decision-lock" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="rollback-crash-recovery-and-byte-exact-restoration" />
+</testsuite>

@@ -1475,6 +1475,211 @@ module TypedSdd =
                   Diagnostics =
                     [ diagnostic "typedSdd.workInvalid" "A valid --work is required." "Pass one work id segment." ] }
 
+    type private Projection =
+        | Json
+        | Plain
+        | Rich
+
+    let private projection args =
+        match has "--plain" args, has "--rich" args, has "--json" args with
+        | true, false, false -> Ok Plain
+        | false, true, false -> Ok Rich
+        | false, false, _ -> Ok Json
+        | _ -> Error "Select only one of --json, --plain, or --rich."
+
+    let private specificationDiagnosticJson (writer: Utf8JsonWriter) (item: SpecificationDiagnostic) =
+        writer.WriteStartObject()
+        writer.WriteString("code", item.Code)
+        writer.WriteString("path", item.Path)
+        writer.WriteString("message", item.Message)
+        writer.WriteEndObject()
+
+    let private renderSpecificationFailure
+        (operation: string)
+        (selected: Projection)
+        (findings: SpecificationDiagnostic list)
+        =
+        match selected with
+        | Json ->
+            use stream = new MemoryStream()
+            use writer = new Utf8JsonWriter(stream)
+            writer.WriteStartObject()
+            writer.WriteString("operation", operation)
+            writer.WriteString("outcome", "blocked")
+            writer.WriteStartArray("diagnostics")
+            findings |> List.iter (specificationDiagnosticJson writer)
+            writer.WriteEndArray()
+            writer.WriteEndObject()
+            writer.Flush()
+            Console.Out.WriteLine(Encoding.UTF8.GetString(stream.ToArray()))
+        | Plain ->
+            findings
+            |> List.iter (fun item -> Console.Out.WriteLine($"{item.Code} {item.Path}: {item.Message}"))
+        | Rich ->
+            Console.Out.WriteLine($"# {operation} blocked\n")
+
+            findings
+            |> List.iter (fun item -> Console.Out.WriteLine($"- `{item.Code}` `{item.Path}` — {item.Message}"))
+
+        1
+
+    let private loadText (rootPath: string) (optionName: string) (args: string list) =
+        match optionValue optionName args with
+        | None ->
+            Error
+                [ { Code = "WORKSPACE-CLI-ARGUMENT"
+                    Path = optionName
+                    Message = $"{optionName} is required."
+                    Location = None } ]
+        | Some relative ->
+            match containedPath rootPath relative with
+            | None ->
+                Error
+                    [ { Code = "WORKSPACE-CLI-PATH"
+                        Path = optionName
+                        Message = "Input path is outside the selected root."
+                        Location = None } ]
+            | Some path ->
+                try
+                    Ok(File.ReadAllText path)
+                with ex ->
+                    Error
+                        [ { Code = "WORKSPACE-CLI-READ"
+                            Path = optionName
+                            Message = ex.Message
+                            Location = None } ]
+
+    let private reconcileWorkspace (args: string list) =
+        let rootPath = root args
+
+        match projection args with
+        | Error message ->
+            renderSpecificationFailure
+                "reconcile"
+                Json
+                [ { Code = "WORKSPACE-CLI-PROJECTION"
+                    Path = "/arguments"
+                    Message = message
+                    Location = None } ]
+        | Ok selected ->
+            match
+                loadText rootPath "--accepted" args, loadText rootPath "--left" args, loadText rootPath "--right" args
+            with
+            | Ok acceptedText, Ok leftText, Ok rightText ->
+                match
+                    WorkspaceLifecycle.deserializeModel acceptedText,
+                    WorkspaceLifecycle.deserializeProposal leftText,
+                    WorkspaceLifecycle.deserializeProposal rightText
+                with
+                | Ok accepted, Ok left, Ok right ->
+                    match WorkspaceLifecycle.reconcile accepted left right with
+                    | Conflicted findings -> renderSpecificationFailure "reconcile" selected findings
+                    | Reconciled(candidate, changes) ->
+                        match selected with
+                        | Json ->
+                            let candidateJson =
+                                WorkspaceLifecycle.serializeModel candidate
+                                |> Result.defaultWith (sprintf "%A" >> failwith)
+
+                            use document = JsonDocument.Parse candidateJson
+                            use stream = new MemoryStream()
+                            use writer = new Utf8JsonWriter(stream)
+                            writer.WriteStartObject()
+                            writer.WriteString("operation", "reconcile")
+                            writer.WriteString("outcome", "succeeded")
+                            writer.WritePropertyName("candidate")
+                            document.RootElement.WriteTo writer
+                            writer.WriteStartArray("semanticChanges")
+
+                            for item in changes do
+                                writer.WriteStartObject()
+                                writer.WriteString("subject", SpecificationId.value item.Subject)
+                                writer.WriteString("summary", item.Summary)
+                                writer.WriteEndObject()
+
+                            writer.WriteEndArray()
+                            writer.WriteStartArray("diagnostics")
+                            writer.WriteEndArray()
+                            writer.WriteEndObject()
+                            writer.Flush()
+                            Console.Out.WriteLine(Encoding.UTF8.GetString(stream.ToArray()))
+                        | Plain ->
+                            Console.Out.WriteLine("reconcile: succeeded")
+
+                            changes
+                            |> List.iter (fun item ->
+                                Console.Out.WriteLine($"{SpecificationId.value item.Subject}: {item.Summary}"))
+                        | Rich ->
+                            Console.Out.WriteLine("# Reconciliation succeeded\n")
+
+                            changes
+                            |> List.iter (fun item ->
+                                Console.Out.WriteLine($"- `{SpecificationId.value item.Subject}` — {item.Summary}"))
+
+                        0
+                | Error findings, _, _
+                | _, Error findings, _
+                | _, _, Error findings -> renderSpecificationFailure "reconcile" selected findings
+            | Error findings, _, _
+            | _, Error findings, _
+            | _, _, Error findings -> renderSpecificationFailure "reconcile" selected findings
+
+    let private correspondWorkspace (args: string list) =
+        let rootPath = root args
+
+        match projection args with
+        | Error message ->
+            renderSpecificationFailure
+                "correspond"
+                Json
+                [ { Code = "WORKSPACE-CLI-PROJECTION"
+                    Path = "/arguments"
+                    Message = message
+                    Location = None } ]
+        | Ok selected ->
+            match
+                loadText rootPath "--accepted" args,
+                loadText rootPath "--contract" args,
+                loadText rootPath "--observations" args
+            with
+            | Ok acceptedText, Ok contractText, Ok observationText ->
+                match
+                    WorkspaceLifecycle.deserializeModel acceptedText,
+                    QuintContractV2.deserialize contractText,
+                    WorkspaceCorrespondence.deserializeObservations observationText
+                with
+                | Ok accepted, Ok contract, Ok observations ->
+                    let scope =
+                        optionValue "--changed" args
+                        |> Option.map (fun value ->
+                            value.Split(',', StringSplitOptions.RemoveEmptyEntries ||| StringSplitOptions.TrimEntries)
+                            |> Array.toList
+                            |> CorrespondenceScope.ImpactedBy)
+                        |> Option.defaultValue CorrespondenceScope.All
+
+                    match WorkspaceCorrespondence.evaluate accepted contract observations scope with
+                    | Error findings -> renderSpecificationFailure "correspond" selected findings
+                    | Ok report ->
+                        match selected with
+                        | Json -> Console.Out.Write(WorkspaceCorrespondence.serializeReport report)
+                        | Plain -> Console.Out.Write(WorkspaceCorrespondence.renderPlain report)
+                        | Rich -> Console.Out.Write(WorkspaceCorrespondence.renderRich report)
+
+                        0
+                | Error findings, _, _
+                | _, _, Error findings -> renderSpecificationFailure "correspond" selected findings
+                | _, Error findings, _ ->
+                    findings
+                    |> List.map (fun item ->
+                        { Code = item.Code
+                          Path = item.Path
+                          Message = item.Message
+                          Location = None })
+                    |> renderSpecificationFailure "correspond" selected
+            | Error findings, _, _
+            | _, Error findings, _
+            | _, _, Error findings -> renderSpecificationFailure "correspond" selected findings
+
     let private unknownArgument operation args =
         let valued, flags =
             match operation with
@@ -1504,6 +1709,10 @@ module TypedSdd =
                       "--cache" ],
                 set [ "--accept" ]
             | "rollback" -> set [ "--root"; "--work" ], set [ "--accept" ]
+            | "reconcile" -> set [ "--root"; "--accepted"; "--left"; "--right" ], set [ "--json"; "--plain"; "--rich" ]
+            | "correspond" ->
+                set [ "--root"; "--accepted"; "--contract"; "--observations"; "--changed" ],
+                set [ "--json"; "--plain"; "--rich" ]
             | _ -> Set.empty, Set.empty
 
         let rec loop seen remaining =
@@ -1523,7 +1732,9 @@ module TypedSdd =
     let run args =
         match args with
         | "provision" :: rest -> QuintProvision.run rest
-        | operation :: rest when Set.contains operation (set [ "author"; "inspect"; "migrate"; "rollback" ]) ->
+        | operation :: rest when
+            Set.contains operation (set [ "author"; "inspect"; "migrate"; "rollback"; "reconcile"; "correspond" ])
+            ->
             match unknownArgument operation rest with
             | Some token ->
                 emit
@@ -1544,6 +1755,8 @@ module TypedSdd =
                 | "inspect" -> inspect rest
                 | "migrate" -> migrate rest
                 | "rollback" -> rollback rest
+                | "reconcile" -> reconcileWorkspace rest
+                | "correspond" -> correspondWorkspace rest
                 | _ -> failwith "guarded"
         | _ ->
             emit
@@ -1557,4 +1770,4 @@ module TypedSdd =
                     [ diagnostic
                           "typedSdd.unknownOperation"
                           "Unknown Typed SDD operation."
-                          "Use provision, author, inspect, migrate, or rollback." ] }
+                          "Use provision, author, inspect, migrate, rollback, reconcile, or correspond." ] }

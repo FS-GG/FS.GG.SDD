@@ -96,6 +96,19 @@ module WorkspaceLifecycle =
     /// Return lowercase SHA-256 over canonical semantic bytes.
     val fingerprint: model: WorkspaceModel -> Result<string, SpecificationDiagnostic list>
 
+    /// Encode one valid workspace model as deterministic canonical JSON.
+    val serializeModel: model: WorkspaceModel -> Result<string, SpecificationDiagnostic list>
+
+    /// Decode the exact workspace-model v1 JSON contract; unknown and duplicate fields fail closed.
+    val deserializeModel: text: string -> Result<WorkspaceModel, SpecificationDiagnostic list>
+
+    /// Encode one valid exact-base proposal as deterministic canonical JSON.
+    val serializeProposal:
+        accepted: WorkspaceModel -> proposal: ChangeProposal -> Result<string, SpecificationDiagnostic list>
+
+    /// Decode the exact change-proposal v1 JSON contract; unknown and duplicate fields fail closed.
+    val deserializeProposal: text: string -> Result<ChangeProposal, SpecificationDiagnostic list>
+
     /// Return a stable readable semantic diff.
     val semanticDiff:
         before: WorkspaceModel ->
@@ -114,6 +127,92 @@ module WorkspaceLifecycle =
         proposal: ChangeProposal ->
         acceptance: HumanAcceptance ->
             Result<WorkspaceModel, SpecificationDiagnostic list>
+
+/// The kind of implementation evidence represented by one correspondence observation.
+[<RequireQualifiedAccess>]
+type CorrespondenceObservationKind =
+    | GeneratedContract
+    | SourceBinding
+    | Test
+    | EvidenceReceipt
+
+/// A producer's explicit interpretation of one fingerprint-bound observation.
+[<RequireQualifiedAccess>]
+type CorrespondenceObservationState =
+    | Observed
+    | Missing
+    | Contradicted of reason: string
+    | Ambiguous of reason: string
+    | Unsupported of reason: string
+
+/// One immutable implementation observation offered to correspondence evaluation.
+type CorrespondenceObservation =
+    { ObligationId: SpecificationId
+      Kind: CorrespondenceObservationKind
+      AcceptedFingerprint: string
+      SubjectFingerprint: string option
+      State: CorrespondenceObservationState
+      SourceBindings: string list
+      TestBindings: string list
+      EvidenceRefs: string list
+      Explanation: string }
+
+/// Closed, non-collapsing correspondence outcome vocabulary.
+[<RequireQualifiedAccess>]
+type CorrespondenceStatus =
+    | Satisfied
+    | Missing
+    | Stale
+    | Contradicted
+    | Ambiguous
+    | Unsupported
+    | Unobserved
+
+/// One accepted obligation and its complete implementation correspondence result.
+type CorrespondenceEntry =
+    { ObligationId: SpecificationId
+      Status: CorrespondenceStatus
+      SourceBindings: string list
+      TestBindings: string list
+      EvidenceRefs: string list
+      Explanation: string }
+
+/// Select either every obligation or the obligations impacted by changed subjects.
+[<RequireQualifiedAccess>]
+type CorrespondenceScope =
+    | All
+    | ImpactedBy of changedSubjectIds: string list
+
+/// One deterministic report derived from accepted authority and immutable observations.
+type CorrespondenceReport =
+    { Schema: string
+      AcceptedFingerprint: string
+      ObservationFingerprint: string
+      Scope: CorrespondenceScope
+      Entries: CorrespondenceEntry list
+      Diagnostics: SpecificationDiagnostic list }
+
+[<RequireQualifiedAccess>]
+module WorkspaceCorrespondence =
+    /// Validate all inputs and derive correspondence without mutating accepted authority.
+    val evaluate:
+        accepted: WorkspaceModel ->
+        contract: QuintCompiledContractV2 ->
+        observations: CorrespondenceObservation list ->
+        scope: CorrespondenceScope ->
+            Result<CorrespondenceReport, SpecificationDiagnostic list>
+
+    /// Decode exact correspondence-observation-set v1 JSON and reject unknown or duplicate fields.
+    val deserializeObservations: text: string -> Result<CorrespondenceObservation list, SpecificationDiagnostic list>
+
+    /// Encode the stable machine projection from the typed report.
+    val serializeReport: report: CorrespondenceReport -> string
+
+    /// Render a stable compact human projection from the typed report.
+    val renderPlain: report: CorrespondenceReport -> string
+
+    /// Render a navigable human projection without adding stored coverage authority.
+    val renderRich: report: CorrespondenceReport -> string
 
 /// Explicit legacy lifecycle identities; values never alias one another.
 [<RequireQualifiedAccess>]
