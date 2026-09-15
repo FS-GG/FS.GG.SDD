@@ -188,9 +188,37 @@ module WorkspaceCorrespondenceTests =
         Assert.Equal(7, statuses.Count)
         Assert.Contains(CorrespondenceStatus.Satisfied, statuses)
         Assert.Contains(CorrespondenceStatus.Unobserved, statuses)
+
+        let satisfied =
+            report.Entries
+            |> List.find (fun item -> item.Status = CorrespondenceStatus.Satisfied)
+
+        Assert.Equal(hash 'b', satisfied.ExpectedFingerprint)
+        Assert.Equal<string list>([ hash 'b' ], satisfied.ObservedFingerprints)
+        Assert.Contains($"schema:{QuintContractV2.schema}", report.Provenance)
+        Assert.Contains(report.Diagnostics, fun item -> item.Code = "CORRESPONDENCE-OBLIGATION-UNSATISFIED")
         Assert.Equal(WorkspaceCorrespondence.serializeReport report, WorkspaceCorrespondence.serializeReport report)
+        Assert.Contains("\"expectedFingerprint\"", WorkspaceCorrespondence.serializeReport report)
         Assert.Contains("EVID-001: satisfied", WorkspaceCorrespondence.renderPlain report)
         Assert.Contains("## EVID-001 — satisfied", WorkspaceCorrespondence.renderRich report)
+
+    [<Fact>]
+    let ``observations target evidence obligations and bind non-missing subjects`` () =
+        let wrongKind =
+            observation
+                "PROD-001"
+                CorrespondenceObservationKind.SourceBinding
+                CorrespondenceObservationState.Observed
+                (Some(hash 'a'))
+
+        let unbound =
+            observation "EVID-001" CorrespondenceObservationKind.Test CorrespondenceObservationState.Observed None
+
+        match WorkspaceCorrespondence.evaluate accepted contract [ wrongKind; unbound ] CorrespondenceScope.All with
+        | Error findings ->
+            Assert.Contains(findings, fun item -> item.Code = "CORRESPONDENCE-OBLIGATION-UNKNOWN")
+            Assert.Contains(findings, fun item -> item.Code = "CORRESPONDENCE-SUBJECT-DIGEST")
+        | Ok _ -> Assert.Fail "invalid observation targets must fail closed"
 
     [<Fact>]
     let ``forged global input fails closed even for selective correspondence`` () =

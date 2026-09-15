@@ -54,10 +54,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/934-model-reconciliation/workspace-correspondence.trx
-      digest: "sha256:bc8adab8f171dd760a495374393e3cd2bea2c19a95afc5b56bc75dc4a66906bf"
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 13
+      passed: 14
       failed: 0
       skipped: 0
     notes: [Strict model codec and deterministic round-trip tests passed.]
@@ -81,10 +81,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/934-model-reconciliation/workspace-correspondence.trx
-      digest: "sha256:bc8adab8f171dd760a495374393e3cd2bea2c19a95afc5b56bc75dc4a66906bf"
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 13
+      passed: 14
       failed: 0
       skipped: 0
     notes: [Order independence and conflict-without-candidate controls passed.]
@@ -108,10 +108,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/934-model-reconciliation/workspace-correspondence.trx
-      digest: "sha256:bc8adab8f171dd760a495374393e3cd2bea2c19a95afc5b56bc75dc4a66906bf"
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 13
+      passed: 14
       failed: 0
       skipped: 0
     notes: [All seven outcomes and forged-fingerprint refusal passed.]
@@ -135,10 +135,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/934-model-reconciliation/workspace-correspondence.trx
-      digest: "sha256:bc8adab8f171dd760a495374393e3cd2bea2c19a95afc5b56bc75dc4a66906bf"
+      digest: "sha256:7c7a27a5a2844b03051b7579dbe7b0e323a482f137ac9891893ccdd7ad31e763"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 13
+      passed: 14
       failed: 0
       skipped: 0
     notes: [Selective impact traversal retained global integrity refusal.]
@@ -162,10 +162,10 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/934-model-reconciliation/typed-sdd-cli.trx
-      digest: "sha256:55622ebfca2723e5f6a0e7d0570bca0d4f39bc19f55da8aa3742d4384a844eb1"
+      digest: "sha256:aaf732d469f571d1cdebe98b582b8b83bc636f65ad74bbecf0da0786b1c4031f"
       digestContract: exact-bytes-v1
       outcome: passed
-      passed: 14
+      passed: 15
       failed: 0
       skipped: 0
     notes: [JSON plain and rich CLI projections passed from one typed result.]

@@ -1665,7 +1665,7 @@ module TypedSdd =
                         | Plain -> Console.Out.Write(WorkspaceCorrespondence.renderPlain report)
                         | Rich -> Console.Out.Write(WorkspaceCorrespondence.renderRich report)
 
-                        0
+                        if List.isEmpty report.Diagnostics then 0 else 1
                 | Error findings, _, _
                 | _, _, Error findings -> renderSpecificationFailure "correspond" selected findings
                 | _, Error findings, _ ->

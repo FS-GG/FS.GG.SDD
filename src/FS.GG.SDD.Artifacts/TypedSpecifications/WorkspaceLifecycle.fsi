@@ -172,6 +172,8 @@ type CorrespondenceStatus =
 type CorrespondenceEntry =
     { ObligationId: SpecificationId
       Status: CorrespondenceStatus
+      ExpectedFingerprint: string
+      ObservedFingerprints: string list
       SourceBindings: string list
       TestBindings: string list
       EvidenceRefs: string list
@@ -189,6 +191,7 @@ type CorrespondenceReport =
       AcceptedFingerprint: string
       ObservationFingerprint: string
       Scope: CorrespondenceScope
+      Provenance: string list
       Entries: CorrespondenceEntry list
       Diagnostics: SpecificationDiagnostic list }
 

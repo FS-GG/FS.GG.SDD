@@ -909,6 +909,8 @@ type CorrespondenceStatus =
 type CorrespondenceEntry =
     { ObligationId: SpecificationId
       Status: CorrespondenceStatus
+      ExpectedFingerprint: string
+      ObservedFingerprints: string list
       SourceBindings: string list
       TestBindings: string list
       EvidenceRefs: string list
@@ -924,6 +926,7 @@ type CorrespondenceReport =
       AcceptedFingerprint: string
       ObservationFingerprint: string
       Scope: CorrespondenceScope
+      Provenance: string list
       Entries: CorrespondenceEntry list
       Diagnostics: SpecificationDiagnostic list }
 
@@ -1038,6 +1041,12 @@ module WorkspaceCorrespondence =
         let acceptedIds =
             accepted.Modules |> List.map (fun item -> idText item.Id) |> Set.ofList
 
+        let obligationIds =
+            accepted.Modules
+            |> List.filter (fun item -> item.Kind = WorkspaceModuleKind.EvidenceRequirement)
+            |> List.map (fun item -> idText item.Id)
+            |> Set.ofList
+
         let catalogueIds = contract.Catalogue |> List.map _.Id |> Set.ofList
         let missingCatalogue = Set.difference acceptedIds catalogueIds
 
@@ -1065,11 +1074,11 @@ module WorkspaceCorrespondence =
                       (path + "/acceptedFingerprint")
                       "Observation is not bound to the accepted workspace fingerprint."
 
-              if not (Set.contains (idText item.ObligationId) acceptedIds) then
+              if not (Set.contains (idText item.ObligationId) obligationIds) then
                   diagnostic
                       "CORRESPONDENCE-OBLIGATION-UNKNOWN"
                       (path + "/obligationId")
-                      $"Unknown obligation '{idText item.ObligationId}'."
+                      $"Unknown evidence obligation '{idText item.ObligationId}'."
 
               match item.SubjectFingerprint with
               | Some value when not (isSha256 value) ->
@@ -1077,6 +1086,11 @@ module WorkspaceCorrespondence =
                       "CORRESPONDENCE-SUBJECT-DIGEST"
                       (path + "/subjectFingerprint")
                       "Subject fingerprint must be lowercase SHA-256."
+              | None when item.State <> CorrespondenceObservationState.Missing ->
+                  diagnostic
+                      "CORRESPONDENCE-SUBJECT-DIGEST"
+                      (path + "/subjectFingerprint")
+                      "Non-missing observations require a subject fingerprint."
               | _ -> ()
 
               if String.IsNullOrWhiteSpace item.Explanation then
@@ -1146,10 +1160,18 @@ module WorkspaceCorrespondence =
 
         Set.union reachable direct
 
-    let private classify (expected: string) (observations: CorrespondenceObservation list) =
+    let private classify
+        (obligationId: SpecificationId)
+        (expected: string)
+        (observations: CorrespondenceObservation list)
+        =
         let sources = observations |> List.collect _.SourceBindings |> distinctSorted
         let tests = observations |> List.collect _.TestBindings |> distinctSorted
         let evidence = observations |> List.collect _.EvidenceRefs |> distinctSorted
+
+        let observedFingerprints =
+            observations |> List.choose _.SubjectFingerprint |> distinctSorted
+
         let explanations = observations |> List.map _.Explanation |> distinctSorted
         let states = observations |> List.map _.State
         let kinds = observations |> List.map _.Kind |> Set.ofList
@@ -1201,12 +1223,10 @@ module WorkspaceCorrespondence =
             else
                 CorrespondenceStatus.Satisfied, String.concat "; " explanations
 
-        { ObligationId =
-            observations
-            |> List.tryHead
-            |> Option.map _.ObligationId
-            |> Option.defaultWith (fun () -> failwith "obligation supplied separately")
+        { ObligationId = obligationId
           Status = status
+          ExpectedFingerprint = expected
+          ObservedFingerprints = observedFingerprints
           SourceBindings = sources
           TestBindings = tests
           EvidenceRefs = evidence
@@ -1247,20 +1267,44 @@ module WorkspaceCorrespondence =
                         if List.isEmpty matching then
                             { ObligationId = obligation.Id
                               Status = CorrespondenceStatus.Unobserved
+                              ExpectedFingerprint = obligation.ContentSha256
+                              ObservedFingerprints = []
                               SourceBindings = []
                               TestBindings = []
                               EvidenceRefs = []
                               Explanation = "No implementation observation was supplied." }
                         else
-                            classify obligation.ContentSha256 matching)
+                            classify obligation.Id obligation.ContentSha256 matching)
+
+                let diagnostics =
+                    entries
+                    |> List.choose (fun entry ->
+                        if entry.Status = CorrespondenceStatus.Satisfied then
+                            None
+                        else
+                            Some(
+                                diagnostic
+                                    "CORRESPONDENCE-OBLIGATION-UNSATISFIED"
+                                    $"/entries/{idText entry.ObligationId}"
+                                    $"Obligation is {statusValue entry.Status}: {entry.Explanation}"
+                            ))
+                    |> sortDiagnostics
+
+                let provenance =
+                    [ yield $"schema:{contract.Schema}"
+                      yield $"profile:{contract.Profile}"
+                      yield $"specification:{contract.Specification}"
+                      for digest in contract.Digests |> List.sortBy _.Name do
+                          yield $"digest:{digest.Name}:{digest.Sha256}" ]
 
                 Ok
                     { Schema = "fsgg.workspace-correspondence-report/v1"
                       AcceptedFingerprint = acceptedFingerprint
                       ObservationFingerprint = observationBytes observations |> sha256
                       Scope = scope
+                      Provenance = provenance
                       Entries = entries
-                      Diagnostics = [] }
+                      Diagnostics = diagnostics }
 
     let deserializeObservations (text: string) =
         try
@@ -1342,12 +1386,15 @@ module WorkspaceCorrespondence =
             |> writeStringArray writer "changedSubjectIds"
 
         writer.WriteEndObject()
+        report.Provenance |> writeStringArray writer "provenance"
         writer.WriteStartArray("entries")
 
         for item in report.Entries |> List.sortBy (fun item -> idText item.ObligationId) do
             writer.WriteStartObject()
             writer.WriteString("obligationId", idText item.ObligationId)
             writer.WriteString("status", statusValue item.Status)
+            writer.WriteString("expectedFingerprint", item.ExpectedFingerprint)
+            item.ObservedFingerprints |> writeStringArray writer "observedFingerprints"
             item.SourceBindings |> writeStringArray writer "sourceBindings"
             item.TestBindings |> writeStringArray writer "testBindings"
             item.EvidenceRefs |> writeStringArray writer "evidenceRefs"
@@ -1370,25 +1417,37 @@ module WorkspaceCorrespondence =
         Encoding.UTF8.GetString(stream.ToArray()) + "\n"
 
     let renderPlain (report: CorrespondenceReport) =
+        let provenance = String.concat "," report.Provenance
+
         [ yield $"correspondence {report.AcceptedFingerprint} observations {report.ObservationFingerprint}"
+          yield $"provenance {provenance}"
           for item in report.Entries do
-              yield $"{idText item.ObligationId}: {statusValue item.Status} - {item.Explanation}" ]
+              let observed = String.concat "," item.ObservedFingerprints
+
+              yield
+                  $"{idText item.ObligationId}: {statusValue item.Status} expected {item.ExpectedFingerprint} observed {observed} - {item.Explanation}" ]
         |> String.concat "\n"
         |> fun value -> value + "\n"
 
     let renderRich (report: CorrespondenceReport) =
+        let provenance = String.concat ", " report.Provenance
+
         [ yield "# Workspace correspondence"
           yield ""
           yield $"Accepted fingerprint: `{report.AcceptedFingerprint}`"
           yield $"Observation fingerprint: `{report.ObservationFingerprint}`"
+          yield $"Provenance: {provenance}"
           yield ""
           for item in report.Entries do
               let sources = String.concat ", " item.SourceBindings
               let tests = String.concat ", " item.TestBindings
               let evidence = String.concat ", " item.EvidenceRefs
+              let observed = String.concat ", " item.ObservedFingerprints
               yield $"## {idText item.ObligationId} — {statusValue item.Status}"
               yield ""
               yield item.Explanation
+              yield $"Expected fingerprint: `{item.ExpectedFingerprint}`"
+              yield $"Observed fingerprints: {observed}"
               yield $"Sources: {sources}"
               yield $"Tests: {tests}"
               yield $"Evidence: {evidence}"

@@ -179,7 +179,9 @@ case that cannot contain a candidate.
 `WorkspaceCorrespondence.evaluate` accepts only a validated `QuintCompiledContractV2` whose catalogue
 covers the accepted workspace. Observations bind the accepted fingerprint, obligation fingerprint,
 generated contract, source, test, and evidence facts. The report records the accepted and complete
-observation-set fingerprints and classifies every selected evidence obligation through the closed
-seven-state vocabulary. `CorrespondenceScope.ImpactedBy` traverses compiled relationships and declared
-impact subjects, but it never filters global integrity diagnostics. `serializeReport`, `renderPlain`,
-and `renderRich` are deterministic projections over that single typed result.
+observation-set fingerprints, the expected and observed obligation fingerprints, and compiled-contract
+provenance while classifying every selected evidence obligation through the closed seven-state
+vocabulary. `CorrespondenceScope.ImpactedBy` traverses compiled relationships and declared impact
+subjects, but it never filters global integrity diagnostics. `serializeReport`, `renderPlain`, and
+`renderRich` are deterministic projections over that single typed result. CLI correspondence exits
+non-zero when any selected obligation is unsatisfied.

@@ -124,8 +124,10 @@ distinctly `satisfied`, `missing`, `stale`, `contradicted`, `ambiguous`, `unsupp
 `unobserved`; these states are not collapsed into a percentage. Selective checking follows compiled
 relationships and impact subjects from `--changed`, while global catalogue, schema, duplicate,
 binding, and fingerprint checks always run first. A forged or incomplete global input blocks the
-report. JSON, plain, and rich output are projections of the same typed report; none is editable
-coverage authority.
+report. Every entry carries its expected and observed fingerprints, and the report carries the
+compiled-contract provenance chain. JSON, plain, and rich output are projections of the same typed
+report; none is editable coverage authority. The `correspond` command exits non-zero whenever a
+selected obligation is not satisfied.
 
 The v2 cache layout is `objects/<sha256>`. Follow the exact acquisition and build recipe in
 [Typed SDD tool provisioning](reference/typed-sdd-provisioning.md), then let the installed `provision`

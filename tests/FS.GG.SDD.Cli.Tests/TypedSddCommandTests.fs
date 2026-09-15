@@ -795,3 +795,108 @@ module TypedSddCommandTests =
 
                 Assert.Equal(0, code)
                 Assert.Contains(expected, output))
+
+    [<Fact>]
+    let ``correspond projects fingerprints and fails when an obligation is unsatisfied`` () =
+        inTemp (fun root ->
+            let identifier value =
+                SpecificationId.create value |> Result.defaultWith failwith
+
+            let digest character = String(character, 64)
+
+            let accepted =
+                { SchemaVersion = 1
+                  Revision = 1L
+                  Modules =
+                    [ { Id = identifier "EVID-001"
+                        Kind = WorkspaceModuleKind.EvidenceRequirement
+                        ContentSha256 = digest 'a'
+                        References = []
+                        Assumptions = []
+                        EvidenceObligationIds = [] } ] }
+
+            let fingerprint =
+                WorkspaceLifecycle.fingerprint accepted
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+
+            let source =
+                { Path = "model.qnt.md"
+                  Start = { Line = 1; Column = 1 }
+                  End = { Line = 1; Column = 10 } }
+
+            let export: QuintGeneralExport =
+                { Id = "EVID-001-EXPORT"
+                  ModuleName = "Workspace"
+                  DeclarationName = "EVID-001"
+                  Value = QuintString(digest 'a')
+                  Source = source }
+
+            let contract =
+                { Schema = QuintContractV2.schema
+                  Profile = QuintGeneralProfile.identity
+                  Specification = "Workspace"
+                  Exports = [ export ]
+                  Catalogue =
+                    [ { Id = "EVID-001"
+                        Kind = "workspace-module"
+                        ExportId = export.Id
+                        Value = export.Value
+                        Source = source } ]
+                  ActionEffects = []
+                  Relationships = []
+                  VerificationProfiles = []
+                  Bounds = []
+                  Impacts = []
+                  Compatibility = []
+                  Digests = [ { Name = "source"; Sha256 = digest 'f' } ] }
+
+            File.WriteAllText(
+                Path.Combine(root, "accepted.json"),
+                WorkspaceLifecycle.serializeModel accepted
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+            )
+
+            File.WriteAllText(
+                Path.Combine(root, "contract.json"),
+                QuintContractV2.serializeCanonical contract
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+            )
+
+            let observation kind =
+                $"""{{"obligationId":"EVID-001","kind":"{kind}","acceptedFingerprint":"{fingerprint}","subjectFingerprint":"{digest 'a'}","state":"observed","reason":null,"sourceBindings":["src/Feature.fs:10"],"testBindings":["tests/FeatureTests.fs:20"],"evidenceRefs":["ci:run/1"],"explanation":"observed"}}"""
+
+            let writeObservations kinds =
+                let rows = kinds |> List.map observation |> String.concat ","
+
+                File.WriteAllText(
+                    Path.Combine(root, "observations.json"),
+                    $"""{{"schema":"fsgg.workspace-correspondence-observations/v1","observations":[{rows}]}}"""
+                )
+
+            let args projection =
+                [ "typed-sdd"
+                  "correspond"
+                  "--root"
+                  root
+                  "--accepted"
+                  "accepted.json"
+                  "--contract"
+                  "contract.json"
+                  "--observations"
+                  "observations.json"
+                  projection ]
+
+            writeObservations [ "generated-contract"; "source-binding"; "test"; "evidence-receipt" ]
+
+            for projection, expected in
+                [ "--json", "\"expectedFingerprint\""
+                  "--plain", "EVID-001: satisfied"
+                  "--rich", "Expected fingerprint" ] do
+                let code, output, _ = run root (args projection)
+                Assert.Equal(0, code)
+                Assert.Contains(expected, output)
+
+            writeObservations [ "source-binding" ]
+            let code, output, _ = run root (args "--json")
+            Assert.Equal(1, code)
+            Assert.Contains("CORRESPONDENCE-OBLIGATION-UNSATISFIED", output))
