@@ -307,7 +307,8 @@ sdd:
 
     let upgradeYes root =
         { TestSupport.request Upgrade root with
-            AssumeYes = true }
+            AssumeYes = true
+        }
         |> TestSupport.runRequest
 
     /// Non-interactive, no `--yes`: the fail-closed refusal path.
@@ -325,7 +326,8 @@ sdd:
             Console.SetOut(new StringWriter())
 
             { TestSupport.request Upgrade root with
-                IsInteractive = true }
+                IsInteractive = true
+            }
             |> TestSupport.runRequest
         finally
             Console.SetIn originalIn
@@ -342,34 +344,38 @@ sdd:
     // ----- pure Drift inputs -----
 
     let record (minimum: string option) : ScaffoldProvenanceRecord =
-        { SchemaVersion = 1
-          Generator = { Id = "fsgg-sdd"; Version = "0.1.0" }
-          RequiredMinimumCliVersion = minimum
-          ProviderName = "rendering"
-          ProviderContractVersion = "1.0.0"
-          TemplateRef = "fsgg-app"
-          Outcome = "providerSucceeded"
-          ProducedPaths = []
-          MirroredPaths = []
-          SddOwnedPaths = []
-          DriverPaths = []
-          GameSkillPaths = []
-          RenderingSkillPaths = []
-          EffectiveParameters = [] }
+        {
+            SchemaVersion = 1
+            Generator = { Id = "fsgg-sdd"; Version = "0.1.0" }
+            RequiredMinimumCliVersion = minimum
+            ProviderName = "rendering"
+            ProviderContractVersion = "1.0.0"
+            TemplateRef = "fsgg-app"
+            Outcome = "providerSucceeded"
+            ProducedPaths = []
+            MirroredPaths = []
+            SddOwnedPaths = []
+            DriverPaths = []
+            GameSkillPaths = []
+            RenderingSkillPaths = []
+            EffectiveParameters = []
+        }
 
     let descriptor (minimum: string option) : ProviderDescriptor =
-        { Name = "rendering"
-          ContractVersion = "1.0.0"
-          TemplateId = "fsgg-app"
-          Source = "nuget"
-          Parameters = []
-          Build = None
-          Test = None
-          Run = None
-          Verify = None
-          NameParameter = "name"
-          IdentifierParameter = None
-          MinimumCliVersion = minimum }
+        {
+            Name = "rendering"
+            ContractVersion = "1.0.0"
+            TemplateId = "fsgg-app"
+            Source = "nuget"
+            Parameters = []
+            Build = None
+            Test = None
+            Run = None
+            Verify = None
+            NameParameter = "name"
+            IdentifierParameter = None
+            MinimumCliVersion = minimum
+        }
 
     let exitCode (report: CommandReport) = exitCodeForReport report
 

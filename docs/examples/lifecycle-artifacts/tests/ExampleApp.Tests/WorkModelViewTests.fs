@@ -23,6 +23,7 @@ module WorkModelViewTests =
         let changed =
             WorkModelView.generate
                 { MatchSource.sample with
-                    Title = "A different match" }
+                    Title = "A different match"
+                }
 
         Assert.NotEqual(view, changed)

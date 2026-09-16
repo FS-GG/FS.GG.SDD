@@ -10,13 +10,15 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 [<AutoOpen>]
 module Specification =
     type SpecificationFrontMatter =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          ChangeTier: string
-          Status: string
-          PublicOrToolFacingImpact: bool option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            ChangeTier: string
+            Status: string
+            PublicOrToolFacingImpact: bool option
+        }
 
     type SpecificationRequirementReference =
         {
@@ -30,16 +32,18 @@ module Specification =
         }
 
     type SpecificationFacts =
-        { FrontMatter: SpecificationFrontMatter
-          StandardSections: string list
-          MissingStandardSections: string list
-          UserStoryIds: UserStoryId list
-          RequirementIds: RequirementId list
-          AcceptanceScenarioIds: AcceptanceScenarioId list
-          ScopeBoundaryIds: ScopeBoundaryId list
-          AmbiguityIds: AmbiguityId list
-          RequirementReferences: SpecificationRequirementReference list
-          Diagnostics: Diagnostic list }
+        {
+            FrontMatter: SpecificationFrontMatter
+            StandardSections: string list
+            MissingStandardSections: string list
+            UserStoryIds: UserStoryId list
+            RequirementIds: RequirementId list
+            AcceptanceScenarioIds: AcceptanceScenarioId list
+            ScopeBoundaryIds: ScopeBoundaryId list
+            AmbiguityIds: AmbiguityId list
+            RequirementReferences: SpecificationRequirementReference list
+            Diagnostics: Diagnostic list
+        }
 
     val specificationStandardSections: unit -> string list
     val parseSpecificationFacts: snapshot: FileSnapshot -> Result<SpecificationFacts, Diagnostic list>

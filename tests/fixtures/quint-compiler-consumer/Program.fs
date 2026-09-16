@@ -22,26 +22,38 @@ let replayDigest = String.replicate 64 "a"
 
 let replayReviewedSirWitness contractFingerprint witnessPath outputDirectory =
     let source: QuintReplaySourceBinding =
-        { Path = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
-          Line = 17
-          Column = 1 }
+        {
+            Path = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
+            Line = 17
+            Column = 1
+        }
 
     let context: QuintItfDecodeContext =
-        { Environment =
-            { Seed = "92220"
-              Bounds = [ "maxSamples", 1L; "transitions", 2L ]
-              ToolFingerprint = replayDigest
-              ProfileFingerprint = replayDigest
-              ContractFingerprint = contractFingerprint
-              AdapterFingerprint = replayDigest
-              ImplementationFingerprint = replayDigest }
-          Steps =
-            [ { Index = 1
-                Action = "ApplyDamage"
-                Source = source }
-              { Index = 2
-                Action = "ApplyDamage"
-                Source = source } ] }
+        {
+            Environment =
+                {
+                    Seed = "92220"
+                    Bounds = [ "maxSamples", 1L; "transitions", 2L ]
+                    ToolFingerprint = replayDigest
+                    ProfileFingerprint = replayDigest
+                    ContractFingerprint = contractFingerprint
+                    AdapterFingerprint = replayDigest
+                    ImplementationFingerprint = replayDigest
+                }
+            Steps =
+                [
+                    {
+                        Index = 1
+                        Action = "ApplyDamage"
+                        Source = source
+                    }
+                    {
+                        Index = 2
+                        Action = "ApplyDamage"
+                        Source = source
+                    }
+                ]
+        }
 
     let trace =
         File.ReadAllText witnessPath
@@ -61,10 +73,12 @@ let replayReviewedSirWitness contractFingerprint witnessPath outputDirectory =
     let observations: QuintReplayObservation list =
         trace.Steps
         |> List.map (fun step ->
-            { Index = step.Index
-              Action = step.Action
-              Source = step.Source
-              Actual = step.Expected })
+            {
+                Index = step.Index
+                Action = step.Action
+                Source = step.Source
+                Actual = step.Expected
+            })
 
     match QuintReplay.compare trace observations with
     | Ok QuintReplayResult.Equivalent -> ()
@@ -79,11 +93,13 @@ let replayReviewedSirWitness contractFingerprint witnessPath outputDirectory =
                     if name = "hitPoints" then
                         name, QuintReplayValue.Integer "1"
                     else
-                        name, value) }
+                        name, value)
+        }
 
     let wrong =
         { wrongDraft with
-            Identity = QuintReplay.stateFingerprint wrongDraft |> expectOk "divergent state identity" }
+            Identity = QuintReplay.stateFingerprint wrongDraft |> expectOk "divergent state identity"
+        }
 
     let divergence =
         match QuintReplay.compare trace [ observations[0]; { observations[1] with Actual = wrong } ] with
@@ -104,20 +120,24 @@ let replayReviewedSirWitness contractFingerprint witnessPath outputDirectory =
         Path.Combine(outputDirectory, "replay.txt"),
         String.concat
             "\n"
-            [ "positive=equivalent"
-              $"trace=%s{trace.TraceIdentity}"
-              $"divergence=%d{divergence.Step}|%s{divergence.Action}|%s{divergence.Source.Path}:%d{divergence.Source.Line}:%d{divergence.Source.Column}|%s{divergence.Reason}"
-              $"expected=%s{divergence.Expected.Value.Identity}"
-              $"actual=%s{divergence.Actual.Value.Identity}" ]
+            [
+                "positive=equivalent"
+                $"trace=%s{trace.TraceIdentity}"
+                $"divergence=%d{divergence.Step}|%s{divergence.Action}|%s{divergence.Source.Path}:%d{divergence.Source.Line}:%d{divergence.Source.Column}|%s{divergence.Reason}"
+                $"expected=%s{divergence.Expected.Value.Identity}"
+                $"actual=%s{divergence.Actual.Value.Identity}"
+            ]
         + "\n"
     )
 
 let position line column : QuintSourcePosition = { Line = line; Column = column }
 
 let range path startLine startColumn endLine endColumn : QuintSourceRange =
-    { Path = path
-      Start = position startLine startColumn
-      End = position endLine endColumn }
+    {
+        Path = path
+        Start = position startLine startColumn
+        End = position endLine endColumn
+    }
 
 let parseFences (source: QuintMarkdownSource) =
     let lines = source.Text.Split('\n')
@@ -165,19 +185,30 @@ let parseFences (source: QuintMarkdownSource) =
             let lastColumn = max 1 contentLines[contentLines.Length - 1].Length
 
             fences.Add
-                { Ordinal = ordinal
-                  Target = target
-                  ModuleName = moduleName
-                  SourceRange = sourceRange
-                  ContentSha256 = sha256Text content }
+                {
+                    Ordinal = ordinal
+                    Target = target
+                    ModuleName = moduleName
+                    SourceRange = sourceRange
+                    ContentSha256 = sha256Text content
+                }
 
             maps.Add
-                { Target = target
-                  GeneratedRange = range target firstGeneratedLine 1 lastGeneratedLine lastColumn
-                  Source =
-                    { FenceOrdinal = ordinal
-                      Range =
-                        range source.Path (cursor + 2) 1 closing (max 1 contentLines[contentLines.Length - 1].Length) } }
+                {
+                    Target = target
+                    GeneratedRange = range target firstGeneratedLine 1 lastGeneratedLine lastColumn
+                    Source =
+                        {
+                            FenceOrdinal = ordinal
+                            Range =
+                                range
+                                    source.Path
+                                    (cursor + 2)
+                                    1
+                                    closing
+                                    (max 1 contentLines[contentLines.Length - 1].Length)
+                        }
+                }
 
             generatedLines <- Map.add target (lastGeneratedLine + 1) generatedLines
             ordinal <- ordinal + 1
@@ -188,51 +219,67 @@ let parseFences (source: QuintMarkdownSource) =
     List.ofSeq fences, List.ofSeq maps
 
 let binding path moduleName catalogue id kind line =
-    { ModuleName = moduleName
-      CatalogueName = catalogue
-      Id = id
-      Kind = kind
-      Source = range path line 1 line 200 }
+    {
+        ModuleName = moduleName
+        CatalogueName = catalogue
+        Id = id
+        Kind = kind
+        Source = range path line 1 line 200
+    }
 
 let bindings (logicalPath: string) =
     match Path.GetFileName logicalPath with
     | "requirements-and-evidence.md" ->
-        [ binding logicalPath "RequirementsSlice" "requirements" "REQ-AUDIT-001" Requirement 19
-          binding logicalPath "RequirementsSlice" "evidenceCatalogue" "EV-VERIFY-001" Evidence 23
-          binding logicalPath "RequirementsSlice" "actionCatalogue" "ObserveEvidence" Action 26
-          binding logicalPath "RequirementsSlice" "actionCatalogue" "AcceptRequirement" Action 27
-          binding logicalPath "RequirementsSlice" "propertyCatalogue" "AcceptedOnlyWithEvidence" Invariant 30
-          binding logicalPath "RequirementsSlice" "propertyCatalogue" "RequirementCanBeAccepted" ReachabilityProperty 31 ],
+        [
+            binding logicalPath "RequirementsSlice" "requirements" "REQ-AUDIT-001" Requirement 19
+            binding logicalPath "RequirementsSlice" "evidenceCatalogue" "EV-VERIFY-001" Evidence 23
+            binding logicalPath "RequirementsSlice" "actionCatalogue" "ObserveEvidence" Action 26
+            binding logicalPath "RequirementsSlice" "actionCatalogue" "AcceptRequirement" Action 27
+            binding logicalPath "RequirementsSlice" "propertyCatalogue" "AcceptedOnlyWithEvidence" Invariant 30
+            binding
+                logicalPath
+                "RequirementsSlice"
+                "propertyCatalogue"
+                "RequirementCanBeAccepted"
+                ReachabilityProperty
+                31
+        ],
         "RequirementsBindings",
         "Q1Requirements"
     | "sir-damage-rule.md" ->
-        [ binding logicalPath "SirDamageSlice" "actions" "Initialize" Action 16
-          binding logicalPath "SirDamageSlice" "actions" "ApplyDamage" Action 17
-          binding logicalPath "SirDamageSlice" "propertyCatalogue" "NonNegativeHitPoints" Invariant 20
-          binding logicalPath "SirDamageSlice" "propertyCatalogue" "KnownLastAction" Invariant 21
-          binding logicalPath "SirDamageSlice" "propertyCatalogue" "DamageCanReachZero" ReachabilityProperty 22 ],
+        [
+            binding logicalPath "SirDamageSlice" "actions" "Initialize" Action 16
+            binding logicalPath "SirDamageSlice" "actions" "ApplyDamage" Action 17
+            binding logicalPath "SirDamageSlice" "propertyCatalogue" "NonNegativeHitPoints" Invariant 20
+            binding logicalPath "SirDamageSlice" "propertyCatalogue" "KnownLastAction" Invariant 21
+            binding logicalPath "SirDamageSlice" "propertyCatalogue" "DamageCanReachZero" ReachabilityProperty 22
+        ],
         "SirBindings",
         "Q1SirDamage"
     | "coordination-process.md" ->
         let actionBindings =
-            [ "Prepare", 19
-              "Interfere", 20
-              "Apply", 21
-              "RefuseStale", 22
-              "LoseResponse", 23
-              "Retry", 24
-              "Refresh", 25
-              "Complete", 26 ]
+            [
+                "Prepare", 19
+                "Interfere", 20
+                "Apply", 21
+                "RefuseStale", 22
+                "LoseResponse", 23
+                "Retry", 24
+                "Refresh", 25
+                "Complete", 26
+            ]
             |> List.map (fun (id, line) -> binding logicalPath "CoordinationSlice" "actionCatalogue" id Action line)
 
         let propertyBindings =
-            [ "AtMostOneApply", Invariant, 29
-              "ReceiptMatchesApply", Invariant, 30
-              "CompleteHasReceipt", Invariant, 31
-              "StaleNeverApplies", Invariant, 32
-              "StaleRefusalNeverApplies", Invariant, 33
-              "KnownPhase", Invariant, 34
-              "EventualCompletion", TemporalProperty, 35 ]
+            [
+                "AtMostOneApply", Invariant, 29
+                "ReceiptMatchesApply", Invariant, 30
+                "CompleteHasReceipt", Invariant, 31
+                "StaleNeverApplies", Invariant, 32
+                "StaleRefusalNeverApplies", Invariant, 33
+                "KnownPhase", Invariant, 34
+                "EventualCompletion", TemporalProperty, 35
+            ]
             |> List.map (fun (id, kind, line) ->
                 binding logicalPath "CoordinationSlice" "propertyCatalogue" id kind line)
 
@@ -247,16 +294,20 @@ let requirement id =
 let cacheObservation id =
     let item = requirement id
 
-    { Id = item.Id
-      Kind = item.Kind
-      State = Present(item.Sha256, item.Bytes, true) }
+    {
+        Id = item.Id
+        Kind = item.Kind
+        State = Present(item.Sha256, item.Bytes, true)
+    }
 
 let request step objectId arguments =
-    { StepId = step
-      ExecutableObjectId = objectId
-      Arguments = arguments
-      Environment = []
-      WorkingDirectory = "isolated-run" }
+    {
+        StepId = step
+        ExecutableObjectId = objectId
+        Arguments = arguments
+        Environment = []
+        WorkingDirectory = "isolated-run"
+    }
 
 match Environment.GetCommandLineArgs() |> Array.skip 1 with
 | [| logicalPath; markdownPath; generatedPath; typedJsonPath; witnessPath; outputDirectory |] ->
@@ -269,52 +320,76 @@ match Environment.GetCommandLineArgs() |> Array.skip 1 with
     let generatedBytes = File.ReadAllBytes generatedPath
 
     let generated =
-        [ { Target = fences.Head.Target
-            Sha256 = sha256Bytes generatedBytes
-            Bytes = int64 generatedBytes.Length } ]
+        [
+            {
+                Target = fences.Head.Target
+                Sha256 = sha256Bytes generatedBytes
+                Bytes = int64 generatedBytes.Length
+            }
+        ]
 
     let sourceBindings, moduleName, specification = bindings logicalPath
 
     let input =
-        { ModuleName = moduleName
-          Toolchain = QuintToolchain.q1
-          Cache = [ cacheObservation "lmt-binary"; cacheObservation "quint-binary" ]
-          ProcessRequests =
-            [ request "extract" "lmt-binary" [ logicalPath ]
-              request "typecheck" "quint-binary" [ "typecheck"; fences.Head.Target; "--out=typed.json" ] ]
-          Endpoint = Available
-          ProcessObservations =
-            [ { StepId = "extract"
-                Outcome = Succeeded }
-              { StepId = "typecheck"
-                Outcome = Succeeded } ]
-          Source = source
-          FenceManifest =
-            { Schema = QuintSource.fenceManifestSchema
-              SourcePath = source.Path
-              SourceSha256 = source.Sha256
-              Fences = fences }
-          Extraction =
-            { First = generated
-              Second = generated
-              Warnings = [] }
-          SourceMap =
-            { Schema = QuintSource.sourceMapSchema
-              SourceSha256 = source.Sha256
-              Entries = sourceMaps }
-          TypedEffect =
-            { Profile = QuintProfile.identity
-              QuintVersion = QuintProfile.quintVersion
-              TypedEffectJson = File.ReadAllText typedJsonPath
-              SourceBindings = sourceBindings }
-          Metadata =
-            { Specification = specification
-              Relationships = []
-              VerificationProfiles = []
-              Bounds = []
-              Impacts = []
-              Compatibility = []
-              Digests = [] } }
+        {
+            ModuleName = moduleName
+            Toolchain = QuintToolchain.q1
+            Cache = [ cacheObservation "lmt-binary"; cacheObservation "quint-binary" ]
+            ProcessRequests =
+                [
+                    request "extract" "lmt-binary" [ logicalPath ]
+                    request "typecheck" "quint-binary" [ "typecheck"; fences.Head.Target; "--out=typed.json" ]
+                ]
+            Endpoint = Available
+            ProcessObservations =
+                [
+                    {
+                        StepId = "extract"
+                        Outcome = Succeeded
+                    }
+                    {
+                        StepId = "typecheck"
+                        Outcome = Succeeded
+                    }
+                ]
+            Source = source
+            FenceManifest =
+                {
+                    Schema = QuintSource.fenceManifestSchema
+                    SourcePath = source.Path
+                    SourceSha256 = source.Sha256
+                    Fences = fences
+                }
+            Extraction =
+                {
+                    First = generated
+                    Second = generated
+                    Warnings = []
+                }
+            SourceMap =
+                {
+                    Schema = QuintSource.sourceMapSchema
+                    SourceSha256 = source.Sha256
+                    Entries = sourceMaps
+                }
+            TypedEffect =
+                {
+                    Profile = QuintProfile.identity
+                    QuintVersion = QuintProfile.quintVersion
+                    TypedEffectJson = File.ReadAllText typedJsonPath
+                    SourceBindings = sourceBindings
+                }
+            Metadata =
+                {
+                    Specification = specification
+                    Relationships = []
+                    VerificationProfiles = []
+                    Bounds = []
+                    Impacts = []
+                    Compatibility = []
+                    Digests = []
+                }
+        }
 
     let output = QuintCompiler.compileObserved input |> expectOk "compileObserved"
     Directory.CreateDirectory outputDirectory |> ignore
@@ -327,12 +402,14 @@ match Environment.GetCommandLineArgs() |> Array.skip 1 with
         Path.Combine(outputDirectory, "native.txt"),
         String.concat
             "\n"
-            [ output.Bindings.ContractFingerprint
-              output.Contract.Catalogue
-              |> List.sortBy _.Id
-              |> List.map _.Id
-              |> String.concat ","
-              output.Bindings.CanonicalJson ]
+            [
+                output.Bindings.ContractFingerprint
+                output.Contract.Catalogue
+                |> List.sortBy _.Id
+                |> List.map _.Id
+                |> String.concat ","
+                output.Bindings.CanonicalJson
+            ]
         + "\n"
     )
 

@@ -25,9 +25,11 @@ module QuintToolchainSourceTests =
         QuintToolchain.q1.Components
         |> List.collect _.Objects
         |> List.map (fun requirement ->
-            { Id = requirement.Id
-              Kind = requirement.Kind
-              State = Present(requirement.Sha256, requirement.Bytes, true) })
+            {
+                Id = requirement.Id
+                Kind = requirement.Kind
+                State = Present(requirement.Sha256, requirement.Bytes, true)
+            })
 
     let private replaceCache id state (observations: QuintCacheObservation list) =
         observations
@@ -38,45 +40,67 @@ module QuintToolchainSourceTests =
                 observation)
 
     let private processRequest arguments environment =
-        { StepId = "extract"
-          ExecutableObjectId = "lmt-binary"
-          Arguments = arguments
-          Environment = environment
-          WorkingDirectory = "run-1" }
+        {
+            StepId = "extract"
+            ExecutableObjectId = "lmt-binary"
+            Arguments = arguments
+            Environment = environment
+            WorkingDirectory = "run-1"
+        }
 
     let private sourceFixture () =
         let bytes = Encoding.UTF8.GetBytes("```quint Main.qnt +=\nmodule Main {\n}\n```\n")
         QuintSource.createMarkdown "specs/main.md" bytes |> expectOk
 
     let private fenceManifest (source: QuintMarkdownSource) =
-        { Schema = QuintSource.fenceManifestSchema
-          SourcePath = source.Path
-          SourceSha256 = source.Sha256
-          Fences =
-            [ { Ordinal = 0
-                Target = "Main.qnt"
-                ModuleName = "Main"
-                SourceRange =
-                  { Path = source.Path
-                    Start = { Line = 1; Column = 1 }
-                    End = { Line = 4; Column = 3 } }
-                ContentSha256 = String.replicate 64 "0" } ] }
+        {
+            Schema = QuintSource.fenceManifestSchema
+            SourcePath = source.Path
+            SourceSha256 = source.Sha256
+            Fences =
+                [
+                    {
+                        Ordinal = 0
+                        Target = "Main.qnt"
+                        ModuleName = "Main"
+                        SourceRange =
+                            {
+                                Path = source.Path
+                                Start = { Line = 1; Column = 1 }
+                                End = { Line = 4; Column = 3 }
+                            }
+                        ContentSha256 = String.replicate 64 "0"
+                    }
+                ]
+        }
 
     let private sourceMap (source: QuintMarkdownSource) =
-        { Schema = QuintSource.sourceMapSchema
-          SourceSha256 = source.Sha256
-          Entries =
-            [ { Target = "Main.qnt"
-                GeneratedRange =
-                  { Path = "Main.qnt"
-                    Start = { Line = 1; Column = 1 }
-                    End = { Line = 1; Column = 10 } }
-                Source =
-                  { FenceOrdinal = 0
-                    Range =
-                      { Path = source.Path
-                        Start = { Line = 2; Column = 1 }
-                        End = { Line = 3; Column = 1 } } } } ] }
+        {
+            Schema = QuintSource.sourceMapSchema
+            SourceSha256 = source.Sha256
+            Entries =
+                [
+                    {
+                        Target = "Main.qnt"
+                        GeneratedRange =
+                            {
+                                Path = "Main.qnt"
+                                Start = { Line = 1; Column = 1 }
+                                End = { Line = 1; Column = 10 }
+                            }
+                        Source =
+                            {
+                                FenceOrdinal = 0
+                                Range =
+                                    {
+                                        Path = source.Path
+                                        Start = { Line = 2; Column = 1 }
+                                        End = { Line = 3; Column = 1 }
+                                    }
+                            }
+                    }
+                ]
+        }
 
     [<Fact>]
     let ``exact Q1 manifest and complete offline cache validate deterministically`` () =
@@ -145,7 +169,8 @@ module QuintToolchainSourceTests =
                 if toolComponent.Id = "lmt" then
                     { toolComponent with
                         Version = "latest"
-                        Source = "github:driusan/lmt@main" }
+                        Source = "github:driusan/lmt@main"
+                    }
                 else
                     toolComponent)
 
@@ -153,13 +178,15 @@ module QuintToolchainSourceTests =
             QuintToolchain.q1.Guidance
             |> Option.map (fun guidance ->
                 { guidance with
-                    Source = "quint-co/quint-llm-kit@main" })
+                    Source = "quint-co/quint-llm-kit@main"
+                })
 
         let findings =
             QuintToolchain.validateManifest
                 { QuintToolchain.q1 with
                     Components = movingTools
-                    Guidance = movingGuidance }
+                    Guidance = movingGuidance
+                }
 
         expectCode "QUINT-TOOLCHAIN-COMPONENT-MISMATCH" findings
         expectCode "QUINT-GUIDANCE-IDENTITY-MISMATCH" findings
@@ -200,8 +227,12 @@ module QuintToolchainSourceTests =
             QuintToolchain.validateExecution
                 plan
                 (Occupied "127.0.0.1:8822")
-                [ { StepId = "extract"
-                    Outcome = Failed(23, "warnings treated as errors") } ]
+                [
+                    {
+                        StepId = "extract"
+                        Outcome = Failed(23, "warnings treated as errors")
+                    }
+                ]
 
         expectCode "QUINT-EXECUTION-ENDPOINT-OCCUPIED" findings
         expectCode "QUINT-EXECUTION-PROCESS-FAILED" findings
@@ -213,9 +244,13 @@ module QuintToolchainSourceTests =
         let sourceMap = sourceMap source
 
         let generated =
-            [ { Target = "Main.qnt"
-                Sha256 = String.replicate 64 "a"
-                Bytes = 42L } ]
+            [
+                {
+                    Target = "Main.qnt"
+                    Sha256 = String.replicate 64 "a"
+                    Bytes = 42L
+                }
+            ]
 
         Assert.Empty(QuintSource.validateManifest source manifest)
 
@@ -223,9 +258,11 @@ module QuintToolchainSourceTests =
             QuintSource.validateExtraction
                 source
                 manifest
-                { First = generated
-                  Second = generated
-                  Warnings = [] }
+                {
+                    First = generated
+                    Second = generated
+                    Warnings = []
+                }
         )
 
         Assert.Empty(QuintSource.validateSourceMap source manifest sourceMap)
@@ -262,13 +299,15 @@ module QuintToolchainSourceTests =
         let unsafeFence =
             { manifest.Fences.Head with
                 Target = "../Main.qnt"
-                ContentSha256 = "moving" }
+                ContentSha256 = "moving"
+            }
 
         let findings =
             QuintSource.validateManifest
                 source
                 { manifest with
-                    Fences = [ unsafeFence ] }
+                    Fences = [ unsafeFence ]
+                }
 
         expectCode "QUINT-FENCE-TARGET-UNSAFE" findings
         expectCode "QUINT-FENCE-CONTENT-DIGEST-INVALID" findings
@@ -280,22 +319,32 @@ module QuintToolchainSourceTests =
         let sourceMap = sourceMap source
 
         let first =
-            [ { Target = "Main.qnt"
-                Sha256 = String.replicate 64 "a"
-                Bytes = 42L } ]
+            [
+                {
+                    Target = "Main.qnt"
+                    Sha256 = String.replicate 64 "a"
+                    Bytes = 42L
+                }
+            ]
 
         let second =
-            [ { Target = "Main.qnt"
-                Sha256 = String.replicate 64 "b"
-                Bytes = 42L } ]
+            [
+                {
+                    Target = "Main.qnt"
+                    Sha256 = String.replicate 64 "b"
+                    Bytes = 42L
+                }
+            ]
 
         let extractionFindings =
             QuintSource.validateExtraction
                 source
                 manifest
-                { First = first
-                  Second = second
-                  Warnings = [ "unexpected fence attribute" ] }
+                {
+                    First = first
+                    Second = second
+                    Warnings = [ "unexpected fence attribute" ]
+                }
 
         expectCode "QUINT-EXTRACTION-WARNING" extractionFindings
         expectCode "QUINT-EXTRACTION-NONDETERMINISTIC" extractionFindings
@@ -304,14 +353,20 @@ module QuintToolchainSourceTests =
             { sourceMap with
                 SourceSha256 = String.replicate 64 "f"
                 Entries =
-                    [ { sourceMap.Entries.Head with
-                          Target = "Other.qnt"
-                          GeneratedRange =
-                              { sourceMap.Entries.Head.GeneratedRange with
-                                  Path = "Main.qnt" }
-                          Source =
-                              { sourceMap.Entries.Head.Source with
-                                  FenceOrdinal = 99 } } ] }
+                    [
+                        { sourceMap.Entries.Head with
+                            Target = "Other.qnt"
+                            GeneratedRange =
+                                { sourceMap.Entries.Head.GeneratedRange with
+                                    Path = "Main.qnt"
+                                }
+                            Source =
+                                { sourceMap.Entries.Head.Source with
+                                    FenceOrdinal = 99
+                                }
+                        }
+                    ]
+            }
 
         let mapFindings = QuintSource.validateSourceMap source manifest staleMap
         expectCode "QUINT-SOURCE-MAP-DIGEST-MISMATCH" mapFindings

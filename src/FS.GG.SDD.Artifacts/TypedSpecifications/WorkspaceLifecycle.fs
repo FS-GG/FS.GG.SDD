@@ -17,17 +17,21 @@ type WorkspaceModuleKind =
     | EvidenceRequirement
 
 type WorkspaceModule =
-    { Id: SpecificationId
-      Kind: WorkspaceModuleKind
-      ContentSha256: string
-      References: SpecificationId list
-      Assumptions: string list
-      EvidenceObligationIds: SpecificationId list }
+    {
+        Id: SpecificationId
+        Kind: WorkspaceModuleKind
+        ContentSha256: string
+        References: SpecificationId list
+        Assumptions: string list
+        EvidenceObligationIds: SpecificationId list
+    }
 
 type WorkspaceModel =
-    { SchemaVersion: int
-      Revision: int64
-      Modules: WorkspaceModule list }
+    {
+        SchemaVersion: int
+        Revision: int64
+        Modules: WorkspaceModule list
+    }
 
 [<RequireQualifiedAccess>]
 type AuthoringDepth =
@@ -42,11 +46,13 @@ type WorkspaceChange =
     | Rename of fromId: SpecificationId * toId: SpecificationId
 
 type OpaqueAcceptance =
-    { Debt: string
-      AffectedSubjects: SpecificationId list
-      Reason: string
-      ResponsibleHuman: string
-      EvidenceRefs: string list }
+    {
+        Debt: string
+        AffectedSubjects: SpecificationId list
+        Reason: string
+        ResponsibleHuman: string
+        EvidenceRefs: string list
+    }
 
 [<RequireQualifiedAccess>]
 type ProposalDisposition =
@@ -58,23 +64,29 @@ type ProposalDisposition =
     | Stale of reason: string
 
 type ChangeProposal =
-    { SchemaVersion: int
-      IssueRef: string
-      ProseSha256: string
-      BaseFingerprint: string
-      AuthoringDepth: AuthoringDepth
-      Changes: WorkspaceChange list
-      Disposition: ProposalDisposition
-      EvidenceFingerprint: string option }
+    {
+        SchemaVersion: int
+        IssueRef: string
+        ProseSha256: string
+        BaseFingerprint: string
+        AuthoringDepth: AuthoringDepth
+        Changes: WorkspaceChange list
+        Disposition: ProposalDisposition
+        EvidenceFingerprint: string option
+    }
 
 type HumanAcceptance =
-    { AcceptedBy: string
-      EvidenceRefs: string list
-      AcceptedAtUtc: string }
+    {
+        AcceptedBy: string
+        EvidenceRefs: string list
+        AcceptedAtUtc: string
+    }
 
 type WorkspaceSemanticChange =
-    { Subject: SpecificationId
-      Summary: string }
+    {
+        Subject: SpecificationId
+        Summary: string
+    }
 
 type WorkspaceReconciliation =
     | Reconciled of WorkspaceModel * WorkspaceSemanticChange list
@@ -82,10 +94,12 @@ type WorkspaceReconciliation =
 
 module private WorkspaceInternals =
     let diagnostic code path message : SpecificationDiagnostic =
-        { Code = code
-          Path = path
-          Message = message
-          Location = None }
+        {
+            Code = code
+            Path = path
+            Message = message
+            Location = None
+        }
 
     let idText = SpecificationId.value
 
@@ -238,22 +252,26 @@ module private WorkspaceInternals =
         checkFields
             path
             (set
-                [ "id"
-                  "kind"
-                  "contentSha256"
-                  "references"
-                  "assumptions"
-                  "evidenceObligationIds" ])
+                [
+                    "id"
+                    "kind"
+                    "contentSha256"
+                    "references"
+                    "assumptions"
+                    "evidenceObligationIds"
+                ])
             element
 
-        { Id = stringProperty "id" element |> parseId (path + "/id")
-          Kind = stringProperty "kind" element |> parseKind (path + "/kind")
-          ContentSha256 = stringProperty "contentSha256" element
-          References = stringArray "references" element |> List.map (parseId (path + "/references"))
-          Assumptions = stringArray "assumptions" element
-          EvidenceObligationIds =
-            stringArray "evidenceObligationIds" element
-            |> List.map (parseId (path + "/evidenceObligationIds")) }
+        {
+            Id = stringProperty "id" element |> parseId (path + "/id")
+            Kind = stringProperty "kind" element |> parseKind (path + "/kind")
+            ContentSha256 = stringProperty "contentSha256" element
+            References = stringArray "references" element |> List.map (parseId (path + "/references"))
+            Assumptions = stringArray "assumptions" element
+            EvidenceObligationIds =
+                stringArray "evidenceObligationIds" element
+                |> List.map (parseId (path + "/evidenceObligationIds"))
+        }
 
     let moduleToJson (writer: Utf8JsonWriter) (item: WorkspaceModule) =
         writer.WriteStartObject()
@@ -300,7 +318,8 @@ module private WorkspaceInternals =
 
         { model with
             Revision = model.Revision + 1L
-            Modules = modules |> Map.toList |> List.map snd }
+            Modules = modules |> Map.toList |> List.map snd
+        }
 
 [<RequireQualifiedAccess>]
 module WorkspaceLifecycle =
@@ -319,54 +338,56 @@ module WorkspaceLifecycle =
                     None)
             |> Set.ofList
 
-        [ if model.SchemaVersion <> 1 then
-              diagnostic "WORKSPACE-SCHEMA-UNSUPPORTED" "/schemaVersion" "Workspace schemaVersion must be 1."
-          if model.Revision < 0L then
-              diagnostic "WORKSPACE-REVISION" "/revision" "Workspace revision cannot be negative."
+        [
+            if model.SchemaVersion <> 1 then
+                diagnostic "WORKSPACE-SCHEMA-UNSUPPORTED" "/schemaVersion" "Workspace schemaVersion must be 1."
+            if model.Revision < 0L then
+                diagnostic "WORKSPACE-REVISION" "/revision" "Workspace revision cannot be negative."
 
-          for duplicate in ids |> List.countBy id |> List.filter (snd >> ((<) 1)) |> List.map fst do
-              diagnostic "WORKSPACE-ID-DUPLICATE" "/modules" $"Module id '{duplicate}' is duplicated."
+            for duplicate in ids |> List.countBy id |> List.filter (snd >> ((<) 1)) |> List.map fst do
+                diagnostic "WORKSPACE-ID-DUPLICATE" "/modules" $"Module id '{duplicate}' is duplicated."
 
-          for index, item in model.Modules |> List.indexed do
-              let path = $"/modules/{index}"
+            for index, item in model.Modules |> List.indexed do
+                let path = $"/modules/{index}"
 
-              if not (isSha256 item.ContentSha256) then
-                  diagnostic
-                      "WORKSPACE-CONTENT-DIGEST"
-                      $"{path}/contentSha256"
-                      "contentSha256 must be lowercase SHA-256."
+                if not (isSha256 item.ContentSha256) then
+                    diagnostic
+                        "WORKSPACE-CONTENT-DIGEST"
+                        $"{path}/contentSha256"
+                        "contentSha256 must be lowercase SHA-256."
 
-              for reference in item.References |> List.map idText |> List.distinct |> List.sort do
-                  if not (Set.contains reference idSet) then
-                      diagnostic
-                          "WORKSPACE-REFERENCE-DANGLING"
-                          $"{path}/references"
-                          $"Reference '{reference}' does not resolve."
+                for reference in item.References |> List.map idText |> List.distinct |> List.sort do
+                    if not (Set.contains reference idSet) then
+                        diagnostic
+                            "WORKSPACE-REFERENCE-DANGLING"
+                            $"{path}/references"
+                            $"Reference '{reference}' does not resolve."
 
-              for evidence in item.EvidenceObligationIds |> List.map idText |> List.distinct |> List.sort do
-                  if not (Set.contains evidence evidenceIds) then
-                      diagnostic
-                          "WORKSPACE-EVIDENCE-DANGLING"
-                          $"{path}/evidenceObligationIds"
-                          $"Evidence obligation '{evidence}' does not resolve to an evidence module."
+                for evidence in item.EvidenceObligationIds |> List.map idText |> List.distinct |> List.sort do
+                    if not (Set.contains evidence evidenceIds) then
+                        diagnostic
+                            "WORKSPACE-EVIDENCE-DANGLING"
+                            $"{path}/evidenceObligationIds"
+                            $"Evidence obligation '{evidence}' does not resolve to an evidence module."
 
-              if item.References.Length <> (item.References |> List.distinct).Length then
-                  diagnostic "WORKSPACE-REFERENCE-DUPLICATE" $"{path}/references" "References must be unique."
+                if item.References.Length <> (item.References |> List.distinct).Length then
+                    diagnostic "WORKSPACE-REFERENCE-DUPLICATE" $"{path}/references" "References must be unique."
 
-              if item.Assumptions |> List.exists String.IsNullOrWhiteSpace then
-                  diagnostic "WORKSPACE-ASSUMPTION-BLANK" $"{path}/assumptions" "Assumptions cannot be blank."
+                if item.Assumptions |> List.exists String.IsNullOrWhiteSpace then
+                    diagnostic "WORKSPACE-ASSUMPTION-BLANK" $"{path}/assumptions" "Assumptions cannot be blank."
 
-              if item.Assumptions.Length <> (item.Assumptions |> List.distinct).Length then
-                  diagnostic "WORKSPACE-ASSUMPTION-DUPLICATE" $"{path}/assumptions" "Assumptions must be unique."
+                if item.Assumptions.Length <> (item.Assumptions |> List.distinct).Length then
+                    diagnostic "WORKSPACE-ASSUMPTION-DUPLICATE" $"{path}/assumptions" "Assumptions must be unique."
 
-              if
-                  item.EvidenceObligationIds.Length
-                  <> (item.EvidenceObligationIds |> List.distinct).Length
-              then
-                  diagnostic
-                      "WORKSPACE-EVIDENCE-DUPLICATE"
-                      $"{path}/evidenceObligationIds"
-                      "Evidence obligations must be unique." ]
+                if
+                    item.EvidenceObligationIds.Length
+                    <> (item.EvidenceObligationIds |> List.distinct).Length
+                then
+                    diagnostic
+                        "WORKSPACE-EVIDENCE-DUPLICATE"
+                        $"{path}/evidenceObligationIds"
+                        "Evidence obligations must be unique."
+        ]
         |> sortDiagnostics
 
     let canonicalBytes model =
@@ -392,12 +413,14 @@ module WorkspaceLifecycle =
                 raise (JsonException("Field 'modules' must be an array."))
 
             let model =
-                { SchemaVersion = int (int64Property "schemaVersion" root)
-                  Revision = int64Property "revision" root
-                  Modules =
-                    modules.EnumerateArray()
-                    |> Seq.mapi (fun index item -> moduleFromJson $"/modules/{index}" item)
-                    |> Seq.toList }
+                {
+                    SchemaVersion = int (int64Property "schemaVersion" root)
+                    Revision = int64Property "revision" root
+                    Modules =
+                        modules.EnumerateArray()
+                        |> Seq.mapi (fun index item -> moduleFromJson $"/modules/{index}" item)
+                        |> Seq.toList
+                }
 
             match validate model with
             | [] -> Ok model
@@ -470,22 +493,26 @@ module WorkspaceLifecycle =
                 checkFields
                     "/disposition"
                     (set
-                        [ "kind"
-                          "debt"
-                          "affectedSubjects"
-                          "reason"
-                          "responsibleHuman"
-                          "evidenceRefs" ])
+                        [
+                            "kind"
+                            "debt"
+                            "affectedSubjects"
+                            "reason"
+                            "responsibleHuman"
+                            "evidenceRefs"
+                        ])
                     element
 
                 ProposalDisposition.AcceptedOpaque
-                    { Debt = stringProperty "debt" element
-                      AffectedSubjects =
-                        stringArray "affectedSubjects" element
-                        |> List.map (parseId "/disposition/affectedSubjects")
-                      Reason = stringProperty "reason" element
-                      ResponsibleHuman = stringProperty "responsibleHuman" element
-                      EvidenceRefs = stringArray "evidenceRefs" element }
+                    {
+                        Debt = stringProperty "debt" element
+                        AffectedSubjects =
+                            stringArray "affectedSubjects" element
+                            |> List.map (parseId "/disposition/affectedSubjects")
+                        Reason = stringProperty "reason" element
+                        ResponsibleHuman = stringProperty "responsibleHuman" element
+                        EvidenceRefs = stringArray "evidenceRefs" element
+                    }
             | "no-semantic-change"
             | "ambiguous"
             | "contradictory"
@@ -502,16 +529,18 @@ module WorkspaceLifecycle =
 
     let serializeProposal (accepted: WorkspaceModel) (proposal: ChangeProposal) =
         let preflight =
-            [ yield! validate accepted
-              if proposal.SchemaVersion <> 1 then
-                  diagnostic "WORKSPACE-PROPOSAL-SCHEMA" "/schemaVersion" "Proposal schemaVersion must be 1."
-              match fingerprint accepted with
-              | Ok expected when expected <> proposal.BaseFingerprint ->
-                  diagnostic
-                      "WORKSPACE-PROPOSAL-STALE"
-                      "/baseFingerprint"
-                      "Proposal does not target the current accepted fingerprint."
-              | _ -> () ]
+            [
+                yield! validate accepted
+                if proposal.SchemaVersion <> 1 then
+                    diagnostic "WORKSPACE-PROPOSAL-SCHEMA" "/schemaVersion" "Proposal schemaVersion must be 1."
+                match fingerprint accepted with
+                | Ok expected when expected <> proposal.BaseFingerprint ->
+                    diagnostic
+                        "WORKSPACE-PROPOSAL-STALE"
+                        "/baseFingerprint"
+                        "Proposal does not target the current accepted fingerprint."
+                | _ -> ()
+            ]
             |> sortDiagnostics
 
         match preflight with
@@ -567,14 +596,16 @@ module WorkspaceLifecycle =
             checkFields
                 ""
                 (set
-                    [ "schemaVersion"
-                      "issueRef"
-                      "proseSha256"
-                      "baseFingerprint"
-                      "authoringDepth"
-                      "changes"
-                      "disposition"
-                      "evidenceFingerprint" ])
+                    [
+                        "schemaVersion"
+                        "issueRef"
+                        "proseSha256"
+                        "baseFingerprint"
+                        "authoringDepth"
+                        "changes"
+                        "disposition"
+                        "evidenceFingerprint"
+                    ])
                 root
 
             let changesElement = property "changes" root
@@ -608,20 +639,22 @@ module WorkspaceLifecycle =
             let evidence = property "evidenceFingerprint" root
 
             let proposal =
-                { SchemaVersion = int (int64Property "schemaVersion" root)
-                  IssueRef = stringProperty "issueRef" root
-                  ProseSha256 = stringProperty "proseSha256" root
-                  BaseFingerprint = stringProperty "baseFingerprint" root
-                  AuthoringDepth = stringProperty "authoringDepth" root |> parseDepth
-                  Changes = changes
-                  Disposition = property "disposition" root |> parseDisposition
-                  EvidenceFingerprint =
-                    if evidence.ValueKind = JsonValueKind.Null then
-                        None
-                    elif evidence.ValueKind = JsonValueKind.String then
-                        evidence.GetString() |> Option.ofObj
-                    else
-                        raise (JsonException("Field 'evidenceFingerprint' must be a string or null.")) }
+                {
+                    SchemaVersion = int (int64Property "schemaVersion" root)
+                    IssueRef = stringProperty "issueRef" root
+                    ProseSha256 = stringProperty "proseSha256" root
+                    BaseFingerprint = stringProperty "baseFingerprint" root
+                    AuthoringDepth = stringProperty "authoringDepth" root |> parseDepth
+                    Changes = changes
+                    Disposition = property "disposition" root |> parseDisposition
+                    EvidenceFingerprint =
+                        if evidence.ValueKind = JsonValueKind.Null then
+                            None
+                        elif evidence.ValueKind = JsonValueKind.String then
+                            evidence.GetString() |> Option.ofObj
+                        else
+                            raise (JsonException("Field 'evidenceFingerprint' must be a string or null."))
+                }
 
             Ok proposal
         with
@@ -645,20 +678,28 @@ module WorkspaceLifecycle =
                 match Map.tryFind key beforeMap, Map.tryFind key afterMap with
                 | None, Some item ->
                     Some
-                        { Subject = item.Id
-                          Summary = $"add {kindValue item.Kind}" }
+                        {
+                            Subject = item.Id
+                            Summary = $"add {kindValue item.Kind}"
+                        }
                 | Some item, None ->
                     Some
-                        { Subject = item.Id
-                          Summary = $"remove {kindValue item.Kind}" }
+                        {
+                            Subject = item.Id
+                            Summary = $"remove {kindValue item.Kind}"
+                        }
                 | Some oldItem, Some newItem when oldItem.Assumptions <> newItem.Assumptions ->
                     Some
-                        { Subject = newItem.Id
-                          Summary = "change assumptions" }
+                        {
+                            Subject = newItem.Id
+                            Summary = "change assumptions"
+                        }
                 | Some oldItem, Some newItem when oldItem <> newItem ->
                     Some
-                        { Subject = newItem.Id
-                          Summary = $"change {kindValue newItem.Kind}" }
+                        {
+                            Subject = newItem.Id
+                            Summary = $"change {kindValue newItem.Kind}"
+                        }
                 | _ -> None)
             |> Ok
 
@@ -667,100 +708,102 @@ module WorkspaceLifecycle =
         let acceptedModules = moduleMap accepted
         let touchedSubjects = proposal.Changes |> List.collect (touched >> Set.toList)
 
-        [ yield! validate accepted
-          if proposal.SchemaVersion <> 1 then
-              diagnostic "WORKSPACE-PROPOSAL-SCHEMA" "/schemaVersion" "Proposal schemaVersion must be 1."
-          yield! nonBlank "WORKSPACE-PROPOSAL-ISSUE" "/issueRef" "Issue reference" proposal.IssueRef
-          if not (isSha256 proposal.ProseSha256) then
-              diagnostic "WORKSPACE-PROPOSAL-PROSE" "/proseSha256" "proseSha256 must be lowercase SHA-256."
+        [
+            yield! validate accepted
+            if proposal.SchemaVersion <> 1 then
+                diagnostic "WORKSPACE-PROPOSAL-SCHEMA" "/schemaVersion" "Proposal schemaVersion must be 1."
+            yield! nonBlank "WORKSPACE-PROPOSAL-ISSUE" "/issueRef" "Issue reference" proposal.IssueRef
+            if not (isSha256 proposal.ProseSha256) then
+                diagnostic "WORKSPACE-PROPOSAL-PROSE" "/proseSha256" "proseSha256 must be lowercase SHA-256."
 
-          match acceptedFingerprint with
-          | Ok expected when proposal.BaseFingerprint <> expected ->
-              diagnostic
-                  "WORKSPACE-PROPOSAL-STALE"
-                  "/baseFingerprint"
-                  "Proposal does not target the current accepted fingerprint."
-          | _ -> ()
+            match acceptedFingerprint with
+            | Ok expected when proposal.BaseFingerprint <> expected ->
+                diagnostic
+                    "WORKSPACE-PROPOSAL-STALE"
+                    "/baseFingerprint"
+                    "Proposal does not target the current accepted fingerprint."
+            | _ -> ()
 
-          for duplicate in
-              touchedSubjects
-              |> List.countBy id
-              |> List.filter (snd >> ((<) 1))
-              |> List.map fst do
-              diagnostic
-                  "WORKSPACE-CHANGE-DUPLICATE"
-                  "/changes"
-                  $"Proposal edits identity '{duplicate}' more than once."
+            for duplicate in
+                touchedSubjects
+                |> List.countBy id
+                |> List.filter (snd >> ((<) 1))
+                |> List.map fst do
+                diagnostic
+                    "WORKSPACE-CHANGE-DUPLICATE"
+                    "/changes"
+                    $"Proposal edits identity '{duplicate}' more than once."
 
-          for index, change in proposal.Changes |> List.indexed do
-              match change with
-              | WorkspaceChange.Remove identifier when not (Map.containsKey (idText identifier) acceptedModules) ->
-                  diagnostic
-                      "WORKSPACE-CHANGE-MISSING"
-                      $"/changes/{index}"
-                      $"Removed identity '{idText identifier}' is absent from the accepted base."
-              | WorkspaceChange.Rename(fromId, _) when not (Map.containsKey (idText fromId) acceptedModules) ->
-                  diagnostic
-                      "WORKSPACE-CHANGE-MISSING"
-                      $"/changes/{index}"
-                      $"Renamed identity '{idText fromId}' is absent from the accepted base."
-              | WorkspaceChange.Rename(_, toId) when Map.containsKey (idText toId) acceptedModules ->
-                  diagnostic
-                      "WORKSPACE-RENAME-TARGET"
-                      $"/changes/{index}"
-                      $"Rename target '{idText toId}' already exists."
-              | _ -> ()
+            for index, change in proposal.Changes |> List.indexed do
+                match change with
+                | WorkspaceChange.Remove identifier when not (Map.containsKey (idText identifier) acceptedModules) ->
+                    diagnostic
+                        "WORKSPACE-CHANGE-MISSING"
+                        $"/changes/{index}"
+                        $"Removed identity '{idText identifier}' is absent from the accepted base."
+                | WorkspaceChange.Rename(fromId, _) when not (Map.containsKey (idText fromId) acceptedModules) ->
+                    diagnostic
+                        "WORKSPACE-CHANGE-MISSING"
+                        $"/changes/{index}"
+                        $"Renamed identity '{idText fromId}' is absent from the accepted base."
+                | WorkspaceChange.Rename(_, toId) when Map.containsKey (idText toId) acceptedModules ->
+                    diagnostic
+                        "WORKSPACE-RENAME-TARGET"
+                        $"/changes/{index}"
+                        $"Rename target '{idText toId}' already exists."
+                | _ -> ()
 
-          match proposal.EvidenceFingerprint, acceptedFingerprint with
-          | Some observed, Ok expected when observed <> expected ->
-              diagnostic
-                  "WORKSPACE-EVIDENCE-STALE"
-                  "/evidenceFingerprint"
-                  "Proposal evidence was collected against another accepted fingerprint."
-          | Some observed, _ when not (isSha256 observed) ->
-              diagnostic
-                  "WORKSPACE-EVIDENCE-DIGEST"
-                  "/evidenceFingerprint"
-                  "Evidence fingerprint must be lowercase SHA-256."
-          | _ -> ()
+            match proposal.EvidenceFingerprint, acceptedFingerprint with
+            | Some observed, Ok expected when observed <> expected ->
+                diagnostic
+                    "WORKSPACE-EVIDENCE-STALE"
+                    "/evidenceFingerprint"
+                    "Proposal evidence was collected against another accepted fingerprint."
+            | Some observed, _ when not (isSha256 observed) ->
+                diagnostic
+                    "WORKSPACE-EVIDENCE-DIGEST"
+                    "/evidenceFingerprint"
+                    "Evidence fingerprint must be lowercase SHA-256."
+            | _ -> ()
 
-          match proposal.Disposition with
-          | ProposalDisposition.AcceptedOpaque opaque ->
-              yield! nonBlank "WORKSPACE-OPAQUE-DEBT" "/disposition/debt" "Opaque debt" opaque.Debt
+            match proposal.Disposition with
+            | ProposalDisposition.AcceptedOpaque opaque ->
+                yield! nonBlank "WORKSPACE-OPAQUE-DEBT" "/disposition/debt" "Opaque debt" opaque.Debt
 
-              if List.isEmpty opaque.AffectedSubjects then
-                  diagnostic
-                      "WORKSPACE-OPAQUE-SUBJECT"
-                      "/disposition/affectedSubjects"
-                      "AcceptedOpaque requires affected subjects."
+                if List.isEmpty opaque.AffectedSubjects then
+                    diagnostic
+                        "WORKSPACE-OPAQUE-SUBJECT"
+                        "/disposition/affectedSubjects"
+                        "AcceptedOpaque requires affected subjects."
 
-              yield! nonBlank "WORKSPACE-OPAQUE-REASON" "/disposition/reason" "Opaque reason" opaque.Reason
+                yield! nonBlank "WORKSPACE-OPAQUE-REASON" "/disposition/reason" "Opaque reason" opaque.Reason
 
-              yield!
-                  nonBlank
-                      "WORKSPACE-OPAQUE-HUMAN"
-                      "/disposition/responsibleHuman"
-                      "Responsible human"
-                      opaque.ResponsibleHuman
+                yield!
+                    nonBlank
+                        "WORKSPACE-OPAQUE-HUMAN"
+                        "/disposition/responsibleHuman"
+                        "Responsible human"
+                        opaque.ResponsibleHuman
 
-              if
-                  List.isEmpty opaque.EvidenceRefs
-                  || opaque.EvidenceRefs |> List.exists String.IsNullOrWhiteSpace
-              then
-                  diagnostic
-                      "WORKSPACE-OPAQUE-EVIDENCE"
-                      "/disposition/evidenceRefs"
-                      "AcceptedOpaque requires evidence references."
-          | ProposalDisposition.NoSemanticChange reason ->
-              yield! nonBlank "WORKSPACE-NO-CHANGE-REASON" "/disposition/reason" "No-semantic-change reason" reason
+                if
+                    List.isEmpty opaque.EvidenceRefs
+                    || opaque.EvidenceRefs |> List.exists String.IsNullOrWhiteSpace
+                then
+                    diagnostic
+                        "WORKSPACE-OPAQUE-EVIDENCE"
+                        "/disposition/evidenceRefs"
+                        "AcceptedOpaque requires evidence references."
+            | ProposalDisposition.NoSemanticChange reason ->
+                yield! nonBlank "WORKSPACE-NO-CHANGE-REASON" "/disposition/reason" "No-semantic-change reason" reason
 
-              if not (List.isEmpty proposal.Changes) then
-                  diagnostic "WORKSPACE-NO-CHANGE-DELTA" "/changes" "NoSemanticChange cannot carry semantic changes."
-          | ProposalDisposition.Ambiguous reason
-          | ProposalDisposition.Contradictory reason
-          | ProposalDisposition.Stale reason ->
-              yield! nonBlank "WORKSPACE-DISPOSITION-REASON" "/disposition/reason" "Disposition reason" reason
-          | ProposalDisposition.CoherentDelta -> () ]
+                if not (List.isEmpty proposal.Changes) then
+                    diagnostic "WORKSPACE-NO-CHANGE-DELTA" "/changes" "NoSemanticChange cannot carry semantic changes."
+            | ProposalDisposition.Ambiguous reason
+            | ProposalDisposition.Contradictory reason
+            | ProposalDisposition.Stale reason ->
+                yield! nonBlank "WORKSPACE-DISPOSITION-REASON" "/disposition/reason" "Disposition reason" reason
+            | ProposalDisposition.CoherentDelta -> ()
+        ]
         |> sortDiagnostics
 
     let private eligible proposal =
@@ -771,31 +814,36 @@ module WorkspaceLifecycle =
         | _ -> false
 
     let private validateAcceptance acceptance =
-        [ yield! nonBlank "WORKSPACE-ACCEPTANCE-HUMAN" "/acceptance/acceptedBy" "Accepting human" acceptance.AcceptedBy
-          yield!
-              nonBlank
-                  "WORKSPACE-ACCEPTANCE-TIME"
-                  "/acceptance/acceptedAtUtc"
-                  "Acceptance time"
-                  acceptance.AcceptedAtUtc
-          if
-              List.isEmpty acceptance.EvidenceRefs
-              || acceptance.EvidenceRefs |> List.exists String.IsNullOrWhiteSpace
-          then
-              diagnostic
-                  "WORKSPACE-ACCEPTANCE-EVIDENCE"
-                  "/acceptance/evidenceRefs"
-                  "Human acceptance requires evidence references." ]
+        [
+            yield!
+                nonBlank "WORKSPACE-ACCEPTANCE-HUMAN" "/acceptance/acceptedBy" "Accepting human" acceptance.AcceptedBy
+            yield!
+                nonBlank
+                    "WORKSPACE-ACCEPTANCE-TIME"
+                    "/acceptance/acceptedAtUtc"
+                    "Acceptance time"
+                    acceptance.AcceptedAtUtc
+            if
+                List.isEmpty acceptance.EvidenceRefs
+                || acceptance.EvidenceRefs |> List.exists String.IsNullOrWhiteSpace
+            then
+                diagnostic
+                    "WORKSPACE-ACCEPTANCE-EVIDENCE"
+                    "/acceptance/evidenceRefs"
+                    "Human acceptance requires evidence references."
+        ]
 
     let reduce accepted proposal acceptance =
         let findings =
-            [ yield! validateProposal accepted proposal
-              yield! validateAcceptance acceptance
-              if not (eligible proposal) then
-                  diagnostic
-                      "WORKSPACE-PROPOSAL-NONREDUCIBLE"
-                      "/disposition"
-                      "Only CoherentDelta, NoSemanticChange, and AcceptedOpaque can reduce accepted authority." ]
+            [
+                yield! validateProposal accepted proposal
+                yield! validateAcceptance acceptance
+                if not (eligible proposal) then
+                    diagnostic
+                        "WORKSPACE-PROPOSAL-NONREDUCIBLE"
+                        "/disposition"
+                        "Only CoherentDelta, NoSemanticChange, and AcceptedOpaque can reduce accepted authority."
+            ]
             |> sortDiagnostics
 
         if not (List.isEmpty findings) then
@@ -845,11 +893,13 @@ module WorkspaceLifecycle =
                     $"Identity '{subject}' is renamed and removed across proposals.")
 
         let eligibilityFindings =
-            [ if not (eligible left) || not (eligible right) then
-                  diagnostic
-                      "WORKSPACE-MERGE-NONREDUCIBLE"
-                      "/disposition"
-                      "Both proposals must have an accepting disposition." ]
+            [
+                if not (eligible left) || not (eligible right) then
+                    diagnostic
+                        "WORKSPACE-MERGE-NONREDUCIBLE"
+                        "/disposition"
+                        "Both proposals must have an accepting disposition."
+            ]
 
         match
             basicFindings @ overlapFindings @ renameDeleteFindings @ eligibilityFindings
@@ -886,15 +936,17 @@ type CorrespondenceObservationState =
     | Unsupported of reason: string
 
 type CorrespondenceObservation =
-    { ObligationId: SpecificationId
-      Kind: CorrespondenceObservationKind
-      AcceptedFingerprint: string
-      SubjectFingerprint: string option
-      State: CorrespondenceObservationState
-      SourceBindings: string list
-      TestBindings: string list
-      EvidenceRefs: string list
-      Explanation: string }
+    {
+        ObligationId: SpecificationId
+        Kind: CorrespondenceObservationKind
+        AcceptedFingerprint: string
+        SubjectFingerprint: string option
+        State: CorrespondenceObservationState
+        SourceBindings: string list
+        TestBindings: string list
+        EvidenceRefs: string list
+        Explanation: string
+    }
 
 [<RequireQualifiedAccess>]
 type CorrespondenceStatus =
@@ -907,14 +959,16 @@ type CorrespondenceStatus =
     | Unobserved
 
 type CorrespondenceEntry =
-    { ObligationId: SpecificationId
-      Status: CorrespondenceStatus
-      ExpectedFingerprint: string
-      ObservedFingerprints: string list
-      SourceBindings: string list
-      TestBindings: string list
-      EvidenceRefs: string list
-      Explanation: string }
+    {
+        ObligationId: SpecificationId
+        Status: CorrespondenceStatus
+        ExpectedFingerprint: string
+        ObservedFingerprints: string list
+        SourceBindings: string list
+        TestBindings: string list
+        EvidenceRefs: string list
+        Explanation: string
+    }
 
 [<RequireQualifiedAccess>]
 type CorrespondenceScope =
@@ -922,13 +976,15 @@ type CorrespondenceScope =
     | ImpactedBy of changedSubjectIds: string list
 
 type CorrespondenceReport =
-    { Schema: string
-      AcceptedFingerprint: string
-      ObservationFingerprint: string
-      Scope: CorrespondenceScope
-      Provenance: string list
-      Entries: CorrespondenceEntry list
-      Diagnostics: SpecificationDiagnostic list }
+    {
+        Schema: string
+        AcceptedFingerprint: string
+        ObservationFingerprint: string
+        Scope: CorrespondenceScope
+        Provenance: string list
+        Entries: CorrespondenceEntry list
+        Diagnostics: SpecificationDiagnostic list
+    }
 
 module private CorrespondenceInternals =
     open WorkspaceInternals
@@ -1050,66 +1106,73 @@ module WorkspaceCorrespondence =
         let catalogueIds = contract.Catalogue |> List.map _.Id |> Set.ofList
         let missingCatalogue = Set.difference acceptedIds catalogueIds
 
-        [ yield! WorkspaceLifecycle.validate accepted
-          yield! contractFindings
-          for identifier in missingCatalogue |> Set.toList |> List.sort do
-              diagnostic
-                  "CORRESPONDENCE-CATALOGUE-INCOMPLETE"
-                  "/contract/catalogue"
-                  $"Accepted module '{identifier}' is absent from the compiled catalogue."
-          for (obligation, kind), count in
-              observations
-              |> List.countBy (fun item -> idText item.ObligationId, kindValue item.Kind)
-              |> List.filter (fun (_, count) -> count > 1) do
-              diagnostic
-                  "CORRESPONDENCE-OBSERVATION-DUPLICATE"
-                  "/observations"
-                  $"Observation '{obligation}/{kind}' is duplicated {count} times."
-          for index, item in observations |> List.indexed do
-              let path = $"/observations/{index}"
+        [
+            yield! WorkspaceLifecycle.validate accepted
+            yield! contractFindings
+            for identifier in missingCatalogue |> Set.toList |> List.sort do
+                diagnostic
+                    "CORRESPONDENCE-CATALOGUE-INCOMPLETE"
+                    "/contract/catalogue"
+                    $"Accepted module '{identifier}' is absent from the compiled catalogue."
+            for (obligation, kind), count in
+                observations
+                |> List.countBy (fun item -> idText item.ObligationId, kindValue item.Kind)
+                |> List.filter (fun (_, count) -> count > 1) do
+                diagnostic
+                    "CORRESPONDENCE-OBSERVATION-DUPLICATE"
+                    "/observations"
+                    $"Observation '{obligation}/{kind}' is duplicated {count} times."
+            for index, item in observations |> List.indexed do
+                let path = $"/observations/{index}"
 
-              if item.AcceptedFingerprint <> acceptedFingerprint then
-                  diagnostic
-                      "CORRESPONDENCE-FINGERPRINT-FORGED"
-                      (path + "/acceptedFingerprint")
-                      "Observation is not bound to the accepted workspace fingerprint."
+                if item.AcceptedFingerprint <> acceptedFingerprint then
+                    diagnostic
+                        "CORRESPONDENCE-FINGERPRINT-FORGED"
+                        (path + "/acceptedFingerprint")
+                        "Observation is not bound to the accepted workspace fingerprint."
 
-              if not (Set.contains (idText item.ObligationId) obligationIds) then
-                  diagnostic
-                      "CORRESPONDENCE-OBLIGATION-UNKNOWN"
-                      (path + "/obligationId")
-                      $"Unknown evidence obligation '{idText item.ObligationId}'."
+                if not (Set.contains (idText item.ObligationId) obligationIds) then
+                    diagnostic
+                        "CORRESPONDENCE-OBLIGATION-UNKNOWN"
+                        (path + "/obligationId")
+                        $"Unknown evidence obligation '{idText item.ObligationId}'."
 
-              match item.SubjectFingerprint with
-              | Some value when not (isSha256 value) ->
-                  diagnostic
-                      "CORRESPONDENCE-SUBJECT-DIGEST"
-                      (path + "/subjectFingerprint")
-                      "Subject fingerprint must be lowercase SHA-256."
-              | None when item.State <> CorrespondenceObservationState.Missing ->
-                  diagnostic
-                      "CORRESPONDENCE-SUBJECT-DIGEST"
-                      (path + "/subjectFingerprint")
-                      "Non-missing observations require a subject fingerprint."
-              | _ -> ()
+                match item.SubjectFingerprint with
+                | Some value when not (isSha256 value) ->
+                    diagnostic
+                        "CORRESPONDENCE-SUBJECT-DIGEST"
+                        (path + "/subjectFingerprint")
+                        "Subject fingerprint must be lowercase SHA-256."
+                | None when item.State <> CorrespondenceObservationState.Missing ->
+                    diagnostic
+                        "CORRESPONDENCE-SUBJECT-DIGEST"
+                        (path + "/subjectFingerprint")
+                        "Non-missing observations require a subject fingerprint."
+                | _ -> ()
 
-              if String.IsNullOrWhiteSpace item.Explanation then
-                  diagnostic "CORRESPONDENCE-EXPLANATION" (path + "/explanation") "Observation explanation is required."
+                if String.IsNullOrWhiteSpace item.Explanation then
+                    diagnostic
+                        "CORRESPONDENCE-EXPLANATION"
+                        (path + "/explanation")
+                        "Observation explanation is required."
 
-              match stateReason item.State with
-              | Some reason when String.IsNullOrWhiteSpace reason ->
-                  diagnostic "CORRESPONDENCE-STATE-REASON" (path + "/reason") "Non-observed states require a reason."
-              | _ -> ()
+                match stateReason item.State with
+                | Some reason when String.IsNullOrWhiteSpace reason ->
+                    diagnostic "CORRESPONDENCE-STATE-REASON" (path + "/reason") "Non-observed states require a reason."
+                | _ -> ()
 
-              for name, values in
-                  [ "sourceBindings", item.SourceBindings
-                    "testBindings", item.TestBindings
-                    "evidenceRefs", item.EvidenceRefs ] do
-                  if values |> List.exists String.IsNullOrWhiteSpace then
-                      diagnostic "CORRESPONDENCE-BINDING-BLANK" (path + "/" + name) "Bindings cannot be blank."
+                for name, values in
+                    [
+                        "sourceBindings", item.SourceBindings
+                        "testBindings", item.TestBindings
+                        "evidenceRefs", item.EvidenceRefs
+                    ] do
+                    if values |> List.exists String.IsNullOrWhiteSpace then
+                        diagnostic "CORRESPONDENCE-BINDING-BLANK" (path + "/" + name) "Bindings cannot be blank."
 
-                  if values.Length <> (values |> List.distinct).Length then
-                      diagnostic "CORRESPONDENCE-BINDING-DUPLICATE" (path + "/" + name) "Bindings must be unique." ]
+                    if values.Length <> (values |> List.distinct).Length then
+                        diagnostic "CORRESPONDENCE-BINDING-DUPLICATE" (path + "/" + name) "Bindings must be unique."
+        ]
         |> sortDiagnostics
 
     let private impactedObligations
@@ -1178,10 +1241,12 @@ module WorkspaceCorrespondence =
 
         let allKinds =
             set
-                [ CorrespondenceObservationKind.GeneratedContract
-                  CorrespondenceObservationKind.SourceBinding
-                  CorrespondenceObservationKind.Test
-                  CorrespondenceObservationKind.EvidenceReceipt ]
+                [
+                    CorrespondenceObservationKind.GeneratedContract
+                    CorrespondenceObservationKind.SourceBinding
+                    CorrespondenceObservationKind.Test
+                    CorrespondenceObservationKind.EvidenceReceipt
+                ]
 
         let status, explanation =
             if List.isEmpty observations then
@@ -1223,14 +1288,16 @@ module WorkspaceCorrespondence =
             else
                 CorrespondenceStatus.Satisfied, String.concat "; " explanations
 
-        { ObligationId = obligationId
-          Status = status
-          ExpectedFingerprint = expected
-          ObservedFingerprints = observedFingerprints
-          SourceBindings = sources
-          TestBindings = tests
-          EvidenceRefs = evidence
-          Explanation = explanation }
+        {
+            ObligationId = obligationId
+            Status = status
+            ExpectedFingerprint = expected
+            ObservedFingerprints = observedFingerprints
+            SourceBindings = sources
+            TestBindings = tests
+            EvidenceRefs = evidence
+            Explanation = explanation
+        }
 
     let evaluate
         (accepted: WorkspaceModel)
@@ -1265,14 +1332,16 @@ module WorkspaceCorrespondence =
                             observations |> List.filter (fun item -> item.ObligationId = obligation.Id)
 
                         if List.isEmpty matching then
-                            { ObligationId = obligation.Id
-                              Status = CorrespondenceStatus.Unobserved
-                              ExpectedFingerprint = obligation.ContentSha256
-                              ObservedFingerprints = []
-                              SourceBindings = []
-                              TestBindings = []
-                              EvidenceRefs = []
-                              Explanation = "No implementation observation was supplied." }
+                            {
+                                ObligationId = obligation.Id
+                                Status = CorrespondenceStatus.Unobserved
+                                ExpectedFingerprint = obligation.ContentSha256
+                                ObservedFingerprints = []
+                                SourceBindings = []
+                                TestBindings = []
+                                EvidenceRefs = []
+                                Explanation = "No implementation observation was supplied."
+                            }
                         else
                             classify obligation.Id obligation.ContentSha256 matching)
 
@@ -1291,20 +1360,24 @@ module WorkspaceCorrespondence =
                     |> sortDiagnostics
 
                 let provenance =
-                    [ yield $"schema:{contract.Schema}"
-                      yield $"profile:{contract.Profile}"
-                      yield $"specification:{contract.Specification}"
-                      for digest in contract.Digests |> List.sortBy _.Name do
-                          yield $"digest:{digest.Name}:{digest.Sha256}" ]
+                    [
+                        yield $"schema:{contract.Schema}"
+                        yield $"profile:{contract.Profile}"
+                        yield $"specification:{contract.Specification}"
+                        for digest in contract.Digests |> List.sortBy _.Name do
+                            yield $"digest:{digest.Name}:{digest.Sha256}"
+                    ]
 
                 Ok
-                    { Schema = "fsgg.workspace-correspondence-report/v1"
-                      AcceptedFingerprint = acceptedFingerprint
-                      ObservationFingerprint = observationBytes observations |> sha256
-                      Scope = scope
-                      Provenance = provenance
-                      Entries = entries
-                      Diagnostics = diagnostics }
+                    {
+                        Schema = "fsgg.workspace-correspondence-report/v1"
+                        AcceptedFingerprint = acceptedFingerprint
+                        ObservationFingerprint = observationBytes observations |> sha256
+                        Scope = scope
+                        Provenance = provenance
+                        Entries = entries
+                        Diagnostics = diagnostics
+                    }
 
     let deserializeObservations (text: string) =
         try
@@ -1327,16 +1400,18 @@ module WorkspaceCorrespondence =
                 checkFields
                     path
                     (set
-                        [ "obligationId"
-                          "kind"
-                          "acceptedFingerprint"
-                          "subjectFingerprint"
-                          "state"
-                          "reason"
-                          "sourceBindings"
-                          "testBindings"
-                          "evidenceRefs"
-                          "explanation" ])
+                        [
+                            "obligationId"
+                            "kind"
+                            "acceptedFingerprint"
+                            "subjectFingerprint"
+                            "state"
+                            "reason"
+                            "sourceBindings"
+                            "testBindings"
+                            "evidenceRefs"
+                            "explanation"
+                        ])
                     item
 
                 let optional name =
@@ -1349,15 +1424,17 @@ module WorkspaceCorrespondence =
                     else
                         raise (JsonException($"{path}/{name}: expected string or null."))
 
-                { ObligationId = stringProperty "obligationId" item |> parseId (path + "/obligationId")
-                  Kind = stringProperty "kind" item |> parseKind
-                  AcceptedFingerprint = stringProperty "acceptedFingerprint" item
-                  SubjectFingerprint = optional "subjectFingerprint"
-                  State = parseState (stringProperty "state" item) (optional "reason")
-                  SourceBindings = stringArray "sourceBindings" item
-                  TestBindings = stringArray "testBindings" item
-                  EvidenceRefs = stringArray "evidenceRefs" item
-                  Explanation = stringProperty "explanation" item })
+                {
+                    ObligationId = stringProperty "obligationId" item |> parseId (path + "/obligationId")
+                    Kind = stringProperty "kind" item |> parseKind
+                    AcceptedFingerprint = stringProperty "acceptedFingerprint" item
+                    SubjectFingerprint = optional "subjectFingerprint"
+                    State = parseState (stringProperty "state" item) (optional "reason")
+                    SourceBindings = stringArray "sourceBindings" item
+                    TestBindings = stringArray "testBindings" item
+                    EvidenceRefs = stringArray "evidenceRefs" item
+                    Explanation = stringProperty "explanation" item
+                })
             |> Seq.toList
             |> Ok
         with
@@ -1419,39 +1496,43 @@ module WorkspaceCorrespondence =
     let renderPlain (report: CorrespondenceReport) =
         let provenance = String.concat "," report.Provenance
 
-        [ yield $"correspondence {report.AcceptedFingerprint} observations {report.ObservationFingerprint}"
-          yield $"provenance {provenance}"
-          for item in report.Entries do
-              let observed = String.concat "," item.ObservedFingerprints
+        [
+            yield $"correspondence {report.AcceptedFingerprint} observations {report.ObservationFingerprint}"
+            yield $"provenance {provenance}"
+            for item in report.Entries do
+                let observed = String.concat "," item.ObservedFingerprints
 
-              yield
-                  $"{idText item.ObligationId}: {statusValue item.Status} expected {item.ExpectedFingerprint} observed {observed} - {item.Explanation}" ]
+                yield
+                    $"{idText item.ObligationId}: {statusValue item.Status} expected {item.ExpectedFingerprint} observed {observed} - {item.Explanation}"
+        ]
         |> String.concat "\n"
         |> fun value -> value + "\n"
 
     let renderRich (report: CorrespondenceReport) =
         let provenance = String.concat ", " report.Provenance
 
-        [ yield "# Workspace correspondence"
-          yield ""
-          yield $"Accepted fingerprint: `{report.AcceptedFingerprint}`"
-          yield $"Observation fingerprint: `{report.ObservationFingerprint}`"
-          yield $"Provenance: {provenance}"
-          yield ""
-          for item in report.Entries do
-              let sources = String.concat ", " item.SourceBindings
-              let tests = String.concat ", " item.TestBindings
-              let evidence = String.concat ", " item.EvidenceRefs
-              let observed = String.concat ", " item.ObservedFingerprints
-              yield $"## {idText item.ObligationId} — {statusValue item.Status}"
-              yield ""
-              yield item.Explanation
-              yield $"Expected fingerprint: `{item.ExpectedFingerprint}`"
-              yield $"Observed fingerprints: {observed}"
-              yield $"Sources: {sources}"
-              yield $"Tests: {tests}"
-              yield $"Evidence: {evidence}"
-              yield "" ]
+        [
+            yield "# Workspace correspondence"
+            yield ""
+            yield $"Accepted fingerprint: `{report.AcceptedFingerprint}`"
+            yield $"Observation fingerprint: `{report.ObservationFingerprint}`"
+            yield $"Provenance: {provenance}"
+            yield ""
+            for item in report.Entries do
+                let sources = String.concat ", " item.SourceBindings
+                let tests = String.concat ", " item.TestBindings
+                let evidence = String.concat ", " item.EvidenceRefs
+                let observed = String.concat ", " item.ObservedFingerprints
+                yield $"## {idText item.ObligationId} — {statusValue item.Status}"
+                yield ""
+                yield item.Explanation
+                yield $"Expected fingerprint: `{item.ExpectedFingerprint}`"
+                yield $"Observed fingerprints: {observed}"
+                yield $"Sources: {sources}"
+                yield $"Tests: {tests}"
+                yield $"Evidence: {evidence}"
+                yield ""
+        ]
         |> String.concat "\n"
         |> fun value -> value + "\n"
 
@@ -1471,19 +1552,23 @@ type LegacyMigrationClassification =
     | Removed
 
 type LegacySourceInventory =
-    { Path: string
-      OriginalSha256: string
-      Lifecycle: LegacyLifecycle
-      Classification: LegacyMigrationClassification
-      TargetPath: string option }
+    {
+        Path: string
+        OriginalSha256: string
+        Lifecycle: LegacyLifecycle
+        Classification: LegacyMigrationClassification
+        TargetPath: string option
+    }
 
 type WorkspaceMigrationPlan =
-    { SchemaVersion: int
-      TargetBackend: string
-      Sources: LegacySourceInventory list
-      RollbackManifestSha256: string
-      Decisions: HumanAcceptance list
-      ReadyToApply: bool }
+    {
+        SchemaVersion: int
+        TargetBackend: string
+        Sources: LegacySourceInventory list
+        RollbackManifestSha256: string
+        Decisions: HumanAcceptance list
+        ReadyToApply: bool
+    }
 
 [<RequireQualifiedAccess>]
 module WorkspaceMigration =
@@ -1493,66 +1578,73 @@ module WorkspaceMigration =
         let sortedSources = sources |> List.sortBy (fun item -> item.Path)
 
         let findings =
-            [ yield! nonBlank "WORKSPACE-MIGRATION-BACKEND" "/targetBackend" "Target backend" targetBackend
-              if targetBackend <> "quint-specification-v1" then
-                  diagnostic
-                      "WORKSPACE-MIGRATION-BACKEND"
-                      "/targetBackend"
-                      "The single lifecycle target is quint-specification-v1."
-              if not (isSha256 rollbackManifestSha256) then
-                  diagnostic
-                      "WORKSPACE-MIGRATION-ROLLBACK"
-                      "/rollbackManifestSha256"
-                      "Rollback manifest must be bound by lowercase SHA-256."
-              for duplicate in
-                  sources
-                  |> List.countBy (fun item -> item.Path)
-                  |> List.filter (snd >> ((<) 1))
-                  |> List.map fst do
-                  diagnostic "WORKSPACE-MIGRATION-PATH-DUPLICATE" "/sources" $"Source path '{duplicate}' is duplicated."
-              for index, source in sortedSources |> List.indexed do
-                  let path = $"/sources/{index}"
-                  yield! nonBlank "WORKSPACE-MIGRATION-PATH" $"{path}/path" "Source path" source.Path
+            [
+                yield! nonBlank "WORKSPACE-MIGRATION-BACKEND" "/targetBackend" "Target backend" targetBackend
+                if targetBackend <> "quint-specification-v1" then
+                    diagnostic
+                        "WORKSPACE-MIGRATION-BACKEND"
+                        "/targetBackend"
+                        "The single lifecycle target is quint-specification-v1."
+                if not (isSha256 rollbackManifestSha256) then
+                    diagnostic
+                        "WORKSPACE-MIGRATION-ROLLBACK"
+                        "/rollbackManifestSha256"
+                        "Rollback manifest must be bound by lowercase SHA-256."
+                for duplicate in
+                    sources
+                    |> List.countBy (fun item -> item.Path)
+                    |> List.filter (snd >> ((<) 1))
+                    |> List.map fst do
+                    diagnostic
+                        "WORKSPACE-MIGRATION-PATH-DUPLICATE"
+                        "/sources"
+                        $"Source path '{duplicate}' is duplicated."
+                for index, source in sortedSources |> List.indexed do
+                    let path = $"/sources/{index}"
+                    yield! nonBlank "WORKSPACE-MIGRATION-PATH" $"{path}/path" "Source path" source.Path
 
-                  if not (isSha256 source.OriginalSha256) then
-                      diagnostic
-                          "WORKSPACE-MIGRATION-DIGEST"
-                          $"{path}/originalSha256"
-                          "Original source must be bound by lowercase SHA-256."
+                    if not (isSha256 source.OriginalSha256) then
+                        diagnostic
+                            "WORKSPACE-MIGRATION-DIGEST"
+                            $"{path}/originalSha256"
+                            "Original source must be bound by lowercase SHA-256."
 
-                  match source.Classification, source.TargetPath with
-                  | LegacyMigrationClassification.Migrated, None ->
-                      diagnostic
-                          "WORKSPACE-MIGRATION-TARGET"
-                          $"{path}/targetPath"
-                          "Migrated sources require a target path."
-                  | LegacyMigrationClassification.Ambiguous reason, _ ->
-                      diagnostic
-                          "WORKSPACE-MIGRATION-DECISION"
-                          $"{path}/classification"
-                          $"Ambiguous source requires a human decision: {reason}"
-                  | LegacyMigrationClassification.Unsupported reason, _ ->
-                      diagnostic
-                          "WORKSPACE-MIGRATION-UNSUPPORTED"
-                          $"{path}/classification"
-                          $"Unsupported source prevents migration: {reason}"
-                  | LegacyMigrationClassification.Removed, Some _ ->
-                      diagnostic
-                          "WORKSPACE-MIGRATION-REMOVED-TARGET"
-                          $"{path}/targetPath"
-                          "Removed sources cannot have a target path."
-                  | _ -> ()
-              if List.isEmpty decisions then
-                  diagnostic
-                      "WORKSPACE-MIGRATION-DECISION"
-                      "/decisions"
-                      "Migration requires an explicit human decision receipt." ]
+                    match source.Classification, source.TargetPath with
+                    | LegacyMigrationClassification.Migrated, None ->
+                        diagnostic
+                            "WORKSPACE-MIGRATION-TARGET"
+                            $"{path}/targetPath"
+                            "Migrated sources require a target path."
+                    | LegacyMigrationClassification.Ambiguous reason, _ ->
+                        diagnostic
+                            "WORKSPACE-MIGRATION-DECISION"
+                            $"{path}/classification"
+                            $"Ambiguous source requires a human decision: {reason}"
+                    | LegacyMigrationClassification.Unsupported reason, _ ->
+                        diagnostic
+                            "WORKSPACE-MIGRATION-UNSUPPORTED"
+                            $"{path}/classification"
+                            $"Unsupported source prevents migration: {reason}"
+                    | LegacyMigrationClassification.Removed, Some _ ->
+                        diagnostic
+                            "WORKSPACE-MIGRATION-REMOVED-TARGET"
+                            $"{path}/targetPath"
+                            "Removed sources cannot have a target path."
+                    | _ -> ()
+                if List.isEmpty decisions then
+                    diagnostic
+                        "WORKSPACE-MIGRATION-DECISION"
+                        "/decisions"
+                        "Migration requires an explicit human decision receipt."
+            ]
             |> sortDiagnostics
 
-        { SchemaVersion = 1
-          TargetBackend = targetBackend
-          Sources = sortedSources
-          RollbackManifestSha256 = rollbackManifestSha256
-          Decisions = decisions
-          ReadyToApply = List.isEmpty findings },
+        {
+            SchemaVersion = 1
+            TargetBackend = targetBackend
+            Sources = sortedSources
+            RollbackManifestSha256 = rollbackManifestSha256
+            Decisions = decisions
+            ReadyToApply = List.isEmpty findings
+        },
         findings

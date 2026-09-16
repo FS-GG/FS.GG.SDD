@@ -85,53 +85,63 @@ module Verify =
         | SkillMissing
 
     type SkillVisibilityFact =
-        { Skill: string
-          RequiringTaskIds: TaskId list
-          Visibility: SkillVisibilityState
-          SourceArtifactPath: string
-          Severity: string
-          DiagnosticIds: string list
-          Correction: string }
+        {
+            Skill: string
+            RequiringTaskIds: TaskId list
+            Visibility: SkillVisibilityState
+            SourceArtifactPath: string
+            Severity: string
+            DiagnosticIds: string list
+            Correction: string
+        }
 
     type VerificationFinding =
-        { Id: string
-          Severity: string
-          Category: string
-          Path: string
-          RelatedIds: string list
-          Message: string
-          Correction: string }
+        {
+            Id: string
+            Severity: string
+            Category: string
+            Path: string
+            RelatedIds: string list
+            Message: string
+            Correction: string
+        }
 
     type VerificationStageReadiness = { Stage: string; Status: string }
 
     type VerificationLifecycleReadiness =
-        { Stages: VerificationStageReadiness list
-          Status: string }
+        {
+            Stages: VerificationStageReadiness list
+            Status: string
+        }
 
     type VerificationTaskGraphReadiness =
-        { TaskCount: int
-          DependencyCount: int
-          DependenciesValid: bool
-          StatusesValid: bool
-          FindingIds: string list }
+        {
+            TaskCount: int
+            DependencyCount: int
+            DependenciesValid: bool
+            StatusesValid: bool
+            FindingIds: string list
+        }
 
     type VerificationView =
-        { SchemaVersion: SchemaVersion
-          ViewVersion: string
-          WorkId: WorkId
-          Stage: LifecycleStage
-          Status: string
-          Generator: string
-          Sources: AnalysisSourceRecord list
-          LifecycleReadiness: VerificationLifecycleReadiness
-          TaskGraph: VerificationTaskGraphReadiness
-          EvidenceDispositions: EvidenceDisposition list
-          TestDispositions: RequiredTestDisposition list
-          SkillVisibility: SkillVisibilityFact list
-          GeneratedViews: AnalysisGeneratedViewRecord list
-          Findings: VerificationFinding list
-          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
-          Diagnostics: Diagnostic list
-          Readiness: string }
+        {
+            SchemaVersion: SchemaVersion
+            ViewVersion: string
+            WorkId: WorkId
+            Stage: LifecycleStage
+            Status: string
+            Generator: string
+            Sources: AnalysisSourceRecord list
+            LifecycleReadiness: VerificationLifecycleReadiness
+            TaskGraph: VerificationTaskGraphReadiness
+            EvidenceDispositions: EvidenceDisposition list
+            TestDispositions: RequiredTestDisposition list
+            SkillVisibility: SkillVisibilityFact list
+            GeneratedViews: AnalysisGeneratedViewRecord list
+            Findings: VerificationFinding list
+            OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+            Diagnostics: Diagnostic list
+            Readiness: string
+        }
 
     val parseVerificationView: snapshot: FileSnapshot -> Result<VerificationView, Diagnostic list>

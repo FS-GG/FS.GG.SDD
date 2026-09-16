@@ -51,10 +51,12 @@ module ArtifactRef =
         | Other of string
 
     type ArtifactRef =
-        { Path: string
-          Kind: ArtifactKind
-          Owner: ArtifactOwner
-          RequiredBySdd: bool }
+        {
+            Path: string
+            Kind: ArtifactKind
+            Owner: ArtifactOwner
+            RequiredBySdd: bool
+        }
 
     val create:
         path: string -> kind: ArtifactKind -> owner: ArtifactOwner -> requiredBySdd: bool -> Result<ArtifactRef, string>

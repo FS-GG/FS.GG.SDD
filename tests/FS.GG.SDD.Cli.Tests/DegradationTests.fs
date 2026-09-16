@@ -14,18 +14,22 @@ module DegradationTests =
     let escChar = char 0x1b
 
     let interactiveColor =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 100
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 100
+            IsInputInteractive = true
+        }
 
     let nonInteractive =
         { interactiveColor with
-            IsInteractive = false }
+            IsInteractive = false
+        }
 
     let colorDisabled =
         { interactiveColor with
-            ColorEnabled = false }
+            ColorEnabled = false
+        }
 
     let sample = RichRenderingTests.sampleReport
 
@@ -127,11 +131,13 @@ module DegradationTests =
     [<Fact>]
     let ``084 T016b each stage state maps to a distinct colour, blocked emphasized`` () =
         let styles =
-            [ StageState.Done
-              StageState.Current
-              StageState.Next
-              StageState.Pending
-              StageState.Blocked ]
+            [
+                StageState.Done
+                StageState.Current
+                StageState.Next
+                StageState.Pending
+                StageState.Blocked
+            ]
             |> List.map stageStateStyle
 
         Assert.Equal(5, styles |> List.distinct |> List.length) // all five distinct (SC-008)
@@ -153,11 +159,13 @@ module DegradationTests =
 
     let blocked =
         { sample with
-            Outcome = CommandOutcome.Blocked }
+            Outcome = CommandOutcome.Blocked
+        }
 
     let succeeding =
         { sample with
-            Outcome = CommandOutcome.Succeeded }
+            Outcome = CommandOutcome.Succeeded
+        }
 
     [<Fact>]
     let ``T016 stream routing is identical across formats`` () =
@@ -198,7 +206,8 @@ module DegradationTests =
             2,
             exitCodeForReport
                 { blocked with
-                    Diagnostics = [ invented ] }
+                    Diagnostics = [ invented ]
+                }
         )
 
         // The same id without the bit is a user-input failure → exit 1.
@@ -209,7 +218,8 @@ module DegradationTests =
             1,
             exitCodeForReport
                 { blocked with
-                    Diagnostics = [ userInput ] }
+                    Diagnostics = [ userInput ]
+                }
         )
 
         // A non-blocked outcome ignores the bit entirely → exit 0.
@@ -217,5 +227,6 @@ module DegradationTests =
             0,
             exitCodeForReport
                 { succeeding with
-                    Diagnostics = [ invented ] }
+                    Diagnostics = [ invented ]
+                }
         )

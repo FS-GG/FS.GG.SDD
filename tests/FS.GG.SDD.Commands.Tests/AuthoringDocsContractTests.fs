@@ -57,21 +57,25 @@ module AuthoringDocsContractTests =
         let text =
             String.concat
                 "\n"
-                [ "---"
-                  "schemaVersion: 1"
-                  "workId: 001-authoring-contracts-guard"
-                  "stage: specify"
-                  "---"
-                  ""
-                  "## Functional Requirements"
-                  ""
-                  line ]
+                [
+                    "---"
+                    "schemaVersion: 1"
+                    "workId: 001-authoring-contracts-guard"
+                    "stage: specify"
+                    "---"
+                    ""
+                    "## Functional Requirements"
+                    ""
+                    line
+                ]
 
         match
             Specification.parseSpecificationFacts
-                { Path = "work/001-authoring-contracts-guard/spec.md"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = "work/001-authoring-contracts-guard/spec.md"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts.RequirementReferences
         | Error diagnostics -> failwith $"Documented coverage line did not parse: {line}\n{diagnostics}"
@@ -118,20 +122,24 @@ module AuthoringDocsContractTests =
         let text =
             String.concat
                 "\n"
-                [ "---"
-                  "schemaVersion: 1"
-                  "workId: 001-authoring-contracts-guard"
-                  "stage: specify"
-                  "---"
-                  ""
-                  "## Functional Requirements"
-                  ""
-                  line ]
+                [
+                    "---"
+                    "schemaVersion: 1"
+                    "workId: 001-authoring-contracts-guard"
+                    "stage: specify"
+                    "---"
+                    ""
+                    "## Functional Requirements"
+                    ""
+                    line
+                ]
 
         RequirementModel.parseRequirements
-            { Path = "work/001-authoring-contracts-guard/spec.md"
-              Text = text
-              RawBytes = None }
+            {
+                Path = "work/001-authoring-contracts-guard/spec.md"
+                Text = text
+                RawBytes = None
+            }
         |> List.tryHead
         |> Option.map (fun requirement -> requirement.Classification)
         |> Option.defaultWith (fun () ->
@@ -172,9 +180,11 @@ module AuthoringDocsContractTests =
 
         match
             Evidence.parseEvidence
-                { Path = "work/001-authoring-contracts-guard/evidence.yml"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = "work/001-authoring-contracts-guard/evidence.yml"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok declarations -> declarations
         | Error diagnostics -> failwith $"Documented evidence block did not parse:\n{text}\n{diagnostics}"
@@ -230,22 +240,26 @@ module AuthoringDocsContractTests =
         let text =
             String.concat
                 "\n"
-                [ "---"
-                  "schemaVersion: 1"
-                  "workId: 001-authoring-contracts-guard"
-                  "stage: clarify"
-                  "sourceSpec: work/001-authoring-contracts-guard/spec.md"
-                  "---"
-                  ""
-                  "## Remaining Ambiguity"
-                  ""
-                  line ]
+                [
+                    "---"
+                    "schemaVersion: 1"
+                    "workId: 001-authoring-contracts-guard"
+                    "stage: clarify"
+                    "sourceSpec: work/001-authoring-contracts-guard/spec.md"
+                    "---"
+                    ""
+                    "## Remaining Ambiguity"
+                    ""
+                    line
+                ]
 
         match
             Clarification.parseClarificationFacts
-                { Path = "work/001-authoring-contracts-guard/clarifications.md"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = "work/001-authoring-contracts-guard/clarifications.md"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts.BlockingAmbiguityCount
         | Error diagnostics -> failwith $"Documented remaining-ambiguity line did not parse: {line}\n{diagnostics}"
@@ -286,23 +300,27 @@ module AuthoringDocsContractTests =
         let text =
             String.concat
                 "\n"
-                [ "---"
-                  "schemaVersion: 1"
-                  "workId: 001-authoring-contracts-guard"
-                  "stage: checklist"
-                  "sourceSpec: work/001-authoring-contracts-guard/spec.md"
-                  "sourceClarifications: work/001-authoring-contracts-guard/clarifications.md"
-                  "---"
-                  ""
-                  "## Blocking Findings"
-                  ""
-                  line ]
+                [
+                    "---"
+                    "schemaVersion: 1"
+                    "workId: 001-authoring-contracts-guard"
+                    "stage: checklist"
+                    "sourceSpec: work/001-authoring-contracts-guard/spec.md"
+                    "sourceClarifications: work/001-authoring-contracts-guard/clarifications.md"
+                    "---"
+                    ""
+                    "## Blocking Findings"
+                    ""
+                    line
+                ]
 
         match
             Checklist.parseChecklistFacts
-                { Path = "work/001-authoring-contracts-guard/checklist.md"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = "work/001-authoring-contracts-guard/checklist.md"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts.BlockingFindings
         | Error diagnostics -> failwith $"Documented blocking-findings line did not parse: {line}\n{diagnostics}"
@@ -341,9 +359,11 @@ module AuthoringDocsContractTests =
     /// through the live `Clarification.parseClarificationFacts` public entry point.
     let private parseClarificationBlock (block: string list) =
         Clarification.parseClarificationFacts
-            { Path = "work/001-authoring-contracts-guard/clarifications.md"
-              Text = String.concat "\n" block
-              RawBytes = None }
+            {
+                Path = "work/001-authoring-contracts-guard/clarifications.md"
+                Text = String.concat "\n" block
+                RawBytes = None
+            }
 
     let private clarificationBlocks (label: string) =
         let blocks = taggedBlocks label referenceDoc

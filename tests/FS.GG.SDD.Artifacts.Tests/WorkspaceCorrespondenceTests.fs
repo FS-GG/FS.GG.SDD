@@ -11,78 +11,106 @@ module WorkspaceCorrespondenceTests =
     let private hash character = String(character, 64)
 
     let private moduleOf identifier kind digest evidence =
-        { Id = id identifier
-          Kind = kind
-          ContentSha256 = digest
-          References = []
-          Assumptions = []
-          EvidenceObligationIds = evidence |> List.map id }
+        {
+            Id = id identifier
+            Kind = kind
+            ContentSha256 = digest
+            References = []
+            Assumptions = []
+            EvidenceObligationIds = evidence |> List.map id
+        }
 
     let private accepted =
-        { SchemaVersion = 1
-          Revision = 1L
-          Modules =
-            [ moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'a') [ "EVID-001" ]
-              for index, character in [ 'b'; 'c'; 'd'; 'e'; 'f'; '1'; '2' ] |> List.indexed do
-                  moduleOf (sprintf "EVID-%03d" (index + 1)) WorkspaceModuleKind.EvidenceRequirement (hash character) [] ] }
+        {
+            SchemaVersion = 1
+            Revision = 1L
+            Modules =
+                [
+                    moduleOf "PROD-001" WorkspaceModuleKind.ProductSpecification (hash 'a') [ "EVID-001" ]
+                    for index, character in [ 'b'; 'c'; 'd'; 'e'; 'f'; '1'; '2' ] |> List.indexed do
+                        moduleOf
+                            (sprintf "EVID-%03d" (index + 1))
+                            WorkspaceModuleKind.EvidenceRequirement
+                            (hash character)
+                            []
+                ]
+        }
 
     let private fingerprint =
         WorkspaceLifecycle.fingerprint accepted
         |> Result.defaultWith (sprintf "%A" >> failwith)
 
     let private source =
-        { Path = "model.qnt.md"
-          Start = { Line = 1; Column = 1 }
-          End = { Line = 1; Column = 10 } }
+        {
+            Path = "model.qnt.md"
+            Start = { Line = 1; Column = 1 }
+            End = { Line = 1; Column = 10 }
+        }
 
     let private contract =
         let exports: QuintGeneralExport list =
             accepted.Modules
             |> List.map (fun item ->
-                { Id = SpecificationId.value item.Id + "-EXPORT"
-                  ModuleName = "Workspace"
-                  DeclarationName = SpecificationId.value item.Id
-                  Value = QuintString item.ContentSha256
-                  Source = source })
+                {
+                    Id = SpecificationId.value item.Id + "-EXPORT"
+                    ModuleName = "Workspace"
+                    DeclarationName = SpecificationId.value item.Id
+                    Value = QuintString item.ContentSha256
+                    Source = source
+                })
 
-        { Schema = QuintContractV2.schema
-          Profile = QuintGeneralProfile.identity
-          Specification = "Workspace"
-          Exports = exports
-          Catalogue =
-            List.map2
-                (fun (item: WorkspaceModule) (export: QuintGeneralExport) ->
-                    { Id = SpecificationId.value item.Id
-                      Kind = "workspace-module"
-                      ExportId = export.Id
-                      Value = export.Value
-                      Source = source })
-                accepted.Modules
-                exports
-          ActionEffects = []
-          Relationships =
-            [ { FromId = "PROD-001"
-                Kind = QuintRelationshipKind.VerifiedBy
-                ToId = "EVID-001" } ]
-          VerificationProfiles = []
-          Bounds = []
-          Impacts =
-            [ { SubjectId = "PROD-001"
-                Category = "implementation"
-                Detail = "EVID-001" } ]
-          Compatibility = []
-          Digests = [ { Name = "source"; Sha256 = hash 'f' } ] }
+        {
+            Schema = QuintContractV2.schema
+            Profile = QuintGeneralProfile.identity
+            Specification = "Workspace"
+            Exports = exports
+            Catalogue =
+                List.map2
+                    (fun (item: WorkspaceModule) (export: QuintGeneralExport) ->
+                        {
+                            Id = SpecificationId.value item.Id
+                            Kind = "workspace-module"
+                            ExportId = export.Id
+                            Value = export.Value
+                            Source = source
+                        })
+                    accepted.Modules
+                    exports
+            ActionEffects = []
+            Relationships =
+                [
+                    {
+                        FromId = "PROD-001"
+                        Kind = QuintRelationshipKind.VerifiedBy
+                        ToId = "EVID-001"
+                    }
+                ]
+            VerificationProfiles = []
+            Bounds = []
+            Impacts =
+                [
+                    {
+                        SubjectId = "PROD-001"
+                        Category = "implementation"
+                        Detail = "EVID-001"
+                    }
+                ]
+            Compatibility = []
+            Digests = [ { Name = "source"; Sha256 = hash 'f' } ]
+        }
 
     let private observation obligation kind state subject =
-        { ObligationId = id obligation
-          Kind = kind
-          AcceptedFingerprint = fingerprint
-          SubjectFingerprint = subject
-          State = state
-          SourceBindings = [ "src/Feature.fs:10" ]
-          TestBindings = [ "tests/FeatureTests.fs:20" ]
-          EvidenceRefs = [ "ci:run/1" ]
-          Explanation = $"{obligation} observation" }
+        {
+            ObligationId = id obligation
+            Kind = kind
+            AcceptedFingerprint = fingerprint
+            SubjectFingerprint = subject
+            State = state
+            SourceBindings = [ "src/Feature.fs:10" ]
+            TestBindings = [ "tests/FeatureTests.fs:20" ]
+            EvidenceRefs = [ "ci:run/1" ]
+            Explanation = $"{obligation} observation"
+        }
 
     [<Fact>]
     let ``workspace codecs are canonical strict and round trip`` () =
@@ -100,7 +128,8 @@ module WorkspaceCorrespondenceTests =
             encoded,
             WorkspaceLifecycle.serializeModel
                 { accepted with
-                    Modules = List.rev accepted.Modules }
+                    Modules = List.rev accepted.Modules
+                }
             |> Result.defaultWith (sprintf "%A" >> failwith)
         )
 
@@ -113,14 +142,16 @@ module WorkspaceCorrespondenceTests =
     [<Fact>]
     let ``reconciliation is order independent and conflicts have no candidate`` () =
         let proposal change =
-            { SchemaVersion = 1
-              IssueRef = "FS-GG/FS.GG.SDD#934"
-              ProseSha256 = hash '1'
-              BaseFingerprint = fingerprint
-              AuthoringDepth = AuthoringDepth.DirectQuint
-              Changes = [ change ]
-              Disposition = ProposalDisposition.CoherentDelta
-              EvidenceFingerprint = None }
+            {
+                SchemaVersion = 1
+                IssueRef = "FS-GG/FS.GG.SDD#934"
+                ProseSha256 = hash '1'
+                BaseFingerprint = fingerprint
+                AuthoringDepth = AuthoringDepth.DirectQuint
+                Changes = [ change ]
+                Disposition = ProposalDisposition.CoherentDelta
+                EvidenceFingerprint = None
+            }
 
         let left =
             proposal (WorkspaceChange.Upsert(moduleOf "DECIS-001" WorkspaceModuleKind.Decision (hash '2') []))
@@ -141,44 +172,48 @@ module WorkspaceCorrespondenceTests =
     [<Fact>]
     let ``correspondence preserves all seven outcomes from one typed report`` () =
         let kinds =
-            [ CorrespondenceObservationKind.GeneratedContract
-              CorrespondenceObservationKind.SourceBinding
-              CorrespondenceObservationKind.Test
-              CorrespondenceObservationKind.EvidenceReceipt ]
+            [
+                CorrespondenceObservationKind.GeneratedContract
+                CorrespondenceObservationKind.SourceBinding
+                CorrespondenceObservationKind.Test
+                CorrespondenceObservationKind.EvidenceReceipt
+            ]
 
         let observations =
-            [ for kind in kinds do
-                  yield observation "EVID-001" kind CorrespondenceObservationState.Observed (Some(hash 'b'))
-              yield
-                  observation
-                      "EVID-002"
-                      CorrespondenceObservationKind.SourceBinding
-                      CorrespondenceObservationState.Missing
-                      (Some(hash 'c'))
-              yield
-                  observation
-                      "EVID-003"
-                      CorrespondenceObservationKind.SourceBinding
-                      CorrespondenceObservationState.Observed
-                      (Some(hash '0'))
-              yield
-                  observation
-                      "EVID-004"
-                      CorrespondenceObservationKind.SourceBinding
-                      (CorrespondenceObservationState.Contradicted "implementation disagrees")
-                      (Some(hash 'e'))
-              yield
-                  observation
-                      "EVID-005"
-                      CorrespondenceObservationKind.SourceBinding
-                      (CorrespondenceObservationState.Ambiguous "two bindings")
-                      (Some(hash 'f'))
-              yield
-                  observation
-                      "EVID-006"
-                      CorrespondenceObservationKind.SourceBinding
-                      (CorrespondenceObservationState.Unsupported "foreign runtime")
-                      (Some(hash '1')) ]
+            [
+                for kind in kinds do
+                    yield observation "EVID-001" kind CorrespondenceObservationState.Observed (Some(hash 'b'))
+                yield
+                    observation
+                        "EVID-002"
+                        CorrespondenceObservationKind.SourceBinding
+                        CorrespondenceObservationState.Missing
+                        (Some(hash 'c'))
+                yield
+                    observation
+                        "EVID-003"
+                        CorrespondenceObservationKind.SourceBinding
+                        CorrespondenceObservationState.Observed
+                        (Some(hash '0'))
+                yield
+                    observation
+                        "EVID-004"
+                        CorrespondenceObservationKind.SourceBinding
+                        (CorrespondenceObservationState.Contradicted "implementation disagrees")
+                        (Some(hash 'e'))
+                yield
+                    observation
+                        "EVID-005"
+                        CorrespondenceObservationKind.SourceBinding
+                        (CorrespondenceObservationState.Ambiguous "two bindings")
+                        (Some(hash 'f'))
+                yield
+                    observation
+                        "EVID-006"
+                        CorrespondenceObservationKind.SourceBinding
+                        (CorrespondenceObservationState.Unsupported "foreign runtime")
+                        (Some(hash '1'))
+            ]
 
         let report =
             WorkspaceCorrespondence.evaluate accepted contract observations CorrespondenceScope.All
@@ -228,7 +263,8 @@ module WorkspaceCorrespondenceTests =
                   CorrespondenceObservationKind.Test
                   CorrespondenceObservationState.Observed
                   (Some(hash 'b')) with
-                AcceptedFingerprint = hash '0' }
+                AcceptedFingerprint = hash '0'
+            }
 
         match
             WorkspaceCorrespondence.evaluate

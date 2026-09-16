@@ -75,7 +75,8 @@ module DiagnosticTests =
         Assert.True(
             Diagnostics.signalsStaleView
                 { Diagnostics.unknownReference artifact "x" "y" with
-                    Id = "refresh.STALEView" }
+                    Id = "refresh.STALEView"
+                }
         )
         // A non-stale id is not misclassified.
         Assert.False(Diagnostics.signalsStaleView (Diagnostics.unknownReference artifact "FR-1" "x"))

@@ -57,10 +57,12 @@ module ArtifactRef =
         | Other of string
 
     type ArtifactRef =
-        { Path: string
-          Kind: ArtifactKind
-          Owner: ArtifactOwner
-          RequiredBySdd: bool }
+        {
+            Path: string
+            Kind: ArtifactKind
+            Owner: ArtifactOwner
+            RequiredBySdd: bool
+        }
 
     let normalizePath (path: string) =
         (if String.IsNullOrEmpty path then
@@ -78,10 +80,12 @@ module ArtifactRef =
             Error "Artifact paths must be repository-relative and stay inside the repository."
         else
             Ok
-                { Path = path
-                  Kind = kind
-                  Owner = owner
-                  RequiredBySdd = requiredBySdd }
+                {
+                    Path = path
+                    Kind = kind
+                    Owner = owner
+                    RequiredBySdd = requiredBySdd
+                }
 
     let ownerValue owner =
         match owner with

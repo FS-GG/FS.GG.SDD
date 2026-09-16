@@ -21,15 +21,19 @@ module ValidationContracts =
     /// One coordinate in a matrix (dimension name -> value, in `Dimensions` order)
     /// plus the recorded status once evaluated.
     type MatrixCell =
-        { Coordinates: (string * string) list
-          Status: CellStatus }
+        {
+            Coordinates: (string * string) list
+            Status: CellStatus
+        }
 
     /// One declared broad-coverage matrix: a name, ordered dimension names, and the
     /// enumerated cross-product of evaluated cells (FR-001).
     type Matrix =
-        { Name: string
-          Dimensions: string list
-          Cells: MatrixCell list }
+        {
+            Name: string
+            Dimensions: string list
+            Cells: MatrixCell list
+        }
 
     /// A determinism/degradation dimension value (FR-003) plus host-variance
     /// determinism (INV-3a). The first four are color/TTY degradation classes;
@@ -45,25 +49,31 @@ module ValidationContracts =
     /// Operational triage facts, explicitly excluded from the deterministic
     /// comparison (FR-007 / INV-5). Normalized to `null` in golden fixtures.
     type SensedMetadata =
-        { StartedAtUtc: string option
-          DurationMs: int option
-          Host: string option }
+        {
+            StartedAtUtc: string option
+            DurationMs: int option
+            Host: string option
+        }
 
     type ReportSummary =
-        { Passed: int
-          Failed: int
-          Skipped: int
-          CoverageGaps: int
-          NotValidated: int
-          OverallPassed: bool }
+        {
+            Passed: int
+            Failed: int
+            Skipped: int
+            CoverageGaps: int
+            NotValidated: int
+            OverallPassed: bool
+        }
 
     /// The single deterministic machine-readable report (FR-006 / FR-007).
     type ValidationReport =
-        { SchemaVersion: int
-          GeneratorVersion: GeneratorVersion
-          Matrices: Matrix list
-          Summary: ReportSummary
-          Sensed: SensedMetadata }
+        {
+            SchemaVersion: int
+            GeneratorVersion: GeneratorVersion
+            Matrices: Matrix list
+            Summary: ReportSummary
+            Sensed: SensedMetadata
+        }
 
     /// Declared matrix names (the four broad matrices).
     val lifecycleMatrixName: string

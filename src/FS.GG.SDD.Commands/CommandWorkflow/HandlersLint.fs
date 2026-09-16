@@ -17,13 +17,19 @@ module internal HandlersLint =
         let diag =
             create "lintUnusableInput" DiagnosticError None None message correction []
 
-        { ArtifactPath = path
-          Kind = LintArtifactKind.Unrecognized
-          Defects =
-            [ { Class = Unresolvable
-                Diagnostic = diag
-                GrammarPointer = None } ]
-          Outcome = UnusableInput }
+        {
+            ArtifactPath = path
+            Kind = LintArtifactKind.Unrecognized
+            Defects =
+                [
+                    {
+                        Class = Unresolvable
+                        Diagnostic = diag
+                        GrammarPointer = None
+                    }
+                ]
+            Outcome = UnusableInput
+        }
 
     let computeLintNext model =
         match model.Lint with
@@ -51,7 +57,8 @@ module internal HandlersLint =
 
             { model with
                 Lint = Some summary
-                Diagnostics = model.Diagnostics @ diagnostics },
+                Diagnostics = model.Diagnostics @ diagnostics
+            },
             []
 
     // `<stage> --explain` (feature 076, US3): the same pre-flight, run over the stage's own
@@ -83,5 +90,6 @@ module internal HandlersLint =
 
             { model with
                 Lint = Some summary
-                Diagnostics = model.Diagnostics @ diagnostics },
+                Diagnostics = model.Diagnostics @ diagnostics
+            },
             []

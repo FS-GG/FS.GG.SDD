@@ -48,9 +48,11 @@ No material ambiguities recorded.
 """
 
     let snapshot text =
-        ({ Path = "work/005-specify-command/spec.md"
-           Text = text
-           RawBytes = None }
+        ({
+            Path = "work/005-specify-command/spec.md"
+            Text = text
+            RawBytes = None
+        }
         : FileSnapshot)
 
     [<Fact>]

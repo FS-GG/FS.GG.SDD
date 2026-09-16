@@ -426,11 +426,13 @@ module internal Internal =
             let dottedPath = String.concat "." keys
 
             Error
-                [ Diagnostics.workModelInconsistent
-                      artifact
-                      $"Required field '{label}' is missing."
-                      $"Add '{dottedPath}' to '{artifact.Path}'."
-                      [ label ] ]
+                [
+                    Diagnostics.workModelInconsistent
+                        artifact
+                        $"Required field '{label}' is missing."
+                        $"Add '{dottedPath}' to '{artifact.Path}'."
+                        [ label ]
+                ]
 
     let combine errors = errors |> List.collect id
 
@@ -718,15 +720,27 @@ module internal Internal =
             | None, SchemaCompatibilityStatus.Current
             | None, SchemaCompatibilityStatus.Deprecated ->
                 Error
-                    [ Diagnostics.malformedSchemaVersion artifact $"{label} is missing or has malformed schemaVersion." ]
+                    [
+                        Diagnostics.malformedSchemaVersion
+                            artifact
+                            $"{label} is missing or has malformed schemaVersion."
+                    ]
             | _, SchemaCompatibilityStatus.Unsupported ->
-                Error [ Diagnostics.unsupportedSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
+                Error
+                    [
+                        Diagnostics.unsupportedSchemaVersion artifact (rawVersion |> Option.defaultValue "")
+                    ]
             | _, SchemaCompatibilityStatus.Future ->
-                Error [ Diagnostics.futureSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
+                Error
+                    [
+                        Diagnostics.futureSchemaVersion artifact (rawVersion |> Option.defaultValue "")
+                    ]
         with ex ->
             Error
-                [ Diagnostics.workModelInconsistent
-                      artifact
-                      $"{label} JSON is malformed: {ex.Message}"
-                      malformedJsonCorrection
-                      [ path ] ]
+                [
+                    Diagnostics.workModelInconsistent
+                        artifact
+                        $"{label} JSON is malformed: {ex.Message}"
+                        malformedJsonCorrection
+                        [ path ]
+                ]

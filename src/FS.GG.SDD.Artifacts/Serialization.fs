@@ -357,11 +357,13 @@ module Serialization =
                 let compatibility = SchemaVersion.classifyRaw source.RawSchemaVersion
 
                 let identity: SourceIdentity =
-                    { Artifact = artifact
-                      Digest = source.SourceDigest
-                      SchemaVersion = compatibility.Version
-                      SchemaStatus = compatibility.Status
-                      RawSchemaVersion = source.RawSchemaVersion }
+                    {
+                        Artifact = artifact
+                        Digest = source.SourceDigest
+                        SchemaVersion = compatibility.Version
+                        SchemaStatus = compatibility.Status
+                        RawSchemaVersion = source.RawSchemaVersion
+                    }
 
                 identity)
 
@@ -370,9 +372,13 @@ module Serialization =
 
         { model with
             GeneratedViews =
-                [ { manifest with
-                      Currency = currency
-                      Diagnostics = diagnostics } ] }
+                [
+                    { manifest with
+                        Currency = currency
+                        Diagnostics = diagnostics
+                    }
+                ]
+        }
 
     let generateWorkModel request =
         let parsed = loadWorkItemFromSnapshots request.Snapshots request.WorkId
@@ -397,12 +403,14 @@ module Serialization =
         let json = serializeWorkModel modelWithDigest
         let outputDigest = SchemaVersion.outputSha256Text json
 
-        { WorkId = request.WorkId
-          OutputPath = outputPath
-          Model = modelWithDigest
-          Json = json
-          OutputDigest = outputDigest
-          Diagnostics = modelWithDigest.Diagnostics }
+        {
+            WorkId = request.WorkId
+            OutputPath = outputPath
+            Model = modelWithDigest
+            Json = json
+            OutputDigest = outputDigest
+            Diagnostics = modelWithDigest.Diagnostics
+        }
 
     let generatedViewArtifact outputPath =
         match ArtifactRef.create outputPath ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
@@ -448,7 +456,8 @@ module Serialization =
             snapshots
             |> List.map (fun snapshot ->
                 { snapshot with
-                    Path = snapshot.Path.Trim().Replace('\\', '/').TrimStart('/') })
+                    Path = snapshot.Path.Trim().Replace('\\', '/').TrimStart('/')
+                })
 
         match normalized |> List.tryFind (fun snapshot -> snapshot.Path = outputPath) with
         | None -> [ Diagnostics.missingGeneratedWorkModel artifact outputPath ]
@@ -462,10 +471,12 @@ module Serialization =
                     || outputDigestStale snapshot metadata
 
                 if stale then
-                    [ Diagnostics.staleGeneratedView
-                          artifact
-                          "Generated work-model metadata no longer matches current sources, generator version, schema versions, or output digest."
-                          "Regenerate readiness/<id>/work-model.json from current lifecycle sources." ]
+                    [
+                        Diagnostics.staleGeneratedView
+                            artifact
+                            "Generated work-model metadata no longer matches current sources, generator version, schema versions, or output digest."
+                            "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
+                    ]
                 else
                     []
 

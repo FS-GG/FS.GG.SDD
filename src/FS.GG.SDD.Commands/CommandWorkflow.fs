@@ -36,32 +36,36 @@ module CommandWorkflow =
     // `{ emptyStagePlan with … }`, so a mis-assignment is a compile error rather than a
     // silent position swap. Module-internal (absent from CommandWorkflow.fsi).
     type StagePlan =
-        { Diagnostics: Diagnostic list
-          Specification: SpecificationSummary option
-          Clarification: ClarificationSummary option
-          Checklist: ChecklistSummary option
-          Plan: PlanSummary option
-          Tasks: TasksSummary option
-          Analysis: AnalysisSummary option
-          Evidence: EvidenceSummary option
-          Verification: VerificationSummary option
-          Ship: ShipSummary option
-          GeneratedViews: GeneratedViewState list
-          PlannedEffects: CommandEffect list }
+        {
+            Diagnostics: Diagnostic list
+            Specification: SpecificationSummary option
+            Clarification: ClarificationSummary option
+            Checklist: ChecklistSummary option
+            Plan: PlanSummary option
+            Tasks: TasksSummary option
+            Analysis: AnalysisSummary option
+            Evidence: EvidenceSummary option
+            Verification: VerificationSummary option
+            Ship: ShipSummary option
+            GeneratedViews: GeneratedViewState list
+            PlannedEffects: CommandEffect list
+        }
 
     let emptyStagePlan =
-        { Diagnostics = []
-          Specification = None
-          Clarification = None
-          Checklist = None
-          Plan = None
-          Tasks = None
-          Analysis = None
-          Evidence = None
-          Verification = None
-          Ship = None
-          GeneratedViews = []
-          PlannedEffects = [] }
+        {
+            Diagnostics = []
+            Specification = None
+            Clarification = None
+            Checklist = None
+            Plan = None
+            Tasks = None
+            Analysis = None
+            Evidence = None
+            Verification = None
+            Ship = None
+            GeneratedViews = []
+            PlannedEffects = []
+        }
 
     let nextLifecycleEffects model =
         match model.Request.Explain, model.Request.Command with
@@ -91,7 +95,8 @@ module CommandWorkflow =
                     let effects = [ writeEffect ]
 
                     { model with
-                        PendingEffects = model.PendingEffects @ effects },
+                        PendingEffects = model.PendingEffects @ effects
+                    },
                     effects
             | (Charter | Specify | Clarify | Checklist | Plan | Tasks | Analyze | Evidence | Verify | Ship), Some workId when
                 not (hasPlannedWrite model)
@@ -103,7 +108,8 @@ module CommandWorkflow =
                         { model with
                             Diagnostics =
                                 (model.Diagnostics @ typedLifecycleDiagnostics workId model)
-                                |> List.distinctBy (fun item -> item.Id, item.Message) }
+                                |> List.distinctBy (fun item -> item.Id, item.Message)
+                        }
 
                     let candidateReads =
                         typedCompilerCandidateEffects workId model
@@ -152,7 +158,8 @@ module CommandWorkflow =
                         let effects = appendNewEffects candidateReads model
 
                         { model with
-                            PendingEffects = model.PendingEffects @ effects },
+                            PendingEffects = model.PendingEffects @ effects
+                        },
                         effects
                     | [] ->
                         let stagePlan =
@@ -164,7 +171,8 @@ module CommandWorkflow =
                                     Diagnostics = diagnostics
                                     Specification = specification
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Specify ->
                                 let diagnostics, specification, generatedViews, effects = computeSpecifyPlan model
 
@@ -172,7 +180,8 @@ module CommandWorkflow =
                                     Diagnostics = diagnostics
                                     Specification = specification
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Clarify ->
                                 let diagnostics, specification, clarification, generatedViews, effects =
                                     computeClarifyPlan model
@@ -182,7 +191,8 @@ module CommandWorkflow =
                                     Specification = specification
                                     Clarification = clarification
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Checklist ->
                                 let diagnostics, specification, clarification, checklist, generatedViews, effects =
                                     computeChecklistPlan model
@@ -193,7 +203,8 @@ module CommandWorkflow =
                                     Clarification = clarification
                                     Checklist = checklist
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Plan ->
                                 let diagnostics, specification, clarification, checklist, plan, generatedViews, effects =
                                     computePlanPlan model
@@ -205,7 +216,8 @@ module CommandWorkflow =
                                     Checklist = checklist
                                     Plan = plan
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Tasks ->
                                 let (diagnostics,
                                      specification,
@@ -225,7 +237,8 @@ module CommandWorkflow =
                                     Plan = plan
                                     Tasks = tasks
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Analyze ->
                                 let (diagnostics,
                                      specification,
@@ -247,7 +260,8 @@ module CommandWorkflow =
                                     Tasks = tasks
                                     Analysis = analysis
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Evidence ->
                                 let (diagnostics,
                                      specification,
@@ -271,7 +285,8 @@ module CommandWorkflow =
                                     Analysis = analysis
                                     Evidence = evidence
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Verify ->
                                 let (diagnostics,
                                      specification,
@@ -297,7 +312,8 @@ module CommandWorkflow =
                                     Evidence = evidence
                                     Verification = verification
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | Ship ->
                                 let (diagnostics,
                                      specification,
@@ -325,10 +341,12 @@ module CommandWorkflow =
                                     Verification = verification
                                     Ship = ship
                                     GeneratedViews = generatedViews
-                                    PlannedEffects = effects }
+                                    PlannedEffects = effects
+                                }
                             | _ ->
                                 { emptyStagePlan with
-                                    Diagnostics = model.Diagnostics }
+                                    Diagnostics = model.Diagnostics
+                                }
 
                         let typedDiagnostics = typedLifecycleDiagnostics workId model
 
@@ -346,7 +364,8 @@ module CommandWorkflow =
                                     then
                                         []
                                     else
-                                        stagePlan.PlannedEffects }
+                                        stagePlan.PlannedEffects
+                            }
 
                         let effects = appendNewEffects stagePlan.PlannedEffects model
 
@@ -363,7 +382,8 @@ module CommandWorkflow =
                                 Evidence = stagePlan.Evidence
                                 Verification = stagePlan.Verification
                                 Ship = stagePlan.Ship
-                                GeneratedViews = stagePlan.GeneratedViews }
+                                GeneratedViews = stagePlan.GeneratedViews
+                            }
 
                         plannedModel, effects
             | Agents, Some workId when not (hasPlannedWrite model) ->
@@ -374,7 +394,8 @@ module CommandWorkflow =
                         { model with
                             Diagnostics =
                                 (model.Diagnostics @ typedLifecycleDiagnostics workId model)
-                                |> List.distinctBy (fun item -> item.Id, item.Message) }
+                                |> List.distinctBy (fun item -> item.Id, item.Message)
+                        }
 
                     let candidateReads =
                         appendNewEffects
@@ -386,7 +407,8 @@ module CommandWorkflow =
                     match candidateReads with
                     | _ :: _ ->
                         { model with
-                            PendingEffects = model.PendingEffects @ candidateReads },
+                            PendingEffects = model.PendingEffects @ candidateReads
+                        },
                         candidateReads
                     | [] ->
                         let diagnostics, agentGuidance, generatedViews, plannedEffects =
@@ -411,7 +433,8 @@ module CommandWorkflow =
                                 PendingEffects = model.PendingEffects @ effects
                                 Diagnostics = diagnostics
                                 AgentGuidance = agentGuidance
-                                GeneratedViews = generatedViews }
+                                GeneratedViews = generatedViews
+                            }
 
                         plannedModel, effects
             | Refresh, Some workId when not (hasPlannedWrite model) ->
@@ -422,7 +445,8 @@ module CommandWorkflow =
                         { model with
                             Diagnostics =
                                 (model.Diagnostics @ typedLifecycleDiagnostics workId model)
-                                |> List.distinctBy (fun item -> item.Id, item.Message) }
+                                |> List.distinctBy (fun item -> item.Id, item.Message)
+                        }
 
                     let candidateReads =
                         appendNewEffects
@@ -438,7 +462,8 @@ module CommandWorkflow =
                     match candidateReads with
                     | _ :: _ ->
                         { model with
-                            PendingEffects = model.PendingEffects @ candidateReads },
+                            PendingEffects = model.PendingEffects @ candidateReads
+                        },
                         candidateReads
                     | [] ->
                         let diagnostics, refresh, generatedViews, plannedEffects = computeRefreshPlan model
@@ -467,7 +492,8 @@ module CommandWorkflow =
                                 PendingEffects = model.PendingEffects @ effects
                                 Diagnostics = diagnostics
                                 Refresh = refresh
-                                GeneratedViews = generatedViews }
+                                GeneratedViews = generatedViews
+                            }
 
                         plannedModel, effects
             | Scaffold, _ ->
@@ -491,7 +517,8 @@ module CommandWorkflow =
 
                     if not (List.isEmpty compilerEffects) then
                         { model with
-                            PendingEffects = model.PendingEffects @ compilerEffects },
+                            PendingEffects = model.PendingEffects @ compilerEffects
+                        },
                         compilerEffects
                     else
                         let model =
@@ -501,7 +528,8 @@ module CommandWorkflow =
                                     Diagnostics =
                                         (model.Diagnostics @ typedLifecycleDiagnostics workId model)
                                         |> Diagnostics.sort
-                                        |> List.distinctBy (fun item -> item.Id, item.Message) }
+                                        |> List.distinctBy (fun item -> item.Id, item.Message)
+                                }
                             | None -> model
 
                         computeDoctorNext model
@@ -519,7 +547,8 @@ module CommandWorkflow =
 
                     if not (List.isEmpty compilerEffects) then
                         { model with
-                            PendingEffects = model.PendingEffects @ compilerEffects },
+                            PendingEffects = model.PendingEffects @ compilerEffects
+                        },
                         compilerEffects
                     else
                         let typedDiagnostics =
@@ -532,7 +561,8 @@ module CommandWorkflow =
                                 Diagnostics =
                                     (model.Diagnostics @ typedDiagnostics)
                                     |> Diagnostics.sort
-                                    |> List.distinctBy (fun item -> item.Id, item.Message) }
+                                    |> List.distinctBy (fun item -> item.Id, item.Message)
+                            }
 
                         if typedDiagnostics |> List.exists (fun item -> item.Severity = DiagnosticError) then
                             model, []
@@ -566,34 +596,37 @@ module CommandWorkflow =
     let init (request: CommandRequest) =
         let request =
             { request with
-                ProjectRoot = normalizeRoot request.ProjectRoot }
+                ProjectRoot = normalizeRoot request.ProjectRoot
+            }
 
         let diagnostics, effects = plan request
 
         let model: CommandModel =
-            { Request = request
-              PendingEffects = effects
-              InterpretedEffects = []
-              Diagnostics = diagnostics
-              Specification = None
-              Clarification = None
-              Checklist = None
-              Plan = None
-              Tasks = None
-              Analysis = None
-              Evidence = None
-              Verification = None
-              Ship = None
-              AgentGuidance = None
-              Refresh = None
-              Scaffold = None
-              Doctor = None
-              Upgrade = None
-              Lint = None
-              Surface = None
-              DependencySurface = None
-              GeneratedViews = []
-              Report = None }
+            {
+                Request = request
+                PendingEffects = effects
+                InterpretedEffects = []
+                Diagnostics = diagnostics
+                Specification = None
+                Clarification = None
+                Checklist = None
+                Plan = None
+                Tasks = None
+                Analysis = None
+                Evidence = None
+                Verification = None
+                Ship = None
+                AgentGuidance = None
+                Refresh = None
+                Scaffold = None
+                Doctor = None
+                Upgrade = None
+                Lint = None
+                Surface = None
+                DependencySurface = None
+                GeneratedViews = []
+                Report = None
+            }
 
         model, effects
 
@@ -602,7 +635,8 @@ module CommandWorkflow =
         | EffectInterpreted result ->
             let next =
                 { model with
-                    InterpretedEffects = model.InterpretedEffects @ [ result ] }
+                    InterpretedEffects = model.InterpretedEffects @ [ result ]
+                }
 
             nextLifecycleEffects next
         | BuildReport ->

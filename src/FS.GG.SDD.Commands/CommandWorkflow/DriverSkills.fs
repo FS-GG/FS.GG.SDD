@@ -143,26 +143,30 @@ module internal DriverSkills =
     /// three fail-closed classes surfaced as scaffold diagnostics. All lists are id-sorted /
     /// path-ordered and deterministic.
     type DriverOutcome =
-        { Writes: CommandEffect list
-          ProvenancePaths: (string * string) list
-          MaterializedIds: string list
-          // The declared `scope` of each materialized driver id (from its manifest row), so a
-          // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
-          MaterializedScopes: Map<string, string>
-          VerifyFailedIds: string list
-          PredicateUnevaluatedIds: string list
-          NamespaceCollisionIds: string list
-          ManifestError: string option }
+        {
+            Writes: CommandEffect list
+            ProvenancePaths: (string * string) list
+            MaterializedIds: string list
+            // The declared `scope` of each materialized driver id (from its manifest row), so a
+            // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
+            MaterializedScopes: Map<string, string>
+            VerifyFailedIds: string list
+            PredicateUnevaluatedIds: string list
+            NamespaceCollisionIds: string list
+            ManifestError: string option
+        }
 
     let empty =
-        { Writes = []
-          ProvenancePaths = []
-          MaterializedIds = []
-          MaterializedScopes = Map.empty
-          VerifyFailedIds = []
-          PredicateUnevaluatedIds = []
-          NamespaceCollisionIds = []
-          ManifestError = None }
+        {
+            Writes = []
+            ProvenancePaths = []
+            MaterializedIds = []
+            MaterializedScopes = Map.empty
+            VerifyFailedIds = []
+            PredicateUnevaluatedIds = []
+            NamespaceCollisionIds = []
+            ManifestError = None
+        }
 
     // The whole `fs-gg-sdd-*` namespace is SDD-owned skeleton (CLAUDE.md; `isSddTree` reserves
     // `.agents/skills/fs-gg-sdd-`), so a driver row anywhere in it is rejected — a prefix guard,
@@ -171,10 +175,13 @@ module internal DriverSkills =
 
     // The intermediate per-row classification, folded into the four output classes.
     type private Classified =
-        { Collisions: string list
-          PredicateUnevaluated: string list
-          VerifyFailed: string list
-          Materializable: (DriverManifest.DriverManifestEntry * (DriverManifest.DriverManifestFile * string) list) list }
+        {
+            Collisions: string list
+            PredicateUnevaluated: string list
+            VerifyFailed: string list
+            Materializable:
+                (DriverManifest.DriverManifestEntry * (DriverManifest.DriverManifestFile * string) list) list
+        }
 
     let private classifyEntry
         (presentIds: Set<string>)
@@ -184,12 +191,14 @@ module internal DriverSkills =
         =
         if entry.Id.StartsWith(reservedNamespacePrefix, System.StringComparison.Ordinal) then
             { acc with
-                Collisions = acc.Collisions @ [ entry.Id ] }
+                Collisions = acc.Collisions @ [ entry.Id ]
+            }
         else
             match DriverPredicate.evaluate entry.MaterializesWhen presentIds with
             | None ->
                 { acc with
-                    PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ] }
+                    PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ]
+                }
             | Some false -> acc // deliberately not materialized (e.g. `materializes-when: false`)
             | Some true ->
                 let declaredPaths = entry.Files |> List.map (fun file -> file.Path) |> Set.ofList
@@ -231,12 +240,14 @@ module internal DriverSkills =
                         |> Option.exists (fun (_, body) -> Fsgg.SkillMirror.sha256 body = entry.Sha256))
                     ->
                     { acc with
-                        Materializable = acc.Materializable @ [ entry, verified ] }
+                        Materializable = acc.Materializable @ [ entry, verified ]
+                    }
                 | _ ->
                     // Any missing/extra/unreadable file or digest mismatch invalidates the closed
                     // directory transport. Never materialize a partial row.
                     { acc with
-                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
+                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ]
+                    }
 
     /// Plan driver materialization from an explicit manifest text + id→body map, gated by the
     /// present skill-id set. The pure core of `plan`, factored out so the fail-closed classes
@@ -252,13 +263,16 @@ module internal DriverSkills =
             match DriverManifest.tryParse text with
             | Error message ->
                 { empty with
-                    ManifestError = Some message }
+                    ManifestError = Some message
+                }
             | Ok manifest ->
                 let classified =
-                    ({ Collisions = []
-                       PredicateUnevaluated = []
-                       VerifyFailed = []
-                       Materializable = [] },
+                    ({
+                        Collisions = []
+                        PredicateUnevaluated = []
+                        VerifyFailed = []
+                        Materializable = []
+                     },
                      manifest.Skills |> List.sortBy (fun skill -> skill.Id))
                     ||> List.fold (classifyEntry presentIds files)
 
@@ -273,54 +287,60 @@ module internal DriverSkills =
                 let materializedFiles =
                     classified.Materializable
                     |> List.collect (fun (entry, files) ->
-                        [ for root in Fsgg.Schemas.agentSkillRoots do
-                              for file, body in files do
-                                  let path = $"{root}/skills/{entry.Id}/{file.Path}"
-                                  yield path, body, file ])
+                        [
+                            for root in Fsgg.Schemas.agentSkillRoots do
+                                for file, body in files do
+                                    let path = $"{root}/skills/{entry.Id}/{file.Path}"
+                                    yield path, body, file
+                        ])
 
-                { Writes =
-                    materializedFiles
-                    |> List.collect (fun (path, body, file) ->
-                        [ yield WriteFile(path, body, AgentGuidanceTarget)
+                {
+                    Writes =
+                        materializedFiles
+                        |> List.collect (fun (path, body, file) ->
+                            [
+                                yield WriteFile(path, body, AgentGuidanceTarget)
 
-                          if file.Executable then
-                              yield SetExecutable path ])
-                  // FS-GG/FS.GG.SDD#752. This used to be `file.Sha256` — the TRANSPORT digest,
-                  // piped straight through into the WORKSPACE record. Those are two different
-                  // questions and only one of them is being asked here:
-                  //
-                  //   transport — "do the compiled-in package bytes match what the producer
-                  //     recorded?" Answered above, against the producer's own domain (raw at v2),
-                  //     over the bytes, once, at materialize time.
-                  //   workspace — "does the file on disk still match what scaffold wrote?"
-                  //     Answered later by `doctor`/`upgrade`, over a body READ BACK through
-                  //     `CommandEffects.readFile`.
-                  //
-                  // A read seam cannot return bytes: it strips the BOM and hands back text. So the
-                  // raw domain is not reproducible there for a BOM-prefixed file by ANY consumer,
-                  // and pinning the workspace question to it made a false positive nothing could
-                  // clear — `upgrade` will not rewrite a present file, and a re-scaffold reproduces
-                  // it. The canonical domain IS reproducible, for every file, because it is defined
-                  // as what that seam yields. So the workspace record is the digest of the body
-                  // actually written, which is what `GameSkills` has always recorded (AC3) and what
-                  // `HandlersUpgrade` and `Drift` now both compare against (AC4).
-                  //
-                  // Value-identical for every file shipped today: all 17 in `FS.GG.Drivers` 0.8.3
-                  // are LF with no BOM, so raw and canonical coincide and no scaffold's provenance
-                  // changes. This buys the CRLF/BOM case a correct answer at no migration cost.
-                  ProvenancePaths =
-                    materializedFiles
-                    |> List.map (fun (path, body, _) -> path, Fsgg.SkillMirror.sha256 body)
-                  MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
-                  MaterializedScopes =
-                    classified.Materializable
-                    |> List.choose (fun (entry, _) ->
-                        Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
-                    |> Map.ofList
-                  VerifyFailedIds = classified.VerifyFailed
-                  PredicateUnevaluatedIds = classified.PredicateUnevaluated
-                  NamespaceCollisionIds = classified.Collisions
-                  ManifestError = None }
+                                if file.Executable then
+                                    yield SetExecutable path
+                            ])
+                    // FS-GG/FS.GG.SDD#752. This used to be `file.Sha256` — the TRANSPORT digest,
+                    // piped straight through into the WORKSPACE record. Those are two different
+                    // questions and only one of them is being asked here:
+                    //
+                    //   transport — "do the compiled-in package bytes match what the producer
+                    //     recorded?" Answered above, against the producer's own domain (raw at v2),
+                    //     over the bytes, once, at materialize time.
+                    //   workspace — "does the file on disk still match what scaffold wrote?"
+                    //     Answered later by `doctor`/`upgrade`, over a body READ BACK through
+                    //     `CommandEffects.readFile`.
+                    //
+                    // A read seam cannot return bytes: it strips the BOM and hands back text. So the
+                    // raw domain is not reproducible there for a BOM-prefixed file by ANY consumer,
+                    // and pinning the workspace question to it made a false positive nothing could
+                    // clear — `upgrade` will not rewrite a present file, and a re-scaffold reproduces
+                    // it. The canonical domain IS reproducible, for every file, because it is defined
+                    // as what that seam yields. So the workspace record is the digest of the body
+                    // actually written, which is what `GameSkills` has always recorded (AC3) and what
+                    // `HandlersUpgrade` and `Drift` now both compare against (AC4).
+                    //
+                    // Value-identical for every file shipped today: all 17 in `FS.GG.Drivers` 0.8.3
+                    // are LF with no BOM, so raw and canonical coincide and no scaffold's provenance
+                    // changes. This buys the CRLF/BOM case a correct answer at no migration cost.
+                    ProvenancePaths =
+                        materializedFiles
+                        |> List.map (fun (path, body, _) -> path, Fsgg.SkillMirror.sha256 body)
+                    MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
+                    MaterializedScopes =
+                        classified.Materializable
+                        |> List.choose (fun (entry, _) ->
+                            Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
+                        |> Map.ofList
+                    VerifyFailedIds = classified.VerifyFailed
+                    PredicateUnevaluatedIds = classified.PredicateUnevaluated
+                    NamespaceCollisionIds = classified.Collisions
+                    ManifestError = None
+                }
 
     /// Legacy test seam: map each supplied body to `SKILL.md`. Schema-v2 callers should use
     /// `planFilesFrom` so auxiliary bytes are part of the closed transport.
@@ -422,9 +442,11 @@ module internal DriverSkills =
                         Ok(
                             files
                             |> List.collect (fun (path, body, executable) ->
-                                [ yield WriteFile(path, body, AgentGuidanceTarget)
-                                  if executable then
-                                      yield SetExecutable path ]),
+                                [
+                                    yield WriteFile(path, body, AgentGuidanceTarget)
+                                    if executable then
+                                        yield SetExecutable path
+                                ]),
                             files |> List.map (fun (path, body, _) -> path, Fsgg.SkillMirror.sha256 body)
                         )
             with ex ->
@@ -445,8 +467,10 @@ module internal DriverSkills =
         match workspace with
         | Error message ->
             { skills with
-                ManifestError = skills.ManifestError |> Option.orElse (Some message) }
+                ManifestError = skills.ManifestError |> Option.orElse (Some message)
+            }
         | Ok(writes, provenance) ->
             { skills with
                 Writes = skills.Writes @ writes
-                ProvenancePaths = skills.ProvenancePaths @ provenance }
+                ProvenancePaths = skills.ProvenancePaths @ provenance
+            }

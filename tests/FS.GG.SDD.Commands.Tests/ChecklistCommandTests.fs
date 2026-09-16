@@ -20,7 +20,8 @@ module ChecklistCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         root
@@ -515,7 +516,8 @@ No blocking ambiguity remains.
 
         let request =
             { TestSupport.checklistRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -551,7 +553,8 @@ No blocking ambiguity remains.
 
         let request =
             { TestSupport.checklistRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -597,7 +600,8 @@ No blocking ambiguity remains.
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         root

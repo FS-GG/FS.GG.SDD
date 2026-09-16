@@ -81,17 +81,19 @@ module internal HandlersScaffold =
     // contract.
     let private reservedDotnetNewOptions =
         set
-            [ "force"
-              "output"
-              "name"
-              "dry-run"
-              "no-update"
-              "language"
-              "type"
-              "project"
-              "verbosity"
-              "diagnostics"
-              "help" ]
+            [
+                "force"
+                "output"
+                "name"
+                "dry-run"
+                "no-update"
+                "language"
+                "type"
+                "project"
+                "verbosity"
+                "diagnostics"
+                "help"
+            ]
 
     let invalidAuthorParamKeys (request: CommandRequest) =
         request.Parameters
@@ -146,26 +148,28 @@ module internal HandlersScaffold =
         | ScaffoldProceed of ProviderDescriptor * Map<string, string>
 
     let notRunSummary providerName providerVersion hint : ScaffoldSummary =
-        { ProviderName = providerName
-          ProviderContractVersion = providerVersion
-          // No resolved provider on a blocked/not-run path, so no minimum to record.
-          RequiredMinimumCliVersion = None
-          Outcome = scaffoldOutcomeValue ProviderNotRun
-          SkeletonCreated = false
-          ProviderInvoked = false
-          ProducedPathCount = 0
-          ProducedPaths = []
-          MirroredPaths = []
-          MaterializedDriverPaths = []
-          MaterializedGameSkillPaths = []
-          MaterializedRenderingSkillPaths = []
-          EffectiveParameters = []
-          RepoInitOutcome = "notApplicable"
-          ToolManifestOutcome = "notApplicable"
-          ExecutableScriptCount = 0
-          ExecutableScriptsSkipped = 0
-          NextActionHint = hint
-          ProviderInvocation = None }
+        {
+            ProviderName = providerName
+            ProviderContractVersion = providerVersion
+            // No resolved provider on a blocked/not-run path, so no minimum to record.
+            RequiredMinimumCliVersion = None
+            Outcome = scaffoldOutcomeValue ProviderNotRun
+            SkeletonCreated = false
+            ProviderInvoked = false
+            ProducedPathCount = 0
+            ProducedPaths = []
+            MirroredPaths = []
+            MaterializedDriverPaths = []
+            MaterializedGameSkillPaths = []
+            MaterializedRenderingSkillPaths = []
+            EffectiveParameters = []
+            RepoInitOutcome = "notApplicable"
+            ToolManifestOutcome = "notApplicable"
+            ExecutableScriptCount = 0
+            ExecutableScriptsSkipped = 0
+            NextActionHint = hint
+            ProviderInvocation = None
+        }
 
     let resolveScaffold model =
         let request = model.Request
@@ -191,10 +195,12 @@ module internal HandlersScaffold =
                 )
             | Some descriptor when not (isSupportedContract descriptor.ContractVersion) ->
                 ScaffoldBlocked(
-                    [ DiagnosticsModule.scaffoldProviderVersionUnsupported
-                          name
-                          descriptor.ContractVersion
-                          supportedContractRange ],
+                    [
+                        DiagnosticsModule.scaffoldProviderVersionUnsupported
+                            name
+                            descriptor.ContractVersion
+                            supportedContractRange
+                    ],
                     notRunSummary
                         (Some name)
                         (Some descriptor.ContractVersion)
@@ -480,22 +486,25 @@ module internal HandlersScaffold =
             MaterializedIds =
                 kept
                 |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
-                |> List.distinct }
+                |> List.distinct
+        }
 
     // The fail-closed driver diagnostics for a planned outcome (empty on a clean plan). Manifest
     // defect and namespace-collision/verify failures are tool-defect errors; an unevaluable
     // predicate is a non-blocking advisory (FR-004).
     let driverDiagnostics (outcome: DriverSkills.DriverOutcome) : Diagnostic list =
-        [ yield!
-              outcome.ManifestError
-              |> Option.map DiagnosticsModule.scaffoldDriverManifestMalformed
-              |> Option.toList
-          if not (List.isEmpty outcome.NamespaceCollisionIds) then
-              yield DiagnosticsModule.scaffoldDriverNamespaceCollision outcome.NamespaceCollisionIds
-          if not (List.isEmpty outcome.VerifyFailedIds) then
-              yield DiagnosticsModule.scaffoldDriverVerifyFailed outcome.VerifyFailedIds
-          if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
-              yield DiagnosticsModule.scaffoldDriverPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
+        [
+            yield!
+                outcome.ManifestError
+                |> Option.map DiagnosticsModule.scaffoldDriverManifestMalformed
+                |> Option.toList
+            if not (List.isEmpty outcome.NamespaceCollisionIds) then
+                yield DiagnosticsModule.scaffoldDriverNamespaceCollision outcome.NamespaceCollisionIds
+            if not (List.isEmpty outcome.VerifyFailedIds) then
+                yield DiagnosticsModule.scaffoldDriverVerifyFailed outcome.VerifyFailedIds
+            if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
+                yield DiagnosticsModule.scaffoldDriverPredicateUnevaluated outcome.PredicateUnevaluatedIds
+        ]
 
     // ADR-0063 / FS.GG.SDD#623: the owner-skill materialization planned from the CLI's embedded
     // the owner-skills package bytes, gated by the effective scaffold parameter set (`profile in [..
@@ -531,22 +540,25 @@ module internal HandlersScaffold =
             MaterializedIds =
                 kept
                 |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
-                |> List.distinct }
+                |> List.distinct
+        }
 
     // The fail-closed owner-skill diagnostics for a planned outcome (empty on a clean plan). Same
     // classes as the driver seam: manifest defect / namespace collision / verify failure are
     // tool-defect errors; an unevaluable predicate is a non-blocking advisory (FR-004).
     let gameSkillDiagnostics (outcome: GameSkills.GameSkillOutcome) : Diagnostic list =
-        [ yield!
-              outcome.ManifestError
-              |> Option.map DiagnosticsModule.scaffoldGameSkillManifestMalformed
-              |> Option.toList
-          if not (List.isEmpty outcome.NamespaceCollisionIds) then
-              yield DiagnosticsModule.scaffoldGameSkillNamespaceCollision outcome.NamespaceCollisionIds
-          if not (List.isEmpty outcome.VerifyFailedIds) then
-              yield DiagnosticsModule.scaffoldGameSkillVerifyFailed outcome.VerifyFailedIds
-          if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
-              yield DiagnosticsModule.scaffoldGameSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
+        [
+            yield!
+                outcome.ManifestError
+                |> Option.map DiagnosticsModule.scaffoldGameSkillManifestMalformed
+                |> Option.toList
+            if not (List.isEmpty outcome.NamespaceCollisionIds) then
+                yield DiagnosticsModule.scaffoldGameSkillNamespaceCollision outcome.NamespaceCollisionIds
+            if not (List.isEmpty outcome.VerifyFailedIds) then
+                yield DiagnosticsModule.scaffoldGameSkillVerifyFailed outcome.VerifyFailedIds
+            if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
+                yield DiagnosticsModule.scaffoldGameSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
+        ]
 
     // ADR-0063 third instance / FS.GG.SDD#864: the FOURTH enrollment channel — the
     // rendering-owner-authored product-skill materialization planned from the CLI's embedded
@@ -632,7 +644,8 @@ module internal HandlersScaffold =
                 |> List.filter (fun entry ->
                     match entry.Split('/') |> Array.tryHead with
                     | Some id -> materialized.Contains id
-                    | None -> false) }
+                    | None -> false)
+        }
 
     // The fail-closed rendering-skill diagnostics for a planned outcome (empty on a clean plan with
     // no withheld files and no yield). Same three classes as the driver/owner-skill seams — manifest defect
@@ -649,36 +662,40 @@ module internal HandlersScaffold =
             outcome.YieldedIds
             |> List.filter (acceptedGameRenderingSharedIds.Contains >> not)
 
-        [ yield!
-              outcome.ManifestError
-              |> Option.map DiagnosticsModule.scaffoldRenderingSkillManifestMalformed
-              |> Option.toList
-          if not (List.isEmpty outcome.NamespaceCollisionIds) then
-              yield DiagnosticsModule.scaffoldRenderingSkillNamespaceCollision outcome.NamespaceCollisionIds
-          if not (List.isEmpty outcome.VerifyFailedIds) then
-              yield DiagnosticsModule.scaffoldRenderingSkillVerifyFailed outcome.VerifyFailedIds
-          if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
-              yield DiagnosticsModule.scaffoldRenderingSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
-          if not (List.isEmpty acceptedYields) then
-              yield DiagnosticsModule.scaffoldRenderingSkillChannelYielded acceptedYields
-          if not (List.isEmpty unexpectedYields) then
-              yield DiagnosticsModule.scaffoldOwnerSkillCollision unexpectedYields
-          if not (List.isEmpty outcome.UndeliverableSidecars) then
-              yield DiagnosticsModule.scaffoldRenderingSkillSidecarsUndeclared outcome.UndeliverableSidecars ]
+        [
+            yield!
+                outcome.ManifestError
+                |> Option.map DiagnosticsModule.scaffoldRenderingSkillManifestMalformed
+                |> Option.toList
+            if not (List.isEmpty outcome.NamespaceCollisionIds) then
+                yield DiagnosticsModule.scaffoldRenderingSkillNamespaceCollision outcome.NamespaceCollisionIds
+            if not (List.isEmpty outcome.VerifyFailedIds) then
+                yield DiagnosticsModule.scaffoldRenderingSkillVerifyFailed outcome.VerifyFailedIds
+            if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
+                yield DiagnosticsModule.scaffoldRenderingSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
+            if not (List.isEmpty acceptedYields) then
+                yield DiagnosticsModule.scaffoldRenderingSkillChannelYielded acceptedYields
+            if not (List.isEmpty unexpectedYields) then
+                yield DiagnosticsModule.scaffoldOwnerSkillCollision unexpectedYields
+            if not (List.isEmpty outcome.UndeliverableSidecars) then
+                yield DiagnosticsModule.scaffoldRenderingSkillSidecarsUndeclared outcome.UndeliverableSidecars
+        ]
 
     let audioSkillDiagnostics (outcome: RenderingSkills.RenderingSkillOutcome) : Diagnostic list =
-        [ yield!
-              outcome.ManifestError
-              |> Option.map DiagnosticsModule.scaffoldAudioSkillManifestMalformed
-              |> Option.toList
-          if not (List.isEmpty outcome.NamespaceCollisionIds) then
-              yield DiagnosticsModule.scaffoldAudioSkillNamespaceCollision outcome.NamespaceCollisionIds
-          if not (List.isEmpty outcome.VerifyFailedIds) then
-              yield DiagnosticsModule.scaffoldAudioSkillVerifyFailed outcome.VerifyFailedIds
-          if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
-              yield DiagnosticsModule.scaffoldAudioSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
-          if not (List.isEmpty outcome.YieldedIds) then
-              yield DiagnosticsModule.scaffoldOwnerSkillCollision outcome.YieldedIds ]
+        [
+            yield!
+                outcome.ManifestError
+                |> Option.map DiagnosticsModule.scaffoldAudioSkillManifestMalformed
+                |> Option.toList
+            if not (List.isEmpty outcome.NamespaceCollisionIds) then
+                yield DiagnosticsModule.scaffoldAudioSkillNamespaceCollision outcome.NamespaceCollisionIds
+            if not (List.isEmpty outcome.VerifyFailedIds) then
+                yield DiagnosticsModule.scaffoldAudioSkillVerifyFailed outcome.VerifyFailedIds
+            if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
+                yield DiagnosticsModule.scaffoldAudioSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
+            if not (List.isEmpty outcome.YieldedIds) then
+                yield DiagnosticsModule.scaffoldOwnerSkillCollision outcome.YieldedIds
+        ]
 
     let plannedAudioSkillOutcome
         (producedPaths: string list)
@@ -717,7 +734,8 @@ module internal HandlersScaffold =
                 kept
                 |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
                 |> List.distinct
-            YieldedIds = yieldedIds }
+            YieldedIds = yieldedIds
+        }
 
     // ----- product skill-manifest union (ADR-0063 tail / skill-union coherence) -----
 
@@ -814,13 +832,15 @@ module internal HandlersScaffold =
             |> List.tryFind (fun (relative, _) -> relative = "SKILL.md")
             |> Option.map (fun (_, skillSha256) ->
                 let entry: ProductSkillManifest.ProductManifestEntry =
-                    { Id = id
-                      Scope = materializedScopes |> Map.tryFind id |> Option.defaultValue fallbackScope
-                      Sha256 = skillSha256
-                      ResolvablePath = Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
-                      MaterializesWhen = materializedPredicates |> Map.tryFind id |> Option.defaultValue "always"
-                      SuppliedBy = materializedSuppliers |> Map.tryFind id
-                      Files = declaredFiles }
+                    {
+                        Id = id
+                        Scope = materializedScopes |> Map.tryFind id |> Option.defaultValue fallbackScope
+                        Sha256 = skillSha256
+                        ResolvablePath = Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
+                        MaterializesWhen = materializedPredicates |> Map.tryFind id |> Option.defaultValue "always"
+                        SuppliedBy = materializedSuppliers |> Map.tryFind id
+                        Files = declaredFiles
+                    }
 
                 entry))
 
@@ -944,92 +964,108 @@ module internal HandlersScaffold =
         (effective: Map<string, string>)
         =
         let record: ScaffoldProvenanceRecord =
-            { SchemaVersion = 1
-              Generator = request.GeneratorVersion
-              RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
-              ProviderName = descriptor.Name
-              ProviderContractVersion = descriptor.ContractVersion
-              TemplateRef = descriptor.TemplateId
-              Outcome = scaffoldOutcomeValue outcome
-              // 058/ADR-0014 §Decision 3: content-addressed provenance — each produced/mirrored
-              // skill copy carries the `sha256` of its materialized body (`skillDigests`);
-              // non-skill produced paths carry none. The field is omitted from output while None.
-              ProducedPaths =
-                producedPaths
-                |> List.map (fun path ->
-                    { Path = path
-                      Owner = GeneratedProduct
-                      Sha256 = Map.tryFind path skillDigests })
-              // 056: the fan-out mirror copies, owner `Mirrored` (never `generatedProduct`).
-              // Empty on any non-success terminal path so an incomplete fan-out is never
-              // recorded as complete (FR-012).
-              MirroredPaths =
-                mirroredPaths
-                |> List.map (fun path ->
-                    { Path = path
-                      Owner = ArtifactOwner.Mirrored
-                      Sha256 = Map.tryFind path skillDigests })
-              // FS.GG.SDD#315: files SDD itself wrote post-instantiation (owner `sdd`), kept out
-              // of `producedPaths` so the app-only invariant — producedPaths == exactly the
-              // provider's tree — survives. Empty on every non-success terminal path.
-              SddOwnedPaths =
-                sddOwnedPaths
-                |> List.map (fun path ->
-                    { Path = path
-                      Owner = ArtifactOwner.Sdd
-                      Sha256 = None })
-              // 108 / ADR-0054: the `.github`-authored driver skill copies materialized from the
-              // pinned package, owner `Driver`, each carrying `SkillMirror.sha256` of the body that
-              // was written — NOT the manifest digest the bytes were content-verified against, which
-              // at schema v2 is a raw-byte transport digest no later read seam can reproduce
-              // (#752). Empty on every non-success/terminal path.
-              DriverPaths =
-                driverPaths
-                |> List.map (fun (path, sha256) ->
-                    { Path = path
-                      Owner = ArtifactOwner.Driver
-                      Sha256 =
-                        (if String.IsNullOrWhiteSpace sha256 then
-                             None
-                         else
-                             Some sha256) })
-              // ADR-0063 / FS.GG.SDD#623: the owner-authored product skill copies materialized
-              // from the pinned the owner-skills package, owner `GameSkill`, each carrying the
-              // manifest `sha256` it was content-verified against. Empty on every non-success path.
-              GameSkillPaths =
-                gameSkillPaths
-                |> List.map (fun (path, sha256) ->
-                    { Path = path
-                      Owner = ArtifactOwner.GameSkill
-                      Sha256 =
-                        (if String.IsNullOrWhiteSpace sha256 then
-                             None
-                         else
-                             Some sha256) })
-              // ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skill
-              // copies materialized from the pinned rendering-skills package, owner
-              // `RenderingSkill`, each carrying the manifest `sha256` it was content-verified
-              // against. A SEPARATE list from `GameSkillPaths` so every delivered path names the
-              // channel that delivered it — acceptance 3 of FS.GG.SDD#864, and the property whose
-              // absence made .github#2380 an investigation. Empty on every non-success path.
-              RenderingSkillPaths =
-                (renderingSkillPaths
-                 |> List.map (fun (path, sha256) -> path, sha256, ArtifactOwner.RenderingSkill))
-                @ (audioSkillPaths
-                   |> List.map (fun (path, sha256) -> path, sha256, ArtifactOwner.AudioSkill))
-                |> List.map (fun (path, sha256, owner) ->
-                    { Path = path
-                      Owner = owner
-                      Sha256 =
-                        (if String.IsNullOrWhiteSpace sha256 then
-                             None
-                         else
-                             Some sha256) })
-              // `Map.toList` is already ascending by key — the FR-003 effective set
-              // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
-              EffectiveParameters = Map.toList effective }
+            {
+                SchemaVersion = 1
+                Generator = request.GeneratorVersion
+                RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
+                ProviderName = descriptor.Name
+                ProviderContractVersion = descriptor.ContractVersion
+                TemplateRef = descriptor.TemplateId
+                Outcome = scaffoldOutcomeValue outcome
+                // 058/ADR-0014 §Decision 3: content-addressed provenance — each produced/mirrored
+                // skill copy carries the `sha256` of its materialized body (`skillDigests`);
+                // non-skill produced paths carry none. The field is omitted from output while None.
+                ProducedPaths =
+                    producedPaths
+                    |> List.map (fun path ->
+                        {
+                            Path = path
+                            Owner = GeneratedProduct
+                            Sha256 = Map.tryFind path skillDigests
+                        })
+                // 056: the fan-out mirror copies, owner `Mirrored` (never `generatedProduct`).
+                // Empty on any non-success terminal path so an incomplete fan-out is never
+                // recorded as complete (FR-012).
+                MirroredPaths =
+                    mirroredPaths
+                    |> List.map (fun path ->
+                        {
+                            Path = path
+                            Owner = ArtifactOwner.Mirrored
+                            Sha256 = Map.tryFind path skillDigests
+                        })
+                // FS.GG.SDD#315: files SDD itself wrote post-instantiation (owner `sdd`), kept out
+                // of `producedPaths` so the app-only invariant — producedPaths == exactly the
+                // provider's tree — survives. Empty on every non-success terminal path.
+                SddOwnedPaths =
+                    sddOwnedPaths
+                    |> List.map (fun path ->
+                        {
+                            Path = path
+                            Owner = ArtifactOwner.Sdd
+                            Sha256 = None
+                        })
+                // 108 / ADR-0054: the `.github`-authored driver skill copies materialized from the
+                // pinned package, owner `Driver`, each carrying `SkillMirror.sha256` of the body that
+                // was written — NOT the manifest digest the bytes were content-verified against, which
+                // at schema v2 is a raw-byte transport digest no later read seam can reproduce
+                // (#752). Empty on every non-success/terminal path.
+                DriverPaths =
+                    driverPaths
+                    |> List.map (fun (path, sha256) ->
+                        {
+                            Path = path
+                            Owner = ArtifactOwner.Driver
+                            Sha256 =
+                                (if String.IsNullOrWhiteSpace sha256 then
+                                     None
+                                 else
+                                     Some sha256)
+                        })
+                // ADR-0063 / FS.GG.SDD#623: the owner-authored product skill copies materialized
+                // from the pinned the owner-skills package, owner `GameSkill`, each carrying the
+                // manifest `sha256` it was content-verified against. Empty on every non-success path.
+                GameSkillPaths =
+                    gameSkillPaths
+                    |> List.map (fun (path, sha256) ->
+                        {
+                            Path = path
+                            Owner = ArtifactOwner.GameSkill
+                            Sha256 =
+                                (if String.IsNullOrWhiteSpace sha256 then
+                                     None
+                                 else
+                                     Some sha256)
+                        })
+                // ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skill
+                // copies materialized from the pinned rendering-skills package, owner
+                // `RenderingSkill`, each carrying the manifest `sha256` it was content-verified
+                // against. A SEPARATE list from `GameSkillPaths` so every delivered path names the
+                // channel that delivered it — acceptance 3 of FS.GG.SDD#864, and the property whose
+                // absence made .github#2380 an investigation. Empty on every non-success path.
+                RenderingSkillPaths =
+                    (renderingSkillPaths
+                     |> List.map (fun (path, sha256) -> path, sha256, ArtifactOwner.RenderingSkill))
+                    @ (audioSkillPaths
+                       |> List.map (fun (path, sha256) -> path, sha256, ArtifactOwner.AudioSkill))
+                    |> List.map (fun (path, sha256, owner) ->
+                        {
+                            Path = path
+                            Owner = owner
+                            Sha256 =
+                                (if String.IsNullOrWhiteSpace sha256 then
+                                     None
+                                 else
+                                     Some sha256)
+                        })
+                // `Map.toList` is already ascending by key — the FR-003 effective set
+                // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
+                EffectiveParameters = Map.toList effective
+            }
 
-        [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize record, StructuredSource) ]
+        [
+            WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize record, StructuredSource)
+        ]
 
     // The create outcome classified from the interpreted-effect log. A **terminal**
     // outcome (dry-run, provider unavailable/failed, SDD-tree intrusion) finalizes in a
@@ -1053,17 +1089,19 @@ module internal HandlersScaffold =
         // started, so a never-launched provider surfaces `null` — never a spurious `0`
         // (FR-003).
         let providerInvocationOf (processResult: ProcessRunResult) : ProviderInvocationResult =
-            { CommandLine = processResult.Command
-              ProcessStarted = processResult.Started
-              ExitCode =
-                if processResult.Started then
-                    Some processResult.ExitCode
-                else
-                    None
-              StandardOutput = processResult.StandardOutput
-              StandardOutputTruncated = processResult.StandardOutputTruncated
-              StandardError = processResult.StandardError
-              StandardErrorTruncated = processResult.StandardErrorTruncated }
+            {
+                CommandLine = processResult.Command
+                ProcessStarted = processResult.Started
+                ExitCode =
+                    if processResult.Started then
+                        Some processResult.ExitCode
+                    else
+                        None
+                StandardOutput = processResult.StandardOutput
+                StandardOutputTruncated = processResult.StandardOutputTruncated
+                StandardError = processResult.StandardError
+                StandardErrorTruncated = processResult.StandardErrorTruncated
+            }
 
         let terminalSummary
             outcome
@@ -1073,55 +1111,59 @@ module internal HandlersScaffold =
             hint
             providerInvocation
             : ScaffoldSummary =
-            { ProviderName = Some name
-              ProviderContractVersion = Some version
-              RequiredMinimumCliVersion = requiredMinimum
-              Outcome = scaffoldOutcomeValue outcome
-              SkeletonCreated = skeletonCreated
-              ProviderInvoked = providerInvoked
-              ProducedPathCount = List.length producedPaths
-              ProducedPaths = producedPaths
-              // Terminal (non-success) paths perform no fan-out (FR-012).
-              MirroredPaths = []
-              // Terminal paths materialize no driver either (108).
-              MaterializedDriverPaths = []
-              // ...and no owner-sourced skill either (ADR-0063 / FS.GG.SDD#623).
-              MaterializedGameSkillPaths = []
-              MaterializedRenderingSkillPaths = []
-              EffectiveParameters = Map.toList effective
-              RepoInitOutcome = "notApplicable"
-              ToolManifestOutcome = "notApplicable"
-              ExecutableScriptCount = 0
-              ExecutableScriptsSkipped = 0
-              NextActionHint = hint
-              ProviderInvocation = providerInvocation }
+            {
+                ProviderName = Some name
+                ProviderContractVersion = Some version
+                RequiredMinimumCliVersion = requiredMinimum
+                Outcome = scaffoldOutcomeValue outcome
+                SkeletonCreated = skeletonCreated
+                ProviderInvoked = providerInvoked
+                ProducedPathCount = List.length producedPaths
+                ProducedPaths = producedPaths
+                // Terminal (non-success) paths perform no fan-out (FR-012).
+                MirroredPaths = []
+                // Terminal paths materialize no driver either (108).
+                MaterializedDriverPaths = []
+                // ...and no owner-sourced skill either (ADR-0063 / FS.GG.SDD#623).
+                MaterializedGameSkillPaths = []
+                MaterializedRenderingSkillPaths = []
+                EffectiveParameters = Map.toList effective
+                RepoInitOutcome = "notApplicable"
+                ToolManifestOutcome = "notApplicable"
+                ExecutableScriptCount = 0
+                ExecutableScriptsSkipped = 0
+                NextActionHint = hint
+                ProviderInvocation = providerInvocation
+            }
 
         if request.DryRun then
             let planned = plannedCreateCommand descriptor effective request
 
             let summary =
-                { ProviderName = Some name
-                  ProviderContractVersion = Some version
-                  RequiredMinimumCliVersion = requiredMinimum
-                  Outcome = scaffoldOutcomeValue ProviderNotRun
-                  SkeletonCreated = false
-                  ProviderInvoked = false
-                  ProducedPathCount = 0
-                  ProducedPaths = []
-                  MirroredPaths = []
-                  MaterializedDriverPaths = []
-                  MaterializedGameSkillPaths = []
-                  MaterializedRenderingSkillPaths = []
-                  // The dry-run preview records exactly what would be forwarded
-                  // (FR-003 audit preview): the resolved effective set.
-                  EffectiveParameters = Map.toList effective
-                  RepoInitOutcome = "notApplicable"
-                  ToolManifestOutcome = "notApplicable"
-                  ExecutableScriptCount = 0
-                  ExecutableScriptsSkipped = 0
-                  NextActionHint =
-                    $"dry run: would run `{planned}`, initialize a git repository, pin `fsgg-sdd` in `{toolManifestPath}`, and make produced scripts executable (produced paths are determined at execution)."
-                  ProviderInvocation = None }
+                {
+                    ProviderName = Some name
+                    ProviderContractVersion = Some version
+                    RequiredMinimumCliVersion = requiredMinimum
+                    Outcome = scaffoldOutcomeValue ProviderNotRun
+                    SkeletonCreated = false
+                    ProviderInvoked = false
+                    ProducedPathCount = 0
+                    ProducedPaths = []
+                    MirroredPaths = []
+                    MaterializedDriverPaths = []
+                    MaterializedGameSkillPaths = []
+                    MaterializedRenderingSkillPaths = []
+                    // The dry-run preview records exactly what would be forwarded
+                    // (FR-003 audit preview): the resolved effective set.
+                    EffectiveParameters = Map.toList effective
+                    RepoInitOutcome = "notApplicable"
+                    ToolManifestOutcome = "notApplicable"
+                    ExecutableScriptCount = 0
+                    ExecutableScriptsSkipped = 0
+                    NextActionHint =
+                        $"dry run: would run `{planned}`, initialize a git repository, pin `fsgg-sdd` in `{toolManifestPath}`, and make produced scripts executable (produced paths are determined at execution)."
+                    ProviderInvocation = None
+                }
 
             FinalizeTerminal(summary, [], [])
         else
@@ -1241,7 +1283,8 @@ module internal HandlersScaffold =
                 model, []
             else
                 { model with
-                    PendingEffects = model.PendingEffects @ [ readEffect ] },
+                    PendingEffects = model.PendingEffects @ [ readEffect ]
+                },
                 [ readEffect ]
         | Some _ ->
             let providerBytes =
@@ -1268,7 +1311,8 @@ module internal HandlersScaffold =
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ [ writeEffect ] },
+                        PendingEffects = model.PendingEffects @ [ writeEffect ]
+                    },
                     [ writeEffect ]
             | Some result when result.Succeeded -> onComposed model
             | Some _ ->
@@ -1276,25 +1320,27 @@ module internal HandlersScaffold =
                 // diagnostic. Do not continue into provenance/post-instantiation and claim a
                 // complete scaffold when the composition boundary did not land.
                 let summary: ScaffoldSummary =
-                    { ProviderName = Some descriptor.Name
-                      ProviderContractVersion = Some descriptor.ContractVersion
-                      RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
-                      Outcome = scaffoldOutcomeValue ProviderFailed
-                      SkeletonCreated = true
-                      ProviderInvoked = true
-                      ProducedPathCount = List.length producedPaths
-                      ProducedPaths = producedPaths
-                      MirroredPaths = []
-                      MaterializedDriverPaths = []
-                      MaterializedGameSkillPaths = []
-                      MaterializedRenderingSkillPaths = []
-                      EffectiveParameters = Map.toList effective
-                      RepoInitOutcome = "notApplicable"
-                      ToolManifestOutcome = "notApplicable"
-                      ExecutableScriptCount = 0
-                      ExecutableScriptsSkipped = 0
-                      NextActionHint = "Resolve the root .gitignore composition failure, then re-run scaffold."
-                      ProviderInvocation = None }
+                    {
+                        ProviderName = Some descriptor.Name
+                        ProviderContractVersion = Some descriptor.ContractVersion
+                        RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
+                        Outcome = scaffoldOutcomeValue ProviderFailed
+                        SkeletonCreated = true
+                        ProviderInvoked = true
+                        ProducedPathCount = List.length producedPaths
+                        ProducedPaths = producedPaths
+                        MirroredPaths = []
+                        MaterializedDriverPaths = []
+                        MaterializedGameSkillPaths = []
+                        MaterializedRenderingSkillPaths = []
+                        EffectiveParameters = Map.toList effective
+                        RepoInitOutcome = "notApplicable"
+                        ToolManifestOutcome = "notApplicable"
+                        ExecutableScriptCount = 0
+                        ExecutableScriptsSkipped = 0
+                        NextActionHint = "Resolve the root .gitignore composition failure, then re-run scaffold."
+                        ProviderInvocation = None
+                    }
 
                 { model with Scaffold = Some summary }, []
 
@@ -1348,14 +1394,16 @@ module internal HandlersScaffold =
                 | Ok(Some _) -> "failed", []
                 | Error detail ->
                     "failed",
-                    [ DiagnosticsModule.create
-                          "scaffold.toolManifestConflict"
-                          DiagnosticsModule.DiagnosticError
-                          None
-                          None
-                          $"The existing dotnet tool manifest cannot receive the required SDD-owned entries: {detail}"
-                          "Repair the malformed manifest or reconcile the fs.gg.sdd.cli/fs.gg.coord.cli entry, then re-run scaffold. Unrelated tool entries are never removed."
-                          [ toolManifestPath ] ]
+                    [
+                        DiagnosticsModule.create
+                            "scaffold.toolManifestConflict"
+                            DiagnosticsModule.DiagnosticError
+                            None
+                            None
+                            $"The existing dotnet tool manifest cannot receive the required SDD-owned entries: {detail}"
+                            "Repair the malformed manifest or reconcile the fs.gg.sdd.cli/fs.gg.coord.cli entry, then re-run scaffold. Unrelated tool entries are never removed."
+                            [ toolManifestPath ]
+                    ]
             | None, None -> "notApplicable", []
 
         let execResults =
@@ -1425,28 +1473,30 @@ module internal HandlersScaffold =
                  |> List.map fst)
 
         let summary: ScaffoldSummary =
-            { ProviderName = Some descriptor.Name
-              ProviderContractVersion = Some descriptor.ContractVersion
-              RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
-              Outcome = scaffoldOutcomeValue outcome
-              SkeletonCreated = true
-              ProviderInvoked = true
-              ProducedPathCount = List.length producedPaths
-              ProducedPaths = producedPaths
-              MirroredPaths = mirroredPaths
-              MaterializedDriverPaths = driverOutcome.ProvenancePaths |> List.map fst |> List.sort
-              MaterializedGameSkillPaths = gameSkillOutcome.ProvenancePaths |> List.map fst |> List.sort
-              MaterializedRenderingSkillPaths =
-                (renderingSkillOutcome.ProvenancePaths @ audioSkillOutcome.ProvenancePaths)
-                |> List.map fst
-                |> List.sort
-              EffectiveParameters = Map.toList effective
-              RepoInitOutcome = repoInitOutcome
-              ToolManifestOutcome = toolManifestOutcome
-              ExecutableScriptCount = executableCount
-              ExecutableScriptsSkipped = List.length skippedPaths
-              NextActionHint = hint
-              ProviderInvocation = None }
+            {
+                ProviderName = Some descriptor.Name
+                ProviderContractVersion = Some descriptor.ContractVersion
+                RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
+                Outcome = scaffoldOutcomeValue outcome
+                SkeletonCreated = true
+                ProviderInvoked = true
+                ProducedPathCount = List.length producedPaths
+                ProducedPaths = producedPaths
+                MirroredPaths = mirroredPaths
+                MaterializedDriverPaths = driverOutcome.ProvenancePaths |> List.map fst |> List.sort
+                MaterializedGameSkillPaths = gameSkillOutcome.ProvenancePaths |> List.map fst |> List.sort
+                MaterializedRenderingSkillPaths =
+                    (renderingSkillOutcome.ProvenancePaths @ audioSkillOutcome.ProvenancePaths)
+                    |> List.map fst
+                    |> List.sort
+                EffectiveParameters = Map.toList effective
+                RepoInitOutcome = repoInitOutcome
+                ToolManifestOutcome = toolManifestOutcome
+                ExecutableScriptCount = executableCount
+                ExecutableScriptsSkipped = List.length skippedPaths
+                NextActionHint = hint
+                ProviderInvocation = None
+            }
 
         // ADR-0063 tail / FS.GG.SDD#739: re-derived (pure) from the same plan and the same
         // interpreted READ of the provider manifest that TICK A amended from, so the reported
@@ -1500,26 +1550,28 @@ module internal HandlersScaffold =
         // provenance recording NO fan-out (FR-012). The scaffold.mirrorFailed id is additive.
         let mirrorFailedFinalize (failedPaths: string list) =
             let summary: ScaffoldSummary =
-                { ProviderName = Some descriptor.Name
-                  ProviderContractVersion = Some descriptor.ContractVersion
-                  RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
-                  Outcome = scaffoldOutcomeValue ProviderFailed
-                  SkeletonCreated = true
-                  ProviderInvoked = true
-                  ProducedPathCount = List.length producedPaths
-                  ProducedPaths = producedPaths
-                  MirroredPaths = []
-                  MaterializedDriverPaths = []
-                  MaterializedGameSkillPaths = []
-                  MaterializedRenderingSkillPaths = []
-                  EffectiveParameters = Map.toList effective
-                  RepoInitOutcome = "notApplicable"
-                  ToolManifestOutcome = "notApplicable"
-                  ExecutableScriptCount = 0
-                  ExecutableScriptsSkipped = 0
-                  NextActionHint =
-                    "The skill fan-out could not be completed; resolve the filesystem issue and re-run scaffold."
-                  ProviderInvocation = None }
+                {
+                    ProviderName = Some descriptor.Name
+                    ProviderContractVersion = Some descriptor.ContractVersion
+                    RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
+                    Outcome = scaffoldOutcomeValue ProviderFailed
+                    SkeletonCreated = true
+                    ProviderInvoked = true
+                    ProducedPathCount = List.length producedPaths
+                    ProducedPaths = producedPaths
+                    MirroredPaths = []
+                    MaterializedDriverPaths = []
+                    MaterializedGameSkillPaths = []
+                    MaterializedRenderingSkillPaths = []
+                    EffectiveParameters = Map.toList effective
+                    RepoInitOutcome = "notApplicable"
+                    ToolManifestOutcome = "notApplicable"
+                    ExecutableScriptCount = 0
+                    ExecutableScriptsSkipped = 0
+                    NextActionHint =
+                        "The skill fan-out could not be completed; resolve the filesystem issue and re-run scaffold."
+                    ProviderInvocation = None
+                }
 
             let provenanceEffects =
                 provenanceWriteEffect
@@ -1542,7 +1594,8 @@ module internal HandlersScaffold =
                 Diagnostics =
                     model.Diagnostics
                     @ [ DiagnosticsModule.scaffoldMirrorFailed failedPaths ]
-                    @ cliCoherenceDiagnostics descriptor model.Request },
+                    @ cliCoherenceDiagnostics descriptor model.Request
+            },
             provenanceEffects
 
         // Gate: run the MIRROR tick(s) to completion before the probe-based TICK A→C.
@@ -1557,7 +1610,8 @@ module internal HandlersScaffold =
                 else
                     Some(
                         { model with
-                            PendingEffects = model.PendingEffects @ readEffects },
+                            PendingEffects = model.PendingEffects @ readEffects
+                        },
                         readEffects
                     )
             else
@@ -1593,7 +1647,8 @@ module internal HandlersScaffold =
                         else
                             Some(
                                 { model with
-                                    PendingEffects = model.PendingEffects @ writeEffects },
+                                    PendingEffects = model.PendingEffects @ writeEffects
+                                },
                                 writeEffects
                             )
                     else
@@ -1670,12 +1725,16 @@ module internal HandlersScaffold =
             // write leaves `sddOwnedPaths` empty, so provenance and `toolManifestOutcome` agree.
             let sddOwnedPaths =
                 match manifestWriteResult with
-                | Some { Succeeded = true
-                         Effect = WriteFile(_, _, StructuredSource) } -> [ toolManifestPath ]
+                | Some {
+                           Succeeded = true
+                           Effect = WriteFile(_, _, StructuredSource)
+                       } -> [ toolManifestPath ]
                 // A merge owns two entries, not the co-tenant file. The current provenance
                 // schema is path-owned, so claiming the whole manifest here would be false.
-                | Some { Succeeded = true
-                         Effect = WriteFile(_, _, HybridArtifact _) } -> []
+                | Some {
+                           Succeeded = true
+                           Effect = WriteFile(_, _, HybridArtifact _)
+                       } -> []
                 | _ -> []
 
             if not manifestReadInterpreted then
@@ -1684,7 +1743,8 @@ module internal HandlersScaffold =
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ [ manifestReadEffect ] },
+                        PendingEffects = model.PendingEffects @ [ manifestReadEffect ]
+                    },
                     [ manifestReadEffect ]
             elif Option.isSome manifestWriteEffect && Option.isNone manifestWriteResult then
                 // TICK 0b — create the absent manifest or land the already-derived hybrid merge,
@@ -1696,7 +1756,8 @@ module internal HandlersScaffold =
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ [ effect ] },
+                        PendingEffects = model.PendingEffects @ [ effect ]
+                    },
                     [ effect ]
             elif not (probeInterpreted || probePlanned) then
                 // TICK A — the success path's single provenance write (FR-004, before `git
@@ -1804,7 +1865,8 @@ module internal HandlersScaffold =
                     @ scriptEffects
 
                 { model with
-                    PendingEffects = model.PendingEffects @ effects },
+                    PendingEffects = model.PendingEffects @ effects
+                },
                 effects
             elif not probeInterpreted then
                 // Probe planned, awaiting interpretation.
@@ -1828,7 +1890,8 @@ module internal HandlersScaffold =
                     let effect = RunProcess("git", [ "init" ], "")
 
                     { model with
-                        PendingEffects = model.PendingEffects @ [ effect ] },
+                        PendingEffects = model.PendingEffects @ [ effect ]
+                    },
                     [ effect ]
                 elif shouldInit && not initInterpreted then
                     // Init planned, awaiting interpretation.
@@ -1852,7 +1915,8 @@ module internal HandlersScaffold =
                         Diagnostics =
                             model.Diagnostics
                             @ diagnostics
-                            @ cliCoherenceDiagnostics descriptor model.Request },
+                            @ cliCoherenceDiagnostics descriptor model.Request
+                    },
                     []
 
     // ----- staged driver entry (called from nextLifecycleEffects) -----
@@ -1865,7 +1929,8 @@ module internal HandlersScaffold =
             | None ->
                 { model with
                     Scaffold = Some summary
-                    Diagnostics = model.Diagnostics @ diagnostics },
+                    Diagnostics = model.Diagnostics @ diagnostics
+                },
                 []
         | ScaffoldProceed(descriptor, effective) ->
             let createInterpreted =
@@ -1881,7 +1946,8 @@ module internal HandlersScaffold =
                     let effects = scaffoldInvocationEffects model.Request descriptor effective
 
                     { model with
-                        PendingEffects = model.PendingEffects @ effects },
+                        PendingEffects = model.PendingEffects @ effects
+                    },
                     effects
             elif Option.isSome model.Scaffold then
                 model, []
@@ -1897,7 +1963,8 @@ module internal HandlersScaffold =
                         Diagnostics =
                             model.Diagnostics
                             @ diagnostics
-                            @ cliCoherenceDiagnostics descriptor model.Request },
+                            @ cliCoherenceDiagnostics descriptor model.Request
+                    },
                     provenanceEffects
                 | FinalizeSuccess(outcome, producedPaths) ->
                     rootGitignoreCompositionNext

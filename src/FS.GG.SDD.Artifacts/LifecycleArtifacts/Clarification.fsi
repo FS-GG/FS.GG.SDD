@@ -20,39 +20,47 @@ module Clarification =
         | NoteAnswer
 
     type ClarificationFrontMatter =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          ChangeTier: string
-          Status: string
-          SourceSpec: string
-          PublicOrToolFacingImpact: bool option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            ChangeTier: string
+            Status: string
+            SourceSpec: string
+            PublicOrToolFacingImpact: bool option
+        }
 
     type ClarificationQuestion =
-        { QuestionId: ClarificationQuestionId
-          Prompt: string
-          SourceAmbiguityIds: AmbiguityId list
-          Blocking: bool
-          State: string
-          SourceLocation: SourceLocation option }
+        {
+            QuestionId: ClarificationQuestionId
+            Prompt: string
+            SourceAmbiguityIds: AmbiguityId list
+            Blocking: bool
+            State: string
+            SourceLocation: SourceLocation option
+        }
 
     type ClarificationAnswer =
-        { QuestionId: ClarificationQuestionId option
-          AmbiguityIds: AmbiguityId list
-          Text: string
-          Kind: ClarificationAnswerKind
-          SourceLocation: SourceLocation option }
+        {
+            QuestionId: ClarificationQuestionId option
+            AmbiguityIds: AmbiguityId list
+            Text: string
+            Kind: ClarificationAnswerKind
+            SourceLocation: SourceLocation option
+        }
 
     type ClarificationDecisionFact =
-        { DecisionId: DecisionId
-          Title: string
-          Kind: ClarificationDecisionKind
-          Text: string
-          Rationale: string option
-          SourceQuestionIds: ClarificationQuestionId list
-          SourceAmbiguityIds: AmbiguityId list
-          SourceLocation: SourceLocation option }
+        {
+            DecisionId: DecisionId
+            Title: string
+            Kind: ClarificationDecisionKind
+            Text: string
+            Rationale: string option
+            SourceQuestionIds: ClarificationQuestionId list
+            SourceAmbiguityIds: AmbiguityId list
+            SourceLocation: SourceLocation option
+        }
 
     type RemainingAmbiguity =
         {
@@ -70,16 +78,18 @@ module Clarification =
         }
 
     type ClarificationFacts =
-        { FrontMatter: ClarificationFrontMatter
-          StandardSections: string list
-          MissingStandardSections: string list
-          Questions: ClarificationQuestion list
-          Answers: ClarificationAnswer list
-          Decisions: ClarificationDecisionFact list
-          AcceptedDeferrals: ClarificationDecisionFact list
-          RemainingAmbiguity: RemainingAmbiguity list
-          BlockingAmbiguityCount: int
-          Diagnostics: Diagnostic list }
+        {
+            FrontMatter: ClarificationFrontMatter
+            StandardSections: string list
+            MissingStandardSections: string list
+            Questions: ClarificationQuestion list
+            Answers: ClarificationAnswer list
+            Decisions: ClarificationDecisionFact list
+            AcceptedDeferrals: ClarificationDecisionFact list
+            RemainingAmbiguity: RemainingAmbiguity list
+            BlockingAmbiguityCount: int
+            Diagnostics: Diagnostic list
+        }
 
     val clarificationStandardSections: unit -> string list
     val parseClarificationFacts: snapshot: FileSnapshot -> Result<ClarificationFacts, Diagnostic list>

@@ -40,7 +40,8 @@ module ScaffoldCommandTests =
             Provider = provider
             Parameters = parameters
             Force = force
-            DryRun = dryRun }
+            DryRun = dryRun
+        }
 
     /// Drive the real MVU loop, returning the final model (for effect assertions) and
     /// its report.
@@ -124,7 +125,8 @@ module ScaffoldCommandTests =
 
         let request =
             { scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true with
-                TemplateUpdate = false }
+                TemplateUpdate = false
+            }
 
         let model, _ = runScaffoldModel request
 
@@ -2161,9 +2163,11 @@ providers:
             | null -> ""
             | value -> value
 
-        [ for entry in doc.RootElement.GetProperty("producedPaths").EnumerateArray() do
-              if str entry "owner" = "generatedProduct" then
-                  str entry "path" ]
+        [
+            for entry in doc.RootElement.GetProperty("producedPaths").EnumerateArray() do
+                if str entry "owner" = "generatedProduct" then
+                    str entry "path"
+        ]
 
     // T008 (US2-AC1 / FR-004): scaffold with lifecycle=sdd delivers the constitution
     // via the reused init skeleton; the report attributes it as the SDD skeleton's
@@ -2233,11 +2237,13 @@ providers:
         // relativeFiles. init itself writes no .git, so this is the init skeleton set.
         let establishedSkeleton =
             Set.ofList
-                [ ".fsgg/project.yml"
-                  ".fsgg/sdd.yml"
-                  ".fsgg/agents.yml"
-                  "AGENTS.md"
-                  "CLAUDE.md" ]
+                [
+                    ".fsgg/project.yml"
+                    ".fsgg/sdd.yml"
+                    ".fsgg/agents.yml"
+                    "AGENTS.md"
+                    "CLAUDE.md"
+                ]
 
         // The seeded process-skill files under every declared runtime root.
         let seededSkillPaths =
@@ -2251,11 +2257,13 @@ providers:
         // 845/docs/decisions/0005: and the opt-in reference-gate-set resolution project.
         let authoredSeeds =
             Set.ofList (
-                [ ".fsgg/constitution.md"
-                  ".fsgg/early-stage-guidance.md"
-                  FS.GG.SDD.Commands.Internal.Foundation.governanceResolutionPath
-                  ".gitignore"
-                  provenancePath ]
+                [
+                    ".fsgg/constitution.md"
+                    ".fsgg/early-stage-guidance.md"
+                    FS.GG.SDD.Commands.Internal.Foundation.governanceResolutionPath
+                    ".gitignore"
+                    provenancePath
+                ]
                 @ seededSkillPaths
             )
 
@@ -2282,8 +2290,10 @@ providers:
             | null -> ""
             | value -> value
 
-        [ for entry in doc.RootElement.GetProperty("effectiveParameters").EnumerateArray() do
-              str entry "key", str entry "value" ]
+        [
+            for entry in doc.RootElement.GetProperty("effectiveParameters").EnumerateArray() do
+                str entry "key", str entry "value"
+        ]
         |> List.sortBy fst
 
     // T008 (US1 / FR-001 / FR-003 / SC-001): omitting `variant` forwards the declared
@@ -2343,8 +2353,8 @@ providers:
         Assert.Contains("scaffoldEffectiveParam: variant=alpha", text)
 
         Assert.True(
-            (text.IndexOf "scaffoldEffectiveParam: productName=Acme") < (text.IndexOf
-                "scaffoldEffectiveParam: variant=alpha")
+            (text.IndexOf "scaffoldEffectiveParam: productName=Acme") <
+                (text.IndexOf "scaffoldEffectiveParam: variant=alpha")
         )
 
     // T009 (FR-008): the effectiveParameters field is scaffold-scoped — a non-scaffold
@@ -2634,17 +2644,21 @@ providers:
             { (scaffoldSummary baseReport) with
                 ProviderInvocation =
                     Some
-                        { CommandLine = "dotnet new fsgg-fixture-app -o . --productName Acme"
-                          ProcessStarted = false // SYNTHETIC: create process failed to launch
-                          ExitCode = None
-                          StandardOutput = ""
-                          StandardOutputTruncated = false
-                          StandardError = "An error occurred trying to start process 'dotnet'."
-                          StandardErrorTruncated = false } }
+                        {
+                            CommandLine = "dotnet new fsgg-fixture-app -o . --productName Acme"
+                            ProcessStarted = false // SYNTHETIC: create process failed to launch
+                            ExitCode = None
+                            StandardOutput = ""
+                            StandardOutputTruncated = false
+                            StandardError = "An error occurred trying to start process 'dotnet'."
+                            StandardErrorTruncated = false
+                        }
+            }
 
         let report =
             { baseReport with
-                Scaffold = Some summary }
+                Scaffold = Some summary
+            }
 
         let doc, invocation = providerInvocationJson report
         use _ = doc
@@ -2868,10 +2882,12 @@ providers:
 
         // Map canonicalizes to sorted keys: productName then rootNamespace.
         let expected =
-            [ "--productName"
-              "Roquelike-DungeonCrawler"
-              "--rootNamespace"
-              "RoquelikeDungeonCrawler" ]
+            [
+                "--productName"
+                "Roquelike-DungeonCrawler"
+                "--rootNamespace"
+                "RoquelikeDungeonCrawler"
+            ]
 
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
 
@@ -2915,8 +2931,10 @@ providers:
 
         // Both values recorded effective (sorted by key), raw name byte-identical.
         Assert.Equal<(string * string) list>(
-            [ "productName", "Roquelike-DungeonCrawler"
-              "rootNamespace", "RoquelikeDungeonCrawler" ],
+            [
+                "productName", "Roquelike-DungeonCrawler"
+                "rootNamespace", "RoquelikeDungeonCrawler"
+            ],
             provenanceEffectiveParameters root
         )
 

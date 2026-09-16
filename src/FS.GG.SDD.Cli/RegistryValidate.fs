@@ -12,14 +12,18 @@ open FS.GG.SDD.Cli.Rendering
 module RegistryValidate =
 
     type ReportDiagnostic =
-        { Entry: string
-          Rule: string
-          Message: string }
+        {
+            Entry: string
+            Rule: string
+            Message: string
+        }
 
     type RegistryValidateReport =
-        { Path: string
-          Valid: bool
-          Diagnostics: ReportDiagnostic list }
+        {
+            Path: string
+            Valid: bool
+            Diagnostics: ReportDiagnostic list
+        }
 
     let private ruleName (rule: Registry.RegistryRule) =
         match rule with
@@ -34,28 +38,40 @@ module RegistryValidate =
     /// A load/parse failure: a single MalformedDocument-class diagnostic, distinct from
     /// content diagnostics (Constitution VIII), never a cascade or a crash.
     let private loadFailure (path: string) (message: string) =
-        { Path = path
-          Valid = false
-          Diagnostics =
-            [ { Entry = path
-                Rule = "MalformedDocument"
-                Message = message } ] }
+        {
+            Path = path
+            Valid = false
+            Diagnostics =
+                [
+                    {
+                        Entry = path
+                        Rule = "MalformedDocument"
+                        Message = message
+                    }
+                ]
+        }
 
     let private report (path: string) (result: Registry.ValidationResult) =
         match result with
         | Registry.Valid ->
-            { Path = path
-              Valid = true
-              Diagnostics = [] }
+            {
+                Path = path
+                Valid = true
+                Diagnostics = []
+            }
         | Registry.Invalid diagnostics ->
-            { Path = path
-              Valid = false
-              Diagnostics =
-                diagnostics
-                |> List.map (fun d ->
-                    { Entry = d.Entry
-                      Rule = ruleName d.Rule
-                      Message = d.Message }) }
+            {
+                Path = path
+                Valid = false
+                Diagnostics =
+                    diagnostics
+                    |> List.map (fun d ->
+                        {
+                            Entry = d.Entry
+                            Rule = ruleName d.Rule
+                            Message = d.Message
+                        })
+            }
 
     /// Validate a registry document, dispatching on its SHAPE rather than its filename
     /// (feature 104). A root `skills:` key selects the org skill catalog; EVERYTHING else
@@ -182,12 +198,18 @@ module RegistryValidate =
                 renderText report
 
     let private argError (message: string) : RegistryValidateReport =
-        { Path = ""
-          Valid = false
-          Diagnostics =
-            [ { Entry = "<args>"
-                Rule = "MissingField"
-                Message = message } ] }
+        {
+            Path = ""
+            Valid = false
+            Diagnostics =
+                [
+                    {
+                        Entry = "<args>"
+                        Rule = "MissingField"
+                        Message = message
+                    }
+                ]
+        }
 
     // FS-GG/FS.GG.SDD#263 (Gap C finding 4 / #203): confine `<path>` so `registry validate` cannot
     // read outside the workspace. The path flows straight into `RegistryDocument.load path` →
@@ -201,14 +223,20 @@ module RegistryValidate =
     // stdout + exit 1, no read. Names the offending path and mirrors the shared "escapes the
     // workspace root" phrasing (`registry skill-manifest`, `validate --out`).
     let private pathEscapeError (path: string) : RegistryValidateReport =
-        { Path = path
-          Valid = false
-          Diagnostics =
-            [ { Entry = path
-                Rule = "PathEscape"
-                Message =
-                  $"'{path}' escapes the workspace root — "
-                  + "pass a path inside the workspace (no absolute path or '..')." } ] }
+        {
+            Path = path
+            Valid = false
+            Diagnostics =
+                [
+                    {
+                        Entry = path
+                        Rule = "PathEscape"
+                        Message =
+                            $"'{path}' escapes the workspace root — "
+                            + "pass a path inside the workspace (no absolute path or '..')."
+                    }
+                ]
+        }
 
     let private usage =
         "Usage: fsgg-sdd registry validate <path> [--json|--text|--rich]"

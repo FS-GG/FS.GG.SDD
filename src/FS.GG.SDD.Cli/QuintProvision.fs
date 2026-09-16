@@ -14,14 +14,16 @@ open FS.GG.SDD.Artifacts.TypedSpecifications
 /// Installed-tool boundary for placing already acquired, exact Quint tool objects into a cache.
 module internal QuintProvision =
     type private Candidate =
-        { Id: string
-          Version: string
-          Origin: string
-          SourcePath: string
-          ExpectedSha256: string
-          ExpectedBytes: int64 option
-          Bytes: byte array
-          CachePath: string }
+        {
+            Id: string
+            Version: string
+            Origin: string
+            SourcePath: string
+            ExpectedSha256: string
+            ExpectedBytes: int64 option
+            Bytes: byte array
+            CachePath: string
+        }
 
     let private optionValue name args =
         args
@@ -34,9 +36,11 @@ module internal QuintProvision =
         |> String.concat ""
 
     let private diagnostic id message correction : TypedLifecycleDiagnostic =
-        { Id = id
-          Message = message
-          Correction = correction }
+        {
+            Id = id
+            Message = message
+            Correction = correction
+        }
 
     let private packageIdentity () =
         $"FS.GG.SDD.Cli/{SchemaVersion.currentGeneratorVersion().Version}"
@@ -141,14 +145,16 @@ module internal QuintProvision =
                 )
             else
                 Ok
-                    { Id = id
-                      Version = version
-                      Origin = origin
-                      SourcePath = Path.GetFullPath sourcePath
-                      ExpectedSha256 = expected.Sha256
-                      ExpectedBytes = expected.Bytes
-                      Bytes = bytes
-                      CachePath = Path.Combine(cacheRoot, "objects", expected.Sha256) }
+                    {
+                        Id = id
+                        Version = version
+                        Origin = origin
+                        SourcePath = Path.GetFullPath sourcePath
+                        ExpectedSha256 = expected.Sha256
+                        ExpectedBytes = expected.Bytes
+                        Bytes = bytes
+                        CachePath = Path.Combine(cacheRoot, "objects", expected.Sha256)
+                    }
         with
         | :? FileNotFoundException
         | :? DirectoryNotFoundException ->
@@ -332,10 +338,12 @@ module internal QuintProvision =
                 profile
                 cacheRoot
                 []
-                [ diagnostic
-                      "typedSdd.provision.unknownArgument"
-                      $"Unknown or incomplete argument '{token}'."
-                      "Use --cache, --profile, --quint and --lmt, supplying every value once." ]
+                [
+                    diagnostic
+                        "typedSdd.provision.unknownArgument"
+                        $"Unknown or incomplete argument '{token}'."
+                        "Use --cache, --profile, --quint and --lmt, supplying every value once."
+                ]
         | None when Option.isSome cacheError -> emit "blocked" profile cacheRoot [] [ Option.get cacheError ]
         | None when platformIdentity () <> QuintToolchain.general.Platform ->
             emit
@@ -343,26 +351,32 @@ module internal QuintProvision =
                 profile
                 cacheRoot
                 []
-                [ diagnostic
-                      "typedSdd.provision.platformUnsupported"
-                      $"The installed platform '{platformIdentity ()}' does not match '{QuintToolchain.general.Platform}'."
-                      "Provision this qualified toolchain only on its declared platform." ]
+                [
+                    diagnostic
+                        "typedSdd.provision.platformUnsupported"
+                        $"The installed platform '{platformIdentity ()}' does not match '{QuintToolchain.general.Platform}'."
+                        "Provision this qualified toolchain only on its declared platform."
+                ]
         | None when profile <> QuintToolchain.general.Profile ->
             emit
                 "blocked"
                 profile
                 cacheRoot
                 []
-                [ diagnostic
-                      "typedSdd.provision.profileUnsupported"
-                      $"Profile '{profile}' does not own this tool object set."
-                      $"Select {QuintToolchain.general.Profile}; existing profile-1 workspaces require no cache mutation." ]
+                [
+                    diagnostic
+                        "typedSdd.provision.profileUnsupported"
+                        $"Profile '{profile}' does not own this tool object set."
+                        $"Select {QuintToolchain.general.Profile}; existing profile-1 workspaces require no cache mutation."
+                ]
         | None ->
             match optionValue "--cache" args, optionValue "--quint" args, optionValue "--lmt" args with
             | Some _, Some quintPath, Some lmtPath ->
                 let reads =
-                    [ readCandidate cacheRoot "quint-binary" quintPath
-                      readCandidate cacheRoot "lmt-binary" lmtPath ]
+                    [
+                        readCandidate cacheRoot "quint-binary" quintPath
+                        readCandidate cacheRoot "lmt-binary" lmtPath
+                    ]
 
                 let diagnostics =
                     reads
@@ -389,17 +403,21 @@ module internal QuintProvision =
                             profile
                             cacheRoot
                             []
-                            [ diagnostic
-                                  "typedSdd.provision.writeFailed"
-                                  $"The exact tool objects could not be staged: {ex.Message}"
-                                  "Correct cache access and retry; no accepted partial object is retained." ]
+                            [
+                                diagnostic
+                                    "typedSdd.provision.writeFailed"
+                                    $"The exact tool objects could not be staged: {ex.Message}"
+                                    "Correct cache access and retry; no accepted partial object is retained."
+                            ]
             | _ ->
                 emit
                     "blocked"
                     profile
                     cacheRoot
                     []
-                    [ diagnostic
-                          "typedSdd.provision.argumentMissing"
-                          "Exact --cache, --quint and --lmt paths are required."
-                          "Acquire the qualified objects, then pass all three paths." ]
+                    [
+                        diagnostic
+                            "typedSdd.provision.argumentMissing"
+                            "Exact --cache, --quint and --lmt paths are required."
+                            "Acquire the qualified objects, then pass all three paths."
+                    ]

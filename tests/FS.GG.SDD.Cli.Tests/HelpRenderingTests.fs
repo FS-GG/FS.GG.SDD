@@ -31,18 +31,22 @@ module HelpRenderingTests =
         helpReport (Commands.request Verify ".") (CommandHelp.commandHelp Verify)
 
     let private interactiveColor =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 100
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 100
+            IsInputInteractive = true
+        }
 
     let private nonInteractive =
         { interactiveColor with
-            IsInteractive = false }
+            IsInteractive = false
+        }
 
     let private colorDisabled =
         { interactiveColor with
-            ColorEnabled = false }
+            ColorEnabled = false
+        }
 
     // ----- projections (in-process, deterministic) -----
 
@@ -127,9 +131,11 @@ module HelpRenderingTests =
 
         let completion = TestShared.ChildProcess.runBounded 60_000 startInfo
 
-        {| ExitCode = completion.ExitCode
-           StdOut = completion.StandardOutput
-           StdErr = completion.StandardError |}
+        {|
+            ExitCode = completion.ExitCode
+            StdOut = completion.StandardOutput
+            StdErr = completion.StandardError
+        |}
 
     [<Fact; Trait("tier", "slow")>]
     let ``CLI top-level --help exits 0 with top-level help on stdout`` () =

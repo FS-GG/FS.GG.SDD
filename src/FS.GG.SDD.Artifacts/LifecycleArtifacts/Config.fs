@@ -41,25 +41,31 @@ module Config =
         }
 
     type SddLifecyclePolicy =
-        { SchemaVersion: SchemaVersion
-          Stages: LifecycleStage list
-          WorkRoot: string
-          ReadinessRoot: string
-          RequireSourceDigests: bool
-          RequireGeneratorVersion: bool
-          StaleBehavior: string }
+        {
+            SchemaVersion: SchemaVersion
+            Stages: LifecycleStage list
+            WorkRoot: string
+            ReadinessRoot: string
+            RequireSourceDigests: bool
+            RequireGeneratorVersion: bool
+            StaleBehavior: string
+        }
 
     type AgentGuidanceTarget =
-        { Id: string
-          GuidancePath: string
-          GeneratedRoot: string }
+        {
+            Id: string
+            GuidancePath: string
+            GeneratedRoot: string
+        }
 
     type AgentGuidanceConfig =
-        { SchemaVersion: SchemaVersion
-          Targets: AgentGuidanceTarget list
-          WorkModelPath: string
-          GeneratedGuidanceIsAuthority: bool
-          RequireEquivalentClaudeAndCodexBehavior: bool }
+        {
+            SchemaVersion: SchemaVersion
+            Targets: AgentGuidanceTarget list
+            WorkModelPath: string
+            GeneratedGuidanceIsAuthority: bool
+            RequireEquivalentClaudeAndCodexBehavior: bool
+        }
 
     let parseProjectConfig (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.ProjectConfig
@@ -70,10 +76,12 @@ module Config =
             let version, versionDiagnostics = schemaVersion artifact root
 
             let fields =
-                [ requiredScalar artifact "project.id" [ "project"; "id" ] root
-                  requiredScalar artifact "project.defaultWorkRoot" [ "project"; "defaultWorkRoot" ] root
-                  requiredScalar artifact "sdd.config" [ "sdd"; "config" ] root
-                  requiredScalar artifact "sdd.agents" [ "sdd"; "agents" ] root ]
+                [
+                    requiredScalar artifact "project.id" [ "project"; "id" ] root
+                    requiredScalar artifact "project.defaultWorkRoot" [ "project"; "defaultWorkRoot" ] root
+                    requiredScalar artifact "sdd.config" [ "sdd"; "config" ] root
+                    requiredScalar artifact "sdd.agents" [ "sdd"; "agents" ] root
+                ]
 
             let fieldDiagnostics =
                 fields
@@ -85,37 +93,39 @@ module Config =
             match version, fields, versionDiagnostics @ fieldDiagnostics with
             | Some schema, [ Ok projectId; Ok workRoot; Ok sddPath; Ok agentsPath ], [] ->
                 Ok
-                    { SchemaVersion = schema
-                      ProjectId = projectId
-                      DefaultWorkRoot = workRoot
-                      SddConfigPath = sddPath
-                      AgentsConfigPath = agentsPath
-                      GovernancePolicyPath = tryScalarAt [ "governance"; "policy" ] root
-                      GovernanceCapabilitiesPath = tryScalarAt [ "governance"; "capabilities" ] root
-                      GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root
-                      Profile =
-                        tryScalarAt [ "project"; "profile" ] root
-                        |> Option.map (fun value -> value.Trim().ToLowerInvariant())
-                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                      TestFramework =
-                        tryScalarAt [ "project"; "testFramework" ] root
-                        |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
-                      // FS-GG/FS.GG.SDD#310: the workspace-declared implementation skill. Read and
-                      // filtered exactly like `testFramework`; normalization and the neutral default
-                      // live with the task generator that consumes it.
-                      ImplementSkill =
-                        tryScalarAt [ "project"; "implementSkill" ] root
-                        |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
-                      // FS-GG/FS.GG.SDD#306: an optional convenience flag, not a contract. `boolAt`
-                      // reads a non-boolean scalar as the default, so a typo degrades to "no visual
-                      // surface" rather than blocking every command in the workspace (Principle VIII).
-                      VisualSurface = boolAt [ "project"; "visualSurface" ] root false
-                      // FS-GG/FS.GG.SDD#305: the workspace-declared floor for the fsgg-sdd toolchain.
-                      // Optional and unvalidated here — an unparseable value is a warning at report
-                      // assembly, not a parse error that would block every command on a config typo.
-                      MinToolVersion =
-                        tryScalarAt [ "sdd"; "minToolVersion" ] root
-                        |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value)) }
+                    {
+                        SchemaVersion = schema
+                        ProjectId = projectId
+                        DefaultWorkRoot = workRoot
+                        SddConfigPath = sddPath
+                        AgentsConfigPath = agentsPath
+                        GovernancePolicyPath = tryScalarAt [ "governance"; "policy" ] root
+                        GovernanceCapabilitiesPath = tryScalarAt [ "governance"; "capabilities" ] root
+                        GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root
+                        Profile =
+                            tryScalarAt [ "project"; "profile" ] root
+                            |> Option.map (fun value -> value.Trim().ToLowerInvariant())
+                            |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                        TestFramework =
+                            tryScalarAt [ "project"; "testFramework" ] root
+                            |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
+                        // FS-GG/FS.GG.SDD#310: the workspace-declared implementation skill. Read and
+                        // filtered exactly like `testFramework`; normalization and the neutral default
+                        // live with the task generator that consumes it.
+                        ImplementSkill =
+                            tryScalarAt [ "project"; "implementSkill" ] root
+                            |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
+                        // FS-GG/FS.GG.SDD#306: an optional convenience flag, not a contract. `boolAt`
+                        // reads a non-boolean scalar as the default, so a typo degrades to "no visual
+                        // surface" rather than blocking every command in the workspace (Principle VIII).
+                        VisualSurface = boolAt [ "project"; "visualSurface" ] root false
+                        // FS-GG/FS.GG.SDD#305: the workspace-declared floor for the fsgg-sdd toolchain.
+                        // Optional and unvalidated here — an unparseable value is a warning at report
+                        // assembly, not a parse error that would block every command on a config typo.
+                        MinToolVersion =
+                            tryScalarAt [ "sdd"; "minToolVersion" ] root
+                            |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
+                    }
             | _ -> Error(versionDiagnostics @ fieldDiagnostics)
 
     let parseSddLifecyclePolicy (snapshot: FileSnapshot) =
@@ -145,21 +155,23 @@ module Config =
             match version with
             | Some schema when List.isEmpty versionDiagnostics && List.isEmpty stageDiagnostics ->
                 Ok
-                    { SchemaVersion = schema
-                      Stages =
-                        stageResults
-                        |> List.choose (function
-                            | Ok stage -> Some stage
-                            | Error _ -> None)
-                      WorkRoot = tryScalarAt [ "artifacts"; "workRoot" ] root |> Option.defaultValue "work"
-                      ReadinessRoot =
-                        tryScalarAt [ "artifacts"; "readinessRoot" ] root
-                        |> Option.defaultValue "readiness"
-                      RequireSourceDigests = boolAt [ "generatedViews"; "requireSourceDigests" ] root true
-                      RequireGeneratorVersion = boolAt [ "generatedViews"; "requireGeneratorVersion" ] root true
-                      StaleBehavior =
-                        tryScalarAt [ "generatedViews"; "staleBehavior" ] root
-                        |> Option.defaultValue "diagnostic" }
+                    {
+                        SchemaVersion = schema
+                        Stages =
+                            stageResults
+                            |> List.choose (function
+                                | Ok stage -> Some stage
+                                | Error _ -> None)
+                        WorkRoot = tryScalarAt [ "artifacts"; "workRoot" ] root |> Option.defaultValue "work"
+                        ReadinessRoot =
+                            tryScalarAt [ "artifacts"; "readinessRoot" ] root
+                            |> Option.defaultValue "readiness"
+                        RequireSourceDigests = boolAt [ "generatedViews"; "requireSourceDigests" ] root true
+                        RequireGeneratorVersion = boolAt [ "generatedViews"; "requireGeneratorVersion" ] root true
+                        StaleBehavior =
+                            tryScalarAt [ "generatedViews"; "staleBehavior" ] root
+                            |> Option.defaultValue "diagnostic"
+                    }
             | _ -> Error(versionDiagnostics @ stageDiagnostics)
 
     let parseAgentGuidanceConfig (snapshot: FileSnapshot) =
@@ -185,9 +197,11 @@ module Config =
                             with
                             | Some id, Some guidancePath, Some generatedRoot ->
                                 Some
-                                    { Id = id
-                                      GuidancePath = guidancePath
-                                      GeneratedRoot = generatedRoot }
+                                    {
+                                        Id = id
+                                        GuidancePath = guidancePath
+                                        GeneratedRoot = generatedRoot
+                                    }
                             | _ -> None))
                     |> Seq.toList)
                 |> Option.defaultValue []
@@ -195,14 +209,16 @@ module Config =
             match version, versionDiagnostics with
             | Some schema, [] ->
                 Ok
-                    { SchemaVersion = schema
-                      Targets = targets
-                      WorkModelPath =
-                        tryScalarAt [ "sourceModel"; "workModel" ] root
-                        |> Option.defaultValue "readiness/{workId}/work-model.json"
-                      GeneratedGuidanceIsAuthority = boolAt [ "policy"; "generatedGuidanceIsAuthority" ] root false
-                      RequireEquivalentClaudeAndCodexBehavior =
-                        boolAt [ "policy"; "requireEquivalentClaudeAndCodexBehavior" ] root true }
+                    {
+                        SchemaVersion = schema
+                        Targets = targets
+                        WorkModelPath =
+                            tryScalarAt [ "sourceModel"; "workModel" ] root
+                            |> Option.defaultValue "readiness/{workId}/work-model.json"
+                        GeneratedGuidanceIsAuthority = boolAt [ "policy"; "generatedGuidanceIsAuthority" ] root false
+                        RequireEquivalentClaudeAndCodexBehavior =
+                            boolAt [ "policy"; "requireEquivalentClaudeAndCodexBehavior" ] root true
+                    }
             | _ -> Error versionDiagnostics
 
     // A declared `build`/`test`/`run`/`verify` command under a provider entry: read the
@@ -211,8 +227,10 @@ module Config =
     // never a launchable empty command; an absent key likewise maps to `None` (FR-005).
     let private declaredCommand key (mapping: YamlNode) =
         let candidate =
-            { Executable = tryScalarAt [ key; "executable" ] mapping |> Option.defaultValue ""
-              Arguments = scalarList [ key; "arguments" ] mapping }
+            {
+                Executable = tryScalarAt [ key; "executable" ] mapping |> Option.defaultValue ""
+                Arguments = scalarList [ key; "arguments" ] mapping
+            }
 
         if isMalformed candidate then None else Some candidate
 
@@ -252,51 +270,55 @@ module Config =
                                             |> Option.bind (fun parameterMapping ->
                                                 tryScalarAt [ "key" ] parameterMapping
                                                 |> Option.map (fun key ->
-                                                    { Key = key
-                                                      Required = boolAt [ "required" ] parameterMapping false
-                                                      Default = tryScalarAt [ "default" ] parameterMapping })))
+                                                    {
+                                                        Key = key
+                                                        Required = boolAt [ "required" ] parameterMapping false
+                                                        Default = tryScalarAt [ "default" ] parameterMapping
+                                                    })))
                                         |> Seq.toList)
                                     |> Option.defaultValue []
 
                                 Some
-                                    { Name = name
-                                      ContractVersion = contractVersion
-                                      TemplateId = templateId
-                                      Source = source
-                                      Parameters = parameters
-                                      Build = declaredCommand "build" mapping
-                                      Test = declaredCommand "test" mapping
-                                      Run = declaredCommand "run" mapping
-                                      Verify = declaredCommand "verify" mapping
-                                      NameParameter =
-                                        tryScalarAt [ "nameParameter" ] mapping
-                                        |> Option.defaultValue defaultNameParameter
-                                      // Optional derivation sink (feature 080). Absent or
-                                      // blank/whitespace ⇒ None ⇒ scaffold derives nothing.
-                                      // Does NOT affect entry-drop (the four required scalars).
-                                      IdentifierParameter =
-                                        tryScalarAt [ "identifierParameter" ] mapping
-                                        |> Option.filter (fun raw -> raw.Trim() <> "")
-                                      // Optional, value-agnostic (feature 052 E2). The coherent-set
-                                      // orchestrator axis (ADR-0008, epic FS-GG/.github#85) is
-                                      // declared by Templates as a nested `minimumFsggSdd:` mapping
-                                      // whose `version` scalar carries the minimum coherent fsgg-sdd
-                                      // version (sibling metadata — requires/adr/registry/tracking —
-                                      // is ignored here). A YAML-null `version` (the real PENDING
-                                      // PUBLISH state) is treated as absent ⇒ `None`; any other value
-                                      // is read verbatim, with validity decided only at comparison
-                                      // (`Fsgg.Version`). Does NOT affect entry-drop (the four
-                                      // required scalars above).
-                                      MinimumCliVersion =
-                                        tryScalarAt [ "minimumFsggSdd"; "version" ] mapping
-                                        |> Option.filter (fun raw ->
-                                            match raw.Trim() with
-                                            | ""
-                                            | "null"
-                                            | "Null"
-                                            | "NULL"
-                                            | "~" -> false
-                                            | _ -> true) }
+                                    {
+                                        Name = name
+                                        ContractVersion = contractVersion
+                                        TemplateId = templateId
+                                        Source = source
+                                        Parameters = parameters
+                                        Build = declaredCommand "build" mapping
+                                        Test = declaredCommand "test" mapping
+                                        Run = declaredCommand "run" mapping
+                                        Verify = declaredCommand "verify" mapping
+                                        NameParameter =
+                                            tryScalarAt [ "nameParameter" ] mapping
+                                            |> Option.defaultValue defaultNameParameter
+                                        // Optional derivation sink (feature 080). Absent or
+                                        // blank/whitespace ⇒ None ⇒ scaffold derives nothing.
+                                        // Does NOT affect entry-drop (the four required scalars).
+                                        IdentifierParameter =
+                                            tryScalarAt [ "identifierParameter" ] mapping
+                                            |> Option.filter (fun raw -> raw.Trim() <> "")
+                                        // Optional, value-agnostic (feature 052 E2). The coherent-set
+                                        // orchestrator axis (ADR-0008, epic FS-GG/.github#85) is
+                                        // declared by Templates as a nested `minimumFsggSdd:` mapping
+                                        // whose `version` scalar carries the minimum coherent fsgg-sdd
+                                        // version (sibling metadata — requires/adr/registry/tracking —
+                                        // is ignored here). A YAML-null `version` (the real PENDING
+                                        // PUBLISH state) is treated as absent ⇒ `None`; any other value
+                                        // is read verbatim, with validity decided only at comparison
+                                        // (`Fsgg.Version`). Does NOT affect entry-drop (the four
+                                        // required scalars above).
+                                        MinimumCliVersion =
+                                            tryScalarAt [ "minimumFsggSdd"; "version" ] mapping
+                                            |> Option.filter (fun raw ->
+                                                match raw.Trim() with
+                                                | ""
+                                                | "null"
+                                                | "Null"
+                                                | "NULL"
+                                                | "~" -> false
+                                                | _ -> true)
+                                    }
                             | _ -> None))
                     |> Seq.toList)
                 |> Option.defaultValue []

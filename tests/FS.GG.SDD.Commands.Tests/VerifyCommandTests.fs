@@ -22,9 +22,11 @@ module VerifyCommandTests =
     let specPath = $"work/{workId}/spec.md"
 
     type CliResult =
-        { ExitCode: int
-          StdOut: string
-          StdErr: string }
+        {
+            ExitCode: int
+            StdOut: string
+            StdErr: string
+        }
 
     let initializedEvidencedProject () =
         let root = TestSupport.tempDirectory ()
@@ -139,9 +141,11 @@ module VerifyCommandTests =
             @ extraArgs
             |> TestSupport.runCliRaw 30000
 
-        { ExitCode = exitCode
-          StdOut = stdout
-          StdErr = stderr }
+        {
+            ExitCode = exitCode
+            StdOut = stdout
+            StdErr = stderr
+        }
 
     // --- User Story 1: verify evidence-ready work ---
 
@@ -171,9 +175,11 @@ module VerifyCommandTests =
 
         match
             parseVerificationView
-                { Path = verifyPath
-                  Text = verifyJson
-                  RawBytes = None }
+                {
+                    Path = verifyPath
+                    Text = verifyJson
+                    RawBytes = None
+                }
         with
         | Ok view ->
             Assert.Equal("verificationReady", view.Readiness)
@@ -472,7 +478,8 @@ module VerifyCommandTests =
 
         let request =
             { TestSupport.verifyRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -525,7 +532,8 @@ module VerifyCommandTests =
 
         let request =
             { TestSupport.verifyRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -654,7 +662,8 @@ module VerifyCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -714,9 +723,11 @@ module VerifyCommandTests =
 
         match
             Task.parseTasks
-                { Path = tasksPath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = tasksPath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok tasks -> tasks
         | Error diagnostics -> failwith $"Generated tasks.yml did not parse: {diagnostics}."
@@ -726,9 +737,11 @@ module VerifyCommandTests =
 
         match
             parseVerificationView
-                { Path = verifyPath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = verifyPath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok view -> view
         | Error diagnostics -> failwith $"Generated verification view did not parse: {diagnostics}."
@@ -812,9 +825,11 @@ tasks:
 
         match
             Task.parseTaskFacts
-                { Path = tasksPath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = tasksPath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Two-task fixture did not parse: {diagnostics}."
@@ -826,15 +841,17 @@ tasks:
         // The shape `evidenceObligations` now produces for a two-task obligation: one draft, two task
         // ids (sorted, as `evidenceDispositions` writes them).
         let draft: HandlersEvidence.EvidenceDispositionDraft =
-            { ObligationId = "EV001"
-              State = "supported"
-              Observed = false
-              ClassifiedRequirement = false
-              JourneyRequirement = false
-              RecordRequirement = false
-              EvidenceIds = [ "EV001" ]
-              TaskIds = [ "T001"; "T002" ]
-              DiagnosticIds = [] }
+            {
+                ObligationId = "EV001"
+                State = "supported"
+                Observed = false
+                ClassifiedRequirement = false
+                JourneyRequirement = false
+                RecordRequirement = false
+                EvidenceIds = [ "EV001" ]
+                TaskIds = [ "T001"; "T002" ]
+                DiagnosticIds = []
+            }
 
         let views = HandlersVerify.verifyEvidenceDispositionViews facts [ draft ]
 

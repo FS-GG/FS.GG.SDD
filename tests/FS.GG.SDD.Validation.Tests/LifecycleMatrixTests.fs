@@ -14,12 +14,14 @@ module LifecycleMatrixTests =
         { defaultPlan with
             LifecycleCommands = [ Init; Plan; Ship ]
             Projections = [ Json; Text; Rich ]
-            States = [ "fresh"; "planReady"; "shipped" ] }
+            States = [ "fresh"; "planReady"; "shipped" ]
+        }
 
     let private lifecycleOptions =
         { defaultOptions with
             OnlyMatrix = Some lifecycleMatrixName
-            Plan = Some focusedPlan }
+            Plan = Some focusedPlan
+        }
 
     let private lifecycleMatrix (report: ValidationReport) =
         report.Matrices |> List.find (fun matrix -> matrix.Name = lifecycleMatrixName)
@@ -65,7 +67,8 @@ module LifecycleMatrixTests =
         let report =
             run
                 { lifecycleOptions with
-                    InjectedDivergences = [ lifecycleMatrixName, coordinates ] }
+                    InjectedDivergences = [ lifecycleMatrixName, coordinates ]
+                }
 
         let matrix = lifecycleMatrix report
         let seeded = matrix.Cells |> List.find (fun cell -> cell.Coordinates = coordinates)

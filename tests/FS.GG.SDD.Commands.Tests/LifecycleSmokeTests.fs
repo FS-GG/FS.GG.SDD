@@ -23,27 +23,31 @@ module LifecycleSmokeTests =
 
     /// Machine-readable readiness views compared for determinism (FR-006).
     let private readinessViews =
-        [ $"readiness/{workId}/work-model.json"
-          $"readiness/{workId}/analysis.json"
-          $"readiness/{workId}/verify.json"
-          $"readiness/{workId}/ship.json" ]
+        [
+            $"readiness/{workId}/work-model.json"
+            $"readiness/{workId}/analysis.json"
+            $"readiness/{workId}/verify.json"
+            $"readiness/{workId}/ship.json"
+        ]
 
     /// The lifecycle stage commands in canonical order, paired with the report
     /// each emitted. Drives the known-green sequence the quickstart documents.
     type private Driven =
-        { Root: string
-          Charter: CommandReport
-          Specify: CommandReport
-          Clarify: CommandReport
-          Checklist: CommandReport
-          Plan: CommandReport
-          Tasks: CommandReport
-          Analyze: CommandReport
-          Evidence: CommandReport
-          Verify: CommandReport
-          Ship: CommandReport
-          Agents: CommandReport
-          Refresh: CommandReport }
+        {
+            Root: string
+            Charter: CommandReport
+            Specify: CommandReport
+            Clarify: CommandReport
+            Checklist: CommandReport
+            Plan: CommandReport
+            Tasks: CommandReport
+            Analyze: CommandReport
+            Evidence: CommandReport
+            Verify: CommandReport
+            Ship: CommandReport
+            Agents: CommandReport
+            Refresh: CommandReport
+        }
 
     /// A fixed project config so two disposable projects can have byte-identical
     /// authored inputs (init otherwise derives the project id from the random temp
@@ -131,7 +135,8 @@ module LifecycleSmokeTests =
         let clarify =
             TestSupport.runRequest
                 { TestSupport.clarifyRequest root workId title with
-                    InputText = None }
+                    InputText = None
+                }
 
         let checklist = TestSupport.runChecklist root workId title
         let plan = TestSupport.runPlan root workId title
@@ -152,19 +157,21 @@ module LifecycleSmokeTests =
         let agents = TestSupport.runAgents root workId
         let refresh = TestSupport.runRefresh root workId
 
-        { Root = root
-          Charter = charter
-          Specify = specify
-          Clarify = clarify
-          Checklist = checklist
-          Plan = plan
-          Tasks = tasks
-          Analyze = analyze
-          Evidence = evidence
-          Verify = verify
-          Ship = ship
-          Agents = agents
-          Refresh = refresh }
+        {
+            Root = root
+            Charter = charter
+            Specify = specify
+            Clarify = clarify
+            Checklist = checklist
+            Plan = plan
+            Tasks = tasks
+            Analyze = analyze
+            Evidence = evidence
+            Verify = verify
+            Ship = ship
+            Agents = agents
+            Refresh = refresh
+        }
 
     // The read-only assertions (stage artifacts, next-action chain, no-Governance,
     // well-formed readiness) all observe one full drive; sharing it keeps the
@@ -174,16 +181,18 @@ module LifecycleSmokeTests =
     let private driven = lazy (driveLifecycle ())
 
     let private lifecycleStages (d: Driven) =
-        [ Charter, d.Charter
-          Specify, d.Specify
-          Clarify, d.Clarify
-          Checklist, d.Checklist
-          Plan, d.Plan
-          Tasks, d.Tasks
-          Analyze, d.Analyze
-          Evidence, d.Evidence
-          Verify, d.Verify
-          Ship, d.Ship ]
+        [
+            Charter, d.Charter
+            Specify, d.Specify
+            Clarify, d.Clarify
+            Checklist, d.Checklist
+            Plan, d.Plan
+            Tasks, d.Tasks
+            Analyze, d.Analyze
+            Evidence, d.Evidence
+            Verify, d.Verify
+            Ship, d.Ship
+        ]
 
     let private notBlocked label (report: CommandReport) =
         Assert.True(report.Outcome <> CommandOutcome.Blocked, $"Stage {label} was blocked: {report.Diagnostics}")
@@ -214,12 +223,14 @@ module LifecycleSmokeTests =
         let d = driven.Value
 
         let replay () =
-            [ "analyze", TestSupport.runAnalyze d.Root workId title
-              "evidence", TestSupport.runEvidence d.Root workId title
-              "verify", TestSupport.runVerify d.Root workId title
-              "ship", TestSupport.runShip d.Root workId title
-              "refresh", TestSupport.runRefresh d.Root workId
-              "agents", TestSupport.runAgents d.Root workId ]
+            [
+                "analyze", TestSupport.runAnalyze d.Root workId title
+                "evidence", TestSupport.runEvidence d.Root workId title
+                "verify", TestSupport.runVerify d.Root workId title
+                "ship", TestSupport.runShip d.Root workId title
+                "refresh", TestSupport.runRefresh d.Root workId
+                "agents", TestSupport.runAgents d.Root workId
+            ]
 
         // The first replay advances older, pre-#857 generated views to the stable post-evidence
         // representation.  The second must be a true no-op, rather than another digest lap.
@@ -228,9 +239,11 @@ module LifecycleSmokeTests =
 
         let before =
             readinessViews
-            @ [ $"readiness/{workId}/summary.md"
+            @ [
+                $"readiness/{workId}/summary.md"
                 $"readiness/{workId}/agent-commands/claude/guidance.json"
-                $"readiness/{workId}/agent-commands/codex/guidance.json" ]
+                $"readiness/{workId}/agent-commands/codex/guidance.json"
+            ]
             |> List.map (fun path -> path, TestSupport.readRelative d.Root path)
 
         for (stage, report) in replay () do
@@ -282,13 +295,15 @@ module LifecycleSmokeTests =
         let evidenceExit, evidenceOutput, evidenceError =
             TestSupport.runCliRaw
                 120000
-                [ "evidence"
-                  "--root"
-                  d.Root
-                  "--work"
-                  workId
-                  "--from-test-report"
-                  reportPath ]
+                [
+                    "evidence"
+                    "--root"
+                    d.Root
+                    "--work"
+                    workId
+                    "--from-test-report"
+                    reportPath
+                ]
 
         Assert.Equal("", evidenceError.Trim())
         Assert.Equal(0, evidenceExit)
@@ -307,13 +322,15 @@ module LifecycleSmokeTests =
         let syncExit, syncOutput, syncError =
             TestSupport.runCliRaw
                 120000
-                [ "evidence"
-                  "--root"
-                  d.Root
-                  "--work"
-                  workId
-                  "--from-test-report"
-                  reportPath ]
+                [
+                    "evidence"
+                    "--root"
+                    d.Root
+                    "--work"
+                    workId
+                    "--from-test-report"
+                    reportPath
+                ]
 
         Assert.Equal("", syncError.Trim())
         Assert.Equal(0, syncExit)
@@ -425,9 +442,11 @@ module LifecycleSmokeTests =
         // each child command—not merely after a later verify or ship can repair analyze.
         for _ in 1..2 do
             for (stage, expectedReadiness, summaryProperty) in
-                [ "analyze", "implementationReady", "analysis"
-                  "verify", "verificationReady", "verification"
-                  "ship", "shipReady", "ship" ] do
+                [
+                    "analyze", "implementationReady", "analysis"
+                    "verify", "verificationReady", "verification"
+                    "ship", "shipReady", "ship"
+                ] do
                 assertDirectStage tracked stage expectedReadiness summaryProperty
 
     [<Fact>]
@@ -472,13 +491,15 @@ module LifecycleSmokeTests =
         let d = driven.Value
 
         let authored =
-            [ "charter", $"work/{workId}/charter.md"
-              "specify", $"work/{workId}/spec.md"
-              "clarify", $"work/{workId}/clarifications.md"
-              "checklist", $"work/{workId}/checklist.md"
-              "plan", $"work/{workId}/plan.md"
-              "tasks", $"work/{workId}/tasks.yml"
-              "evidence", $"work/{workId}/evidence.yml" ]
+            [
+                "charter", $"work/{workId}/charter.md"
+                "specify", $"work/{workId}/spec.md"
+                "clarify", $"work/{workId}/clarifications.md"
+                "checklist", $"work/{workId}/checklist.md"
+                "plan", $"work/{workId}/plan.md"
+                "tasks", $"work/{workId}/tasks.yml"
+                "evidence", $"work/{workId}/evidence.yml"
+            ]
 
         for (stage, path) in authored do
             let absolute = Path.Combine(d.Root, path.Replace('/', Path.DirectorySeparatorChar))
@@ -507,18 +528,20 @@ module LifecycleSmokeTests =
         // The authoritative ordering the quickstart documents (FR-014): charter →
         // specify → … → ship, with the two cross-cutting generators terminal.
         let expected =
-            [ Charter, Some Specify
-              Specify, Some Clarify
-              Clarify, Some Checklist
-              Checklist, Some Plan
-              Plan, Some Tasks
-              Tasks, Some Analyze
-              Analyze, Some Evidence
-              Evidence, Some Verify
-              Verify, Some Ship
-              Ship, None
-              Agents, None
-              Refresh, None ]
+            [
+                Charter, Some Specify
+                Specify, Some Clarify
+                Clarify, Some Checklist
+                Checklist, Some Plan
+                Plan, Some Tasks
+                Tasks, Some Analyze
+                Analyze, Some Evidence
+                Evidence, Some Verify
+                Verify, Some Ship
+                Ship, None
+                Agents, None
+                Refresh, None
+            ]
 
         for (command, successor) in expected do
             Assert.Equal(successor, nextLifecycleCommand command)
@@ -529,17 +552,19 @@ module LifecycleSmokeTests =
         // Each stage's emitted next-action id, as documented in the quickstart.
         // A behavioral change to any pointer breaks this and forces a doc update.
         let expectedActionIds =
-            [ d.Charter, "nextLifecycleCommand"
-              d.Specify, "nextLifecycleCommand"
-              d.Clarify, "nextLifecycleCommand"
-              d.Checklist, "nextLifecycleCommand"
-              d.Plan, "nextLifecycleCommand"
-              d.Tasks, "nextLifecycleCommand"
-              d.Analyze, "analysis.next.implement"
-              d.Evidence, "evidence.next.verify"
-              d.Verify, "verify.next.ship"
-              d.Ship, "ship.next.protectedBoundary"
-              d.Agents, "agentsGenerated" ]
+            [
+                d.Charter, "nextLifecycleCommand"
+                d.Specify, "nextLifecycleCommand"
+                d.Clarify, "nextLifecycleCommand"
+                d.Checklist, "nextLifecycleCommand"
+                d.Plan, "nextLifecycleCommand"
+                d.Tasks, "nextLifecycleCommand"
+                d.Analyze, "analysis.next.implement"
+                d.Evidence, "evidence.next.verify"
+                d.Verify, "verify.next.ship"
+                d.Ship, "ship.next.protectedBoundary"
+                d.Agents, "agentsGenerated"
+            ]
 
         for (report, actionId) in expectedActionIds do
             Assert.Equal(Some actionId, report.NextAction |> Option.map (fun action -> action.ActionId))
@@ -603,9 +628,11 @@ module LifecycleSmokeTests =
         // The originating stage report records each generated view's sources
         // and generator identity.
         let viewReports =
-            [ $"readiness/{workId}/analysis.json", d.Analyze
-              $"readiness/{workId}/verify.json", d.Verify
-              $"readiness/{workId}/ship.json", d.Ship ]
+            [
+                $"readiness/{workId}/analysis.json", d.Analyze
+                $"readiness/{workId}/verify.json", d.Verify
+                $"readiness/{workId}/ship.json", d.Ship
+            ]
 
         for (path, report) in viewReports do
             match report.GeneratedViews |> List.tryFind (fun v -> v.Path = path) with
@@ -665,13 +692,16 @@ module LifecycleSmokeTests =
         TestSupport.writeRelative root ".fsgg/tooling.yml" "# incomplete tooling\n"
 
         let reports =
-            [ "charter", TestSupport.runCharter root workId title
-              "specify", TestSupport.runSpecify root workId title ]
+            [
+                "charter", TestSupport.runCharter root workId title
+                "specify", TestSupport.runSpecify root workId title
+            ]
 
         let clarify =
             TestSupport.runRequest
                 { TestSupport.clarifyRequest root workId title with
-                    InputText = None }
+                    InputText = None
+                }
 
         let checklist = TestSupport.runChecklist root workId title
         let plan = TestSupport.runPlan root workId title
@@ -680,21 +710,25 @@ module LifecycleSmokeTests =
 
         let reports =
             reports
-            @ [ "clarify", clarify
+            @ [
+                "clarify", clarify
                 "checklist", checklist
                 "plan", plan
-                "tasks", TestSupport.runTasks root workId title ]
+                "tasks", TestSupport.runTasks root workId title
+            ]
 
         TestSupport.writePassingTaskEvidenceFor root workId
 
         let reports =
             reports
-            @ [ "analyze", TestSupport.runAnalyze root workId title
+            @ [
+                "analyze", TestSupport.runAnalyze root workId title
                 "evidence", TestSupport.runEvidence root workId title
                 "verify", TestSupport.runVerify root workId title
                 "ship", TestSupport.runShip root workId title
                 "agents", TestSupport.runAgents root workId
-                "refresh", TestSupport.runRefresh root workId ]
+                "refresh", TestSupport.runRefresh root workId
+            ]
 
         // Every command stays usable and performs no Governance evaluation/enforcement.
         for (label, report) in reports do
@@ -702,12 +736,14 @@ module LifecycleSmokeTests =
             let json = serializeReport report
 
             for enforcementField in
-                [ "\"route\""
-                  "\"profile\""
-                  "\"freshness\""
-                  "\"gate\""
-                  "\"audit\""
-                  "\"protectedBranch\"" ] do
+                [
+                    "\"route\""
+                    "\"profile\""
+                    "\"freshness\""
+                    "\"gate\""
+                    "\"audit\""
+                    "\"protectedBranch\""
+                ] do
                 Assert.DoesNotContain(enforcementField, json)
 
     [<Fact>]

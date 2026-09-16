@@ -19,30 +19,35 @@ module RecordReceiptTests =
     /// case cannot pass by accident — if the base is not coherent, the first assertion fails and every
     /// derived case becomes vacuous, which is the failure mode a per-case literal invites.
     let private decisionReceipt =
-        { Kind = "decision"
-          Locator = "docs/decisions/adr-0035.md"
-          LocatorContract = "durable-locator-v1"
-          Digest = sha "a"
-          Statement = "ADR-0035 records that SDD never runs a test."
-          RecordedAt = "2026-08-15T09:49:00Z" }
+        {
+            Kind = "decision"
+            Locator = "docs/decisions/adr-0035.md"
+            LocatorContract = "durable-locator-v1"
+            Digest = sha "a"
+            Statement = "ADR-0035 records that SDD never runs a test."
+            RecordedAt = "2026-08-15T09:49:00Z"
+        }
 
     let private issueReceipt =
         { decisionReceipt with
             Kind = "issue"
             Locator = "https://example.invalid/rows/865"
-            Digest = "" }
+            Digest = ""
+        }
 
     let private commitReceipt =
         { decisionReceipt with
             Kind = "commit"
             Locator = String.replicate 40 "a"
-            Digest = "" }
+            Digest = ""
+        }
 
     let private declarationWith receipt =
         { EvidenceCodec.declarationSeed with
             Result = "pass"
             Synthetic = false
-            RecordReceipt = receipt }
+            RecordReceipt = receipt
+        }
 
     // ===== coherence: the three kinds that ARE coherent =====
 
@@ -69,7 +74,8 @@ module RecordReceiptTests =
             let reason =
                 recordReceiptInconsistency
                     { decisionReceipt with
-                        LocatorContract = contract }
+                        LocatorContract = contract
+                    }
 
             Assert.True(Option.isSome reason, $"locatorContract '{contract}' must be refused")
             Assert.Contains("locatorContract", Option.get reason)
@@ -80,18 +86,26 @@ module RecordReceiptTests =
         // this repository, and a `commit` locator that is a path is not an object name. Checking only
         // for non-emptiness would make `locator` a free-text field wearing a schema.
         let wrong =
-            [ { decisionReceipt with
-                  Locator = "https://example.invalid/rows/865" }
-              { decisionReceipt with
-                  Locator = "../outside/adr.md" }
-              { issueReceipt with
-                  Locator = "docs/decisions/adr-0035.md" }
-              { issueReceipt with
-                  Locator = "http://example.invalid/rows/865" }
-              { commitReceipt with
-                  Locator = "docs/decisions/adr-0035.md" }
-              { commitReceipt with
-                  Locator = String.replicate 39 "a" } ]
+            [
+                { decisionReceipt with
+                    Locator = "https://example.invalid/rows/865"
+                }
+                { decisionReceipt with
+                    Locator = "../outside/adr.md"
+                }
+                { issueReceipt with
+                    Locator = "docs/decisions/adr-0035.md"
+                }
+                { issueReceipt with
+                    Locator = "http://example.invalid/rows/865"
+                }
+                { commitReceipt with
+                    Locator = "docs/decisions/adr-0035.md"
+                }
+                { commitReceipt with
+                    Locator = String.replicate 39 "a"
+                }
+            ]
 
         for receipt in wrong do
             Assert.True(
@@ -104,10 +118,12 @@ module RecordReceiptTests =
         // The digest is what makes a repository-local record STRONGER evidence than a remote one, so a
         // decision receipt that omits it has given up the only property SDD can check itself.
         for digest in
-            [ ""
-              "deadbeef"
-              "sha1:" + String.replicate 40 "a"
-              "sha256:" + String.replicate 63 "a" ] do
+            [
+                ""
+                "deadbeef"
+                "sha1:" + String.replicate 40 "a"
+                "sha256:" + String.replicate 63 "a"
+            ] do
             let reason = recordReceiptInconsistency { decisionReceipt with Digest = digest }
 
             Assert.True(Option.isSome reason, $"decision digest '{digest}' must be refused")
@@ -132,7 +148,8 @@ module RecordReceiptTests =
             let reason =
                 recordReceiptInconsistency
                     { decisionReceipt with
-                        Statement = statement }
+                        Statement = statement
+                    }
 
             Assert.True(Option.isSome reason)
             Assert.Contains("statement", Option.get reason)
@@ -143,7 +160,8 @@ module RecordReceiptTests =
             let reason =
                 recordReceiptInconsistency
                     { decisionReceipt with
-                        RecordedAt = recorded }
+                        RecordedAt = recorded
+                    }
 
             Assert.True(Option.isSome reason, $"recordedAt '{recorded}' must be refused")
             Assert.Contains("recordedAt", Option.get reason)
@@ -175,7 +193,8 @@ module RecordReceiptTests =
         let deferral =
             { EvidenceCodec.declarationSeed with
                 Kind = EvidenceKind.Deferral
-                Result = "deferred" }
+                Result = "deferred"
+            }
 
         Assert.True(obligationIsRecorded [ declarationWith (Some decisionReceipt); deferral ])
 
@@ -191,13 +210,16 @@ module RecordReceiptTests =
             { declarationWith None with
                 ObservedRun =
                     Some
-                        { Source = "artifacts/test-results.trx"
-                          Digest = sha "c"
-                          DigestContract = "exact-bytes-v1"
-                          Outcome = "passed"
-                          Passed = 12
-                          Failed = 0
-                          Skipped = 0 } }
+                        {
+                            Source = "artifacts/test-results.trx"
+                            Digest = sha "c"
+                            DigestContract = "exact-bytes-v1"
+                            Outcome = "passed"
+                            Passed = 12
+                            Failed = 0
+                            Skipped = 0
+                        }
+            }
 
         // The run really is observed — so this asserts the DISPATCH, not an incidental failure of the
         // observed-run rule.

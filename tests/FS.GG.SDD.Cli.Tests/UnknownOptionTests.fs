@@ -21,24 +21,26 @@ module UnknownOptionTests =
     module Commands = FS.GG.SDD.Commands.Tests.TestSupport
 
     let private everyCommand =
-        [ Init
-          Charter
-          Specify
-          Clarify
-          Checklist
-          Plan
-          Tasks
-          Analyze
-          Evidence
-          Verify
-          Ship
-          Agents
-          Refresh
-          Scaffold
-          Doctor
-          Upgrade
-          Lint
-          Surface ]
+        [
+            Init
+            Charter
+            Specify
+            Clarify
+            Checklist
+            Plan
+            Tasks
+            Analyze
+            Evidence
+            Verify
+            Ship
+            Agents
+            Refresh
+            Scaffold
+            Doctor
+            Upgrade
+            Lint
+            Surface
+        ]
 
     // ----- the scanner -----
 
@@ -235,9 +237,11 @@ module UnknownOptionTests =
         let stderr = proc.StandardError.ReadToEnd()
         proc.WaitForExit(30000) |> ignore
 
-        {| ExitCode = proc.ExitCode
-           StdOut = stdout
-           StdErr = stderr |}
+        {|
+            ExitCode = proc.ExitCode
+            StdOut = stdout
+            StdErr = stderr
+        |}
 
     let private withTempDirs (body: string -> string -> unit) =
         let root = Path.Combine(Path.GetTempPath(), $"fsgg-196-{Guid.NewGuid():N}")

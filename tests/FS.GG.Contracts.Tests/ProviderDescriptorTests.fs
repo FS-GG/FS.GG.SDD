@@ -6,18 +6,20 @@ open Xunit
 module ProviderDescriptorTests =
 
     let private baseDescriptor: Provider.ProviderDescriptor =
-        { Name = "fixture"
-          ContractVersion = "1.0.0"
-          TemplateId = "fixture-template"
-          Source = "/abs/path/ok"
-          Parameters = []
-          Build = None
-          Test = None
-          Run = None
-          Verify = None
-          NameParameter = "name"
-          IdentifierParameter = None
-          MinimumCliVersion = None }
+        {
+            Name = "fixture"
+            ContractVersion = "1.0.0"
+            TemplateId = "fixture-template"
+            Source = "/abs/path/ok"
+            Parameters = []
+            Build = None
+            Test = None
+            Run = None
+            Verify = None
+            NameParameter = "name"
+            IdentifierParameter = None
+            MinimumCliVersion = None
+        }
 
     // SC-003 / Scenario D: a descriptor with no command fields exposes them absent,
     // so consumers fall back to today's platform defaults (no observable change).
@@ -32,8 +34,10 @@ module ProviderDescriptorTests =
     [<Fact>]
     let ``descriptor declaring commands exposes executable and arguments as authored`` () =
         let cmd: Provider.DeclaredCommand =
-            { Executable = "dotnet"
-              Arguments = [ "build"; "-c"; "Release" ] }
+            {
+                Executable = "dotnet"
+                Arguments = [ "build"; "-c"; "Release" ]
+            }
 
         let d = { baseDescriptor with Build = Some cmd }
 
@@ -47,13 +51,16 @@ module ProviderDescriptorTests =
     [<Fact>]
     let ``the five preserved fields carry the current SDD descriptor shape`` () =
         let param: Provider.ProviderParameterSpec =
-            { Key = "license"
-              Required = false
-              Default = Some "MIT" }
+            {
+                Key = "license"
+                Required = false
+                Default = Some "MIT"
+            }
 
         let d =
             { baseDescriptor with
-                Parameters = [ param ] }
+                Parameters = [ param ]
+            }
 
         Assert.Equal("fixture", d.Name)
         Assert.Equal("1.0.0", d.ContractVersion)
@@ -75,14 +82,16 @@ module ProviderDescriptorTests =
             "name",
             Provider.resolveNameParameter
                 { baseDescriptor with
-                    NameParameter = "" }
+                    NameParameter = ""
+                }
         )
 
         Assert.Equal(
             "name",
             Provider.resolveNameParameter
                 { baseDescriptor with
-                    NameParameter = "   " }
+                    NameParameter = "   "
+                }
         )
 
     [<Fact>]
@@ -91,7 +100,8 @@ module ProviderDescriptorTests =
             "projectName",
             Provider.resolveNameParameter
                 { baseDescriptor with
-                    NameParameter = "projectName" }
+                    NameParameter = "projectName"
+                }
         )
 
     // Edge Case / Principle VIII: a declared command with a blank executable is
@@ -102,14 +112,18 @@ module ProviderDescriptorTests =
 
         Assert.True(
             Provider.isMalformed
-                { Executable = "   "
-                  Arguments = [ "x" ] }
+                {
+                    Executable = "   "
+                    Arguments = [ "x" ]
+                }
         )
 
     [<Fact>]
     let ``isMalformed is false for a declared executable`` () =
         Assert.False(
             Provider.isMalformed
-                { Executable = "dotnet"
-                  Arguments = [] }
+                {
+                    Executable = "dotnet"
+                    Arguments = []
+                }
         )

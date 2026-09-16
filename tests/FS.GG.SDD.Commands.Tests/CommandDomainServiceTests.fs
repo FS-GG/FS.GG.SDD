@@ -38,7 +38,9 @@ module CommandDomainServiceTests =
     [<Fact>]
     let ``diagnostic facade delegates correction routing`` () =
         let diagnostics =
-            [ DiagnosticConstructors.missingSpecificationPrerequisite "work/x/spec.md" "Specification is required." ]
+            [
+                DiagnosticConstructors.missingSpecificationPrerequisite "work/x/spec.md" "Specification is required."
+            ]
 
         Assert.Equal(Some Specify, DiagnosticRouting.planCorrection diagnostics)
 

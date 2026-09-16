@@ -38,12 +38,14 @@ module internal EarlyStageAuthoring =
             with
             | Some schemaVersion, Some workId, Some title, Some stage, Some changeTier, Some status ->
                 Ok
-                    { SchemaVersion = schemaVersion
-                      WorkId = workId
-                      Title = title
-                      Stage = stage
-                      ChangeTier = changeTier
-                      Status = status }
+                    {
+                        SchemaVersion = schemaVersion
+                        WorkId = workId
+                        Title = title
+                        Stage = stage
+                        ChangeTier = changeTier
+                        Status = status
+                    }
             | _ -> Error(malformedCharterFrontMatter path "Charter front matter is incomplete.")
 
     let titleFromWorkId (workId: string) =
@@ -146,7 +148,8 @@ module internal EarlyStageAuthoring =
                 ->
                 Some(
                     { snapshot with
-                        Path = normalizeRelativePath path }
+                        Path = normalizeRelativePath path
+                    }
                 )
             | _ -> None)
 
@@ -180,34 +183,38 @@ module internal EarlyStageAuthoring =
         | None, None, None -> [ outsideProject () ]
         | _ ->
             let missing =
-                [ if Option.isNone project then
-                      missingProjectConfig ".fsgg/project.yml"
-                  if Option.isNone sdd then
-                      missingSddConfig ".fsgg/sdd.yml"
-                  if Option.isNone agents then
-                      missingAgentsConfig ".fsgg/agents.yml" ]
+                [
+                    if Option.isNone project then
+                        missingProjectConfig ".fsgg/project.yml"
+                    if Option.isNone sdd then
+                        missingSddConfig ".fsgg/sdd.yml"
+                    if Option.isNone agents then
+                        missingAgentsConfig ".fsgg/agents.yml"
+                ]
 
             let malformed =
-                [ match project with
-                  | Some snapshot ->
-                      match parseProjectConfig snapshot with
-                      | Ok _ -> ()
-                      | Error _ -> yield malformedProjectConfig snapshot.Path
-                  | None -> ()
+                [
+                    match project with
+                    | Some snapshot ->
+                        match parseProjectConfig snapshot with
+                        | Ok _ -> ()
+                        | Error _ -> yield malformedProjectConfig snapshot.Path
+                    | None -> ()
 
-                  match sdd with
-                  | Some snapshot ->
-                      match parseSddLifecyclePolicy snapshot with
-                      | Ok _ -> ()
-                      | Error _ -> yield malformedSddConfig snapshot.Path
-                  | None -> ()
+                    match sdd with
+                    | Some snapshot ->
+                        match parseSddLifecyclePolicy snapshot with
+                        | Ok _ -> ()
+                        | Error _ -> yield malformedSddConfig snapshot.Path
+                    | None -> ()
 
-                  match agents with
-                  | Some snapshot ->
-                      match parseAgentGuidanceConfig snapshot with
-                      | Ok _ -> ()
-                      | Error _ -> yield malformedAgentsConfig snapshot.Path
-                  | None -> () ]
+                    match agents with
+                    | Some snapshot ->
+                        match parseAgentGuidanceConfig snapshot with
+                        | Ok _ -> ()
+                        | Error _ -> yield malformedAgentsConfig snapshot.Path
+                    | None -> ()
+                ]
 
             missing @ malformed
 

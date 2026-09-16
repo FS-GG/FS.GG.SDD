@@ -49,25 +49,29 @@ module EvidenceRoundTripPropertyTests =
         let text =
             String.concat
                 "\n"
-                [ "schemaVersion: 1"
-                  $"workId: {workId}"
-                  "stage: evidence"
-                  "status: evidenceReady"
-                  $"sourceSpec: work/{workId}/spec.md"
-                  $"sourceClarifications: work/{workId}/clarifications.md"
-                  $"sourceChecklist: work/{workId}/checklist.md"
-                  $"sourcePlan: work/{workId}/plan.md"
-                  $"sourceTasks: work/{workId}/tasks.yml"
-                  $"sourceAnalysis: readiness/{workId}/analysis.json"
-                  "sourceSnapshots: []"
-                  "evidence: []"
-                  "lifecycleNotes: []" ]
+                [
+                    "schemaVersion: 1"
+                    $"workId: {workId}"
+                    "stage: evidence"
+                    "status: evidenceReady"
+                    $"sourceSpec: work/{workId}/spec.md"
+                    $"sourceClarifications: work/{workId}/clarifications.md"
+                    $"sourceChecklist: work/{workId}/checklist.md"
+                    $"sourcePlan: work/{workId}/plan.md"
+                    $"sourceTasks: work/{workId}/tasks.yml"
+                    $"sourceAnalysis: readiness/{workId}/analysis.json"
+                    "sourceSnapshots: []"
+                    "evidence: []"
+                    "lifecycleNotes: []"
+                ]
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact
         | Error diagnostics -> failwithf "base evidence.yml did not parse: %A" diagnostics
@@ -152,14 +156,16 @@ module EvidenceRoundTripPropertyTests =
             let! result = optScalar
 
             return
-                { ReferenceId = id
-                  Kind = kind
-                  Path = path
-                  Uri = uri
-                  Digest = digest
-                  RelatedSourceId = related
-                  Result = result
-                  SourceLocation = None }
+                {
+                    ReferenceId = id
+                    Kind = kind
+                    Path = path
+                    Uri = uri
+                    Digest = digest
+                    RelatedSourceId = related
+                    Result = result
+                    SourceLocation = None
+                }
         }
 
     let private sourceRefs: Gen<EvidenceSourceReference list> =
@@ -179,16 +185,20 @@ module EvidenceRoundTripPropertyTests =
 
     let private disclosure: Gen<SyntheticDisclosure option> =
         Gen.oneof
-            [ Gen.constant None
-              gen {
-                  let! standsInFor = nonNullSafeToken
-                  let! reason = nonNullSafeToken
+            [
+                Gen.constant None
+                gen {
+                    let! standsInFor = nonNullSafeToken
+                    let! reason = nonNullSafeToken
 
-                  return
-                      Some
-                          { StandsInFor = standsInFor
-                            Reason = reason }
-              } ]
+                    return
+                        Some
+                            {
+                                StandsInFor = standsInFor
+                                Reason = reason
+                            }
+                }
+            ]
 
     // FS.GG.SDD#350: the receipt round-trips through the SAME shared field list as every other
     // authored field, so it is held to the same property. A receipt the renderer emitted and the
@@ -199,24 +209,28 @@ module EvidenceRoundTripPropertyTests =
     // covers a failing receipt too — not just the shape the happy path records.
     let private observedRun: Gen<ObservedRun option> =
         Gen.oneof
-            [ Gen.constant None
-              gen {
-                  let! source = nonNullSafeToken
-                  let! hex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 64
-                  let! passed = Gen.choose (0, 5000)
-                  let! failed = Gen.choose (0, 50)
-                  let! skipped = Gen.choose (0, 50)
+            [
+                Gen.constant None
+                gen {
+                    let! source = nonNullSafeToken
+                    let! hex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 64
+                    let! passed = Gen.choose (0, 5000)
+                    let! failed = Gen.choose (0, 50)
+                    let! skipped = Gen.choose (0, 50)
 
-                  return
-                      Some
-                          { Source = source
-                            Digest = "sha256:" + System.String(hex)
-                            DigestContract = "exact-bytes-v1"
-                            Outcome = (if failed = 0 then "passed" else "failed")
-                            Passed = passed
-                            Failed = failed
-                            Skipped = skipped }
-              } ]
+                    return
+                        Some
+                            {
+                                Source = source
+                                Digest = "sha256:" + System.String(hex)
+                                DigestContract = "exact-bytes-v1"
+                                Outcome = (if failed = 0 then "passed" else "failed")
+                                Passed = passed
+                                Failed = failed
+                                Skipped = skipped
+                            }
+                }
+            ]
 
     // FS.GG.SDD#865. The record receipt joins the same round-trip property, and for the same reason the
     // observed-run receipt did: a field the renderer emits and the reader drops would silently
@@ -225,66 +239,80 @@ module EvidenceRoundTripPropertyTests =
     // is an optional field, and `lowerRecordReceipt` deliberately omits an empty digest.
     let private recordReceipt: Gen<RecordReceipt option> =
         Gen.oneof
-            [ Gen.constant None
-              gen {
-                  let! hex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 64
-                  let! statement = nonNullSafeToken
-                  let! shaHex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 40
-                  let! locatorToken = nonNullSafeToken
+            [
+                Gen.constant None
+                gen {
+                    let! hex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 64
+                    let! statement = nonNullSafeToken
+                    let! shaHex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 40
+                    let! locatorToken = nonNullSafeToken
 
-                  let! kindAndLocatorAndDigest =
-                      Gen.elements
-                          [ "decision", "docs/decisions/" + locatorToken + ".md", "sha256:" + System.String(hex)
-                            "issue", "https://example.invalid/rows/" + locatorToken, ""
-                            "commit", System.String(shaHex), "" ]
+                    let! kindAndLocatorAndDigest =
+                        Gen.elements
+                            [
+                                "decision", "docs/decisions/" + locatorToken + ".md", "sha256:" + System.String(hex)
+                                "issue", "https://example.invalid/rows/" + locatorToken, ""
+                                "commit", System.String(shaHex), ""
+                            ]
 
-                  let kind, locator, digest = kindAndLocatorAndDigest
+                    let kind, locator, digest = kindAndLocatorAndDigest
 
-                  return
-                      Some
-                          { Kind = kind
-                            Locator = locator
-                            LocatorContract = "durable-locator-v1"
-                            Digest = digest
-                            Statement = statement
-                            RecordedAt = "2026-08-15T00:00:00Z" }
-              } ]
+                    return
+                        Some
+                            {
+                                Kind = kind
+                                Locator = locator
+                                LocatorContract = "durable-locator-v1"
+                                Digest = digest
+                                Statement = statement
+                                RecordedAt = "2026-08-15T00:00:00Z"
+                            }
+                }
+            ]
 
     let private performanceBudget: Gen<PerformanceBudgetDeclaration option> =
         Gen.oneof
-            [ Gen.constant None
-              Gen.constant (
-                  Some
-                      { ArtifactPath = "readiness/work/performance-baseline.txt"
-                        Intent = None
-                        TargetFps = 60
-                        WorkloadIds = [ "idle-play"; "movement" ]
-                        StressWorkloadIds = [ "pointer-stress" ]
-                        WorkloadDefinitionDigests =
-                          [ "idle-play=sha256:idle"
-                            "movement=sha256:movement"
-                            "pointer-stress=sha256:pointer" ]
-                        CurrencyToken = "commit:abc123"
-                        CapturedAfterUtc = "2026-07-25T00:00:00Z"
-                        MaxP95Ms = 16.67m
-                        MaxP99Ms = 25m
-                        MaxCatchUpFrames = 0
-                        MeasurementScope = "normal 60 FPS play"
-                        RequiredCapability = "bounded-headless-update-render"
-                        LiveCompositorRequired = false
-                        DeferralIssue = Some "FS-GG/Game#123" }
-              ) ]
+            [
+                Gen.constant None
+                Gen.constant (
+                    Some
+                        {
+                            ArtifactPath = "readiness/work/performance-baseline.txt"
+                            Intent = None
+                            TargetFps = 60
+                            WorkloadIds = [ "idle-play"; "movement" ]
+                            StressWorkloadIds = [ "pointer-stress" ]
+                            WorkloadDefinitionDigests =
+                                [
+                                    "idle-play=sha256:idle"
+                                    "movement=sha256:movement"
+                                    "pointer-stress=sha256:pointer"
+                                ]
+                            CurrencyToken = "commit:abc123"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
+                            MaxP95Ms = 16.67m
+                            MaxP99Ms = 25m
+                            MaxCatchUpFrames = 0
+                            MeasurementScope = "normal 60 FPS play"
+                            RequiredCapability = "bounded-headless-update-render"
+                            LiveCompositorRequired = false
+                            DeferralIssue = Some "FS-GG/Game#123"
+                        }
+                )
+            ]
 
     let private evidenceKind: Gen<EvidenceKind> =
         Gen.elements
-            [ EvidenceKind.Implementation
-              EvidenceKind.Verification
-              EvidenceKind.Review
-              EvidenceKind.GeneratedViewEvidence
-              EvidenceKind.Synthetic
-              EvidenceKind.Deferral
-              EvidenceKind.Note
-              EvidenceKind.Missing ]
+            [
+                EvidenceKind.Implementation
+                EvidenceKind.Verification
+                EvidenceKind.Review
+                EvidenceKind.GeneratedViewEvidence
+                EvidenceKind.Synthetic
+                EvidenceKind.Deferral
+                EvidenceKind.Note
+                EvidenceKind.Missing
+            ]
 
     // A subject `type: task`/`requirement` prepends the subject id into the task/requirement ref
     // set on read; the property avoids that reader-side merge by generating other subject types,
@@ -300,7 +328,9 @@ module EvidenceRoundTripPropertyTests =
             let! kind = evidenceKind
             let! subjType = subjectType
             let! subjId = safeToken
-            let! taskRefs = idSubset (fun i -> createTaskId (sprintf "T%03d" i) |> orFail "taskId") (fun x -> x.Value)
+
+            let! taskRefs =
+                idSubset (fun i -> createTaskId (sprintf "T%03d" i) |> orFail "taskId") (fun x -> x.Value)
 
             let! requirementRefs =
                 idSubset (fun i -> createRequirementId (sprintf "FR-%03d" i) |> orFail "reqId") (fun x -> x.Value)
@@ -333,32 +363,34 @@ module EvidenceRoundTripPropertyTests =
             let! notes = sortedDistinctTokens
 
             return
-                { Id = id
-                  Kind = kind
-                  Subject = { SubjectType = subjType; Id = subjId }
-                  TaskRefs = taskRefs
-                  RequirementRefs = requirementRefs
-                  AcceptanceScenarioRefs = acceptanceRefs
-                  ClarificationDecisionRefs = decisionRefs
-                  ChecklistResultRefs = checklistRefs
-                  PlanDecisionRefs = planRefs
-                  ObligationRefs = obligationRefs
-                  ArtifactRefs = artifactRefs
-                  SourceRefs = refs
-                  Result = result
-                  Synthetic = synthetic
-                  SyntheticDisclosure = syntheticDisclosure
-                  ObservedRun = receipt
-                  RecordReceipt = record
-                  JourneyReceipt = None
-                  PerformanceBudget = performance
-                  Rationale = rationale
-                  Owner = owner
-                  Scope = scope
-                  LaterLifecycleVisibility = visibility
-                  Notes = notes
-                  Source = provenanceSource
-                  SourceLocation = None }
+                {
+                    Id = id
+                    Kind = kind
+                    Subject = { SubjectType = subjType; Id = subjId }
+                    TaskRefs = taskRefs
+                    RequirementRefs = requirementRefs
+                    AcceptanceScenarioRefs = acceptanceRefs
+                    ClarificationDecisionRefs = decisionRefs
+                    ChecklistResultRefs = checklistRefs
+                    PlanDecisionRefs = planRefs
+                    ObligationRefs = obligationRefs
+                    ArtifactRefs = artifactRefs
+                    SourceRefs = refs
+                    Result = result
+                    Synthetic = synthetic
+                    SyntheticDisclosure = syntheticDisclosure
+                    ObservedRun = receipt
+                    RecordReceipt = record
+                    JourneyReceipt = None
+                    PerformanceBudget = performance
+                    Rationale = rationale
+                    Owner = owner
+                    Scope = scope
+                    LaterLifecycleVisibility = visibility
+                    Notes = notes
+                    Source = provenanceSource
+                    SourceLocation = None
+                }
         }
 
     let rec private sequenceGen (gens: Gen<'a> list) : Gen<'a list> =
@@ -387,7 +419,8 @@ module EvidenceRoundTripPropertyTests =
                 { baseArtifact with
                     Evidence = declarations
                     LifecycleNotes = lifecycleNotes
-                    SourceSnapshots = [] }
+                    SourceSnapshots = []
+                }
         }
 
     // ── The property ─────────────────────────────────────────────────────────────────────
@@ -395,30 +428,32 @@ module EvidenceRoundTripPropertyTests =
     // Project a declaration to its authored partition, dropping parse-assigned provenance
     // (`Source`, `SourceLocation`, and each sourceRef's `SourceLocation`).
     let private authored (declaration: EvidenceDeclaration) =
-        {| Id = declaration.Id
-           Kind = declaration.Kind
-           Subject = declaration.Subject
-           TaskRefs = declaration.TaskRefs
-           RequirementRefs = declaration.RequirementRefs
-           AcceptanceScenarioRefs = declaration.AcceptanceScenarioRefs
-           ClarificationDecisionRefs = declaration.ClarificationDecisionRefs
-           ChecklistResultRefs = declaration.ChecklistResultRefs
-           PlanDecisionRefs = declaration.PlanDecisionRefs
-           ObligationRefs = declaration.ObligationRefs
-           ArtifactRefs = declaration.ArtifactRefs
-           SourceRefs =
-            declaration.SourceRefs
-            |> List.map (fun ref -> { ref with SourceLocation = None })
-           Result = declaration.Result
-           Synthetic = declaration.Synthetic
-           SyntheticDisclosure = declaration.SyntheticDisclosure
-           ObservedRun = declaration.ObservedRun
-           PerformanceBudget = declaration.PerformanceBudget
-           Rationale = declaration.Rationale
-           Owner = declaration.Owner
-           Scope = declaration.Scope
-           LaterLifecycleVisibility = declaration.LaterLifecycleVisibility
-           Notes = declaration.Notes |}
+        {|
+            Id = declaration.Id
+            Kind = declaration.Kind
+            Subject = declaration.Subject
+            TaskRefs = declaration.TaskRefs
+            RequirementRefs = declaration.RequirementRefs
+            AcceptanceScenarioRefs = declaration.AcceptanceScenarioRefs
+            ClarificationDecisionRefs = declaration.ClarificationDecisionRefs
+            ChecklistResultRefs = declaration.ChecklistResultRefs
+            PlanDecisionRefs = declaration.PlanDecisionRefs
+            ObligationRefs = declaration.ObligationRefs
+            ArtifactRefs = declaration.ArtifactRefs
+            SourceRefs =
+                declaration.SourceRefs
+                |> List.map (fun ref -> { ref with SourceLocation = None })
+            Result = declaration.Result
+            Synthetic = declaration.Synthetic
+            SyntheticDisclosure = declaration.SyntheticDisclosure
+            ObservedRun = declaration.ObservedRun
+            PerformanceBudget = declaration.PerformanceBudget
+            Rationale = declaration.Rationale
+            Owner = declaration.Owner
+            Scope = declaration.Scope
+            LaterLifecycleVisibility = declaration.LaterLifecycleVisibility
+            Notes = declaration.Notes
+        |}
 
     let private authoredPartition (artifact: EvidenceArtifact) =
         artifact.Evidence |> List.map authored |> List.sortBy (fun d -> d.Id.Value), artifact.LifecycleNotes
@@ -431,9 +466,11 @@ module EvidenceRoundTripPropertyTests =
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwithf "round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
         | Ok parsed -> authoredPartition artifact = authoredPartition parsed
@@ -448,99 +485,120 @@ module EvidenceRoundTripPropertyTests =
     [<Fact>]
     let ``round-trip preserves every authored field, the #181 sourceRef ids, and a quoted null`` () =
         let declaration =
-            { Id = createEvidenceId "EV001" |> orFail "evId"
-              Kind = EvidenceKind.Verification
-              Subject =
-                { SubjectType = "component"
-                  Id = "renderer" }
-              TaskRefs = [ createTaskId "T001" |> orFail "taskId" ]
-              RequirementRefs = [ createRequirementId "FR-001" |> orFail "reqId" ]
-              AcceptanceScenarioRefs = [ createAcceptanceScenarioId "AC-001" |> orFail "acId" ]
-              ClarificationDecisionRefs = [ createDecisionId "DEC-001" |> orFail "decId" ]
-              ChecklistResultRefs = [ createChecklistResultId "CR-001" |> orFail "crId" ]
-              PlanDecisionRefs = [ createPlanDecisionId "PD-001" |> orFail "pdId" ]
-              ObligationRefs = [ "OBL-1"; "OBL-2" ]
-              ArtifactRefs = [ mkArtifactRef "docs/a.md" ]
-              SourceRefs =
-                [ { ReferenceId = Some "src-1"
-                    Kind = "artifact"
-                    Path = Some "docs/a.md"
-                    Uri = None
-                    Digest = Some "deadbeef"
-                    RelatedSourceId = Some "src-0"
-                    Result = Some "null"
-                    SourceLocation = None } ]
-              Result = "pass"
-              Synthetic = true
-              SyntheticDisclosure =
-                Some
-                    { StandsInFor = "null"
-                      Reason = "stub" }
-              // #350: the receipt is an authored field like any other AS FAR AS THE CODEC IS
-              // CONCERNED — it is recorded rather than typed, but it still has to survive
-              // render→parse, or the next `evidence` run drops it and silently un-observes the
-              // obligation.
-              ObservedRun =
-                Some
-                    { Source = "artifacts/test-results.trx"
-                      Digest = "sha256:" + String.replicate 64 "a"
-                      DigestContract = "exact-bytes-v1"
-                      Outcome = "passed"
-                      Passed = 1630
-                      Failed = 0
-                      Skipped = 4 }
-              // #865: the record receipt is authored rather than recorded, which makes surviving
-              // render→parse MORE important, not less — there is no `--from-test-report` to re-stamp it
-              // if a run drops it. `decision` is the kind chosen here because it is the only one that
-              // carries a digest, so the anchor exercises every field the type has.
-              RecordReceipt =
-                Some
-                    { Kind = "decision"
-                      Locator = "docs/decisions/adr-0035.md"
-                      LocatorContract = "durable-locator-v1"
-                      Digest = "sha256:" + String.replicate 64 "b"
-                      Statement = "ADR-0035 records that SDD never runs a test."
-                      RecordedAt = "2026-08-15T00:00:00Z" }
-              JourneyReceipt = None
-              PerformanceBudget =
-                Some
-                    { ArtifactPath = "readiness/work/performance-baseline.txt"
-                      Intent = None
-                      TargetFps = 60
-                      WorkloadIds = [ "idle-play"; "movement" ]
-                      StressWorkloadIds = [ "pointer-stress" ]
-                      WorkloadDefinitionDigests =
-                        [ "idle-play=sha256:idle"
-                          "movement=sha256:movement"
-                          "pointer-stress=sha256:pointer" ]
-                      CurrencyToken = "commit:abc123"
-                      CapturedAfterUtc = "2026-07-25T00:00:00Z"
-                      MaxP95Ms = 16.67m
-                      MaxP99Ms = 25m
-                      MaxCatchUpFrames = 0
-                      MeasurementScope = "normal 60 FPS play"
-                      RequiredCapability = "bounded-headless-update-render"
-                      LiveCompositorRequired = false
-                      DeferralIssue = Some "FS-GG/Game#123" }
-              Rationale = Some "why"
-              Owner = Some "team"
-              Scope = None
-              LaterLifecycleVisibility = Some "null"
-              Notes = [ "n1"; "n2" ]
-              Source = provenanceSource
-              SourceLocation = None }
+            {
+                Id = createEvidenceId "EV001" |> orFail "evId"
+                Kind = EvidenceKind.Verification
+                Subject =
+                    {
+                        SubjectType = "component"
+                        Id = "renderer"
+                    }
+                TaskRefs = [ createTaskId "T001" |> orFail "taskId" ]
+                RequirementRefs = [ createRequirementId "FR-001" |> orFail "reqId" ]
+                AcceptanceScenarioRefs = [ createAcceptanceScenarioId "AC-001" |> orFail "acId" ]
+                ClarificationDecisionRefs = [ createDecisionId "DEC-001" |> orFail "decId" ]
+                ChecklistResultRefs = [ createChecklistResultId "CR-001" |> orFail "crId" ]
+                PlanDecisionRefs = [ createPlanDecisionId "PD-001" |> orFail "pdId" ]
+                ObligationRefs = [ "OBL-1"; "OBL-2" ]
+                ArtifactRefs = [ mkArtifactRef "docs/a.md" ]
+                SourceRefs =
+                    [
+                        {
+                            ReferenceId = Some "src-1"
+                            Kind = "artifact"
+                            Path = Some "docs/a.md"
+                            Uri = None
+                            Digest = Some "deadbeef"
+                            RelatedSourceId = Some "src-0"
+                            Result = Some "null"
+                            SourceLocation = None
+                        }
+                    ]
+                Result = "pass"
+                Synthetic = true
+                SyntheticDisclosure =
+                    Some
+                        {
+                            StandsInFor = "null"
+                            Reason = "stub"
+                        }
+                // #350: the receipt is an authored field like any other AS FAR AS THE CODEC IS
+                // CONCERNED — it is recorded rather than typed, but it still has to survive
+                // render→parse, or the next `evidence` run drops it and silently un-observes the
+                // obligation.
+                ObservedRun =
+                    Some
+                        {
+                            Source = "artifacts/test-results.trx"
+                            Digest = "sha256:" + String.replicate 64 "a"
+                            DigestContract = "exact-bytes-v1"
+                            Outcome = "passed"
+                            Passed = 1630
+                            Failed = 0
+                            Skipped = 4
+                        }
+                // #865: the record receipt is authored rather than recorded, which makes surviving
+                // render→parse MORE important, not less — there is no `--from-test-report` to re-stamp it
+                // if a run drops it. `decision` is the kind chosen here because it is the only one that
+                // carries a digest, so the anchor exercises every field the type has.
+                RecordReceipt =
+                    Some
+                        {
+                            Kind = "decision"
+                            Locator = "docs/decisions/adr-0035.md"
+                            LocatorContract = "durable-locator-v1"
+                            Digest = "sha256:" + String.replicate 64 "b"
+                            Statement = "ADR-0035 records that SDD never runs a test."
+                            RecordedAt = "2026-08-15T00:00:00Z"
+                        }
+                JourneyReceipt = None
+                PerformanceBudget =
+                    Some
+                        {
+                            ArtifactPath = "readiness/work/performance-baseline.txt"
+                            Intent = None
+                            TargetFps = 60
+                            WorkloadIds = [ "idle-play"; "movement" ]
+                            StressWorkloadIds = [ "pointer-stress" ]
+                            WorkloadDefinitionDigests =
+                                [
+                                    "idle-play=sha256:idle"
+                                    "movement=sha256:movement"
+                                    "pointer-stress=sha256:pointer"
+                                ]
+                            CurrencyToken = "commit:abc123"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
+                            MaxP95Ms = 16.67m
+                            MaxP99Ms = 25m
+                            MaxCatchUpFrames = 0
+                            MeasurementScope = "normal 60 FPS play"
+                            RequiredCapability = "bounded-headless-update-render"
+                            LiveCompositorRequired = false
+                            DeferralIssue = Some "FS-GG/Game#123"
+                        }
+                Rationale = Some "why"
+                Owner = Some "team"
+                Scope = None
+                LaterLifecycleVisibility = Some "null"
+                Notes = [ "n1"; "n2" ]
+                Source = provenanceSource
+                SourceLocation = None
+            }
 
         let artifact =
             { baseArtifact with
                 Evidence = [ declaration ]
                 LifecycleNotes = [ "kept-note" ]
-                SourceSnapshots = [] }
+                SourceSnapshots = []
+            }
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = renderText artifact
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = renderText artifact
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwithf "anchor round-trip parse failed: %A" diagnostics
         | Ok parsed ->
@@ -555,8 +613,10 @@ module EvidenceRoundTripPropertyTests =
             // #180: a *quoted* disclosure scalar survives as the literal, keeping the gate honest.
             Assert.Equal(
                 Some
-                    { StandsInFor = "null"
-                      Reason = "stub" },
+                    {
+                        StandsInFor = "null"
+                        Reason = "stub"
+                    },
                 reparsed.SyntheticDisclosure
             )
 

@@ -14,30 +14,36 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module Task =
     type TaskFrontMatter =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          SourceChecklist: string
-          SourcePlan: string
-          PublicOrToolFacingImpact: bool option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            SourceChecklist: string
+            SourcePlan: string
+            PublicOrToolFacingImpact: bool option
+        }
 
     type TaskSourceSnapshot =
-        { Label: string
-          Path: string
-          Digest: string option
-          SchemaVersion: int option
-          SourceLocation: SourceLocation option }
+        {
+            Label: string
+            Path: string
+            Digest: string option
+            SchemaVersion: int option
+            SourceLocation: SourceLocation option
+        }
 
     type TaskGraphFinding =
-        { FindingId: string
-          Severity: string
-          Text: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            FindingId: string
+            Severity: string
+            Text: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type TaskStatus =
         | Pending
@@ -47,29 +53,33 @@ module Task =
         | Stale
 
     type WorkTask =
-        { Id: TaskId
-          Title: string
-          Status: TaskStatus
-          Owner: string
-          Dependencies: TaskId list
-          Requirements: RequirementId list
-          Decisions: DecisionId list
-          SourceIds: string list
-          RequiredSkills: string list
-          RequiredEvidence: EvidenceId list
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: TaskId
+            Title: string
+            Status: TaskStatus
+            Owner: string
+            Dependencies: TaskId list
+            Requirements: RequirementId list
+            Decisions: DecisionId list
+            SourceIds: string list
+            RequiredSkills: string list
+            RequiredEvidence: EvidenceId list
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     type TaskFacts =
-        { FrontMatter: TaskFrontMatter
-          SourceSnapshots: TaskSourceSnapshot list
-          Tasks: WorkTask list
-          AcceptedDeferrals: string list
-          Findings: TaskGraphFinding list
-          AdvisoryNotes: string list
-          LifecycleNotes: string list
-          StaleTaskCount: int
-          Diagnostics: Diagnostic list }
+        {
+            FrontMatter: TaskFrontMatter
+            SourceSnapshots: TaskSourceSnapshot list
+            Tasks: WorkTask list
+            AcceptedDeferrals: string list
+            Findings: TaskGraphFinding list
+            AdvisoryNotes: string list
+            LifecycleNotes: string list
+            StaleTaskCount: int
+            Diagnostics: Diagnostic list
+        }
 
     let parseTaskStatus (value: string) =
         match
@@ -100,72 +110,81 @@ module Task =
     // tag, `skipRationale` refines the `Skipped` rationale — its field runs after `status` in order).
     module TaskCodec =
         let taskSeed: WorkTask =
-            { Id = { Value = "T000" }
-              Title = ""
-              Status = Pending
-              Owner = "unassigned"
-              Dependencies = []
-              Requirements = []
-              Decisions = []
-              SourceIds = []
-              RequiredSkills = []
-              RequiredEvidence = []
-              Source = sourceArtifact "work/seed/tasks.yml" ArtifactKind.Tasks
-              SourceLocation = None }
+            {
+                Id = { Value = "T000" }
+                Title = ""
+                Status = Pending
+                Owner = "unassigned"
+                Dependencies = []
+                Requirements = []
+                Decisions = []
+                SourceIds = []
+                RequiredSkills = []
+                RequiredEvidence = []
+                Source = sourceArtifact "work/seed/tasks.yml" ArtifactKind.Tasks
+                SourceLocation = None
+            }
 
         let taskFields: ArtifactCodec.FieldCodec<WorkTask> list =
-            [ ArtifactCodec.mappedScalar "title" id id (fun t -> t.Title) (fun v t -> { t with Title = v })
-              ArtifactCodec.mappedScalar "status" taskStatusSourceValue parseTaskStatus (fun t -> t.Status) (fun v t ->
-                  { t with Status = v })
-              ArtifactCodec.defaultedScalar "owner" "unassigned" (fun t -> t.Owner) (fun v t -> { t with Owner = v })
-              ArtifactCodec.refList
-                  "dependencies"
-                  Identifiers.createTaskId
-                  (fun (id: TaskId) -> id.Value)
-                  (fun t -> t.Dependencies)
-                  (fun v t -> { t with Dependencies = v })
-              ArtifactCodec.refList
-                  "requirements"
-                  Identifiers.createRequirementId
-                  (fun (id: RequirementId) -> id.Value)
-                  (fun t -> t.Requirements)
-                  (fun v t -> { t with Requirements = v })
-              ArtifactCodec.refList
-                  "decisions"
-                  Identifiers.createDecisionId
-                  (fun (id: DecisionId) -> id.Value)
-                  (fun t -> t.Decisions)
-                  (fun v t -> { t with Decisions = v })
-              ArtifactCodec.alwaysInlineList
-                  "sourceIds"
-                  (fun t -> t.SourceIds)
-                  // sourceIds are upper-cased, distinct, and sorted on read (matching the pre-codec
-                  // parser); the renderer already distinct+sorts every inline list.
-                  (fun v t ->
-                      { t with
-                          SourceIds =
-                              v
-                              |> List.map (fun (s: string) -> s.ToUpperInvariant())
-                              |> List.distinct
-                              |> List.sort })
-              ArtifactCodec.alwaysInlineList "requiredSkills" (fun t -> t.RequiredSkills) (fun v t ->
-                  { t with RequiredSkills = v })
-              ArtifactCodec.refList
-                  "requiredEvidence"
-                  Identifiers.createEvidenceId
-                  (fun (id: EvidenceId) -> id.Value)
-                  (fun t -> t.RequiredEvidence)
-                  (fun v t -> { t with RequiredEvidence = v })
-              ArtifactCodec.optionalScalar
-                  "skipRationale"
-                  (fun t ->
-                      match t.Status with
-                      | Skipped rationale -> Some rationale
-                      | _ -> None)
-                  (fun ropt t ->
-                      match t.Status, ropt with
-                      | Skipped _, Some rationale -> { t with Status = Skipped rationale }
-                      | _ -> t) ]
+            [
+                ArtifactCodec.mappedScalar "title" id id (fun t -> t.Title) (fun v t -> { t with Title = v })
+                ArtifactCodec.mappedScalar
+                    "status"
+                    taskStatusSourceValue
+                    parseTaskStatus
+                    (fun t -> t.Status)
+                    (fun v t -> { t with Status = v })
+                ArtifactCodec.defaultedScalar "owner" "unassigned" (fun t -> t.Owner) (fun v t -> { t with Owner = v })
+                ArtifactCodec.refList
+                    "dependencies"
+                    Identifiers.createTaskId
+                    (fun (id: TaskId) -> id.Value)
+                    (fun t -> t.Dependencies)
+                    (fun v t -> { t with Dependencies = v })
+                ArtifactCodec.refList
+                    "requirements"
+                    Identifiers.createRequirementId
+                    (fun (id: RequirementId) -> id.Value)
+                    (fun t -> t.Requirements)
+                    (fun v t -> { t with Requirements = v })
+                ArtifactCodec.refList
+                    "decisions"
+                    Identifiers.createDecisionId
+                    (fun (id: DecisionId) -> id.Value)
+                    (fun t -> t.Decisions)
+                    (fun v t -> { t with Decisions = v })
+                ArtifactCodec.alwaysInlineList
+                    "sourceIds"
+                    (fun t -> t.SourceIds)
+                    // sourceIds are upper-cased, distinct, and sorted on read (matching the pre-codec
+                    // parser); the renderer already distinct+sorts every inline list.
+                    (fun v t ->
+                        { t with
+                            SourceIds =
+                                v
+                                |> List.map (fun (s: string) -> s.ToUpperInvariant())
+                                |> List.distinct
+                                |> List.sort
+                        })
+                ArtifactCodec.alwaysInlineList "requiredSkills" (fun t -> t.RequiredSkills) (fun v t ->
+                    { t with RequiredSkills = v })
+                ArtifactCodec.refList
+                    "requiredEvidence"
+                    Identifiers.createEvidenceId
+                    (fun (id: EvidenceId) -> id.Value)
+                    (fun t -> t.RequiredEvidence)
+                    (fun v t -> { t with RequiredEvidence = v })
+                ArtifactCodec.optionalScalar
+                    "skipRationale"
+                    (fun t ->
+                        match t.Status with
+                        | Skipped rationale -> Some rationale
+                        | _ -> None)
+                    (fun ropt t ->
+                        match t.Status, ropt with
+                        | Skipped _, Some rationale -> { t with Status = Skipped rationale }
+                        | _ -> t)
+            ]
 
     let workIdFromTaskPath (path: string) =
         let normalized = normalizePath path
@@ -191,24 +210,26 @@ module Task =
             |> Option.bind (Identifiers.parseStage >> Result.toOption)
             |> Option.defaultValue LifecycleStage.Tasks
 
-        { SchemaVersion = version
-          WorkId = workId
-          Title = tryScalarAt [ "title" ] workNode |> Option.defaultValue workId.Value
-          Stage = stage
-          Status = tryScalarAt [ "status" ] workNode |> Option.defaultValue "tasksReady"
-          SourceSpec =
-            tryScalarAt [ "sourceSpec" ] workNode
-            |> Option.defaultValue $"work/{workId.Value}/spec.md"
-          SourceClarifications =
-            tryScalarAt [ "sourceClarifications" ] workNode
-            |> Option.defaultValue $"work/{workId.Value}/clarifications.md"
-          SourceChecklist =
-            tryScalarAt [ "sourceChecklist" ] workNode
-            |> Option.defaultValue $"work/{workId.Value}/checklist.md"
-          SourcePlan =
-            tryScalarAt [ "sourcePlan" ] workNode
-            |> Option.defaultValue $"work/{workId.Value}/plan.md"
-          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] workNode }
+        {
+            SchemaVersion = version
+            WorkId = workId
+            Title = tryScalarAt [ "title" ] workNode |> Option.defaultValue workId.Value
+            Stage = stage
+            Status = tryScalarAt [ "status" ] workNode |> Option.defaultValue "tasksReady"
+            SourceSpec =
+                tryScalarAt [ "sourceSpec" ] workNode
+                |> Option.defaultValue $"work/{workId.Value}/spec.md"
+            SourceClarifications =
+                tryScalarAt [ "sourceClarifications" ] workNode
+                |> Option.defaultValue $"work/{workId.Value}/clarifications.md"
+            SourceChecklist =
+                tryScalarAt [ "sourceChecklist" ] workNode
+                |> Option.defaultValue $"work/{workId.Value}/checklist.md"
+            SourcePlan =
+                tryScalarAt [ "sourcePlan" ] workNode
+                |> Option.defaultValue $"work/{workId.Value}/plan.md"
+            PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] workNode
+        }
 
     let parseTaskSourceSnapshots root : TaskSourceSnapshot list =
         trySequenceAt [ "sources" ] root
@@ -228,13 +249,15 @@ module Task =
                                 | _ -> None)
 
                         Some(
-                            { Label = label
-                              Path = normalizePath path
-                              Digest =
-                                tryScalarAt [ "digest" ] mapping
-                                |> Option.map (fun value -> value.ToLowerInvariant())
-                              SchemaVersion = schemaVersion
-                              SourceLocation = sourceLocation (index + 1) }
+                            {
+                                Label = label
+                                Path = normalizePath path
+                                Digest =
+                                    tryScalarAt [ "digest" ] mapping
+                                    |> Option.map (fun value -> value.ToLowerInvariant())
+                                SchemaVersion = schemaVersion
+                                SourceLocation = sourceLocation (index + 1)
+                            }
                             : TaskSourceSnapshot
                         )
                     | _ -> None))
@@ -254,11 +277,13 @@ module Task =
                         tryScalarAt [ "id" ] mapping
                         |> Option.defaultValue (sprintf "TF-%03d" (index + 1))
 
-                    { FindingId = id
-                      Severity = tryScalarAt [ "severity" ] mapping |> Option.defaultValue "warning"
-                      Text = tryScalarAt [ "text" ] mapping |> Option.defaultValue id
-                      SourceIds = scalarList [ "sourceIds" ] mapping
-                      SourceLocation = sourceLocation (index + 1) }))
+                    {
+                        FindingId = id
+                        Severity = tryScalarAt [ "severity" ] mapping |> Option.defaultValue "warning"
+                        Text = tryScalarAt [ "text" ] mapping |> Option.defaultValue id
+                        SourceIds = scalarList [ "sourceIds" ] mapping
+                        SourceLocation = sourceLocation (index + 1)
+                    }))
             |> Seq.choose id
             |> Seq.toList)
         |> Option.defaultValue []
@@ -306,18 +331,20 @@ module Task =
                                 | None -> None, []
                                 | Some rawId ->
                                     let refDiagnostics =
-                                        [ scalarList [ "dependencies" ] mapping
-                                          |> malformedRefs Identifiers.createTaskId
-                                          |> List.map (Diagnostics.malformedReference artifact "task dependency")
-                                          scalarList [ "requirements" ] mapping
-                                          |> malformedRefs Identifiers.createRequirementId
-                                          |> List.map (Diagnostics.malformedReference artifact "requirement")
-                                          scalarList [ "decisions" ] mapping
-                                          |> malformedRefs Identifiers.createDecisionId
-                                          |> List.map (Diagnostics.malformedReference artifact "decision")
-                                          scalarList [ "requiredEvidence" ] mapping
-                                          |> malformedRefs Identifiers.createEvidenceId
-                                          |> List.map (Diagnostics.malformedReference artifact "evidence") ]
+                                        [
+                                            scalarList [ "dependencies" ] mapping
+                                            |> malformedRefs Identifiers.createTaskId
+                                            |> List.map (Diagnostics.malformedReference artifact "task dependency")
+                                            scalarList [ "requirements" ] mapping
+                                            |> malformedRefs Identifiers.createRequirementId
+                                            |> List.map (Diagnostics.malformedReference artifact "requirement")
+                                            scalarList [ "decisions" ] mapping
+                                            |> malformedRefs Identifiers.createDecisionId
+                                            |> List.map (Diagnostics.malformedReference artifact "decision")
+                                            scalarList [ "requiredEvidence" ] mapping
+                                            |> malformedRefs Identifiers.createEvidenceId
+                                            |> List.map (Diagnostics.malformedReference artifact "evidence")
+                                        ]
                                         |> List.concat
 
                                     match Identifiers.createTaskId rawId with
@@ -334,7 +361,8 @@ module Task =
                                                 ArtifactCodec.foldInto
                                                     TaskCodec.taskFields
                                                     { TaskCodec.taskSeed with
-                                                        Title = Identifiers.taskIdValue id }
+                                                        Title = Identifiers.taskIdValue id
+                                                    }
                                                     mapping
                                             with
                                             | Ok value -> value
@@ -344,7 +372,8 @@ module Task =
                                             { decoded with
                                                 Id = id
                                                 Source = artifact
-                                                SourceLocation = sourceLocation (index + 1) },
+                                                SourceLocation = sourceLocation (index + 1)
+                                            },
                                         refDiagnostics)
                         |> Seq.toList)
                     |> Option.defaultValue []
@@ -365,17 +394,19 @@ module Task =
                     |> Diagnostics.sort
 
                 Ok
-                    { FrontMatter = frontMatter
-                      SourceSnapshots =
-                        parseTaskSourceSnapshots root
-                        |> List.sortBy (fun snapshot -> snapshot.Label, snapshot.Path)
-                      Tasks = tasks |> List.sortBy (fun task -> task.Id.Value)
-                      AcceptedDeferrals = acceptedDeferrals |> List.sort
-                      Findings = findings |> List.sortBy (fun finding -> finding.FindingId)
-                      AdvisoryNotes = advisoryNotes |> List.sort
-                      LifecycleNotes = lifecycleNotes
-                      StaleTaskCount = staleCount
-                      Diagnostics = diagnostics }
+                    {
+                        FrontMatter = frontMatter
+                        SourceSnapshots =
+                            parseTaskSourceSnapshots root
+                            |> List.sortBy (fun snapshot -> snapshot.Label, snapshot.Path)
+                        Tasks = tasks |> List.sortBy (fun task -> task.Id.Value)
+                        AcceptedDeferrals = acceptedDeferrals |> List.sort
+                        Findings = findings |> List.sortBy (fun finding -> finding.FindingId)
+                        AdvisoryNotes = advisoryNotes |> List.sort
+                        LifecycleNotes = lifecycleNotes
+                        StaleTaskCount = staleCount
+                        Diagnostics = diagnostics
+                    }
             | _ -> Error versionDiagnostics
 
     // NOT derived (#164). Unioning `requirements`/`decisions` into `SourceIds` here was tried and

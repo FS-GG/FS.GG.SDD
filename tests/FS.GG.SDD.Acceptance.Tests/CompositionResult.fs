@@ -32,56 +32,66 @@ module CompositionResult =
 
     /// The nine asserted facts; every one must hold for `Pass`.
     type Facts =
-        { SkeletonPresent: bool
-          ConstitutionPresent: bool
-          AppBuilds: bool
-          AppRuns: bool
-          GitInitialized: bool
-          ScriptsExecutable: bool
-          ProvenancePartitioned: bool
-          RefreshExcludes: bool
-          ReportedComplete: bool }
+        {
+            SkeletonPresent: bool
+            ConstitutionPresent: bool
+            AppBuilds: bool
+            AppRuns: bool
+            GitInitialized: bool
+            ScriptsExecutable: bool
+            ProvenancePartitioned: bool
+            RefreshExcludes: bool
+            ReportedComplete: bool
+        }
 
     /// Legitimately-variable metadata, null-normalized for golden/diff comparison.
     type Sensed =
-        { ResolvedTemplateVersion: string option
-          ProviderAvailable: bool option
-          Host: string option
-          Timestamp: string option }
+        {
+            ResolvedTemplateVersion: string option
+            ProviderAvailable: bool option
+            Host: string option
+            Timestamp: string option
+        }
 
     type CompositionResultRecord =
-        { SchemaVersion: int
-          Verdict: Verdict
-          ScaffoldOutcome: string
-          ScaffoldDiagnostic: string option
-          Facts: Facts
-          Failure: (string * string) option
-          Sensed: Sensed }
+        {
+            SchemaVersion: int
+            Verdict: Verdict
+            ScaffoldOutcome: string
+            ScaffoldDiagnostic: string option
+            Facts: Facts
+            Failure: (string * string) option
+            Sensed: Sensed
+        }
 
     /// All-false facts — the starting point before a successful scaffold lets facts be asserted.
     let noFacts =
-        { SkeletonPresent = false
-          ConstitutionPresent = false
-          AppBuilds = false
-          AppRuns = false
-          GitInitialized = false
-          ScriptsExecutable = false
-          ProvenancePartitioned = false
-          RefreshExcludes = false
-          ReportedComplete = false }
+        {
+            SkeletonPresent = false
+            ConstitutionPresent = false
+            AppBuilds = false
+            AppRuns = false
+            GitInitialized = false
+            ScriptsExecutable = false
+            ProvenancePartitioned = false
+            RefreshExcludes = false
+            ReportedComplete = false
+        }
 
     /// The canonical (name, value) ordering of the asserted facts — the serialization order and
     /// the order the "first failing fact" is resolved in.
     let orderedFacts (facts: Facts) =
-        [ "skeletonPresent", facts.SkeletonPresent
-          "constitutionPresent", facts.ConstitutionPresent
-          "appBuilds", facts.AppBuilds
-          "appRuns", facts.AppRuns
-          "gitInitialized", facts.GitInitialized
-          "scriptsExecutable", facts.ScriptsExecutable
-          "provenancePartitioned", facts.ProvenancePartitioned
-          "refreshExcludes", facts.RefreshExcludes
-          "reportedComplete", facts.ReportedComplete ]
+        [
+            "skeletonPresent", facts.SkeletonPresent
+            "constitutionPresent", facts.ConstitutionPresent
+            "appBuilds", facts.AppBuilds
+            "appRuns", facts.AppRuns
+            "gitInitialized", facts.GitInitialized
+            "scriptsExecutable", facts.ScriptsExecutable
+            "provenancePartitioned", facts.ProvenancePartitioned
+            "refreshExcludes", facts.RefreshExcludes
+            "reportedComplete", facts.ReportedComplete
+        ]
 
     let private firstFailingFact (facts: Facts) =
         orderedFacts facts |> List.tryFind (snd >> not) |> Option.map fst
@@ -133,21 +143,25 @@ module CompositionResult =
         =
         let verdict = resolveVerdict outcome diagnostic factDiagnostic facts
 
-        { SchemaVersion = 1
-          Verdict = verdict
-          ScaffoldOutcome = outcome
-          ScaffoldDiagnostic = diagnostic
-          Facts = facts
-          Failure = failureOf verdict
-          Sensed = sensed }
+        {
+            SchemaVersion = 1
+            Verdict = verdict
+            ScaffoldOutcome = outcome
+            ScaffoldDiagnostic = diagnostic
+            Facts = facts
+            Failure = failureOf verdict
+            Sensed = sensed
+        }
 
     // T007: null-normalize the sensed block before any byte comparison (golden / two-run diff),
     // mirroring the `ValidationContracts.fs` INV-5 pattern (research D8, FR-011 / SC-005).
     let nullSensed =
-        { ResolvedTemplateVersion = None
-          ProviderAvailable = None
-          Host = None
-          Timestamp = None }
+        {
+            ResolvedTemplateVersion = None
+            ProviderAvailable = None
+            Host = None
+            Timestamp = None
+        }
 
     let normalizeSensed (record: CompositionResultRecord) = { record with Sensed = nullSensed }
 

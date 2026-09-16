@@ -13,26 +13,32 @@ module LifecycleRuleContracts =
     /// (SDD never decides those — `route`/profile/freshness/gate are Governance-owned). Prefer the
     /// handoff for any real Governance integration.
     type GovernanceCompatibility =
-        { RouteAware: bool
-          ProfileAware: bool
-          FreshnessAware: bool
-          EnforceableBySdd: bool }
+        {
+            RouteAware: bool
+            ProfileAware: bool
+            FreshnessAware: bool
+            EnforceableBySdd: bool
+        }
 
     type RuleInput =
-        { Artifact: ArtifactRef
-          Required: bool }
+        {
+            Artifact: ArtifactRef
+            Required: bool
+        }
 
     type LifecycleRuleContract =
-        { SchemaVersion: SchemaVersion
-          Id: string
-          Owner: ArtifactOwner
-          Stage: LifecycleStage
-          Inputs: RuleInput list
-          FindingShape: string
-          DiagnosticIds: string list
-          Evidence: string list
-          TestObligations: string list
-          GovernanceCompatibility: GovernanceCompatibility }
+        {
+            SchemaVersion: SchemaVersion
+            Id: string
+            Owner: ArtifactOwner
+            Stage: LifecycleStage
+            Inputs: RuleInput list
+            FindingShape: string
+            DiagnosticIds: string list
+            Evidence: string list
+            TestObligations: string list
+            GovernanceCompatibility: GovernanceCompatibility
+        }
 
     val sddOnlyCompatibility: unit -> GovernanceCompatibility
     val initialContracts: unit -> LifecycleRuleContract list

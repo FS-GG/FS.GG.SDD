@@ -168,41 +168,45 @@ module internal RenderingSkills =
     /// fail-closed classes surfaced as scaffold diagnostics. All lists are id-sorted / path-ordered
     /// and deterministic.
     type RenderingSkillOutcome =
-        { Writes: CommandEffect list
-          ProvenancePaths: (string * string) list
-          MaterializedIds: string list
-          // The declared `scope` of each materialized owner-skill id (from its manifest row), so a
-          // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
-          MaterializedScopes: Map<string, string>
-          // The stable producer-relative source attribution carried by each materialized manifest
-          // row. Unlike provider-owned rows, these bytes are injected by SDD after the provider
-          // has run, so retaining this field is what marks them as co-tenants rather than silently
-          // presenting them as output owned by the workspace producer.
-          MaterializedSuppliers: Map<string, string>
-          VerifyFailedIds: string list
-          PredicateUnevaluatedIds: string list
-          NamespaceCollisionIds: string list
-          // Ids this channel would have materialized but yielded to an earlier channel that already
-          // owns the same path (see the module note, point 2). Non-blocking advisory; populated by
-          // `HandlersScaffold`, which is the only layer that can see the other channels' plans.
-          YieldedIds: string list
-          // `<id>/<relative-path>` of every delivered file the manifest declares no digest for, so
-          // it could not be verified and was not written (see the module note, point 1).
-          UndeliverableSidecars: string list
-          ManifestError: string option }
+        {
+            Writes: CommandEffect list
+            ProvenancePaths: (string * string) list
+            MaterializedIds: string list
+            // The declared `scope` of each materialized owner-skill id (from its manifest row), so a
+            // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
+            MaterializedScopes: Map<string, string>
+            // The stable producer-relative source attribution carried by each materialized manifest
+            // row. Unlike provider-owned rows, these bytes are injected by SDD after the provider
+            // has run, so retaining this field is what marks them as co-tenants rather than silently
+            // presenting them as output owned by the workspace producer.
+            MaterializedSuppliers: Map<string, string>
+            VerifyFailedIds: string list
+            PredicateUnevaluatedIds: string list
+            NamespaceCollisionIds: string list
+            // Ids this channel would have materialized but yielded to an earlier channel that already
+            // owns the same path (see the module note, point 2). Non-blocking advisory; populated by
+            // `HandlersScaffold`, which is the only layer that can see the other channels' plans.
+            YieldedIds: string list
+            // `<id>/<relative-path>` of every delivered file the manifest declares no digest for, so
+            // it could not be verified and was not written (see the module note, point 1).
+            UndeliverableSidecars: string list
+            ManifestError: string option
+        }
 
     let empty =
-        { Writes = []
-          ProvenancePaths = []
-          MaterializedIds = []
-          MaterializedScopes = Map.empty
-          MaterializedSuppliers = Map.empty
-          VerifyFailedIds = []
-          PredicateUnevaluatedIds = []
-          NamespaceCollisionIds = []
-          YieldedIds = []
-          UndeliverableSidecars = []
-          ManifestError = None }
+        {
+            Writes = []
+            ProvenancePaths = []
+            MaterializedIds = []
+            MaterializedScopes = Map.empty
+            MaterializedSuppliers = Map.empty
+            VerifyFailedIds = []
+            PredicateUnevaluatedIds = []
+            NamespaceCollisionIds = []
+            YieldedIds = []
+            UndeliverableSidecars = []
+            ManifestError = None
+        }
 
     // The whole `fs-gg-sdd-*` namespace is SDD-owned skeleton (CLAUDE.md; `isSddTree` reserves
     // `.agents/skills/fs-gg-sdd-`), so a delivered row anywhere in it is rejected — a prefix guard,
@@ -216,11 +220,13 @@ module internal RenderingSkills =
 
     // The intermediate per-row classification, folded into the output classes.
     type private Classified =
-        { Collisions: string list
-          PredicateUnevaluated: string list
-          VerifyFailed: string list
-          Materializable:
-              (ProductSkillManifest.ProductManifestEntry * (ProductSkillManifest.ProductManifestFile * string) list) list }
+        {
+            Collisions: string list
+            PredicateUnevaluated: string list
+            VerifyFailed: string list
+            Materializable:
+                (ProductSkillManifest.ProductManifestEntry * (ProductSkillManifest.ProductManifestFile * string) list) list
+        }
 
     let private classifyEntry
         (parameters: Map<string, string>)
@@ -233,18 +239,21 @@ module internal RenderingSkills =
             acc // Any non-product row belongs to another delivery seam.
         elif entry.Id.StartsWith(reservedNamespacePrefix, System.StringComparison.Ordinal) then
             { acc with
-                Collisions = acc.Collisions @ [ entry.Id ] }
+                Collisions = acc.Collisions @ [ entry.Id ]
+            }
         elif Option.isNone entry.SuppliedBy then
             // A Rendering-owned row without its source producer would be indistinguishable in the
             // folded product manifest from a provider-owned product row. Attribution is therefore
             // part of this channel's verified transport, not optional decoration.
             { acc with
-                VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
+                VerifyFailed = acc.VerifyFailed @ [ entry.Id ]
+            }
         else
             match ProductPredicate.evaluate entry.MaterializesWhen parameters with
             | None ->
                 { acc with
-                    PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ] }
+                    PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ]
+                }
             | Some false -> acc // deliberately not materialized off-profile (predicate held false)
             | Some true ->
                 // v1 implicitly declares its canonical body. v2 is a closed per-file transport:
@@ -256,8 +265,10 @@ module internal RenderingSkills =
                     // empty `files` cannot be promoted into an invented write target.
                     if schemaVersion < 2 && List.isEmpty entry.Files then
                         let implicitFile: ProductSkillManifest.ProductManifestFile =
-                            { Path = canonicalBodyPath
-                              Sha256 = entry.Sha256 }
+                            {
+                                Path = canonicalBodyPath
+                                Sha256 = entry.Sha256
+                            }
 
                         [ implicitFile ]
                     else
@@ -309,10 +320,12 @@ module internal RenderingSkills =
                     && canonicalOk
                 then
                     { acc with
-                        Materializable = acc.Materializable @ [ entry, verified ] }
+                        Materializable = acc.Materializable @ [ entry, verified ]
+                    }
                 else
                     { acc with
-                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
+                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ]
+                    }
 
     /// Plan owner-skill materialization from an explicit manifest text + id→body map, gated by the
     /// effective scaffold parameter set. The pure core of `plan`, factored out so the fail-closed
@@ -330,13 +343,16 @@ module internal RenderingSkills =
             match ProductSkillManifest.tryParse text with
             | Error message ->
                 { empty with
-                    ManifestError = Some message }
+                    ManifestError = Some message
+                }
             | Ok(schemaVersion, entries) ->
                 let classified =
-                    ({ Collisions = []
-                       PredicateUnevaluated = []
-                       VerifyFailed = []
-                       Materializable = [] },
+                    ({
+                        Collisions = []
+                        PredicateUnevaluated = []
+                        VerifyFailed = []
+                        Materializable = []
+                     },
                      entries |> List.sortBy (fun skill -> skill.Id))
                     ||> List.fold (fun acc entry -> classifyEntry parameters schemaVersion files acc entry)
 
@@ -352,33 +368,37 @@ module internal RenderingSkills =
                 let materializedFiles =
                     classified.Materializable
                     |> List.collect (fun (entry, verified) ->
-                        [ for root in Fsgg.Schemas.agentSkillRoots do
-                              for file, body in verified do
-                                  yield $"{root}/skills/{entry.Id}/{file.Path}", body ])
+                        [
+                            for root in Fsgg.Schemas.agentSkillRoots do
+                                for file, body in verified do
+                                    yield $"{root}/skills/{entry.Id}/{file.Path}", body
+                        ])
 
-                { Writes =
-                    materializedFiles
-                    |> List.map (fun (path, body) -> WriteFile(path, body, AgentGuidanceTarget))
-                  ProvenancePaths =
-                    materializedFiles
-                    |> List.map (fun (path, body) -> path, Fsgg.SkillMirror.sha256 body)
-                  MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
-                  MaterializedScopes =
-                    classified.Materializable
-                    |> List.choose (fun (entry, _) ->
-                        Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
-                    |> Map.ofList
-                  MaterializedSuppliers =
-                    classified.Materializable
-                    |> List.choose (fun (entry, _) ->
-                        entry.SuppliedBy |> Option.map (fun supplier -> entry.Id, supplier))
-                    |> Map.ofList
-                  VerifyFailedIds = classified.VerifyFailed
-                  PredicateUnevaluatedIds = classified.PredicateUnevaluated
-                  NamespaceCollisionIds = classified.Collisions
-                  YieldedIds = []
-                  UndeliverableSidecars = []
-                  ManifestError = None }
+                {
+                    Writes =
+                        materializedFiles
+                        |> List.map (fun (path, body) -> WriteFile(path, body, AgentGuidanceTarget))
+                    ProvenancePaths =
+                        materializedFiles
+                        |> List.map (fun (path, body) -> path, Fsgg.SkillMirror.sha256 body)
+                    MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
+                    MaterializedScopes =
+                        classified.Materializable
+                        |> List.choose (fun (entry, _) ->
+                            Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
+                        |> Map.ofList
+                    MaterializedSuppliers =
+                        classified.Materializable
+                        |> List.choose (fun (entry, _) ->
+                            entry.SuppliedBy |> Option.map (fun supplier -> entry.Id, supplier))
+                        |> Map.ofList
+                    VerifyFailedIds = classified.VerifyFailed
+                    PredicateUnevaluatedIds = classified.PredicateUnevaluated
+                    NamespaceCollisionIds = classified.Collisions
+                    YieldedIds = []
+                    UndeliverableSidecars = []
+                    ManifestError = None
+                }
 
     /// v1-compatible test seam: callers supplying bodies still exercise the canonical file path.
     let planFrom manifestText (bodies: Map<string, string>) (_sidecars: string list) parameters =
@@ -407,5 +427,6 @@ module internal RenderingSkills =
             { outcome with
                 UndeliverableSidecars =
                     undeliverableSidecars ()
-                    |> List.filter (fun entry -> materialized.Contains(entry.Split('/') |> Array.head)) }
+                    |> List.filter (fun entry -> materialized.Contains(entry.Split('/') |> Array.head))
+            }
         | _ -> outcome

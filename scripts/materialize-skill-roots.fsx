@@ -396,18 +396,26 @@ for id in union do
 /// the fan-out; reusing it after the writes would report every root the fan-out just repaired as
 /// still missing the skill — a verdict about a tree that no longer exists.
 let observe () : SkillMirror.ActualSkillFiles list =
-    [ for root in roots do
-          for id in union ->
-              { Root = root
-                Id = id
-                Files =
-                  if File.Exists(abs (SkillMirror.skillPath root id)) then
-                      Some
-                          [ for rel in filesIn root id ->
-                                { SkillMirror.SkillFile.RelativePath = rel
-                                  Body = File.ReadAllText(abs (root + "/skills/" + id + "/" + rel)) } ]
-                  else
-                      None } ]
+    [
+        for root in roots do
+            for id in union ->
+                {
+                    Root = root
+                    Id = id
+                    Files =
+                        if File.Exists(abs (SkillMirror.skillPath root id)) then
+                            Some
+                                [
+                                    for rel in filesIn root id ->
+                                        {
+                                            SkillMirror.SkillFile.RelativePath = rel
+                                            Body = File.ReadAllText(abs (root + "/skills/" + id + "/" + rel))
+                                        }
+                                ]
+                        else
+                            None
+                }
+    ]
 
 // Guard: a skill present in several roots must ALREADY agree — the same file SET, and the same
 // BYTES for every file in it — or this is a DIVERGENCE and the repair is a producer question, not
@@ -427,12 +435,14 @@ let observe () : SkillMirror.ActualSkillFiles list =
 let preMaterializeExpected: SkillMirror.ExpectedSkill list =
     union
     |> List.map (fun id ->
-        { Id = id
-          Scope = Schemas.SkillScope.Process
-          // No reference digest at this stage: the manifest hash is asserted separately, below,
-          // against the CANONICAL body once that root has been proven. Here the subject is only
-          // whether the roots agree WITH EACH OTHER.
-          Sha256 = "" })
+        {
+            Id = id
+            Scope = Schemas.SkillScope.Process
+            // No reference digest at this stage: the manifest hash is asserted separately, below,
+            // against the CANONICAL body once that root has been proven. Here the subject is only
+            // whether the roots agree WITH EACH OTHER.
+            Sha256 = ""
+        })
 
 for d in SkillMirror.verifyFiles roots preMaterializeExpected (observe ()) do
     for f in d.Files do
@@ -523,8 +533,10 @@ let manifestSchemaVersion, declaredFiles =
                 let files =
                     match e.TryGetProperty "files" with
                     | true, arr ->
-                        [ for f in arr.EnumerateArray() ->
-                              declaredFile (f.GetProperty("path").GetString()) (f.GetProperty("sha256").GetString()) ]
+                        [
+                            for f in arr.EnumerateArray() ->
+                                declaredFile (f.GetProperty("path").GetString()) (f.GetProperty("sha256").GetString())
+                        ]
                     | _ -> [ declaredFile "SKILL.md" (e.GetProperty("sha256").GetString()) ]
 
                 id, files)
@@ -577,13 +589,17 @@ let canonicalSkills: SkillMirror.MultiFileSkill list =
                     )
                 | _ -> ()
 
-                { SkillMirror.MultiFileSkill.Id = id
-                  Files =
-                    filesIn root id
-                    |> Set.toList
-                    |> List.map (fun rel ->
-                        { SkillMirror.SkillFile.RelativePath = rel
-                          Body = File.ReadAllText(abs (root + "/skills/" + id + "/" + rel)) }) })
+                {
+                    SkillMirror.MultiFileSkill.Id = id
+                    Files =
+                        filesIn root id
+                        |> Set.toList
+                        |> List.map (fun rel ->
+                            {
+                                SkillMirror.SkillFile.RelativePath = rel
+                                Body = File.ReadAllText(abs (root + "/skills/" + id + "/" + rel))
+                            })
+                })
 
 // The plan, and with it the library's OWN refusals — surfaced verbatim rather than re-derived.
 // `[unrepresentable]` used to live in this script as a hand-written guard around `mirror`'s
@@ -642,21 +658,23 @@ let expected: SkillMirror.ExpectedSkillFiles list =
     |> List.map (fun skill ->
         let id = skill.Id
 
-        { Id = id
-          // `scope` here is only carried through to the drift report; the process set is what the
-          // producer manifest declares, everything else in the union is a co-tenant product/process
-          // skill this repo vendors.
-          Scope =
-            (if Map.containsKey id declaredFiles then
-                 Schemas.SkillScope.Process
-             else
-                 Schemas.SkillScope.Product)
-          // FS.GG.SDD#727: the producer's declared FILE SET, not one digest for the whole skill.
-          // An empty list means this producer declares nothing about this skill — hash-match is
-          // skipped and presence + cross-root identity carry it, exactly as `Sha256 = ""` did.
-          // That is the honest state for a CO-TENANT skill whose manifest lives in another
-          // producer's repo; inventing a digest for it would be a fabricated authority.
-          Files = (Map.tryFind id declaredFiles |> Option.defaultValue []) })
+        {
+            Id = id
+            // `scope` here is only carried through to the drift report; the process set is what the
+            // producer manifest declares, everything else in the union is a co-tenant product/process
+            // skill this repo vendors.
+            Scope =
+                (if Map.containsKey id declaredFiles then
+                     Schemas.SkillScope.Process
+                 else
+                     Schemas.SkillScope.Product)
+            // FS.GG.SDD#727: the producer's declared FILE SET, not one digest for the whole skill.
+            // An empty list means this producer declares nothing about this skill — hash-match is
+            // skipped and presence + cross-root identity carry it, exactly as `Sha256 = ""` did.
+            // That is the honest state for a CO-TENANT skill whose manifest lives in another
+            // producer's repo; inventing a digest for it would be a fabricated authority.
+            Files = (Map.tryFind id declaredFiles |> Option.defaultValue [])
+        })
 
 // FS.GG.SDD#721: the verdict is taken over the skill's WHOLE FILE SET, not just `SKILL.md`.
 // Before this, the driver materialized `references/**` and `agents/*.yaml` through `mirrorFiles`

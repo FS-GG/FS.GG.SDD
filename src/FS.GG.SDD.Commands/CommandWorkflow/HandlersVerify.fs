@@ -67,19 +67,23 @@ module internal HandlersVerify =
             []
         else
             let malformed message =
-                [ errorForPath
-                      "verify.fsharpSurfaceReceiptMalformed"
-                      fsharpSurfaceReceiptPath
-                      $"Work item '{workId}' has public-impact/Tier-1 F# obligations, but Governance public-surface receipt is invalid: {message}"
-                      "Run the Governance F# public-surface producer and commit a valid fsharp-public-surface/v1 receipt; malformed input never certifies ship readiness." ]
+                [
+                    errorForPath
+                        "verify.fsharpSurfaceReceiptMalformed"
+                        fsharpSurfaceReceiptPath
+                        $"Work item '{workId}' has public-impact/Tier-1 F# obligations, but Governance public-surface receipt is invalid: {message}"
+                        "Run the Governance F# public-surface producer and commit a valid fsharp-public-surface/v1 receipt; malformed input never certifies ship readiness."
+                ]
 
             match snapshot fsharpSurfaceReceiptPath model with
             | None ->
-                [ errorForPath
-                      "verify.fsharpSurfaceReceiptMissing"
-                      fsharpSurfaceReceiptPath
-                      $"Work item '{workId}' has public-impact/Tier-1 F# obligations and declares Governance capabilities, but no public-surface receipt was found."
-                      "Run the Governance F# public-surface producer. A block-on-ship F# surface must be evaluated before SDD can certify this work." ]
+                [
+                    errorForPath
+                        "verify.fsharpSurfaceReceiptMissing"
+                        fsharpSurfaceReceiptPath
+                        $"Work item '{workId}' has public-impact/Tier-1 F# obligations and declares Governance capabilities, but no public-surface receipt was found."
+                        "Run the Governance F# public-surface producer. A block-on-ship F# surface must be evaluated before SDD can certify this work."
+                ]
             | Some receipt ->
                 try
                     use document = JsonDocument.Parse receipt.Text
@@ -136,11 +140,13 @@ module internal HandlersVerify =
                             else
                                 malformed "a non-applicable receipt lacks the explicit not-applicable disposition"
                         elif count = 0 && cardinality = "zero" then
-                            [ errorForPath
-                                  "verify.emptyBlockingFSharpSurface"
-                                  fsharpSurfaceReceiptPath
-                                  $"Work item '{workId}' has public-impact/Tier-1 F# obligations, but block-on-ship surface glob '{glob}' matched zero signatures. Declare the public F# API in compiled .fsi files or record a validated non-applicability disposition."
-                                  "Author/update the compiled .fsi signature surface before implementation hardens the public contract, then regenerate the Governance receipt." ]
+                            [
+                                errorForPath
+                                    "verify.emptyBlockingFSharpSurface"
+                                    fsharpSurfaceReceiptPath
+                                    $"Work item '{workId}' has public-impact/Tier-1 F# obligations, but block-on-ship surface glob '{glob}' matched zero signatures. Declare the public F# API in compiled .fsi files or record a validated non-applicability disposition."
+                                    "Author/update the compiled .fsi signature surface before implementation hardens the public contract, then regenerate the Governance receipt."
+                            ]
                         elif
                             count < 0
                             || (count = 1 && cardinality <> "one")
@@ -203,13 +209,15 @@ module internal HandlersVerify =
         }
 
     type VerifySkillView =
-        { Skill: string
-          RequiringTaskIds: string list
-          Visibility: string
-          SourceArtifactPath: string
-          Severity: string
-          DiagnosticIds: string list
-          Correction: string }
+        {
+            Skill: string
+            RequiringTaskIds: string list
+            Visibility: string
+            SourceArtifactPath: string
+            Severity: string
+            DiagnosticIds: string list
+            Correction: string
+        }
 
     let dispositionSeverity state =
         match state with
@@ -265,20 +273,22 @@ module internal HandlersVerify =
         workModelJson
         model
         : GeneratedViewSource list =
-        [ snapshot ".fsgg/project.yml" model
-          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          snapshot ".fsgg/sdd.yml" model
-          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          snapshot ".fsgg/agents.yml" model
-          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          Some(analysisSourceFromSnapshot (specPath workId) specText)
-          Some(analysisSourceFromSnapshot (clarificationPath workId) clarificationText)
-          Some(analysisSourceFromSnapshot (checklistPath workId) checklistText)
-          Some(analysisSourceFromSnapshot (planPath workId) planText)
-          Some(analysisSourceFromSnapshot (tasksPath workId) tasksText)
-          Some(analysisSourceFromSnapshot (evidencePath workId) evidenceText)
-          analysisText |> Option.map (analysisSourceFromSnapshot (analysisPath workId))
-          workModelJson |> Option.map (analysisSourceFromSnapshot (workModelPath workId)) ]
+        [
+            snapshot ".fsgg/project.yml" model
+            |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+            snapshot ".fsgg/sdd.yml" model
+            |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+            snapshot ".fsgg/agents.yml" model
+            |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+            Some(analysisSourceFromSnapshot (specPath workId) specText)
+            Some(analysisSourceFromSnapshot (clarificationPath workId) clarificationText)
+            Some(analysisSourceFromSnapshot (checklistPath workId) checklistText)
+            Some(analysisSourceFromSnapshot (planPath workId) planText)
+            Some(analysisSourceFromSnapshot (tasksPath workId) tasksText)
+            Some(analysisSourceFromSnapshot (evidencePath workId) evidenceText)
+            analysisText |> Option.map (analysisSourceFromSnapshot (analysisPath workId))
+            workModelJson |> Option.map (analysisSourceFromSnapshot (workModelPath workId))
+        ]
         |> List.choose id
         |> List.sortBy (fun source -> source.Path)
 
@@ -333,23 +343,25 @@ module internal HandlersVerify =
         |> List.map (fun draft ->
             let severity = dispositionSeverity draft.State
 
-            { Id = "ED-" + draft.ObligationId
-              ObligationId = draft.ObligationId
-              State = draft.State
-              Observed = draft.Observed
-              ClassifiedRequirement = draft.ClassifiedRequirement
-              JourneyRequirement = draft.JourneyRequirement
-              RecordRequirement = draft.RecordRequirement
-              EvidenceIds = draft.EvidenceIds
-              TaskIds = draft.TaskIds
-              SourceIds = affectedSourceIds draft.TaskIds
-              Severity = severity
-              DiagnosticIds = draft.DiagnosticIds
-              Correction =
-                if severity = "ready" then
-                    ""
-                else
-                    $"Resolve evidence obligation {draft.ObligationId}." })
+            {
+                Id = "ED-" + draft.ObligationId
+                ObligationId = draft.ObligationId
+                State = draft.State
+                Observed = draft.Observed
+                ClassifiedRequirement = draft.ClassifiedRequirement
+                JourneyRequirement = draft.JourneyRequirement
+                RecordRequirement = draft.RecordRequirement
+                EvidenceIds = draft.EvidenceIds
+                TaskIds = draft.TaskIds
+                SourceIds = affectedSourceIds draft.TaskIds
+                Severity = severity
+                DiagnosticIds = draft.DiagnosticIds
+                Correction =
+                    if severity = "ready" then
+                        ""
+                    else
+                        $"Resolve evidence obligation {draft.ObligationId}."
+            })
         |> List.sortBy (fun view -> view.Id)
 
     let verifyTestDispositionViews
@@ -563,38 +575,40 @@ module internal HandlersVerify =
 
             let severity = dispositionSeverity state
 
-            { Id = "TD-" + obligationId
-              ObligationId = obligationId
-              State = state
-              // #865: the same one kind-directed rule the `ED-` site consumes, so the `TD-` view cannot
-              // call an obligation discharged that `ED-` calls unobserved, or the reverse.
-              Observed =
-                state = "satisfied"
-                && obligationDischarged
-                    (if recordDischarged then
-                         Evidence.recordDischargeClass
-                     else
-                         Evidence.testDischargeClass)
+            {
+                Id = "TD-" + obligationId
+                ObligationId = obligationId
+                State = state
+                // #865: the same one kind-directed rule the `ED-` site consumes, so the `TD-` view cannot
+                // call an obligation discharged that `ED-` calls unobserved, or the reverse.
+                Observed =
+                    state = "satisfied"
+                    && obligationDischarged
+                        (if recordDischarged then
+                             Evidence.recordDischargeClass
+                         else
+                             Evidence.testDischargeClass)
+                        matches
+                RecordRequirement = recordDischarged
+                EvidenceIds =
                     matches
-              RecordRequirement = recordDischarged
-              EvidenceIds =
-                matches
-                |> List.map (fun declaration -> declaration.Id.Value)
-                |> List.distinct
-                |> List.sort
-              TaskIds = tasks |> List.map (fun task -> task.Id.Value) |> List.distinct |> List.sort
-              RequirementIds =
-                tasks
-                |> List.collect (fun task -> task.Requirements |> List.map _.Value)
-                |> List.distinct
-                |> List.sort
-              Severity = severity
-              DiagnosticIds = diagnostics
-              Correction =
-                if severity = "ready" then
-                    ""
-                else
-                    $"Record a verifying test for {obligationId}." })
+                    |> List.map (fun declaration -> declaration.Id.Value)
+                    |> List.distinct
+                    |> List.sort
+                TaskIds = tasks |> List.map (fun task -> task.Id.Value) |> List.distinct |> List.sort
+                RequirementIds =
+                    tasks
+                    |> List.collect (fun task -> task.Requirements |> List.map _.Value)
+                    |> List.distinct
+                    |> List.sort
+                Severity = severity
+                DiagnosticIds = diagnostics
+                Correction =
+                    if severity = "ready" then
+                        ""
+                    else
+                        $"Record a verifying test for {obligationId}."
+            })
         |> List.sortBy (fun view -> view.Id)
 
     let verifySkillViews workId (taskFacts: TaskFacts) (evidenceDrafts: EvidenceDispositionDraft list) =
@@ -620,17 +634,19 @@ module internal HandlersVerify =
                     | Some states -> not (states |> List.exists (fun state -> Set.contains state blockingStates))
                     | None -> true)
 
-            { Skill = skill
-              RequiringTaskIds = tasks |> List.map (fun task -> task.Id.Value) |> List.distinct |> List.sort
-              Visibility = if visible then "visible" else "missing"
-              SourceArtifactPath = tasksPath workId
-              Severity = if visible then "ready" else "blocking"
-              DiagnosticIds = if visible then [] else [ "evidence.missingRequiredSkill" ]
-              Correction =
-                if visible then
-                    ""
-                else
-                    $"Make required skill '{skill}' visible through lifecycle artifacts or supporting evidence." })
+            {
+                Skill = skill
+                RequiringTaskIds = tasks |> List.map (fun task -> task.Id.Value) |> List.distinct |> List.sort
+                Visibility = if visible then "visible" else "missing"
+                SourceArtifactPath = tasksPath workId
+                Severity = if visible then "ready" else "blocking"
+                DiagnosticIds = if visible then [] else [ "evidence.missingRequiredSkill" ]
+                Correction =
+                    if visible then
+                        ""
+                    else
+                        $"Make required skill '{skill}' visible through lifecycle artifacts or supporting evidence."
+            })
         |> List.sortBy (fun view -> view.Skill)
 
     let existingVerifyDiagnostic workId model =
@@ -777,9 +793,11 @@ module internal HandlersVerify =
                 let evidencePresenceDiagnostics =
                     match existingEvidenceArtifact, snapshot (evidencePath workId) model with
                     | None, None ->
-                        [ missingEvidencePrerequisite
-                              (evidencePath workId)
-                              $"Evidence prerequisite '{evidencePath workId}' is missing." ]
+                        [
+                            missingEvidencePrerequisite
+                                (evidencePath workId)
+                                $"Evidence prerequisite '{evidencePath workId}' is missing."
+                        ]
                     | _ -> []
 
                 let verifyViewDiagnostics = existingVerifyDiagnostic workId model |> Option.toList
@@ -900,14 +918,16 @@ module internal HandlersVerify =
                                 |> List.map _.ObligationId
                                 |> List.sort
 
-                            [ if not (List.isEmpty missing) then
-                                  missingRequiredTest (tasksPath workId) missing
-                              if not (List.isEmpty unobserved) then
-                                  unobservedRequiredTest (tasksPath workId) unobserved
-                              if not (List.isEmpty unrecorded) then
-                                  unrecordedRequiredRecord (tasksPath workId) unrecorded
-                              if not (List.isEmpty stale) then
-                                  staleRequiredTest (tasksPath workId) stale ]
+                            [
+                                if not (List.isEmpty missing) then
+                                    missingRequiredTest (tasksPath workId) missing
+                                if not (List.isEmpty unobserved) then
+                                    unobservedRequiredTest (tasksPath workId) unobserved
+                                if not (List.isEmpty unrecorded) then
+                                    unrecordedRequiredRecord (tasksPath workId) unrecorded
+                                if not (List.isEmpty stale) then
+                                    staleRequiredTest (tasksPath workId) stale
+                            ]
 
                         let skillDiagnostics =
                             let missing =
@@ -1004,27 +1024,29 @@ module internal HandlersVerify =
                                     model
 
                             let lifecycleStages =
-                                [ "specify", (if Option.isSome specFacts then "current" else "missing")
-                                  "clarify",
-                                  (if Option.isSome clarificationFacts then
-                                       "current"
-                                   else
-                                       "missing")
-                                  "checklist",
-                                  (if Option.isSome checklistFacts then
-                                       "current"
-                                   else
-                                       "missing")
-                                  "plan", (if Option.isSome planFacts then "current" else "missing")
-                                  "tasks", "current"
-                                  "analyze",
-                                  (analysis
-                                   |> Option.map (fun summary -> summary.Readiness)
-                                   |> Option.defaultValue "missing")
-                                  "evidence",
-                                  (evidenceSummaryOpt
-                                   |> Option.map (fun summary -> summary.Readiness)
-                                   |> Option.defaultValue "missing") ]
+                                [
+                                    "specify", (if Option.isSome specFacts then "current" else "missing")
+                                    "clarify",
+                                    (if Option.isSome clarificationFacts then
+                                         "current"
+                                     else
+                                         "missing")
+                                    "checklist",
+                                    (if Option.isSome checklistFacts then
+                                         "current"
+                                     else
+                                         "missing")
+                                    "plan", (if Option.isSome planFacts then "current" else "missing")
+                                    "tasks", "current"
+                                    "analyze",
+                                    (analysis
+                                     |> Option.map (fun summary -> summary.Readiness)
+                                     |> Option.defaultValue "missing")
+                                    "evidence",
+                                    (evidenceSummaryOpt
+                                     |> Option.map (fun summary -> summary.Readiness)
+                                     |> Option.defaultValue "missing")
+                                ]
 
                             let dependencyCount =
                                 taskFacts.Tasks |> List.collect (fun task -> task.Dependencies) |> List.length
@@ -1049,25 +1071,27 @@ module internal HandlersVerify =
                                 taskFacts.Findings |> List.map (fun finding -> finding.FindingId) |> List.sort
 
                             let generatedViewsForVerify =
-                                [ workModelView
-                                  analysis
-                                  |> Option.map (fun _ ->
-                                      generatedViewState
-                                          (analysisPath workId)
-                                          "verification"
-                                          model.Request.GeneratorVersion
-                                          []
-                                          GeneratedViewCurrency.Current
-                                          [])
-                                  |> Option.defaultValue (
-                                      generatedViewState
-                                          (analysisPath workId)
-                                          "verification"
-                                          model.Request.GeneratorVersion
-                                          []
-                                          GeneratedViewCurrency.Missing
-                                          []
-                                  ) ]
+                                [
+                                    workModelView
+                                    analysis
+                                    |> Option.map (fun _ ->
+                                        generatedViewState
+                                            (analysisPath workId)
+                                            "verification"
+                                            model.Request.GeneratorVersion
+                                            []
+                                            GeneratedViewCurrency.Current
+                                            [])
+                                    |> Option.defaultValue (
+                                        generatedViewState
+                                            (analysisPath workId)
+                                            "verification"
+                                            model.Request.GeneratorVersion
+                                            []
+                                            GeneratedViewCurrency.Missing
+                                            []
+                                    )
+                                ]
 
                             let text =
                                 verifyJson
@@ -1133,62 +1157,66 @@ module internal HandlersVerify =
                                 |> List.length
 
                             let summary: VerificationSummary =
-                                { WorkId = workId
-                                  Stage = "verify"
-                                  Status = readiness
-                                  VerifyPath = verifyPath workId
-                                  FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                                  ReadyFindingCount =
-                                    if readiness = "verificationReady" then
-                                        evidenceViews.Length + testViews.Length
-                                    else
-                                        findingCount "ready"
-                                  AdvisoryCount = findingCount "advisory"
-                                  WarningCount = findingCount "warning"
-                                  BlockingCount = findingCount "blocking"
-                                  ObligationCount = evidenceViews.Length + testViews.Length
-                                  EvidenceSupportedCount = evidenceSupported
-                                  EvidenceSelfAttestedCount = evidenceSupported - evidenceObservedCount
-                                  EvidenceObservedCount = evidenceObservedCount
-                                  EvidenceDeferredCount = evidenceCount "deferred"
-                                  EvidenceMissingCount = evidenceCount "missing"
-                                  EvidenceStaleCount = evidenceCount "stale"
-                                  EvidenceSyntheticCount = evidenceCount "synthetic"
-                                  EvidenceInvalidCount = evidenceCount "invalid"
-                                  TestSatisfiedCount = testSatisfied
-                                  TestSelfAttestedCount = testSatisfied - testObservedCount
-                                  TestObservedCount = testObservedCount
-                                  TestDeferredCount = testCount "deferred"
-                                  TestMissingCount = testCount "missing"
-                                  TestStaleCount = testCount "stale"
-                                  TestInvalidCount = testCount "invalid"
-                                  // WI-4 (ADR-0048): carry the evidence stage's classified-FR unmet
-                                  // aggregate through unchanged — verify reports the same number ship binds.
-                                  ClassifiedObligationsUnmetCount =
-                                    evidenceSummaryOpt
-                                    |> Option.map (fun summary -> summary.ClassifiedObligationsUnmetCount)
-                                    |> Option.defaultValue 0
-                                  JourneyObligationsUnmetCount =
-                                    evidenceSummaryOpt
-                                    |> Option.map (fun summary -> summary.JourneyObligationsUnmetCount)
-                                    |> Option.defaultValue 0
-                                  SkillVisibleCount =
-                                    skillViews
-                                    |> List.filter (fun view -> view.Visibility = "visible")
-                                    |> List.length
-                                  SkillMissingCount =
-                                    skillViews
-                                    |> List.filter (fun view -> view.Visibility = "missing")
-                                    |> List.length
-                                  SourceSnapshotCount = sources.Length
-                                  Readiness = readiness }
+                                {
+                                    WorkId = workId
+                                    Stage = "verify"
+                                    Status = readiness
+                                    VerifyPath = verifyPath workId
+                                    FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
+                                    ReadyFindingCount =
+                                        if readiness = "verificationReady" then
+                                            evidenceViews.Length + testViews.Length
+                                        else
+                                            findingCount "ready"
+                                    AdvisoryCount = findingCount "advisory"
+                                    WarningCount = findingCount "warning"
+                                    BlockingCount = findingCount "blocking"
+                                    ObligationCount = evidenceViews.Length + testViews.Length
+                                    EvidenceSupportedCount = evidenceSupported
+                                    EvidenceSelfAttestedCount = evidenceSupported - evidenceObservedCount
+                                    EvidenceObservedCount = evidenceObservedCount
+                                    EvidenceDeferredCount = evidenceCount "deferred"
+                                    EvidenceMissingCount = evidenceCount "missing"
+                                    EvidenceStaleCount = evidenceCount "stale"
+                                    EvidenceSyntheticCount = evidenceCount "synthetic"
+                                    EvidenceInvalidCount = evidenceCount "invalid"
+                                    TestSatisfiedCount = testSatisfied
+                                    TestSelfAttestedCount = testSatisfied - testObservedCount
+                                    TestObservedCount = testObservedCount
+                                    TestDeferredCount = testCount "deferred"
+                                    TestMissingCount = testCount "missing"
+                                    TestStaleCount = testCount "stale"
+                                    TestInvalidCount = testCount "invalid"
+                                    // WI-4 (ADR-0048): carry the evidence stage's classified-FR unmet
+                                    // aggregate through unchanged — verify reports the same number ship binds.
+                                    ClassifiedObligationsUnmetCount =
+                                        evidenceSummaryOpt
+                                        |> Option.map (fun summary -> summary.ClassifiedObligationsUnmetCount)
+                                        |> Option.defaultValue 0
+                                    JourneyObligationsUnmetCount =
+                                        evidenceSummaryOpt
+                                        |> Option.map (fun summary -> summary.JourneyObligationsUnmetCount)
+                                        |> Option.defaultValue 0
+                                    SkillVisibleCount =
+                                        skillViews
+                                        |> List.filter (fun view -> view.Visibility = "visible")
+                                        |> List.length
+                                    SkillMissingCount =
+                                        skillViews
+                                        |> List.filter (fun view -> view.Visibility = "missing")
+                                        |> List.length
+                                    SourceSnapshotCount = sources.Length
+                                    Readiness = readiness
+                                }
 
                             let effects =
                                 if hasBlocking then
                                     []
                                 else
-                                    [ CreateDirectory(readinessDirectory workId)
-                                      WriteFile(verifyPath workId, text, GeneratedView) ]
+                                    [
+                                        CreateDirectory(readinessDirectory workId)
+                                        WriteFile(verifyPath workId, text, GeneratedView)
+                                    ]
 
                             Some summary, Some view, effects
                         | _ -> None, None, []

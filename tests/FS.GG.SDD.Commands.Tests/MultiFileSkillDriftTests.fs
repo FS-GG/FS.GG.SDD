@@ -463,26 +463,34 @@ module MultiFileSkillDriftTests =
     let private declarableJunkName = "desktop.ini"
 
     let private driverRow (path: string) : FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath =
-        { FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
-          Owner = FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.Driver
-          // No reference digest: `verifyFileSet` reads an empty digest as "no authority to
-          // arbitrate with", so presence and cross-root identity still decide. That is all this
-          // case needs, and inventing a digest would test the digest path instead.
-          Sha256 = Some "" }
+        {
+            FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
+            Owner = FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.Driver
+            // No reference digest: `verifyFileSet` reads an empty digest as "no authority to
+            // arbitrate with", so presence and cross-root identity still decide. That is all this
+            // case needs, and inventing a digest would test the digest path instead.
+            Sha256 = Some ""
+        }
 
     /// A provenance record DECLARING `<relatives>` for `declaringDriverId` in every root.
     let private recordDeclaring (relatives: string list) =
         { record None with
             DriverPaths =
-                [ for root in allRoots do
-                      for relative in relatives -> driverRow $"{root}/skills/{declaringDriverId}/{relative}" ] }
+                [
+                    for root in allRoots do
+                        for relative in relatives -> driverRow $"{root}/skills/{declaringDriverId}/{relative}"
+                ]
+        }
 
     /// Bodies for a coherent `declaringDriverId` copy in every root, plus whatever `extra` adds.
     let private declaringDriverBodies extra =
         let baseline =
             skillBodiesFor coherentPresent
             |> Map.toList
-            |> List.append [ for root in allRoots -> $"{root}/skills/{declaringDriverId}/SKILL.md", "# junk-shipper\n" ]
+            |> List.append
+                [
+                    for root in allRoots -> $"{root}/skills/{declaringDriverId}/SKILL.md", "# junk-shipper\n"
+                ]
 
         (baseline @ extra) |> Map.ofList
 
@@ -604,7 +612,10 @@ module MultiFileSkillDriftTests =
         let declared = recordDeclaring [ "SKILL.md"; declarableJunkName ]
 
         let bodies =
-            declaringDriverBodies [ $".claude/skills/{declaringDriverId}/{declarableJunkName}", "[.ShellClassInfo]\n" ]
+            declaringDriverBodies
+                [
+                    $".claude/skills/{declaringDriverId}/{declarableJunkName}", "[.ShellClassInfo]\n"
+                ]
 
         let report =
             Drift.compute
@@ -942,18 +953,22 @@ module MultiFileSkillDriftTests =
         let driverRows, gameRows, renderingRows = ownerSourcedProvenanceRows []
 
         let produced owner (path, sha256) =
-            { FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
-              FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Owner = owner
-              FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Sha256 = Some sha256 }
+            {
+                FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
+                FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Owner = owner
+                FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Sha256 = Some sha256
+            }
 
         { record None with
             // The PRODUCT class, present so AC5's "a product auxiliary is not reported undeclared"
             // leg has a product skill to hang off. Its declaration covers `SKILL.md` and nothing
             // else — the #727 gap — which is exactly why it can hold no opinion about an auxiliary.
             ProducedPaths =
-                [ produced
-                      FS.GG.SDD.Artifacts.ArtifactRef.GeneratedProduct
-                      (Fsgg.SkillMirror.skillPath ".agents" productSkillId, Fsgg.SkillMirror.sha256 productSkillBody) ]
+                [
+                    produced
+                        FS.GG.SDD.Artifacts.ArtifactRef.GeneratedProduct
+                        (Fsgg.SkillMirror.skillPath ".agents" productSkillId, Fsgg.SkillMirror.sha256 productSkillBody)
+                ]
             DriverPaths = driverRows |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.Driver)
             GameSkillPaths = gameRows |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.GameSkill)
             // FS.GG.SDD#864: `ownerSourcedCopies` now MATERIALIZES the fourth channel's copies, so
@@ -962,7 +977,8 @@ module MultiFileSkillDriftTests =
             // a defect rather than a baseline.
             RenderingSkillPaths =
                 renderingRows
-                |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.RenderingSkill) }
+                |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.RenderingSkill)
+        }
 
     /// The coherent body map for that record: the seeded skeleton, the owner-sourced copies with
     /// the bodies their plan verified, and the product skill in all three roots.
@@ -1187,10 +1203,12 @@ module MultiFileSkillDriftTests =
         // happened to hold the same non-empty set would be the worst overlap there is, and a
         // `left <> right` guard is exactly the one that would skip it.
         let classes =
-            [ "notMirrored", report.SkillNotMirroredPaths
-              "lost", report.SkillLostPaths
-              "divergent", report.SkillDivergentPaths
-              "undeclared", report.SkillUndeclaredPaths ]
+            [
+                "notMirrored", report.SkillNotMirroredPaths
+                "lost", report.SkillLostPaths
+                "divergent", report.SkillDivergentPaths
+                "undeclared", report.SkillUndeclaredPaths
+            ]
             |> List.map (fun (name, paths) -> name, Set.ofList paths)
 
         for i in 0 .. classes.Length - 1 do
@@ -1521,15 +1539,18 @@ module MultiFileSkillDriftTests =
             rows
             |> List.map rewrite
             |> List.map (fun (path, sha256) ->
-                { FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
-                  FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Owner = owner
-                  FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Sha256 = Some sha256 })
+                {
+                    FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
+                    FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Owner = owner
+                    FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Sha256 = Some sha256
+                })
 
         { record None with
             DriverPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.Driver driverRows
             GameSkillPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.GameSkill gameRows
             // FS.GG.SDD#864 — see `ownerDeclaringRecord`: materialized ⇒ declared.
-            RenderingSkillPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.RenderingSkill renderingRows }
+            RenderingSkillPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.RenderingSkill renderingRows
+        }
 
     /// The record a real scaffold writes — every digest the one it verified against.
     let private ownerRecord () = ownerRecordWith (fun row -> row)
@@ -1873,14 +1894,16 @@ module MultiFileSkillDriftTests =
                 allRoots |> List.map (fun root -> absolute fixtureRoot $"{root}/skills/{id}")
 
             let crlfConverted =
-                [ for directory in skillDirectories do
-                      for file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories) do
-                          if file <> deletedAbsolute then
-                              let lf = File.ReadAllText(file).Replace("\r\n", "\n")
+                [
+                    for directory in skillDirectories do
+                        for file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories) do
+                            if file <> deletedAbsolute then
+                                let lf = File.ReadAllText(file).Replace("\r\n", "\n")
 
-                              if lf.Contains '\n' then
-                                  File.WriteAllText(file, lf.Replace("\n", "\r\n"))
-                                  yield file ]
+                                if lf.Contains '\n' then
+                                    File.WriteAllText(file, lf.Replace("\n", "\r\n"))
+                                    yield file
+                ]
 
             // Not vacuous: there really are preserved siblings, and they really did change.
             Assert.NotEmpty crlfConverted

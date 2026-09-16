@@ -55,16 +55,20 @@ module RequirementClassificationTests =
         let text =
             String.concat
                 "\n"
-                [ "## Functional Requirements"
-                  ""
-                  "- FR-001: W/S move the paddle. {gameplay} (covers AC-002)"
-                  "- FR-002: The menu lists saved games. (covers AC-003)" ]
+                [
+                    "## Functional Requirements"
+                    ""
+                    "- FR-001: W/S move the paddle. {gameplay} (covers AC-002)"
+                    "- FR-002: The menu lists saved games. (covers AC-003)"
+                ]
 
         let requirements =
             RequirementModel.parseRequirements
-                { Path = "work/001-classification/spec.md"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = "work/001-classification/spec.md"
+                    Text = text
+                    RawBytes = None
+                }
 
         let classificationFor id =
             requirements

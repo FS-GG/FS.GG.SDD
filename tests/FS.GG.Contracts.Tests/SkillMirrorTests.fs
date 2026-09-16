@@ -66,9 +66,11 @@ module SkillMirrorTests =
         let writes = mirror roots [ "s", "body" ]
 
         Assert.Equal<string list>(
-            [ ".claude/skills/s/SKILL.md"
-              ".codex/skills/s/SKILL.md"
-              ".agents/skills/s/SKILL.md" ],
+            [
+                ".claude/skills/s/SKILL.md"
+                ".codex/skills/s/SKILL.md"
+                ".agents/skills/s/SKILL.md"
+            ],
             writes |> List.map (fun w -> w.Path)
         )
 
@@ -90,16 +92,28 @@ module SkillMirrorTests =
 
     /// The real shape, measured on `main`: SKILL.md, an `agents/openai.yaml`, and `references/**`.
     let private kitSkill id =
-        { Id = id
-          Files =
-            [ { RelativePath = "SKILL.md"
-                Body = $"# {id}\n" }
-              { RelativePath = "agents/openai.yaml"
-                Body = $"name: {id}\n" }
-              { RelativePath = "references/deep-detail.md"
-                Body = $"# {id} deep detail\n" }
-              { RelativePath = "references/command-contracts.md"
-                Body = $"# {id} command contracts\n" } ] }
+        {
+            Id = id
+            Files =
+                [
+                    {
+                        RelativePath = "SKILL.md"
+                        Body = $"# {id}\n"
+                    }
+                    {
+                        RelativePath = "agents/openai.yaml"
+                        Body = $"name: {id}\n"
+                    }
+                    {
+                        RelativePath = "references/deep-detail.md"
+                        Body = $"# {id} deep detail\n"
+                    }
+                    {
+                        RelativePath = "references/command-contracts.md"
+                        Body = $"# {id} command contracts\n"
+                    }
+                ]
+        }
 
     [<Fact>]
     let ``mirrorFiles fans a genuine multi-file skill into every root`` () =
@@ -119,10 +133,12 @@ module SkillMirrorTests =
                 |> List.sort
 
             Assert.Equal<string list>(
-                [ root + "/skills/pnext-item/SKILL.md"
-                  root + "/skills/pnext-item/agents/openai.yaml"
-                  root + "/skills/pnext-item/references/command-contracts.md"
-                  root + "/skills/pnext-item/references/deep-detail.md" ]
+                [
+                    root + "/skills/pnext-item/SKILL.md"
+                    root + "/skills/pnext-item/agents/openai.yaml"
+                    root + "/skills/pnext-item/references/command-contracts.md"
+                    root + "/skills/pnext-item/references/deep-detail.md"
+                ]
                 |> List.sort,
                 underRoot
             )
@@ -144,10 +160,18 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 roots
-                [ { Id = "s"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "body" } ] } ]
+                [
+                    {
+                        Id = "s"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "body"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Empty plan.Refused
         Assert.Equal<MirrorWrite list>(single, plan.Writes)
@@ -157,29 +181,51 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = "beta"
-                    Files =
-                      [ { RelativePath = "references/z.md"
-                          Body = "z" }
-                        { RelativePath = "SKILL.md"
-                          Body = "b" } ] }
-                  { Id = "alpha"
-                    Files =
-                      [ { RelativePath = "references/b.md"
-                          Body = "b" }
-                        { RelativePath = "SKILL.md"
-                          Body = "a" }
-                        { RelativePath = "agents/openai.yaml"
-                          Body = "y" } ] } ]
+                [
+                    {
+                        Id = "beta"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "references/z.md"
+                                    Body = "z"
+                                }
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "b"
+                                }
+                            ]
+                    }
+                    {
+                        Id = "alpha"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "references/b.md"
+                                    Body = "b"
+                                }
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "a"
+                                }
+                                {
+                                    RelativePath = "agents/openai.yaml"
+                                    Body = "y"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Empty plan.Refused
 
         Assert.Equal<string list>(
-            [ ".claude/skills/alpha/SKILL.md"
-              ".claude/skills/alpha/agents/openai.yaml"
-              ".claude/skills/alpha/references/b.md"
-              ".claude/skills/beta/SKILL.md"
-              ".claude/skills/beta/references/z.md" ],
+            [
+                ".claude/skills/alpha/SKILL.md"
+                ".claude/skills/alpha/agents/openai.yaml"
+                ".claude/skills/alpha/references/b.md"
+                ".claude/skills/beta/SKILL.md"
+                ".claude/skills/beta/references/z.md"
+            ],
             plan.Writes |> List.map (fun w -> w.Path)
         )
 
@@ -231,12 +277,22 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 roots
-                [ { Id = "evil"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "ok" }
-                        { RelativePath = "../../../etc/passwd"
-                          Body = "pwned" } ] } ]
+                [
+                    {
+                        Id = "evil"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "ok"
+                                }
+                                {
+                                    RelativePath = "../../../etc/passwd"
+                                    Body = "pwned"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Equal(Some [ UnsafeRelativePath "../../../etc/passwd" ], reasonsFor "evil" plan)
         // The SAFE sibling is refused too — no half-materialized skill.
@@ -248,11 +304,19 @@ module SkillMirrorTests =
             let plan =
                 mirrorFiles
                     [ ".claude" ]
-                    [ { Id = "s"
-                        Files =
-                          [ { RelativePath = "SKILL.md"
-                              Body = "ok" }
-                            { RelativePath = bad; Body = "x" } ] } ]
+                    [
+                        {
+                            Id = "s"
+                            Files =
+                                [
+                                    {
+                                        RelativePath = "SKILL.md"
+                                        Body = "ok"
+                                    }
+                                    { RelativePath = bad; Body = "x" }
+                                ]
+                        }
+                    ]
 
             Assert.NotEmpty plan.Refused
             Assert.Empty plan.Writes
@@ -262,10 +326,18 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = ".."
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "x" } ] } ]
+                [
+                    {
+                        Id = ".."
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "x"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Equal(Some [ UnsafeSkillId ], reasonsFor ".." plan)
         Assert.Empty plan.Writes
@@ -278,10 +350,18 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = "ghost"
-                    Files =
-                      [ { RelativePath = "references/a.md"
-                          Body = "x" } ] } ]
+                [
+                    {
+                        Id = "ghost"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "references/a.md"
+                                    Body = "x"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Equal(Some [ MissingSkillFile ], reasonsFor "ghost" plan)
         Assert.Empty plan.Writes
@@ -293,12 +373,22 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = "s"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "a" }
-                        { RelativePath = "SKILL.md"
-                          Body = "B DIFFERENT" } ] } ]
+                [
+                    {
+                        Id = "s"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "a"
+                                }
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "B DIFFERENT"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Equal(Some [ DuplicateRelativePath "SKILL.md" ], reasonsFor "s" plan)
         Assert.Empty plan.Writes
@@ -311,19 +401,33 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = "s"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "ok" }
-                        { RelativePath = "references/A.md"
-                          Body = "one" }
-                        { RelativePath = "references/a.md"
-                          Body = "TWO" } ] } ]
+                [
+                    {
+                        Id = "s"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "ok"
+                                }
+                                {
+                                    RelativePath = "references/A.md"
+                                    Body = "one"
+                                }
+                                {
+                                    RelativePath = "references/a.md"
+                                    Body = "TWO"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Equal(
             Some
-                [ DuplicateRelativePath "references/A.md"
-                  DuplicateRelativePath "references/a.md" ],
+                [
+                    DuplicateRelativePath "references/A.md"
+                    DuplicateRelativePath "references/a.md"
+                ],
             reasonsFor "s" plan
         )
 
@@ -334,14 +438,28 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = "s"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "a" } ] }
-                  { Id = "s"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "B DIFFERENT" } ] } ]
+                [
+                    {
+                        Id = "s"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "a"
+                                }
+                            ]
+                    }
+                    {
+                        Id = "s"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "B DIFFERENT"
+                                }
+                            ]
+                    }
+                ]
 
         Assert.Equal(Some [ DuplicateSkillId ], reasonsFor "s" plan)
         Assert.Empty plan.Writes
@@ -354,16 +472,30 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = "s"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "a" }
-                        { RelativePath = "../escape.md"
-                          Body = "x" }
-                        { RelativePath = "references/a.md"
-                          Body = "1" }
-                        { RelativePath = "references/a.md"
-                          Body = "2" } ] } ]
+                [
+                    {
+                        Id = "s"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "a"
+                                }
+                                {
+                                    RelativePath = "../escape.md"
+                                    Body = "x"
+                                }
+                                {
+                                    RelativePath = "references/a.md"
+                                    Body = "1"
+                                }
+                                {
+                                    RelativePath = "references/a.md"
+                                    Body = "2"
+                                }
+                            ]
+                    }
+                ]
 
         let reasons = reasonsFor "s" plan |> Option.defaultValue []
         Assert.Contains(UnsafeRelativePath "../escape.md", reasons)
@@ -377,15 +509,29 @@ module SkillMirrorTests =
         let plan =
             mirrorFiles
                 [ ".claude" ]
-                [ { Id = "good"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "ok" } ] }
-                  { Id = "bad"
-                    Files =
-                      [ { RelativePath = "SKILL.md"
-                          Body = "ok" }
-                        { RelativePath = "../x"; Body = "no" } ] } ]
+                [
+                    {
+                        Id = "good"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "ok"
+                                }
+                            ]
+                    }
+                    {
+                        Id = "bad"
+                        Files =
+                            [
+                                {
+                                    RelativePath = "SKILL.md"
+                                    Body = "ok"
+                                }
+                                { RelativePath = "../x"; Body = "no" }
+                            ]
+                    }
+                ]
 
         Assert.Equal<string list>([ ".claude/skills/good/SKILL.md" ], plan.Writes |> List.map (fun w -> w.Path))
         Assert.Equal<string list>([ "bad" ], plan.Refused |> List.map (fun r -> r.Id))
@@ -416,9 +562,11 @@ module SkillMirrorTests =
     // ----- verify -----
 
     let private expected id sha =
-        { Id = id
-          Scope = Process
-          Sha256 = sha }
+        {
+            Id = id
+            Scope = Process
+            Sha256 = sha
+        }
 
     let private copy root id body : ActualCopy = { Root = root; Id = id; Body = body }
 
@@ -436,9 +584,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copy ".claude" "s" (Some body)
-              copy ".codex" "s" (Some body)
-              copy ".agents" "s" None ]
+            [
+                copy ".claude" "s" (Some body)
+                copy ".codex" "s" (Some body)
+                copy ".agents" "s" None
+            ]
 
         let drift = verify roots [ expected "s" (sha256 body) ] actual
         let d = List.exactlyOne drift
@@ -449,9 +599,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copy ".claude" "s" (Some body)
-              copy ".codex" "s" (Some "EDITED\n")
-              copy ".agents" "s" (Some body) ]
+            [
+                copy ".claude" "s" (Some body)
+                copy ".codex" "s" (Some "EDITED\n")
+                copy ".agents" "s" (Some body)
+            ]
 
         // No reference digest ⇒ hash-match skipped, but cross-root divergence is still caught.
         let drift = verify roots [ expected "s" "" ] actual
@@ -463,9 +615,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copy ".claude" "s" (Some body)
-              copy ".codex" "s" (Some body)
-              copy ".agents" "s" (Some "TAMPERED\n") ]
+            [
+                copy ".claude" "s" (Some body)
+                copy ".codex" "s" (Some body)
+                copy ".agents" "s" (Some "TAMPERED\n")
+            ]
 
         let drift = verify roots [ expected "s" (sha256 body) ] actual
         let d = List.exactlyOne drift
@@ -495,9 +649,11 @@ module SkillMirrorTests =
 
     /// A coherent 3-file skill in every root: `SKILL.md` + two auxiliaries.
     let private multiFile body =
-        [ file "SKILL.md" body
-          file "references/deep-detail.md" "detail\n"
-          file "agents/openai.yaml" "name: s\n" ]
+        [
+            file "SKILL.md" body
+            file "references/deep-detail.md" "detail\n"
+            file "agents/openai.yaml" "name: s\n"
+        ]
 
     [<Fact>]
     let ``verifyFiles returns no drift for a fully coherent multi-file skill`` () =
@@ -515,15 +671,19 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some(multiFile body))
-              copyFiles
-                  ".codex"
-                  "s"
-                  (Some
-                      [ file "SKILL.md" body
-                        file "references/deep-detail.md" "EDITED\n"
-                        file "agents/openai.yaml" "name: s\n" ])
-              copyFiles ".agents" "s" (Some(multiFile body)) ]
+            [
+                copyFiles ".claude" "s" (Some(multiFile body))
+                copyFiles
+                    ".codex"
+                    "s"
+                    (Some
+                        [
+                            file "SKILL.md" body
+                            file "references/deep-detail.md" "EDITED\n"
+                            file "agents/openai.yaml" "name: s\n"
+                        ])
+                copyFiles ".agents" "s" (Some(multiFile body))
+            ]
 
         let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
         Assert.Empty d.MissingRoots
@@ -541,10 +701,12 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some(multiFile body))
-              // `.codex` lost the reference entirely AND disagrees on the agent card.
-              copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: OTHER\n" ])
-              copyFiles ".agents" "s" (Some(multiFile body)) ]
+            [
+                copyFiles ".claude" "s" (Some(multiFile body))
+                // `.codex` lost the reference entirely AND disagrees on the agent card.
+                copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: OTHER\n" ])
+                copyFiles ".agents" "s" (Some(multiFile body))
+            ]
 
         let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
         // The skill is present in every root, so the SKILL-level missing fact stays empty.
@@ -576,9 +738,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some(multiFile body))
-              copyFiles ".codex" "s" (Some(multiFile body))
-              copyFiles ".agents" "s" None ]
+            [
+                copyFiles ".claude" "s" (Some(multiFile body))
+                copyFiles ".codex" "s" (Some(multiFile body))
+                copyFiles ".agents" "s" None
+            ]
 
         let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
         Assert.Equal<string list>([ ".agents" ], d.MissingRoots)
@@ -593,9 +757,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
-              copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "references/stale.md" "left over\n" ])
-              copyFiles ".agents" "s" (Some [ file "SKILL.md" body ]) ]
+            [
+                copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+                copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "references/stale.md" "left over\n" ])
+                copyFiles ".agents" "s" (Some [ file "SKILL.md" body ])
+            ]
 
         let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
         let f = List.exactlyOne d.Files
@@ -609,15 +775,19 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some(multiFile body))
-              copyFiles ".codex" "s" (Some(multiFile body))
-              copyFiles
-                  ".agents"
-                  "s"
-                  (Some
-                      [ file "SKILL.md" "TAMPERED\n"
-                        file "references/deep-detail.md" "detail\n"
-                        file "agents/openai.yaml" "name: s\n" ]) ]
+            [
+                copyFiles ".claude" "s" (Some(multiFile body))
+                copyFiles ".codex" "s" (Some(multiFile body))
+                copyFiles
+                    ".agents"
+                    "s"
+                    (Some
+                        [
+                            file "SKILL.md" "TAMPERED\n"
+                            file "references/deep-detail.md" "detail\n"
+                            file "agents/openai.yaml" "name: s\n"
+                        ])
+            ]
 
         let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
         let f = List.exactlyOne d.Files
@@ -652,11 +822,13 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let cases =
-            [ "coherent", [ Some body; Some body; Some body ], sha256 body
-              "missing", [ Some body; Some body; None ], sha256 body
-              "divergent", [ Some body; Some "EDITED\n"; Some body ], ""
-              "hash", [ Some body; Some body; Some "TAMPERED\n" ], sha256 body
-              "all-absent", [ None; None; None ], "" ]
+            [
+                "coherent", [ Some body; Some body; Some body ], sha256 body
+                "missing", [ Some body; Some body; None ], sha256 body
+                "divergent", [ Some body; Some "EDITED\n"; Some body ], ""
+                "hash", [ Some body; Some body; Some "TAMPERED\n" ], sha256 body
+                "all-absent", [ None; None; None ], ""
+            ]
 
         for (id, bodies, sha) in cases do
             let pairs = List.zip roots bodies
@@ -695,15 +867,19 @@ module SkillMirrorTests =
     let private declared rel sha : SkillManifestFile = { RelativePath = rel; Sha256 = sha }
 
     let private expectedFiles id files : ExpectedSkillFiles =
-        { Id = id
-          Scope = Process
-          Files = files }
+        {
+            Id = id
+            Scope = Process
+            Files = files
+        }
 
     /// The declaration matching `multiFile body` — every file of the 3-file skill, digested.
     let private declaredMultiFile body =
-        [ declared "SKILL.md" (sha256 body)
-          declared "references/deep-detail.md" (sha256 "detail\n")
-          declared "agents/openai.yaml" (sha256 "name: s\n") ]
+        [
+            declared "SKILL.md" (sha256 body)
+            declared "references/deep-detail.md" (sha256 "detail\n")
+            declared "agents/openai.yaml" (sha256 "name: s\n")
+        ]
 
     // THE DEFECT THE ITEM NAMES, AND THE ONE THE OLD SURFACE CANNOT SEE.
     //
@@ -719,9 +895,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let tampered =
-            [ file "SKILL.md" body
-              file "references/deep-detail.md" "TAMPERED\n"
-              file "agents/openai.yaml" "name: s\n" ]
+            [
+                file "SKILL.md" body
+                file "references/deep-detail.md" "TAMPERED\n"
+                file "agents/openai.yaml" "name: s\n"
+            ]
 
         let actual = roots |> List.map (fun r -> copyFiles r "s" (Some tampered))
 
@@ -816,15 +994,19 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some(multiFile body))
-              copyFiles
-                  ".codex"
-                  "s"
-                  (Some
-                      [ file "SKILL.md" body
-                        file "references/deep-detail.md" "EDITED\n"
-                        file "agents/openai.yaml" "name: s\n" ])
-              copyFiles ".agents" "s" None ]
+            [
+                copyFiles ".claude" "s" (Some(multiFile body))
+                copyFiles
+                    ".codex"
+                    "s"
+                    (Some
+                        [
+                            file "SKILL.md" body
+                            file "references/deep-detail.md" "EDITED\n"
+                            file "agents/openai.yaml" "name: s\n"
+                        ])
+                copyFiles ".agents" "s" None
+            ]
 
         let d = List.exactlyOne (verifyFileSet roots [ expectedFiles "s" [] ] actual)
         Assert.Equal<string list>([ ".agents" ], d.MissingRoots)
@@ -853,11 +1035,13 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let cases =
-            [ "coherent", [ Some body; Some body; Some body ], sha256 body
-              "missing", [ Some body; Some body; None ], sha256 body
-              "divergent", [ Some body; Some "EDITED\n"; Some body ], ""
-              "hash", [ Some body; Some body; Some "TAMPERED\n" ], sha256 body
-              "all-absent", [ None; None; None ], "" ]
+            [
+                "coherent", [ Some body; Some body; Some body ], sha256 body
+                "missing", [ Some body; Some body; None ], sha256 body
+                "divergent", [ Some body; Some "EDITED\n"; Some body ], ""
+                "hash", [ Some body; Some body; Some "TAMPERED\n" ], sha256 body
+                "all-absent", [ None; None; None ], ""
+            ]
 
         for (id, bodies, sha) in cases do
             let observed =
@@ -907,8 +1091,10 @@ module SkillMirrorTests =
             |> List.map (fun r -> copyFiles r "s" (Some [ file "SKILL.md" body; file "references/deep.md" "d\n" ]))
 
         let declaration =
-            [ declared "SKILL.md" (sha256 body)
-              declared "references\\deep.md" (sha256 "d\n") ]
+            [
+                declared "SKILL.md" (sha256 body)
+                declared "references\\deep.md" (sha256 "d\n")
+            ]
 
         Assert.Empty(verifyFileSet roots [ expectedFiles "s" declaration ] actual)
 
@@ -963,15 +1149,16 @@ module SkillMirrorTests =
     let ``a MANGLED UTF-16 or UTF-32 body is refused, not collided`` () =
         let collidingPairs =
             [ // UTF-16 BE, odd length: the trailing byte has no partner.
-              "utf-16 BE odd", [| 0xFEuy; 0xFFuy; 0x41uy |], [| 0xFEuy; 0xFFuy; 0x42uy |]
-              // UTF-16 LE, odd length.
-              "utf-16 LE odd", [| 0xFFuy; 0xFEuy; 0x41uy |], [| 0xFFuy; 0xFEuy; 0x42uy |]
-              // UTF-16 LE, unpaired HIGH surrogate (D800/D801) with nothing following it.
-              "utf-16 LE lone surrogate", [| 0xFFuy; 0xFEuy; 0x00uy; 0xD8uy |], [| 0xFFuy; 0xFEuy; 0x01uy; 0xD8uy |]
-              // UTF-32 LE, scalar above U+10FFFF.
-              "utf-32 LE out of range",
-              [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x11uy; 0x00uy |],
-              [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x12uy; 0x00uy |] ]
+                "utf-16 BE odd", [| 0xFEuy; 0xFFuy; 0x41uy |], [| 0xFEuy; 0xFFuy; 0x42uy |]
+                // UTF-16 LE, odd length.
+                "utf-16 LE odd", [| 0xFFuy; 0xFEuy; 0x41uy |], [| 0xFFuy; 0xFEuy; 0x42uy |]
+                // UTF-16 LE, unpaired HIGH surrogate (D800/D801) with nothing following it.
+                "utf-16 LE lone surrogate", [| 0xFFuy; 0xFEuy; 0x00uy; 0xD8uy |], [| 0xFFuy; 0xFEuy; 0x01uy; 0xD8uy |]
+                // UTF-32 LE, scalar above U+10FFFF.
+                "utf-32 LE out of range",
+                [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x11uy; 0x00uy |],
+                [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x12uy; 0x00uy |]
+            ]
 
         for (label, a, b) in collidingPairs do
             // The read seam really does collide them — this is the defect, restated per case rather
@@ -1015,10 +1202,12 @@ module SkillMirrorTests =
         // Whatever encoding the preamble selected, the offset is inside the file and everything
         // before it decodes — the invariant that makes the number usable in a diagnostic.
         for bytes in
-            [ Array.append (utf8 "abc") [| 0x80uy |]
-              Array.concat [ utf8Bom; utf8 "ok"; [| 0xFFuy |] ]
-              [| 0xFEuy; 0xFFuy; 0x41uy |]
-              [| 0xFFuy; 0xFEuy; 0x00uy; 0xD8uy |] ] do
+            [
+                Array.append (utf8 "abc") [| 0x80uy |]
+                Array.concat [ utf8Bom; utf8 "ok"; [| 0xFFuy |] ]
+                [| 0xFEuy; 0xFFuy; 0x41uy |]
+                [| 0xFFuy; 0xFEuy; 0x00uy; 0xD8uy |]
+            ] do
             match decodeBody bytes with
             | Error(NotDecodable offset) ->
                 Assert.InRange(offset, 0, bytes.Length - 1)
@@ -1032,19 +1221,22 @@ module SkillMirrorTests =
     [<Fact>]
     let ``decodeBody is File_ReadAllText for every body that decodes`` () =
         let bodies =
-            [ "decodeBody: empty", [||]
-              "decodeBody: ascii", utf8 "# Skill\n\nbody\n"
-              "decodeBody: multibyte", utf8 "héllo — naïve ✅ 🚀\n"
-              "decodeBody: crlf", utf8 "line one\r\nline two\r\n"
-              "decodeBody: lone cr", utf8 "line one\rline two\n"
-              "decodeBody: nul", [| 0x61uy; 0x00uy; 0x62uy |]
-              "decodeBody: utf-8 BOM", Array.append utf8Bom (utf8 "# Skill\n")
-              "decodeBody: utf-16 LE BOM", Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "hi\n")
-              "decodeBody: utf-16 BE BOM", Array.append [| 0xFEuy; 0xFFuy |] (Encoding.BigEndianUnicode.GetBytes "hi\n")
-              "decodeBody: utf-32 LE BOM",
-              Array.append [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |] (UTF32Encoding(false, false).GetBytes "hi\n")
-              "decodeBody: utf-32 BE BOM",
-              Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (UTF32Encoding(true, false).GetBytes "hi\n") ]
+            [
+                "decodeBody: empty", [||]
+                "decodeBody: ascii", utf8 "# Skill\n\nbody\n"
+                "decodeBody: multibyte", utf8 "héllo — naïve ✅ 🚀\n"
+                "decodeBody: crlf", utf8 "line one\r\nline two\r\n"
+                "decodeBody: lone cr", utf8 "line one\rline two\n"
+                "decodeBody: nul", [| 0x61uy; 0x00uy; 0x62uy |]
+                "decodeBody: utf-8 BOM", Array.append utf8Bom (utf8 "# Skill\n")
+                "decodeBody: utf-16 LE BOM", Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "hi\n")
+                "decodeBody: utf-16 BE BOM",
+                Array.append [| 0xFEuy; 0xFFuy |] (Encoding.BigEndianUnicode.GetBytes "hi\n")
+                "decodeBody: utf-32 LE BOM",
+                Array.append [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |] (UTF32Encoding(false, false).GetBytes "hi\n")
+                "decodeBody: utf-32 BE BOM",
+                Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (UTF32Encoding(true, false).GetBytes "hi\n")
+            ]
 
         for (label, bytes) in bodies do
             let expected = readAllTextOf bytes
@@ -1067,10 +1259,12 @@ module SkillMirrorTests =
     [<Fact>]
     let ``a well-formed UTF-16 or UTF-32 body decodes rather than being refused`` () =
         let wellFormed =
-            [ Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "# Skill\n")
-              Array.append [| 0xFEuy; 0xFFuy |] (Encoding.BigEndianUnicode.GetBytes "# Skill\n")
-              Array.append [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |] (UTF32Encoding(false, false).GetBytes "# Skill\n")
-              Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (UTF32Encoding(true, false).GetBytes "# Skill\n") ]
+            [
+                Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "# Skill\n")
+                Array.append [| 0xFEuy; 0xFFuy |] (Encoding.BigEndianUnicode.GetBytes "# Skill\n")
+                Array.append [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |] (UTF32Encoding(false, false).GetBytes "# Skill\n")
+                Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (UTF32Encoding(true, false).GetBytes "# Skill\n")
+            ]
 
         for bytes in wellFormed do
             Assert.Equal<Result<string, BodyRefusalReason>>(Ok "# Skill\n", decodeBody bytes)
@@ -1116,16 +1310,20 @@ module SkillMirrorTests =
     // working rather than a fold that reports nothing.
 
     let private unobservedAt root id paths : UnobservedSkillFiles =
-        { Root = root
-          Id = id
-          RelativePaths = paths }
+        {
+            Root = root
+            Id = id
+            RelativePaths = paths
+        }
 
     /// The shape the whole item is about: `.claude` is a complete copy but for ONE auxiliary, so
     /// exactly one file is in question and every assertion below can be `exactlyOne`.
     let private auxiliaryOnlyAtTwoRoots body =
-        [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: s\n" ])
-          copyFiles ".codex" "s" (Some(multiFile body))
-          copyFiles ".agents" "s" (Some(multiFile body)) ]
+        [
+            copyFiles ".claude" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: s\n" ])
+            copyFiles ".codex" "s" (Some(multiFile body))
+            copyFiles ".agents" "s" (Some(multiFile body))
+        ]
 
     [<Fact>]
     let ``verifyObservedFiles withholds a file the caller could not observe`` () =
@@ -1168,9 +1366,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some(multiFile body))
-              copyFiles ".codex" "s" (Some(multiFile body))
-              copyFiles ".agents" "s" None ]
+            [
+                copyFiles ".claude" "s" (Some(multiFile body))
+                copyFiles ".codex" "s" (Some(multiFile body))
+                copyFiles ".agents" "s" None
+            ]
 
         let exp = [ expected "s" (sha256 body) ]
 
@@ -1186,9 +1386,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
-              copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "references/deep-detail.md" "a\n" ])
-              copyFiles ".agents" "s" (Some [ file "SKILL.md" body; file "references/deep-detail.md" "b\n" ]) ]
+            [
+                copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+                copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "references/deep-detail.md" "a\n" ])
+                copyFiles ".agents" "s" (Some [ file "SKILL.md" body; file "references/deep-detail.md" "b\n" ])
+            ]
 
         let d =
             List.exactlyOne (
@@ -1211,13 +1413,17 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
-              copyFiles ".codex" "s" (Some(multiFile body))
-              copyFiles ".agents" "s" (Some(multiFile body)) ]
+            [
+                copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+                copyFiles ".codex" "s" (Some(multiFile body))
+                copyFiles ".agents" "s" (Some(multiFile body))
+            ]
 
         let unobserved =
-            [ unobservedAt ".claude" "s" [ "references" ]
-              unobservedAt ".claude" "s" [ "agents/openai.yaml" ] ]
+            [
+                unobservedAt ".claude" "s" [ "references" ]
+                unobservedAt ".claude" "s" [ "agents/openai.yaml" ]
+            ]
 
         Assert.Empty(verifyObservedFiles roots [ expected "s" (sha256 body) ] actual unobserved)
 
@@ -1247,9 +1453,11 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
-              copyFiles ".codex" "s" (Some(multiFile body))
-              copyFiles ".agents" "s" None ]
+            [
+                copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+                copyFiles ".codex" "s" (Some(multiFile body))
+                copyFiles ".agents" "s" None
+            ]
 
         let exp = [ expected "s" (sha256 body) ]
         Assert.Equal<MultiFileSkillDrift list>(verifyFiles roots exp actual, verifyObservedFiles roots exp actual [])
@@ -1279,14 +1487,18 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let tampered =
-            [ file "SKILL.md" body
-              file "references/deep-detail.md" "TAMPERED\n"
-              file "agents/openai.yaml" "name: s\n" ]
+            [
+                file "SKILL.md" body
+                file "references/deep-detail.md" "TAMPERED\n"
+                file "agents/openai.yaml" "name: s\n"
+            ]
 
         let actual =
-            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: s\n" ])
-              copyFiles ".codex" "s" (Some tampered)
-              copyFiles ".agents" "s" (Some tampered) ]
+            [
+                copyFiles ".claude" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: s\n" ])
+                copyFiles ".codex" "s" (Some tampered)
+                copyFiles ".agents" "s" (Some tampered)
+            ]
 
         let d =
             List.exactlyOne (

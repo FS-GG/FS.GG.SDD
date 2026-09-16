@@ -43,13 +43,15 @@ module MergePolicyTests =
         let files = policies |> List.map (fun (_, file, _) -> file) |> List.sort
 
         Assert.Equal<string list>(
-            [ "charter.md"
-              "checklist.md"
-              "clarifications.md"
-              "evidence.yml"
-              "plan.md"
-              "spec.md"
-              "tasks.yml" ],
+            [
+                "charter.md"
+                "checklist.md"
+                "clarifications.md"
+                "evidence.yml"
+                "plan.md"
+                "spec.md"
+                "tasks.yml"
+            ],
             files
         )
 
@@ -80,11 +82,13 @@ module MergePolicyTests =
     [<Fact>]
     let ``each markdown policy ensures exactly its artifact's standard sections`` () =
         let expected =
-            [ "charter.md", MergePolicies.charterSections
-              "spec.md", specificationStandardSections ()
-              "clarifications.md", clarificationStandardSections ()
-              "checklist.md", checklistStandardSections ()
-              "plan.md", planStandardSections () ]
+            [
+                "charter.md", MergePolicies.charterSections
+                "spec.md", specificationStandardSections ()
+                "clarifications.md", clarificationStandardSections ()
+                "checklist.md", checklistStandardSections ()
+                "plan.md", planStandardSections ()
+            ]
 
         for file, sections in expected do
             let _, _, policy = policies |> List.find (fun (_, candidate, _) -> candidate = file)

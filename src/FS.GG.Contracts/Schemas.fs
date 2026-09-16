@@ -7,221 +7,277 @@ module Schemas =
         | Governance
 
     type SchemaContractEntry =
-        { Name: string
-          SchemaVersion: int
-          ContractVersion: string option
-          Owner: SchemaOwner }
+        {
+            Name: string
+            SchemaVersion: int
+            ContractVersion: string option
+            Owner: SchemaOwner
+        }
 
     type GeneratorRef = { Id: string; Version: string }
 
     type ProviderParameterEntry =
-        { Key: string
-          Required: bool
-          Default: string option }
+        {
+            Key: string
+            Required: bool
+            Default: string option
+        }
 
     type SchemaSourceIdentity =
-        { Path: string
-          DigestAlgorithm: string
-          DigestValue: string
-          SchemaVersion: int option }
+        {
+            Path: string
+            DigestAlgorithm: string
+            DigestValue: string
+            SchemaVersion: int option
+        }
 
     type SchemaDiagnostic =
-        { Id: string
-          Severity: string
-          Message: string
-          Correction: string
-          RelatedIds: string list }
+        {
+            Id: string
+            Severity: string
+            Message: string
+            Correction: string
+            RelatedIds: string list
+        }
 
     type ProviderRegistryEntry =
-        { Name: string
-          ContractVersion: string
-          TemplateId: string
-          Source: string
-          Parameters: ProviderParameterEntry list }
+        {
+            Name: string
+            ContractVersion: string
+            TemplateId: string
+            Source: string
+            Parameters: ProviderParameterEntry list
+        }
 
     type ProvidersSchema =
-        { SchemaVersion: int
-          Providers: ProviderRegistryEntry list }
+        {
+            SchemaVersion: int
+            Providers: ProviderRegistryEntry list
+        }
 
     type ProjectSchema =
-        { SchemaVersion: int
-          ProjectId: string
-          DefaultWorkRoot: string
-          SddConfigPath: string
-          AgentsConfigPath: string
-          GovernancePolicyPath: string option
-          GovernanceCapabilitiesPath: string option
-          GovernanceToolingPath: string option }
+        {
+            SchemaVersion: int
+            ProjectId: string
+            DefaultWorkRoot: string
+            SddConfigPath: string
+            AgentsConfigPath: string
+            GovernancePolicyPath: string option
+            GovernanceCapabilitiesPath: string option
+            GovernanceToolingPath: string option
+        }
 
     type SddSchema =
-        { SchemaVersion: int
-          Stages: string list
-          WorkRoot: string
-          ReadinessRoot: string
-          RequireSourceDigests: bool
-          RequireGeneratorVersion: bool
-          StaleBehavior: string }
+        {
+            SchemaVersion: int
+            Stages: string list
+            WorkRoot: string
+            ReadinessRoot: string
+            RequireSourceDigests: bool
+            RequireGeneratorVersion: bool
+            StaleBehavior: string
+        }
 
     type AgentGuidanceTargetEntry =
-        { Id: string
-          GuidancePath: string
-          GeneratedRoot: string }
+        {
+            Id: string
+            GuidancePath: string
+            GeneratedRoot: string
+        }
 
     type AgentsSchema =
-        { SchemaVersion: int
-          Targets: AgentGuidanceTargetEntry list
-          WorkModelPath: string
-          GeneratedGuidanceIsAuthority: bool
-          RequireEquivalentClaudeAndCodexBehavior: bool }
+        {
+            SchemaVersion: int
+            Targets: AgentGuidanceTargetEntry list
+            WorkModelPath: string
+            GeneratedGuidanceIsAuthority: bool
+            RequireEquivalentClaudeAndCodexBehavior: bool
+        }
 
     type ScaffoldProducedPathEntry =
-        { Path: string
-          Owner: string
-          Sha256: string option }
+        {
+            Path: string
+            Owner: string
+            Sha256: string option
+        }
 
     type ScaffoldProvenanceSchema =
-        { SchemaVersion: int
-          Generator: GeneratorRef
-          ProviderName: string
-          ProviderContractVersion: string
-          TemplateRef: string
-          Outcome: string
-          ProducedPaths: ScaffoldProducedPathEntry list }
+        {
+            SchemaVersion: int
+            Generator: GeneratorRef
+            ProviderName: string
+            ProviderContractVersion: string
+            TemplateRef: string
+            Outcome: string
+            ProducedPaths: ScaffoldProducedPathEntry list
+        }
 
     type SkillScope =
         | Process
         | Product
 
     type SkillManifestEntry =
-        { Id: string
-          Scope: SkillScope
-          Sha256: string
-          Body: string option
-          ResolvablePath: string option }
+        {
+            Id: string
+            Scope: SkillScope
+            Sha256: string
+            Body: string option
+            ResolvablePath: string option
+        }
 
     type SkillManifest =
-        { SchemaVersion: int
-          Skills: SkillManifestEntry list }
+        {
+            SchemaVersion: int
+            Skills: SkillManifestEntry list
+        }
 
     type SkillManifestFile =
         { RelativePath: string; Sha256: string }
 
     type SkillManifestFileSet =
-        { Skill: SkillManifestEntry
-          Files: SkillManifestFile list }
+        {
+            Skill: SkillManifestEntry
+            Files: SkillManifestFile list
+        }
 
     type SkillManifestV2 =
-        { SchemaVersion: int
-          Skills: SkillManifestFileSet list }
+        {
+            SchemaVersion: int
+            Skills: SkillManifestFileSet list
+        }
 
     type GovernanceHandoffEvidenceNode =
-        { Id: string
-          State: string
-          Rationale: string option }
+        {
+            Id: string
+            State: string
+            Rationale: string option
+        }
 
     type GovernanceHandoffEvidenceEdge =
-        { Dependent: string
-          Dependency: string }
+        {
+            Dependent: string
+            Dependency: string
+        }
 
     type GovernanceHandoffEvidence =
-        { Nodes: GovernanceHandoffEvidenceNode list
-          Dependencies: GovernanceHandoffEvidenceEdge list }
+        {
+            Nodes: GovernanceHandoffEvidenceNode list
+            Dependencies: GovernanceHandoffEvidenceEdge list
+        }
 
     type PerformanceEvidenceSampleSet =
-        { WorkloadId: string
-          WorkloadDefinitionDigest: string
-          WorkloadClass: string
-          TargetFps: int
-          MaxP95Ms: decimal
-          MaxP99Ms: decimal
-          MaxCatchUpFrames: int
-          MeasurementScope: string
-          RequiredCapability: string
-          HostProfile: string
-          PackageVersions: string list
-          MeasurementMode: string
-          Capabilities: string list
-          WarmupPolicy: string
-          SamplePolicy: string
-          CapturedAtUtc: string
-          CurrencyToken: string
-          ProbeReadbackContaminated: bool
-          DurationSamplesMs: decimal list
-          CatchUpFrames: int list }
+        {
+            WorkloadId: string
+            WorkloadDefinitionDigest: string
+            WorkloadClass: string
+            TargetFps: int
+            MaxP95Ms: decimal
+            MaxP99Ms: decimal
+            MaxCatchUpFrames: int
+            MeasurementScope: string
+            RequiredCapability: string
+            HostProfile: string
+            PackageVersions: string list
+            MeasurementMode: string
+            Capabilities: string list
+            WarmupPolicy: string
+            SamplePolicy: string
+            CapturedAtUtc: string
+            CurrencyToken: string
+            ProbeReadbackContaminated: bool
+            DurationSamplesMs: decimal list
+            CatchUpFrames: int list
+        }
 
     type PerformanceEvidenceArtifact =
-        { ContractVersion: string
-          ClaimedBudgetPassed: bool option
-          SampleSets: PerformanceEvidenceSampleSet list }
+        {
+            ContractVersion: string
+            ClaimedBudgetPassed: bool option
+            SampleSets: PerformanceEvidenceSampleSet list
+        }
 
     type PerformanceEvidenceMeasurement =
-        { WorkloadId: string
-          P95Ms: decimal
-          P99Ms: decimal
-          MaxCatchUpFrames: int }
+        {
+            WorkloadId: string
+            P95Ms: decimal
+            P99Ms: decimal
+            MaxCatchUpFrames: int
+        }
 
     /// The single lifecycle declaration of performance intent. Early SDD stages author this
     /// contract; evidence and Governance carry the same value instead of maintaining mirrors.
     type PerformanceIntentDeclaration =
-        { Id: string
-          Disposition: string
-          TargetFps: int
-          WorkloadIds: string list
-          WorkloadDefinitionDigests: string list
-          MaximumExpectedScale: string
-          MaxP95Ms: decimal
-          MaxP99Ms: decimal
-          MaxCatchUpFrames: int
-          StructuralCostBudgets: string list
-          RequiredCapability: string
-          LiveCompositorRequired: bool
-          DeferralIssue: string option
-          EvidenceRefs: string list
-          Rationale: string option }
+        {
+            Id: string
+            Disposition: string
+            TargetFps: int
+            WorkloadIds: string list
+            WorkloadDefinitionDigests: string list
+            MaximumExpectedScale: string
+            MaxP95Ms: decimal
+            MaxP99Ms: decimal
+            MaxCatchUpFrames: int
+            StructuralCostBudgets: string list
+            RequiredCapability: string
+            LiveCompositorRequired: bool
+            DeferralIssue: string option
+            EvidenceRefs: string list
+            Rationale: string option
+        }
 
     type GovernanceHandoffPerformanceEvidence =
-        { EvidenceId: string
-          ArtifactPath: string
-          Intent: PerformanceIntentDeclaration option
-          Artifact: PerformanceEvidenceArtifact
-          Measurements: PerformanceEvidenceMeasurement list }
+        {
+            EvidenceId: string
+            ArtifactPath: string
+            Intent: PerformanceIntentDeclaration option
+            Artifact: PerformanceEvidenceArtifact
+            Measurements: PerformanceEvidenceMeasurement list
+        }
 
     type GovernanceHandoffReference =
-        { Path: string
-          Owner: string
-          Relationship: string
-          Kind: string option
-          Operation: string option }
+        {
+            Path: string
+            Owner: string
+            Relationship: string
+            Kind: string option
+            Operation: string option
+        }
 
     type GovernanceHandoffConfigPresence =
-        { PolicyPresent: bool
-          PolicyPointer: string option
-          CapabilitiesPresent: bool
-          CapabilitiesPointer: string option
-          ToolingPresent: bool
-          ToolingPointer: string option }
+        {
+            PolicyPresent: bool
+            PolicyPointer: string option
+            CapabilitiesPresent: bool
+            CapabilitiesPointer: string option
+            ToolingPresent: bool
+            ToolingPointer: string option
+        }
 
     type GovernanceHandoffReadiness =
-        { ShipDisposition: string
-          VerificationReadiness: string
-          AdvisoryCount: int
-          WarningCount: int
-          BlockingCount: int
-          BlockingDiagnosticIds: string list
-          PerViewState: (string * string) list }
+        {
+            ShipDisposition: string
+            VerificationReadiness: string
+            AdvisoryCount: int
+            WarningCount: int
+            BlockingCount: int
+            BlockingDiagnosticIds: string list
+            PerViewState: (string * string) list
+        }
 
     type GovernanceHandoffSchema =
-        { SchemaVersion: int
-          ContractVersion: string
-          GeneratorVersion: GeneratorRef
-          WorkId: string
-          Sources: SchemaSourceIdentity list
-          Evidence: GovernanceHandoffEvidence
-          PerformanceEvidence: GovernanceHandoffPerformanceEvidence list
-          GovernedReferences: GovernanceHandoffReference list
-          GovernanceConfig: GovernanceHandoffConfigPresence
-          Readiness: GovernanceHandoffReadiness
-          Diagnostics: SchemaDiagnostic list }
+        {
+            SchemaVersion: int
+            ContractVersion: string
+            GeneratorVersion: GeneratorRef
+            WorkId: string
+            Sources: SchemaSourceIdentity list
+            Evidence: GovernanceHandoffEvidence
+            PerformanceEvidence: GovernanceHandoffPerformanceEvidence list
+            GovernedReferences: GovernanceHandoffReference list
+            GovernanceConfig: GovernanceHandoffConfigPresence
+            Readiness: GovernanceHandoffReadiness
+            Diagnostics: SchemaDiagnostic list
+        }
 
     // SOURCE: Governance published reference (TBD-link) — minimal provisional shape.
     type GovernanceSchema = { SchemaVersion: int }
@@ -271,50 +327,74 @@ module Schemas =
     let toolingVersion = 1
 
     let entries: SchemaContractEntry list =
-        [ { Name = "providers"
-            SchemaVersion = providersVersion
-            ContractVersion = None
-            Owner = Sdd }
-          { Name = "project"
-            SchemaVersion = projectVersion
-            ContractVersion = None
-            Owner = Sdd }
-          { Name = "sdd"
-            SchemaVersion = sddVersion
-            ContractVersion = None
-            Owner = Sdd }
-          { Name = "agents"
-            SchemaVersion = agentsVersion
-            ContractVersion = None
-            Owner = Sdd }
-          { Name = "scaffold-provenance"
-            SchemaVersion = scaffoldProvenanceVersion
-            ContractVersion = None
-            Owner = Sdd }
-          { Name = "governance-handoff"
-            SchemaVersion = governanceHandoffVersion
-            ContractVersion = Some governanceHandoffContractVersion
-            Owner = Sdd }
-          { Name = "skill-manifest"
-            SchemaVersion = skillManifestVersion
-            ContractVersion = None
-            Owner = Sdd }
-          { Name = "governance"
-            SchemaVersion = governanceVersion
-            ContractVersion = None
-            Owner = Governance }
-          { Name = "policy"
-            SchemaVersion = policyVersion
-            ContractVersion = None
-            Owner = Governance }
-          { Name = "capabilities"
-            SchemaVersion = capabilitiesVersion
-            ContractVersion = None
-            Owner = Governance }
-          { Name = "tooling"
-            SchemaVersion = toolingVersion
-            ContractVersion = None
-            Owner = Governance } ]
+        [
+            {
+                Name = "providers"
+                SchemaVersion = providersVersion
+                ContractVersion = None
+                Owner = Sdd
+            }
+            {
+                Name = "project"
+                SchemaVersion = projectVersion
+                ContractVersion = None
+                Owner = Sdd
+            }
+            {
+                Name = "sdd"
+                SchemaVersion = sddVersion
+                ContractVersion = None
+                Owner = Sdd
+            }
+            {
+                Name = "agents"
+                SchemaVersion = agentsVersion
+                ContractVersion = None
+                Owner = Sdd
+            }
+            {
+                Name = "scaffold-provenance"
+                SchemaVersion = scaffoldProvenanceVersion
+                ContractVersion = None
+                Owner = Sdd
+            }
+            {
+                Name = "governance-handoff"
+                SchemaVersion = governanceHandoffVersion
+                ContractVersion = Some governanceHandoffContractVersion
+                Owner = Sdd
+            }
+            {
+                Name = "skill-manifest"
+                SchemaVersion = skillManifestVersion
+                ContractVersion = None
+                Owner = Sdd
+            }
+            {
+                Name = "governance"
+                SchemaVersion = governanceVersion
+                ContractVersion = None
+                Owner = Governance
+            }
+            {
+                Name = "policy"
+                SchemaVersion = policyVersion
+                ContractVersion = None
+                Owner = Governance
+            }
+            {
+                Name = "capabilities"
+                SchemaVersion = capabilitiesVersion
+                ContractVersion = None
+                Owner = Governance
+            }
+            {
+                Name = "tooling"
+                SchemaVersion = toolingVersion
+                ContractVersion = None
+                Owner = Governance
+            }
+        ]
 
     // The single declared agent-skill root set (ADR-0065, as amended by ADR-0067 §5).
     // Bare repo-root names; consumers append `skills/`. One place to add/rename a runtime root.

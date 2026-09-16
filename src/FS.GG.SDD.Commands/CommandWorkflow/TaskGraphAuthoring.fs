@@ -59,48 +59,52 @@ module internal TaskGraphAuthoring =
         let statusCount predicate =
             facts.Tasks |> List.filter (fun task -> predicate task.Status) |> List.length
 
-        { WorkId = facts.FrontMatter.WorkId.Value
-          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
-          Status = facts.FrontMatter.Status
-          SourceSpec = facts.FrontMatter.SourceSpec
-          SourceClarifications = facts.FrontMatter.SourceClarifications
-          SourceChecklist = facts.FrontMatter.SourceChecklist
-          SourcePlan = facts.FrontMatter.SourcePlan
-          TaskIds = facts.Tasks |> List.map (fun task -> task.Id.Value) |> List.sort
-          DependencyCount = facts.Tasks |> List.sumBy (fun task -> task.Dependencies.Length)
-          RequiredSkillCount =
-            facts.Tasks
-            |> List.collect (fun task -> task.RequiredSkills)
-            |> List.distinct
-            |> List.length
-          RequiredEvidenceCount =
-            facts.Tasks
-            |> List.collect (fun task -> task.RequiredEvidence |> List.map _.Value)
-            |> List.distinct
-            |> List.length
-          PendingCount = statusCount ((=) TaskStatus.Pending)
-          InProgressCount = statusCount ((=) TaskStatus.InProgress)
-          DoneCount = statusCount ((=) TaskStatus.Done)
-          SkippedCount =
-            facts.Tasks
-            |> List.filter (fun task ->
-                match task.Status with
-                | TaskStatus.Skipped _ -> true
-                | _ -> false)
-            |> List.length
-          StaleCount = facts.StaleTaskCount
-          AcceptedDeferralCount = facts.AcceptedDeferrals.Length
-          BlockingFindingCount =
-            facts.Findings
-            |> List.filter (fun finding -> finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
-            |> List.length
-          AdvisoryCount = facts.AdvisoryNotes.Length }
+        {
+            WorkId = facts.FrontMatter.WorkId.Value
+            Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+            Status = facts.FrontMatter.Status
+            SourceSpec = facts.FrontMatter.SourceSpec
+            SourceClarifications = facts.FrontMatter.SourceClarifications
+            SourceChecklist = facts.FrontMatter.SourceChecklist
+            SourcePlan = facts.FrontMatter.SourcePlan
+            TaskIds = facts.Tasks |> List.map (fun task -> task.Id.Value) |> List.sort
+            DependencyCount = facts.Tasks |> List.sumBy (fun task -> task.Dependencies.Length)
+            RequiredSkillCount =
+                facts.Tasks
+                |> List.collect (fun task -> task.RequiredSkills)
+                |> List.distinct
+                |> List.length
+            RequiredEvidenceCount =
+                facts.Tasks
+                |> List.collect (fun task -> task.RequiredEvidence |> List.map _.Value)
+                |> List.distinct
+                |> List.length
+            PendingCount = statusCount ((=) TaskStatus.Pending)
+            InProgressCount = statusCount ((=) TaskStatus.InProgress)
+            DoneCount = statusCount ((=) TaskStatus.Done)
+            SkippedCount =
+                facts.Tasks
+                |> List.filter (fun task ->
+                    match task.Status with
+                    | TaskStatus.Skipped _ -> true
+                    | _ -> false)
+                |> List.length
+            StaleCount = facts.StaleTaskCount
+            AcceptedDeferralCount = facts.AcceptedDeferrals.Length
+            BlockingFindingCount =
+                facts.Findings
+                |> List.filter (fun finding -> finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                |> List.length
+            AdvisoryCount = facts.AdvisoryNotes.Length
+        }
 
     let parseTasksForCommand path text : Result<TaskFacts * Diagnostic list, Diagnostic list> =
         let snapshot =
-            { Path = path
-              Text = text
-              RawBytes = None }
+            {
+                Path = path
+                Text = text
+                RawBytes = None
+            }
 
         match parseTaskFacts snapshot with
         | Error diagnostics ->
@@ -178,18 +182,20 @@ module internal TaskGraphAuthoring =
         evidenceIndex
         idIndex
         : WorkTask =
-        { Id = taskId idIndex
-          Title = title
-          Status = TaskStatus.Pending
-          Owner = "sdd"
-          Dependencies = dependencies
-          Requirements = requirements
-          Decisions = decisions
-          SourceIds = sourceIds |> List.distinct |> List.sort
-          RequiredSkills = skills |> List.distinct |> List.sort
-          RequiredEvidence = [ taskEvidenceId evidenceIndex ]
-          Source = taskArtifactRef workId
-          SourceLocation = None }
+        {
+            Id = taskId idIndex
+            Title = title
+            Status = TaskStatus.Pending
+            Owner = "sdd"
+            Dependencies = dependencies
+            Requirements = requirements
+            Decisions = decisions
+            SourceIds = sourceIds |> List.distinct |> List.sort
+            RequiredSkills = skills |> List.distinct |> List.sort
+            RequiredEvidence = [ taskEvidenceId evidenceIndex ]
+            Source = taskArtifactRef workId
+            SourceLocation = None
+        }
 
     let plannedTasks
         (skills: DerivedSkills)
@@ -337,11 +343,13 @@ module internal TaskGraphAuthoring =
         // keeps visible, and the fold target for a pure deferral-mirror PD. Built once, upstream of
         // both, so the mirror partition and the keep-visible tasks read the same set.
         let acceptedDeferralIds =
-            [ clarificationFacts.AcceptedDeferrals
-              |> List.map (fun deferral -> deferral.DecisionId.Value)
-              checklistFacts.AcceptedDeferrals
-              |> List.map (fun result -> result.ResultId.Value)
-              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+            [
+                clarificationFacts.AcceptedDeferrals
+                |> List.map (fun deferral -> deferral.DecisionId.Value)
+                checklistFacts.AcceptedDeferrals
+                |> List.map (fun result -> result.ResultId.Value)
+                planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id)
+            ]
             |> List.concat
             |> List.distinct
 
@@ -431,7 +439,8 @@ module internal TaskGraphAuthoring =
                 match Map.tryFind task.Id.Value foldedByTaskId with
                 | Some folded ->
                     { task with
-                        SourceIds = task.SourceIds @ folded |> List.distinct |> List.sort }
+                        SourceIds = task.SourceIds @ folded |> List.distinct |> List.sort
+                    }
                 | None -> task)
 
         let contractTasks =
@@ -520,13 +529,15 @@ module internal TaskGraphAuthoring =
             if not visualSurface then
                 []
             else
-                [ maybeTask
-                      []
-                      visualInspectionTaskTitle
-                      []
-                      []
-                      primaryDependency
-                      [ visualInspectionSkill; skills.ImplementSkill ] ]
+                [
+                    maybeTask
+                        []
+                        visualInspectionTaskTitle
+                        []
+                        []
+                        primaryDependency
+                        [ visualInspectionSkill; skills.ImplementSkill ]
+                ]
                 |> List.choose id
 
         // SDD#700: the task projection of the exact early intent. The stable intent id stays in the
@@ -536,13 +547,15 @@ module internal TaskGraphAuthoring =
             performanceIntent
             |> Option.filter (fun intent -> intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase))
             |> Option.map (fun intent ->
-                [ maybeTask
-                      []
-                      $"Measure performance intent {intent.Id}"
-                      []
-                      []
-                      primaryDependency
-                      [ "performance-measurement"; intent.RequiredCapability ] ]
+                [
+                    maybeTask
+                        []
+                        $"Measure performance intent {intent.Id}"
+                        []
+                        []
+                        primaryDependency
+                        [ "performance-measurement"; intent.RequiredCapability ]
+                ]
                 |> List.choose id)
             |> Option.defaultValue []
 
@@ -593,10 +606,12 @@ module internal TaskGraphAuthoring =
         @ productionJourneyTasks
 
     let currentTaskSourceDigests workId specText clarificationText checklistText planText =
-        [ "spec", specPath workId, specText
-          "clarifications", clarificationPath workId, clarificationText
-          "checklist", checklistPath workId, checklistText
-          "plan", planPath workId, planText ]
+        [
+            "spec", specPath workId, specText
+            "clarifications", clarificationPath workId, clarificationText
+            "checklist", checklistPath workId, checklistText
+            "plan", planPath workId, planText
+        ]
         |> List.map (fun (label, path, text) -> label, path, (SchemaVersionModule.sha256Text text).Value)
 
     // §082 (#147): merge the re-derived graph with the prior file. `tasks.yml` legitimately
@@ -697,12 +712,14 @@ module internal TaskGraphAuthoring =
                         Requirements = requirements
                         Decisions = decisions
                         RequiredSkills = requiredSkills
-                        SourceIds = sourceIds }
+                        SourceIds = sourceIds
+                    }
                 | None ->
                     { task with
                         Id = finalId
                         Dependencies = dependencies
-                        RequiredEvidence = requiredEvidence })
+                        RequiredEvidence = requiredEvidence
+                    })
 
         // The dispositions the re-derived graph already covers. An unmatched prior task is kept
         // only if it UNIQUELY covers a live disposition the derived graph misses (an authored
@@ -743,7 +760,8 @@ module internal TaskGraphAuthoring =
                             Requirements = requirements
                             Decisions = decisions
                             SourceIds = sourceIds
-                            Status = carriedStatus })
+                            Status = carriedStatus
+                        })
 
         let merged = mergedDerived @ keptAuthored
 
@@ -757,7 +775,8 @@ module internal TaskGraphAuthoring =
             { task with
                 Dependencies =
                     task.Dependencies
-                    |> List.filter (fun dep -> Set.contains dep.Value survivingIds) })
+                    |> List.filter (fun dep -> Set.contains dep.Value survivingIds)
+            })
 
     /// Dispatch the merge above on the policy `tasks.yml`'s write tag carries (#309). Only
     /// `StructuredMerge` can carry authored state forward; under a section policy this function has
@@ -900,33 +919,35 @@ sources:
         (checklistFacts: ChecklistFacts)
         (planFacts: PlanFacts)
         =
-        [ specFacts.RequirementIds |> List.map (fun id -> id.Value)
-          specFacts.UserStoryIds |> List.map (fun id -> id.Value)
-          specFacts.AcceptanceScenarioIds |> List.map (fun id -> id.Value)
-          specFacts.ScopeBoundaryIds |> List.map (fun id -> id.Value)
-          specFacts.AmbiguityIds |> List.map (fun id -> id.Value)
-          clarificationFacts.Questions
-          |> List.map (fun (question: ClarificationQuestion) -> question.QuestionId.Value)
-          clarificationFacts.Decisions
-          |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
-          clarificationFacts.AcceptedDeferrals
-          |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
-          checklistFacts.Items
-          |> List.map (fun (item: ChecklistItem) -> item.ItemId.Value)
-          checklistFacts.Results
-          |> List.map (fun (result: ChecklistReviewResult) -> result.ResultId.Value)
-          planFacts.Decisions
-          |> List.map (fun (decision: PlanDecision) -> decision.DecisionId.Value)
-          planFacts.ContractReferences
-          |> List.map (fun (reference: PlanContractReference) -> reference.ContractId.Value)
-          planFacts.VerificationObligations
-          |> List.map (fun (obligation: VerificationObligation) -> obligation.ObligationId.Value)
-          planFacts.MigrationNotes
-          |> List.map (fun (migration: PlanMigrationNote) -> migration.MigrationId.Value)
-          planFacts.GeneratedViewImpacts
-          |> List.map (fun (impact: GeneratedViewImpact) -> impact.ImpactId.Value)
-          planFacts.AcceptedDeferrals
-          |> List.map (fun (deferral: AcceptedPlanDeferral) -> deferral.Id) ]
+        [
+            specFacts.RequirementIds |> List.map (fun id -> id.Value)
+            specFacts.UserStoryIds |> List.map (fun id -> id.Value)
+            specFacts.AcceptanceScenarioIds |> List.map (fun id -> id.Value)
+            specFacts.ScopeBoundaryIds |> List.map (fun id -> id.Value)
+            specFacts.AmbiguityIds |> List.map (fun id -> id.Value)
+            clarificationFacts.Questions
+            |> List.map (fun (question: ClarificationQuestion) -> question.QuestionId.Value)
+            clarificationFacts.Decisions
+            |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
+            clarificationFacts.AcceptedDeferrals
+            |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
+            checklistFacts.Items
+            |> List.map (fun (item: ChecklistItem) -> item.ItemId.Value)
+            checklistFacts.Results
+            |> List.map (fun (result: ChecklistReviewResult) -> result.ResultId.Value)
+            planFacts.Decisions
+            |> List.map (fun (decision: PlanDecision) -> decision.DecisionId.Value)
+            planFacts.ContractReferences
+            |> List.map (fun (reference: PlanContractReference) -> reference.ContractId.Value)
+            planFacts.VerificationObligations
+            |> List.map (fun (obligation: VerificationObligation) -> obligation.ObligationId.Value)
+            planFacts.MigrationNotes
+            |> List.map (fun (migration: PlanMigrationNote) -> migration.MigrationId.Value)
+            planFacts.GeneratedViewImpacts
+            |> List.map (fun (impact: GeneratedViewImpact) -> impact.ImpactId.Value)
+            planFacts.AcceptedDeferrals
+            |> List.map (fun (deferral: AcceptedPlanDeferral) -> deferral.Id)
+        ]
         |> List.concat
         |> Set.ofList
 
@@ -962,33 +983,37 @@ sources:
         (checklistFacts: ChecklistFacts)
         (planFacts: PlanFacts)
         : string list =
-        [ specFacts.RequirementIds |> List.map _.Value
-          specFacts.AcceptanceScenarioIds |> List.map _.Value
-          clarificationFacts.Decisions
-          |> List.map (fun decision -> decision.DecisionId.Value)
-          clarificationFacts.AcceptedDeferrals
-          |> List.map (fun decision -> decision.DecisionId.Value)
-          checklistFacts.AcceptedDeferrals
-          |> List.map (fun result -> result.ResultId.Value)
-          planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
-          planFacts.ContractReferences
-          |> List.map (fun contract -> contract.ContractId.Value)
-          planFacts.VerificationObligations
-          |> List.map (fun obligation -> obligation.ObligationId.Value)
-          planFacts.MigrationNotes
-          |> List.map (fun migration -> migration.MigrationId.Value)
-          planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
-          planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+        [
+            specFacts.RequirementIds |> List.map _.Value
+            specFacts.AcceptanceScenarioIds |> List.map _.Value
+            clarificationFacts.Decisions
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            clarificationFacts.AcceptedDeferrals
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            checklistFacts.AcceptedDeferrals
+            |> List.map (fun result -> result.ResultId.Value)
+            planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+            planFacts.ContractReferences
+            |> List.map (fun contract -> contract.ContractId.Value)
+            planFacts.VerificationObligations
+            |> List.map (fun obligation -> obligation.ObligationId.Value)
+            planFacts.MigrationNotes
+            |> List.map (fun migration -> migration.MigrationId.Value)
+            planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
+            planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id)
+        ]
         |> List.concat
 
     // Every id a task graph currently disposes: a task's sourceIds, its typed
     // requirement/decision refs, plus file-level accepted deferrals. Upper-cased for the
     // case-insensitive membership test against `requiredDispositionIds`.
     let allTaskDispositionIds (facts: TaskFacts) =
-        [ facts.Tasks |> List.collect (fun task -> task.SourceIds)
-          facts.Tasks |> List.collect (fun task -> task.Requirements |> List.map _.Value)
-          facts.Tasks |> List.collect (fun task -> task.Decisions |> List.map _.Value)
-          facts.AcceptedDeferrals ]
+        [
+            facts.Tasks |> List.collect (fun task -> task.SourceIds)
+            facts.Tasks |> List.collect (fun task -> task.Requirements |> List.map _.Value)
+            facts.Tasks |> List.collect (fun task -> task.Decisions |> List.map _.Value)
+            facts.AcceptedDeferrals
+        ]
         |> List.concat
         |> upperSet
 
@@ -1089,20 +1114,22 @@ sources:
             | [] -> []
             | missing -> [ missingDisposition path missing ]
 
-        [ duplicateDiagnostics
-          unknownSources
-          unknownDependencies
-          selfDependencies
-          taskDependencyCycleDiagnostics path facts.Tasks
-          missingDispositions
-          if not (List.isEmpty skippedWithoutRationale) then
-              [ skippedTaskMissingRationale path skippedWithoutRationale ]
-          else
-              []
-          if not (List.isEmpty doneMissingEvidence) then
-              [ doneTaskMissingEvidence path doneMissingEvidence ]
-          else
-              [] ]
+        [
+            duplicateDiagnostics
+            unknownSources
+            unknownDependencies
+            selfDependencies
+            taskDependencyCycleDiagnostics path facts.Tasks
+            missingDispositions
+            if not (List.isEmpty skippedWithoutRationale) then
+                [ skippedTaskMissingRationale path skippedWithoutRationale ]
+            else
+                []
+            if not (List.isEmpty doneMissingEvidence) then
+                [ doneTaskMissingEvidence path doneMissingEvidence ]
+            else
+                []
+        ]
         |> List.concat
         |> DiagnosticsModule.sort
 
@@ -1162,11 +1189,13 @@ sources:
                     None
 
             let acceptedDeferrals =
-                [ clarificationFacts.AcceptedDeferrals
-                  |> List.map (fun deferral -> deferral.DecisionId.Value)
-                  checklistFacts.AcceptedDeferrals
-                  |> List.map (fun result -> result.ResultId.Value)
-                  planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+                [
+                    clarificationFacts.AcceptedDeferrals
+                    |> List.map (fun deferral -> deferral.DecisionId.Value)
+                    checklistFacts.AcceptedDeferrals
+                    |> List.map (fun result -> result.ResultId.Value)
+                    planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id)
+                ]
                 |> List.concat
                 |> List.distinct
                 |> List.sort
@@ -1218,7 +1247,8 @@ sources:
                             existingFacts.FrontMatter.SchemaVersion.Major
                             existingFacts.FrontMatter.WorkId.Value
                             existingFacts.FrontMatter.Stage
-                        @ [ if
+                        @ [
+                            if
                                 not (
                                     String.Equals(
                                         normalizeRelativePath existingFacts.FrontMatter.SourceSpec,
@@ -1265,7 +1295,8 @@ sources:
                             then
                                 malformedTasksArtifact
                                     path
-                                    $"Tasks sourcePlan '{existingFacts.FrontMatter.SourcePlan}' does not match '{planPath workId}'." ]
+                                    $"Tasks sourcePlan '{existingFacts.FrontMatter.SourcePlan}' does not match '{planPath workId}'."
+                        ]
 
                     let hasBlockingParserDiagnostics =
                         identityDiagnostics @ existingDiagnostics
@@ -1305,11 +1336,13 @@ sources:
                             mergeAuthoredTaskState MergePolicies.tasks liveIds existingFacts.Tasks derived
 
                         let acceptedDeferrals =
-                            [ clarificationFacts.AcceptedDeferrals
-                              |> List.map (fun deferral -> deferral.DecisionId.Value)
-                              checklistFacts.AcceptedDeferrals
-                              |> List.map (fun result -> result.ResultId.Value)
-                              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+                            [
+                                clarificationFacts.AcceptedDeferrals
+                                |> List.map (fun deferral -> deferral.DecisionId.Value)
+                                checklistFacts.AcceptedDeferrals
+                                |> List.map (fun result -> result.ResultId.Value)
+                                planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id)
+                            ]
                             |> List.concat
                             |> List.distinct
                             |> List.sort
@@ -1383,7 +1416,8 @@ sources:
                         facts.FrontMatter.SchemaVersion.Major
                         facts.FrontMatter.WorkId.Value
                         facts.FrontMatter.Stage
-                    @ [ if
+                    @ [
+                        if
                             not (
                                 String.Equals(
                                     normalizeRelativePath facts.FrontMatter.SourceSpec,
@@ -1443,28 +1477,31 @@ sources:
                             failedTasksPrerequisite
                                 path
                                 $"Tasks status '{facts.FrontMatter.Status}' is not tasksReady."
-                                [ facts.FrontMatter.Status ] ]
+                                [ facts.FrontMatter.Status ]
+                    ]
 
                 let taskDiagnostics =
                     taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
 
                 let graphDiagnostics =
-                    [ let staleIds =
-                          facts.Tasks
-                          |> List.filter (fun task -> task.Status = TaskStatus.Stale)
-                          |> List.map (fun task -> task.Id.Value)
+                    [
+                        let staleIds =
+                            facts.Tasks
+                            |> List.filter (fun task -> task.Status = TaskStatus.Stale)
+                            |> List.map (fun task -> task.Id.Value)
 
-                      if not (List.isEmpty staleIds) then
-                          staleTask path staleIds
+                        if not (List.isEmpty staleIds) then
+                            staleTask path staleIds
 
-                      let blockingFindings =
-                          facts.Findings
-                          |> List.filter (fun finding ->
-                              finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
-                          |> List.map (fun finding -> finding.FindingId)
+                        let blockingFindings =
+                            facts.Findings
+                            |> List.filter (fun finding ->
+                                finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                            |> List.map (fun finding -> finding.FindingId)
 
-                      if not (List.isEmpty blockingFindings) then
-                          failedTasksPrerequisite path "Tasks contain blocking findings." blockingFindings ]
+                        if not (List.isEmpty blockingFindings) then
+                            failedTasksPrerequisite path "Tasks contain blocking findings." blockingFindings
+                    ]
 
                 let allDiagnostics =
                     identityDiagnostics

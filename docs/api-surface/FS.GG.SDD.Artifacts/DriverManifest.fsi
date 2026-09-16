@@ -24,10 +24,12 @@ module DriverManifest =
     /// relative paths; `DigestDomain` says which function reproduces `Sha256`; and `Executable`
     /// is the intended execute-bit state in every materialized skill root.
     type DriverManifestFile =
-        { Path: string
-          Sha256: string
-          DigestDomain: DriverDigestDomain
-          Executable: bool }
+        {
+            Path: string
+            Sha256: string
+            DigestDomain: DriverDigestDomain
+            Executable: bool
+        }
 
     type DriverManifestEntry =
         {
@@ -52,8 +54,10 @@ module DriverManifest =
         }
 
     type DriverManifest =
-        { SchemaVersion: int
-          Skills: DriverManifestEntry list }
+        {
+            SchemaVersion: int
+            Skills: DriverManifestEntry list
+        }
 
     /// Parse and validate a `driver-skill-manifest.json` document. Schema v2 is fail-closed:
     /// every file row, raw digest, executable flag, unique safe relative path, and the

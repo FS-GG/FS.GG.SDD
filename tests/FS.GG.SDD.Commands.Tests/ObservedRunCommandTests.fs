@@ -68,7 +68,8 @@ module ObservedRunCommandTests =
 
     let private runWithReport root report =
         { TestSupport.evidenceRequest root workId title with
-            FromTestReport = report }
+            FromTestReport = report
+        }
         |> TestSupport.runRequest
 
     let private markEveryTaskAsProductionJourney root =
@@ -85,9 +86,11 @@ module ObservedRunCommandTests =
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"evidence.yml did not parse: {diagnostics}"
@@ -429,14 +432,16 @@ module ObservedRunCommandTests =
         TestSupport.commitFixtureCandidate root
 
         let exitCode, stdout, stderr =
-            [ "evidence"
-              "--root"
-              root
-              "--work"
-              workId
-              "--from-test-report"
-              reportPath
-              "--text" ]
+            [
+                "evidence"
+                "--root"
+                root
+                "--work"
+                workId
+                "--from-test-report"
+                reportPath
+                "--text"
+            ]
             |> TestSupport.runCliRaw 30000
 
         Assert.Equal("", stderr)
@@ -461,14 +466,16 @@ module ObservedRunCommandTests =
         let root = evidencedProjectClaimingPass ()
 
         let exitCode, _, stderr =
-            [ "evidence"
-              "--root"
-              root
-              "--work"
-              workId
-              "--from-tests"
-              "tests/FS.GG.SDD.Foo.Tests"
-              "--text" ]
+            [
+                "evidence"
+                "--root"
+                root
+                "--work"
+                workId
+                "--from-tests"
+                "tests/FS.GG.SDD.Foo.Tests"
+                "--text"
+            ]
             |> TestSupport.runCliRaw 30000
 
         Assert.Equal("", stderr)
@@ -548,12 +555,14 @@ module ObservedRunCommandTests =
 
     let private runVerifyRequiringObserved root =
         { TestSupport.verifyRequest root workId title with
-            RequireObserved = true }
+            RequireObserved = true
+        }
         |> TestSupport.runRequest
 
     let private runShipRequiringObserved root =
         { TestSupport.shipRequest root workId title with
-            RequireObserved = true }
+            RequireObserved = true
+        }
         |> TestSupport.runRequest
 
     let private productionJourneyWithReport (bytes: byte array) =
@@ -878,7 +887,8 @@ module ObservedRunCommandTests =
 
     let private runWithSync root report =
         { TestSupport.evidenceRequest root workId title with
-            SyncObservedRun = report }
+            SyncObservedRun = report
+        }
         |> TestSupport.runRequest
 
     let private digestOf text =
@@ -1042,7 +1052,8 @@ module ObservedRunCommandTests =
         let result =
             { TestSupport.evidenceRequest root workId title with
                 FromTestReport = Some reportPath
-                SyncObservedRun = Some reportPath }
+                SyncObservedRun = Some reportPath
+            }
             |> TestSupport.runRequest
 
         Assert.Contains(result.Diagnostics, fun d -> d.Id = "evidence.receiptModeConflict")
@@ -1059,14 +1070,16 @@ module ObservedRunCommandTests =
         TestSupport.writeRelative root reportPath (trxWith 6 0)
 
         let exitCode, stdout, stderr =
-            [ "evidence"
-              "--root"
-              root
-              "--work"
-              workId
-              "--sync-observed-run"
-              reportPath
-              "--text" ]
+            [
+                "evidence"
+                "--root"
+                root
+                "--work"
+                workId
+                "--sync-observed-run"
+                reportPath
+                "--text"
+            ]
             |> TestSupport.runCliRaw 30000
 
         Assert.Equal("", stderr)

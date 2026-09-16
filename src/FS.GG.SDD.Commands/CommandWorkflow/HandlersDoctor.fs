@@ -120,8 +120,10 @@ module internal HandlersDoctor =
         // doctor never reads phantom copies for a product file that merely looks skill-shaped.
         let ids = Drift.productSkillEntries (resolveProvenance model) |> List.map fst
 
-        [ for id in ids do
-              for root in agentSkillRoots -> SkillMirror.skillPath root id ]
+        [
+            for id in ids do
+                for root in agentSkillRoots -> SkillMirror.skillPath root id
+        ]
         |> List.distinct
         |> List.sort
 
@@ -317,18 +319,20 @@ module internal HandlersDoctor =
             (unreadableSubjects model)
 
     let doctorSummaryOf (drift: Drift.DriftReport) : DoctorSummary =
-        { HasProvenance = drift.HasProvenance
-          ProviderName = drift.ProviderName
-          InstalledCliVersion = drift.InstalledCliVersion
-          RequiredMinimumCliVersion = drift.RequiredMinimumCliVersion
-          RequiredMinimumCliVersionSource = drift.RequiredMinimumCliVersionSource
-          CliAxis = drift.CliAxis
-          CliBehindBy = drift.CliBehindBy
-          ExpectedArtifactCount = drift.ExpectedArtifactCount
-          MissingArtifactPaths = drift.MissingArtifactPaths
-          SkillDriftPaths = drift.SkillDriftPaths
-          PreviewSteps = drift.Steps
-          IsCoherent = drift.IsCoherent }
+        {
+            HasProvenance = drift.HasProvenance
+            ProviderName = drift.ProviderName
+            InstalledCliVersion = drift.InstalledCliVersion
+            RequiredMinimumCliVersion = drift.RequiredMinimumCliVersion
+            RequiredMinimumCliVersionSource = drift.RequiredMinimumCliVersionSource
+            CliAxis = drift.CliAxis
+            CliBehindBy = drift.CliBehindBy
+            ExpectedArtifactCount = drift.ExpectedArtifactCount
+            MissingArtifactPaths = drift.MissingArtifactPaths
+            SkillDriftPaths = drift.SkillDriftPaths
+            PreviewSteps = drift.Steps
+            IsCoherent = drift.IsCoherent
+        }
 
     let computeDoctorNext model =
         match model.Doctor with
@@ -342,7 +346,8 @@ module internal HandlersDoctor =
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ effects },
+                        PendingEffects = model.PendingEffects @ effects
+                    },
                     effects
             | None ->
                 let drift = computeDrift model
@@ -356,7 +361,8 @@ module internal HandlersDoctor =
                 // already emitted name the files and keep the run at exit 0.
                 let summary =
                     { doctorSummaryOf drift with
-                        IsCoherent = drift.IsCoherent && List.isEmpty unreadable }
+                        IsCoherent = drift.IsCoherent && List.isEmpty unreadable
+                    }
 
                 // Non-blocking drift advisory (doctor always exits 0) whenever there is drift to
                 // reconcile. #313: `IsCoherent` — not `HasProvenance` — is the gate, because an
@@ -375,5 +381,6 @@ module internal HandlersDoctor =
 
                 { model with
                     Doctor = Some summary
-                    Diagnostics = model.Diagnostics @ diagnostics },
+                    Diagnostics = model.Diagnostics @ diagnostics
+                },
                 []

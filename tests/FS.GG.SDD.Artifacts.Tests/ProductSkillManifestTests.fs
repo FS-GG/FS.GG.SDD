@@ -52,13 +52,15 @@ module ProductSkillManifestTests =
     let private file path sha256 : ProductSkillManifest.ProductManifestFile = { Path = path; Sha256 = sha256 }
 
     let private addition id scope sha256 : ProductSkillManifest.ProductManifestEntry =
-        { Id = id
-          Scope = scope
-          Sha256 = sha256
-          ResolvablePath = Some(".agents/skills/" + id + "/SKILL.md")
-          MaterializesWhen = "always"
-          SuppliedBy = None
-          Files = [ file "SKILL.md" sha256 ] }
+        {
+            Id = id
+            Scope = scope
+            Sha256 = sha256
+            ResolvablePath = Some(".agents/skills/" + id + "/SKILL.md")
+            MaterializesWhen = "always"
+            SuppliedBy = None
+            Files = [ file "SKILL.md" sha256 ]
+        }
 
     let private parsed text =
         match ProductSkillManifest.tryParse text with
@@ -78,8 +80,10 @@ module ProductSkillManifestTests =
         let text =
             amended
                 providerManifest
-                [ addition "workRoadmap" "process" "bbbb"
-                  addition "fs-gg-playtest" "product" "cccc" ]
+                [
+                    addition "workRoadmap" "process" "bbbb"
+                    addition "fs-gg-playtest" "product" "cccc"
+                ]
 
         let _, entries = parsed text
 
@@ -144,9 +148,11 @@ module ProductSkillManifestTests =
         // Every declared file survives, with its digest, sorted by path (the deterministic shape
         // `SkillManifestJson` emits and `skill-union-assert.sh` reads).
         Assert.Equal<ProductSkillManifest.ProductManifestFile list>(
-            [ file "SKILL.md" "aaaa"
-              file "agents/reviewer.yaml" "eeee"
-              file "references/deep-detail.md" "dddd" ],
+            [
+                file "SKILL.md" "aaaa"
+                file "agents/reviewer.yaml" "eeee"
+                file "references/deep-detail.md" "dddd"
+            ],
             elmish.Files
         )
 
@@ -180,7 +186,8 @@ module ProductSkillManifestTests =
     let ``amend refuses a v2 fold-in whose additions carry no file set`` () =
         let fileless =
             { addition "workRoadmap" "process" "bbbb" with
-                Files = [] }
+                Files = []
+            }
 
         match ProductSkillManifest.amend providerManifestV2 [ fileless ] with
         | Error(ProductSkillManifest.AdditionsMissingFileSet(2, [ "workRoadmap" ])) -> ()

@@ -7,9 +7,11 @@ open System.Text.RegularExpressions
 
 module SchemaVersion =
     type SchemaVersion =
-        { Major: int
-          Minor: int option
-          Raw: string }
+        {
+            Major: int
+            Minor: int option
+            Raw: string
+        }
 
     type SourceDigest = { Algorithm: string; Value: string }
     type OutputDigest = { Algorithm: string; Value: string }
@@ -23,16 +25,20 @@ module SchemaVersion =
         | Future
 
     type SchemaCompatibility =
-        { RawValue: string
-          Version: SchemaVersion option
-          Status: SchemaCompatibilityStatus
-          SupportedRange: string
-          MigrationHint: string option }
+        {
+            RawValue: string
+            Version: SchemaVersion option
+            Status: SchemaCompatibilityStatus
+            SupportedRange: string
+            MigrationHint: string option
+        }
 
     let create major =
-        { Major = major
-          Minor = None
-          Raw = string major }
+        {
+            Major = major
+            Minor = None
+            Raw = string major
+        }
 
     let parse (value: string) =
         let value = if String.IsNullOrEmpty value then "" else value.Trim()
@@ -55,17 +61,21 @@ module SchemaVersion =
             | Some major ->
                 if not m.Groups[2].Success then
                     Ok
-                        { Major = major
-                          Minor = None
-                          Raw = value }
+                        {
+                            Major = major
+                            Minor = None
+                            Raw = value
+                        }
                 else
                     match tryInt m.Groups[2].Value with
                     | None -> malformed
                     | Some minor ->
                         Ok
-                            { Major = major
-                              Minor = Some minor
-                              Raw = value }
+                            {
+                                Major = major
+                                Minor = Some minor
+                                Raw = value
+                            }
 
     let isSupported version = version.Major = 1
 
@@ -80,11 +90,13 @@ module SchemaVersion =
     let supportedRange = "1"
 
     let compatibility raw version status hint =
-        { RawValue = raw
-          Version = version
-          Status = status
-          SupportedRange = supportedRange
-          MigrationHint = hint }
+        {
+            RawValue = raw
+            Version = version
+            Status = status
+            SupportedRange = supportedRange
+            MigrationHint = hint
+        }
 
     let classifyRaw (value: string option) =
         let raw = value |> Option.map (fun value -> value.Trim()) |> Option.defaultValue ""
@@ -186,8 +198,10 @@ module SchemaVersion =
     let outputSha256Text text =
         let digest = sha256Text text
 
-        ({ Algorithm = digest.Algorithm
-           Value = digest.Value }
+        ({
+            Algorithm = digest.Algorithm
+            Value = digest.Value
+        }
         : OutputDigest)
 
     let createGeneratorVersion (id: string) (version: string) =

@@ -42,79 +42,95 @@ module GovernanceHandoffTests =
     let generator = SchemaVersionModule.currentGeneratorVersion ()
 
     let emptyModel: WorkModel =
-        { SchemaVersion = 1
-          ModelVersion = "1.0"
-          WorkId = workId
-          Project =
-            { Id = "fsgg-sdd"
-              DefaultWorkRoot = "work"
-              Profile = None }
-          Sources = []
-          WorkItem =
-            { Id = workId
-              Title = title
-              Stage = "ship"
-              ChangeTier = "tier1"
-              Status = "draft" }
-          PerformanceIntent = None
-          Requirements = []
-          Decisions = []
-          Tasks = []
-          Evidence = []
-          GeneratedViews = []
-          Diagnostics = []
-          GovernanceBoundaries = [] }
+        {
+            SchemaVersion = 1
+            ModelVersion = "1.0"
+            WorkId = workId
+            Project =
+                {
+                    Id = "fsgg-sdd"
+                    DefaultWorkRoot = "work"
+                    Profile = None
+                }
+            Sources = []
+            WorkItem =
+                {
+                    Id = workId
+                    Title = title
+                    Stage = "ship"
+                    ChangeTier = "tier1"
+                    Status = "draft"
+                }
+            PerformanceIntent = None
+            Requirements = []
+            Decisions = []
+            Tasks = []
+            Evidence = []
+            GeneratedViews = []
+            Diagnostics = []
+            GovernanceBoundaries = []
+        }
 
     let mkEvidence id result synthetic taskRefs rationale : EvidenceEntry =
-        { Id = id
-          Kind = "verification"
-          SubjectType = "task"
-          SubjectId = taskRefs |> List.tryHead |> Option.defaultValue ""
-          TaskRefs = taskRefs
-          RequirementRefs = []
-          ArtifactRefs = []
-          Result = result
-          Synthetic = synthetic
-          PerformanceBudget = None
-          PerformanceEvidenceArtifact = None
-          PerformanceMeasurements = []
-          Rationale = rationale
-          Source = $"work/{workId}/evidence.yml"
-          SourceLocation = None }
+        {
+            Id = id
+            Kind = "verification"
+            SubjectType = "task"
+            SubjectId = taskRefs |> List.tryHead |> Option.defaultValue ""
+            TaskRefs = taskRefs
+            RequirementRefs = []
+            ArtifactRefs = []
+            Result = result
+            Synthetic = synthetic
+            PerformanceBudget = None
+            PerformanceEvidenceArtifact = None
+            PerformanceMeasurements = []
+            Rationale = rationale
+            Source = $"work/{workId}/evidence.yml"
+            SourceLocation = None
+        }
 
     let mkTask id status deps requiredEvidence : TaskEntry =
-        { Id = id
-          Title = id
-          Status = status
-          Owner = "sdd"
-          Dependencies = deps
-          Requirements = []
-          Decisions = []
-          SourceIds = []
-          RequiredSkills = []
-          RequiredEvidence = requiredEvidence
-          Source = $"work/{workId}/tasks.yml"
-          SourceLocation = None }
+        {
+            Id = id
+            Title = id
+            Status = status
+            Owner = "sdd"
+            Dependencies = deps
+            Requirements = []
+            Decisions = []
+            SourceIds = []
+            RequiredSkills = []
+            RequiredEvidence = requiredEvidence
+            Source = $"work/{workId}/tasks.yml"
+            SourceLocation = None
+        }
 
     let mkBoundary path owner relationship : GovernanceBoundaryEntry =
-        { Path = path
-          Owner = owner
-          RequiredBySdd = false
-          Relationship = relationship }
+        {
+            Path = path
+            Owner = owner
+            RequiredBySdd = false
+            Relationship = relationship
+        }
 
     let readinessFacts disposition verification blockingIds : ReadinessFacts =
-        { ShipDisposition = disposition
-          VerificationReadiness = verification
-          AdvisoryCount = 0
-          WarningCount = 0
-          BlockingCount = List.length blockingIds
-          ClassifiedObligationsUnmet = 0
-          JourneyObligationsUnmet = 0
-          BlockingDiagnosticIds = blockingIds
-          PerViewState =
-            [ "ship.json", "current"
-              "verify.json", "current"
-              "work-model.json", "current" ] }
+        {
+            ShipDisposition = disposition
+            VerificationReadiness = verification
+            AdvisoryCount = 0
+            WarningCount = 0
+            BlockingCount = List.length blockingIds
+            ClassifiedObligationsUnmet = 0
+            JourneyObligationsUnmet = 0
+            BlockingDiagnosticIds = blockingIds
+            PerViewState =
+                [
+                    "ship.json", "current"
+                    "verify.json", "current"
+                    "work-model.json", "current"
+                ]
+        }
 
     let cleanReadiness = readinessFacts "shipReady" "verificationReady" []
 
@@ -209,12 +225,14 @@ module GovernanceHandoffTests =
         TestSupport.initializeVerifiedProject root workId title
 
         let authored =
-            [ ".fsgg/project.yml"
-              ".fsgg/sdd.yml"
-              ".fsgg/agents.yml"
-              $"work/{workId}/spec.md"
-              $"work/{workId}/tasks.yml"
-              $"work/{workId}/evidence.yml" ]
+            [
+                ".fsgg/project.yml"
+                ".fsgg/sdd.yml"
+                ".fsgg/agents.yml"
+                $"work/{workId}/spec.md"
+                $"work/{workId}/tasks.yml"
+                $"work/{workId}/evidence.yml"
+            ]
             |> List.filter (TestSupport.existsRelative root)
 
         let before =
@@ -281,8 +299,11 @@ module GovernanceHandoffTests =
             { emptyModel with
                 Tasks = [ mkTask "T001" "done" [] [ "EVS"; "EVR" ] ]
                 Evidence =
-                    [ mkEvidence "EVS" "supported" true [ "T001" ] (Some "stub data")
-                      mkEvidence "EVR" "supported" false [ "T001" ] None ] }
+                    [
+                        mkEvidence "EVS" "supported" true [ "T001" ] (Some "stub data")
+                        mkEvidence "EVR" "supported" false [ "T001" ] None
+                    ]
+            }
 
         let handoff = project model emptyGovernanceConfig cleanReadiness
 
@@ -312,7 +333,8 @@ module GovernanceHandoffTests =
             { emptyModel with
                 Diagnostics = [ conflict ]
                 // a declared dependency cycle T001 -> T002 -> T001
-                Tasks = [ mkTask "T001" "todo" [ "T002" ] []; mkTask "T002" "todo" [ "T001" ] [] ] }
+                Tasks = [ mkTask "T001" "todo" [ "T002" ] []; mkTask "T002" "todo" [ "T001" ] [] ]
+            }
 
         let handoff = project model emptyGovernanceConfig cleanReadiness
         Assert.Contains(handoff.Diagnostics, fun d -> d.Id = "proseStructuredMismatch")
@@ -325,7 +347,8 @@ module GovernanceHandoffTests =
         let model =
             { emptyModel with
                 Tasks = [ mkTask "T001" "done" [] [ "EV1" ] ]
-                Evidence = [ mkEvidence "EV1" "stale" false [ "T001" ] None ] }
+                Evidence = [ mkEvidence "EV1" "stale" false [ "T001" ] None ]
+            }
 
         let handoff = project model emptyGovernanceConfig cleanReadiness
         let node = handoff.Evidence.Nodes |> List.find (fun n -> n.Id = "evidence:EV1")
@@ -342,8 +365,11 @@ module GovernanceHandoffTests =
         let model =
             { emptyModel with
                 GovernanceBoundaries =
-                    [ mkBoundary "src/Zeta.fs" "sdd" "authored"
-                      mkBoundary "src/Alpha.fs" "governance" "governed" ] }
+                    [
+                        mkBoundary "src/Zeta.fs" "sdd" "authored"
+                        mkBoundary "src/Alpha.fs" "governance" "governed"
+                    ]
+            }
 
         let handoff = project model emptyGovernanceConfig cleanReadiness
 
@@ -362,12 +388,14 @@ module GovernanceHandoffTests =
     [<Fact>]
     let ``US3 fsgg pointers are referenced when present and reported absent without failure`` () =
         let present: GovernanceConfigPresence =
-            { PolicyPresent = true
-              PolicyPointer = Some ".fsgg/policy.yml"
-              CapabilitiesPresent = false
-              CapabilitiesPointer = None
-              ToolingPresent = false
-              ToolingPointer = None }
+            {
+                PolicyPresent = true
+                PolicyPointer = Some ".fsgg/policy.yml"
+                CapabilitiesPresent = false
+                CapabilitiesPointer = None
+                ToolingPresent = false
+                ToolingPointer = None
+            }
 
         let json = toJson (project emptyModel present cleanReadiness)
         let config = prop "governanceConfig" (parse json)
@@ -381,14 +409,16 @@ module GovernanceHandoffTests =
         let json = readHandoff (shippedProject ())
 
         for forbidden in
-            [ "autoSynthetic"
-              "route"
-              "profile"
-              "gate"
-              "enforcement"
-              "verdict"
-              "capabilityVerdict"
-              "matchedGlob" ] do
+            [
+                "autoSynthetic"
+                "route"
+                "profile"
+                "gate"
+                "enforcement"
+                "verdict"
+                "capabilityVerdict"
+                "matchedGlob"
+            ] do
             Assert.DoesNotContain(forbidden, json)
 
     // =====================================================================
@@ -475,9 +505,11 @@ module GovernanceHandoffTests =
         let root = shippedProject ()
 
         let authored =
-            [ $"work/{workId}/spec.md"
-              $"work/{workId}/tasks.yml"
-              $"work/{workId}/evidence.yml" ]
+            [
+                $"work/{workId}/spec.md"
+                $"work/{workId}/tasks.yml"
+                $"work/{workId}/evidence.yml"
+            ]
             |> List.filter (TestSupport.existsRelative root)
 
         let before = authored |> List.map (TestSupport.readRelative root)
@@ -488,80 +520,92 @@ module GovernanceHandoffTests =
     [<Fact>]
     let ``performance evidence projects raw samples and recomputed measurements`` () =
         let sample: Fsgg.Schemas.PerformanceEvidenceSampleSet =
-            { WorkloadId = "idle-play"
-              WorkloadDefinitionDigest = "sha256:idle-v1"
-              WorkloadClass = "normal-play"
-              TargetFps = 60
-              MaxP95Ms = 16.67m
-              MaxP99Ms = 25m
-              MaxCatchUpFrames = 0
-              MeasurementScope = "normal"
-              RequiredCapability = "headless"
-              HostProfile = "linux-x64-ci"
-              PackageVersions = [ "FS.GG.Game@1.2.3" ]
-              MeasurementMode = "headless"
-              Capabilities = [ "headless" ]
-              WarmupPolicy = "120-frames"
-              SamplePolicy = "nearest-rank/3"
-              CapturedAtUtc = "2026-07-26T00:00:00Z"
-              CurrencyToken = "commit:abc123"
-              ProbeReadbackContaminated = false
-              DurationSamplesMs = [ 10m; 11m; 12m ]
-              CatchUpFrames = [ 0; 0; 0 ] }
+            {
+                WorkloadId = "idle-play"
+                WorkloadDefinitionDigest = "sha256:idle-v1"
+                WorkloadClass = "normal-play"
+                TargetFps = 60
+                MaxP95Ms = 16.67m
+                MaxP99Ms = 25m
+                MaxCatchUpFrames = 0
+                MeasurementScope = "normal"
+                RequiredCapability = "headless"
+                HostProfile = "linux-x64-ci"
+                PackageVersions = [ "FS.GG.Game@1.2.3" ]
+                MeasurementMode = "headless"
+                Capabilities = [ "headless" ]
+                WarmupPolicy = "120-frames"
+                SamplePolicy = "nearest-rank/3"
+                CapturedAtUtc = "2026-07-26T00:00:00Z"
+                CurrencyToken = "commit:abc123"
+                ProbeReadbackContaminated = false
+                DurationSamplesMs = [ 10m; 11m; 12m ]
+                CatchUpFrames = [ 0; 0; 0 ]
+            }
 
         let artifact: Fsgg.Schemas.PerformanceEvidenceArtifact =
-            { ContractVersion = "performance-evidence-v1"
-              ClaimedBudgetPassed = Some true
-              SampleSets = [ sample ] }
+            {
+                ContractVersion = "performance-evidence-v1"
+                ClaimedBudgetPassed = Some true
+                SampleSets = [ sample ]
+            }
 
         let measured: Fsgg.Schemas.PerformanceEvidenceMeasurement =
-            { WorkloadId = "idle-play"
-              P95Ms = 12m
-              P99Ms = 12m
-              MaxCatchUpFrames = 0 }
+            {
+                WorkloadId = "idle-play"
+                P95Ms = 12m
+                P99Ms = 12m
+                MaxCatchUpFrames = 0
+            }
 
         let evidence =
             { mkEvidence "EV687" "pass" false [] None with
                 PerformanceBudget =
                     Some
-                        { ArtifactPath = "readiness/performance.json"
-                          Intent =
-                            Some
-                                { Id = "PI-001"
-                                  Disposition = "active"
-                                  TargetFps = 60
-                                  WorkloadIds = [ "idle-play" ]
-                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
-                                  MaximumExpectedScale = "10k sprites"
-                                  MaxP95Ms = 16.67m
-                                  MaxP99Ms = 25m
-                                  MaxCatchUpFrames = 0
-                                  StructuralCostBudgets = [ "draw-calls<=500" ]
-                                  RequiredCapability = "headless"
-                                  LiveCompositorRequired = false
-                                  DeferralIssue = None
-                                  EvidenceRefs = []
-                                  Rationale = None }
-                          TargetFps = 60
-                          WorkloadIds = [ "idle-play" ]
-                          StressWorkloadIds = []
-                          WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
-                          CurrencyToken = "commit:abc123"
-                          CapturedAfterUtc = "2026-07-25T00:00:00Z"
-                          MaxP95Ms = 16.67m
-                          MaxP99Ms = 25m
-                          MaxCatchUpFrames = 0
-                          MeasurementScope = "normal"
-                          RequiredCapability = "headless"
-                          LiveCompositorRequired = false
-                          DeferralIssue = None }
+                        {
+                            ArtifactPath = "readiness/performance.json"
+                            Intent =
+                                Some
+                                    {
+                                        Id = "PI-001"
+                                        Disposition = "active"
+                                        TargetFps = 60
+                                        WorkloadIds = [ "idle-play" ]
+                                        WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                                        MaximumExpectedScale = "10k sprites"
+                                        MaxP95Ms = 16.67m
+                                        MaxP99Ms = 25m
+                                        MaxCatchUpFrames = 0
+                                        StructuralCostBudgets = [ "draw-calls<=500" ]
+                                        RequiredCapability = "headless"
+                                        LiveCompositorRequired = false
+                                        DeferralIssue = None
+                                        EvidenceRefs = []
+                                        Rationale = None
+                                    }
+                            TargetFps = 60
+                            WorkloadIds = [ "idle-play" ]
+                            StressWorkloadIds = []
+                            WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                            CurrencyToken = "commit:abc123"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
+                            MaxP95Ms = 16.67m
+                            MaxP99Ms = 25m
+                            MaxCatchUpFrames = 0
+                            MeasurementScope = "normal"
+                            RequiredCapability = "headless"
+                            LiveCompositorRequired = false
+                            DeferralIssue = None
+                        }
                 PerformanceEvidenceArtifact = Some artifact
-                PerformanceMeasurements = [ measured ] }
+                PerformanceMeasurements = [ measured ]
+            }
 
         let json =
             project
                 { emptyModel with
-                    Evidence = [ evidence ] }
+                    Evidence = [ evidence ]
+                }
                 emptyGovernanceConfig
                 cleanReadiness
             |> toJson

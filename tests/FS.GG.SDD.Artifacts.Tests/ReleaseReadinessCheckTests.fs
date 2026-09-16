@@ -14,9 +14,11 @@ module ReleaseReadinessCheckTests =
     let conformantProduced (r: ReleaseReadiness) =
         r.Catalog
         |> List.map (fun entry ->
-            { Contract = entry.Contract
-              Source = entry.SourceArtifact
-              Inventory = entry.Inventory |> List.map (fun item -> item.Name) })
+            {
+                Contract = entry.Contract
+                Source = entry.SourceArtifact
+                Inventory = entry.Inventory |> List.map (fun item -> item.Name)
+            })
 
     let diagIds (diagnostics: Diagnostics.Diagnostic list) =
         diagnostics |> List.map (fun diagnostic -> diagnostic.Id)
@@ -51,20 +53,22 @@ module ReleaseReadinessCheckTests =
             |> fun entry -> entry.Inventory |> List.map _.Name
 
         for field in
-            [ "diagnostics[].artifact"
-              "diagnostics[].correction"
-              "diagnostics[].id"
-              "diagnostics[].message"
-              "diagnostics[].relatedIds"
-              "diagnostics[].severity"
-              "findings[].category"
-              "findings[].correction"
-              "findings[].id"
-              "findings[].message"
-              "findings[].path"
-              "findings[].relatedIds"
-              "findings[].severity"
-              "findings[].state" ] do
+            [
+                "diagnostics[].artifact"
+                "diagnostics[].correction"
+                "diagnostics[].id"
+                "diagnostics[].message"
+                "diagnostics[].relatedIds"
+                "diagnostics[].severity"
+                "findings[].category"
+                "findings[].correction"
+                "findings[].id"
+                "findings[].message"
+                "findings[].path"
+                "findings[].relatedIds"
+                "findings[].severity"
+                "findings[].state"
+            ] do
             Assert.Contains(field, fields)
 
     // ===== readiness fails by absence, never passes by it (FR-012) =====
@@ -73,7 +77,8 @@ module ReleaseReadinessCheckTests =
     let ``T019 a produced output with no catalog entry is reported not-ready`` () =
         let trimmed =
             { release with
-                Catalog = release.Catalog |> List.filter (fun e -> e.Contract <> "ship.json") }
+                Catalog = release.Catalog |> List.filter (fun e -> e.Contract <> "ship.json")
+            }
         // ship.json is still produced, but no longer catalogued
         let diagnostics = evaluate trimmed (conformantProduced release)
         Assert.Contains("releaseOutputUndocumented", diagIds diagnostics)
@@ -88,7 +93,8 @@ module ReleaseReadinessCheckTests =
                         if e.Contract = "verify.json" then
                             { e with BaselinePresent = false }
                         else
-                            e) }
+                            e)
+            }
 
         let diagnostics = evaluate withoutBaseline (conformantProduced withoutBaseline)
         Assert.Contains("releaseBaselineMissing", diagIds diagnostics)
@@ -100,13 +106,15 @@ module ReleaseReadinessCheckTests =
         // through a catalog whose entry has been blanked via record copy.
         let emptyRef =
             { (release.Catalog.Head.SourceArtifact) with
-                Path = "" }
+                Path = ""
+            }
 
         let blanked =
             { release with
                 Catalog =
                     release.Catalog
-                    |> List.mapi (fun i e -> if i = 0 then { e with SourceArtifact = emptyRef } else e) }
+                    |> List.mapi (fun i e -> if i = 0 then { e with SourceArtifact = emptyRef } else e)
+            }
 
         let diagnostics = evaluate blanked (conformantProduced blanked)
         Assert.Contains("releaseSourceMissing", diagIds diagnostics)
@@ -120,7 +128,8 @@ module ReleaseReadinessCheckTests =
             |> List.map (fun p ->
                 if p.Contract = "work-model.json" then
                     { p with
-                        Inventory = "surpriseField" :: p.Inventory }
+                        Inventory = "surpriseField" :: p.Inventory
+                    }
                 else
                     p)
 
@@ -133,7 +142,8 @@ module ReleaseReadinessCheckTests =
             |> List.map (fun p ->
                 if p.Contract = "work-model.json" then
                     { p with
-                        Inventory = p.Inventory |> List.filter ((<>) "tasks") }
+                        Inventory = p.Inventory |> List.filter ((<>) "tasks")
+                    }
                 else
                     p)
 

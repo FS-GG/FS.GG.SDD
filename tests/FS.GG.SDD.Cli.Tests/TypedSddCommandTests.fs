@@ -69,22 +69,24 @@ module TypedSddCommandTests =
             let code, stdout, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--agent"
-                      "tern"
-                      "--session"
-                      "general-1"
-                      "--backend"
-                      "quint-specification-v1"
-                      "--cache"
-                      cache
-                      "--profile"
-                      QuintGeneralProfile.identity ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--agent"
+                        "tern"
+                        "--session"
+                        "general-1"
+                        "--backend"
+                        "quint-specification-v1"
+                        "--cache"
+                        cache
+                        "--profile"
+                        QuintGeneralProfile.identity
+                    ]
 
             Assert.Equal(1, code)
             Assert.Contains("typedSdd.v2.generalInputRequired", stdout)
@@ -96,20 +98,22 @@ module TypedSddCommandTests =
             let code, _, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--title"
-                      "Demo"
-                      "--agent"
-                      "tern"
-                      "--session"
-                      "s1"
-                      "--backend"
-                      "fsharp-specification-v1" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--title"
+                        "Demo"
+                        "--agent"
+                        "tern"
+                        "--session"
+                        "s1"
+                        "--backend"
+                        "fsharp-specification-v1"
+                    ]
 
             Assert.Equal(0, code)
 
@@ -133,16 +137,18 @@ module TypedSddCommandTests =
             let code, report, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--agent"
-                      "tern"
-                      "--session"
-                      "default-quint" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--agent"
+                        "tern"
+                        "--session"
+                        "default-quint"
+                    ]
 
             Assert.Equal(1, code)
             Assert.Contains("typedSdd.v2.cacheRequired", report)
@@ -166,41 +172,63 @@ module TypedSddCommandTests =
             let typedEffectDigest = TypedAuthorityManifest.sha256 typedEffectBytes
 
             let sourceRange =
-                { Path = source.Path
-                  Start = { Line = 3; Column = 1 }
-                  End = { Line = 3; Column = 14 } }
+                {
+                    Path = source.Path
+                    Start = { Line = 3; Column = 1 }
+                    End = { Line = 3; Column = 14 }
+                }
 
             let fenceRange =
-                { Path = source.Path
-                  Start = { Line = 2; Column = 1 }
-                  End = { Line = 4; Column = 3 } }
+                {
+                    Path = source.Path
+                    Start = { Line = 2; Column = 1 }
+                    End = { Line = 4; Column = 3 }
+                }
 
             let contract =
-                { Schema = QuintContract.schema
-                  Profile = QuintProfile.identity
-                  Specification = "DemoSpec"
-                  Catalogue =
-                    [ { Id = "STATE"
-                        Kind = QuintCatalogueKind.StateVariable
-                        Source = sourceRange }
-                      { Id = "ADVANCE"
-                        Kind = QuintCatalogueKind.Action
-                        Source = sourceRange } ]
-                  ActionEffects =
-                    [ { ActionId = "ADVANCE"
-                        Reads = [ "STATE" ]
-                        Writes = [ "STATE" ]
-                        Subjects = [ "STATE" ] } ]
-                  Relationships = []
-                  VerificationProfiles = []
-                  Bounds = []
-                  Impacts = []
-                  Compatibility = []
-                  Digests =
-                    [ { Name = "sandbox-contract"
-                        Sha256 = TypedAuthorityManifest.sha256 QuintSandbox.contractBytes }
-                      { Name = "typed-effect"
-                        Sha256 = typedEffectDigest } ] }
+                {
+                    Schema = QuintContract.schema
+                    Profile = QuintProfile.identity
+                    Specification = "DemoSpec"
+                    Catalogue =
+                        [
+                            {
+                                Id = "STATE"
+                                Kind = QuintCatalogueKind.StateVariable
+                                Source = sourceRange
+                            }
+                            {
+                                Id = "ADVANCE"
+                                Kind = QuintCatalogueKind.Action
+                                Source = sourceRange
+                            }
+                        ]
+                    ActionEffects =
+                        [
+                            {
+                                ActionId = "ADVANCE"
+                                Reads = [ "STATE" ]
+                                Writes = [ "STATE" ]
+                                Subjects = [ "STATE" ]
+                            }
+                        ]
+                    Relationships = []
+                    VerificationProfiles = []
+                    Bounds = []
+                    Impacts = []
+                    Compatibility = []
+                    Digests =
+                        [
+                            {
+                                Name = "sandbox-contract"
+                                Sha256 = TypedAuthorityManifest.sha256 QuintSandbox.contractBytes
+                            }
+                            {
+                                Name = "typed-effect"
+                                Sha256 = typedEffectDigest
+                            }
+                        ]
+                }
 
             let contractBytes =
                 QuintContract.serializeCanonical contract
@@ -211,41 +239,61 @@ module TypedSddCommandTests =
 
             let fenceBytes =
                 QuintSource.encodeFenceManifest
-                    { Schema = QuintSource.fenceManifestSchema
-                      SourcePath = source.Path
-                      SourceSha256 = source.Sha256
-                      Fences =
-                        [ { Ordinal = 0
-                            Target = "demo.qnt"
-                            ModuleName = "Demo"
-                            SourceRange = fenceRange
-                            ContentSha256 = TypedAuthorityManifest.sha256 moduleBytes } ] }
+                    {
+                        Schema = QuintSource.fenceManifestSchema
+                        SourcePath = source.Path
+                        SourceSha256 = source.Sha256
+                        Fences =
+                            [
+                                {
+                                    Ordinal = 0
+                                    Target = "demo.qnt"
+                                    ModuleName = "Demo"
+                                    SourceRange = fenceRange
+                                    ContentSha256 = TypedAuthorityManifest.sha256 moduleBytes
+                                }
+                            ]
+                    }
 
             let sourceMapBytes =
                 QuintSource.encodeSourceMap
-                    { Schema = QuintSource.sourceMapSchema
-                      SourceSha256 = source.Sha256
-                      Entries =
-                        [ { Target = "demo.qnt"
-                            GeneratedRange =
-                              { Path = "demo.qnt"
-                                Start = { Line = 1; Column = 1 }
-                                End = { Line = 1; Column = 14 } }
-                            Source =
-                              { FenceOrdinal = 0
-                                Range = sourceRange } } ] }
+                    {
+                        Schema = QuintSource.sourceMapSchema
+                        SourceSha256 = source.Sha256
+                        Entries =
+                            [
+                                {
+                                    Target = "demo.qnt"
+                                    GeneratedRange =
+                                        {
+                                            Path = "demo.qnt"
+                                            Start = { Line = 1; Column = 1 }
+                                            End = { Line = 1; Column = 14 }
+                                        }
+                                    Source =
+                                        {
+                                            FenceOrdinal = 0
+                                            Range = sourceRange
+                                        }
+                                }
+                            ]
+                    }
 
             let frame (value: string) =
                 let valueBytes = Text.Encoding.UTF8.GetBytes value
 
                 Array.concat
-                    [ Text.Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
-                      valueBytes ]
+                    [
+                        Text.Encoding.ASCII.GetBytes(valueBytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
+                        valueBytes
+                    ]
 
             let modulesDigest =
-                [ "demo.qnt"
-                  TypedAuthorityManifest.sha256 moduleBytes
-                  moduleBytes.LongLength.ToString(CultureInfo.InvariantCulture) ]
+                [
+                    "demo.qnt"
+                    TypedAuthorityManifest.sha256 moduleBytes
+                    moduleBytes.LongLength.ToString(CultureInfo.InvariantCulture)
+                ]
                 |> List.collect (frame >> Array.toList)
                 |> List.toArray
                 |> TypedAuthorityManifest.sha256
@@ -254,24 +302,28 @@ module TypedSddCommandTests =
 
             let fingerprint =
                 QuintContract.fingerprint
-                    { SourceSha256 = source.Sha256
-                      FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
-                      GeneratedModulesSha256 = modulesDigest
-                      ToolchainSha256 = toolchain
-                      Contract = contract }
+                    {
+                        SourceSha256 = source.Sha256
+                        FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
+                        GeneratedModulesSha256 = modulesDigest
+                        ToolchainSha256 = toolchain
+                        Contract = contract
+                    }
                 |> expectOk
 
             let receiptBytes =
                 QuintCompiler.encodeReceipt
-                    { Schema = QuintCompiler.receiptSchema
-                      SourceSha256 = source.Sha256
-                      FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
-                      GeneratedModulesSha256 = modulesDigest
-                      ToolchainSha256 = toolchain
-                      TypedEffectSha256 = typedEffectDigest
-                      ContractSha256 = TypedAuthorityManifest.sha256 contractBytes
-                      CompilationFingerprint = fingerprint
-                      ProcessSteps = [ "extract"; "typecheck" ] }
+                    {
+                        Schema = QuintCompiler.receiptSchema
+                        SourceSha256 = source.Sha256
+                        FenceManifestSha256 = TypedAuthorityManifest.sha256 fenceBytes
+                        GeneratedModulesSha256 = modulesDigest
+                        ToolchainSha256 = toolchain
+                        TypedEffectSha256 = typedEffectDigest
+                        ContractSha256 = TypedAuthorityManifest.sha256 contractBytes
+                        CompilationFingerprint = fingerprint
+                        ProcessSteps = [ "extract"; "typecheck" ]
+                    }
                 |> Text.Encoding.UTF8.GetBytes
 
             let bindingsBytes =
@@ -279,15 +331,17 @@ module TypedSddCommandTests =
                 |> Text.Encoding.UTF8.GetBytes
 
             let content: (string * string * byte array) list =
-                [ "markdown", "work/demo/specification.md", markdown
-                  "fence-manifest", "readiness/demo/quint/fences.json", fenceBytes
-                  "generated-modules", "readiness/demo/quint/demo.qnt", moduleBytes
-                  "source-map", "readiness/demo/quint/source-map.json", sourceMapBytes
-                  "typed-effect", "readiness/demo/quint/typed-effect.json", typedEffectBytes
-                  "sandbox-contract", "readiness/demo/quint/sandbox-contract.json", QuintSandbox.contractBytes
-                  "compiled-contract", "readiness/demo/quint/contract.json", contractBytes
-                  "bindings", "readiness/demo/quint/bindings.fs", bindingsBytes
-                  "compilation-receipt", "readiness/demo/quint/receipt.json", receiptBytes ]
+                [
+                    "markdown", "work/demo/specification.md", markdown
+                    "fence-manifest", "readiness/demo/quint/fences.json", fenceBytes
+                    "generated-modules", "readiness/demo/quint/demo.qnt", moduleBytes
+                    "source-map", "readiness/demo/quint/source-map.json", sourceMapBytes
+                    "typed-effect", "readiness/demo/quint/typed-effect.json", typedEffectBytes
+                    "sandbox-contract", "readiness/demo/quint/sandbox-contract.json", QuintSandbox.contractBytes
+                    "compiled-contract", "readiness/demo/quint/contract.json", contractBytes
+                    "bindings", "readiness/demo/quint/bindings.fs", bindingsBytes
+                    "compilation-receipt", "readiness/demo/quint/receipt.json", receiptBytes
+                ]
 
             let artifacts =
                 content
@@ -300,22 +354,26 @@ module TypedSddCommandTests =
 
                     File.WriteAllBytes(full, value)
 
-                    { Id = id
-                      Path = path
-                      Sha256 = TypedAuthorityManifest.sha256 value })
+                    {
+                        Id = id
+                        Path = path
+                        Sha256 = TypedAuthorityManifest.sha256 value
+                    })
 
             let authority =
-                { SchemaVersion = 2
-                  Lifecycle = "typed-sdd"
-                  Backend = "quint-specification-v1"
-                  ProfileIdentity = QuintProfile.identity
-                  ToolchainIdentity = toolchain
-                  PackageIdentity = $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
-                  Artifacts = artifacts
-                  AuthoringAgent = "tern"
-                  AuthoringSession = "v2"
-                  RollbackManifestPath = None
-                  RollbackManifestSha256 = None }
+                {
+                    SchemaVersion = 2
+                    Lifecycle = "typed-sdd"
+                    Backend = "quint-specification-v1"
+                    ProfileIdentity = QuintProfile.identity
+                    ToolchainIdentity = toolchain
+                    PackageIdentity = $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
+                    Artifacts = artifacts
+                    AuthoringAgent = "tern"
+                    AuthoringSession = "v2"
+                    RollbackManifestPath = None
+                    RollbackManifestSha256 = None
+                }
 
             let manifestPath = Path.Combine(root, TypedAuthorityManifest.path "demo")
 
@@ -359,14 +417,16 @@ module TypedSddCommandTests =
             let code, stdout, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "migrate"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--source"
-                      "work/demo/spec.md" ]
+                    [
+                        "typed-sdd"
+                        "migrate"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--source"
+                        "work/demo/spec.md"
+                    ]
 
             Assert.Equal(0, code)
             Assert.Contains("\"classification\": \"Migrated\"", stdout)
@@ -386,18 +446,20 @@ module TypedSddCommandTests =
             let code, stdout, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "../" + escapeName
-                      "--agent"
-                      "a"
-                      "--session"
-                      "s"
-                      "--backend"
-                      "fsharp-specification-v1" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "../" + escapeName
+                        "--agent"
+                        "a"
+                        "--session"
+                        "s"
+                        "--backend"
+                        "fsharp-specification-v1"
+                    ]
 
             Assert.Equal(1, code)
             Assert.Contains("typedSdd.workInvalid", stdout)
@@ -406,14 +468,16 @@ module TypedSddCommandTests =
             let migrateCode, migrate, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "migrate"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--source"
-                      "../outside.md" ]
+                    [
+                        "typed-sdd"
+                        "migrate"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--source"
+                        "../outside.md"
+                    ]
 
             Assert.Equal(1, migrateCode)
             Assert.Contains("typedSdd.sourceEscapesRoot", migrate))
@@ -435,17 +499,19 @@ module TypedSddCommandTests =
             let code, migrated, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "migrate"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--source"
-                      "work/demo/spec.md"
-                      "--backend"
-                      "fsharp-specification-v1"
-                      "--accept" ]
+                    [
+                        "typed-sdd"
+                        "migrate"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--source"
+                        "work/demo/spec.md"
+                        "--backend"
+                        "fsharp-specification-v1"
+                        "--accept"
+                    ]
 
             Assert.Equal(0, code)
             Assert.Contains("requirements:", migrated)
@@ -475,17 +541,19 @@ module TypedSddCommandTests =
                 let code, _, _ =
                     run
                         root
-                        [ "typed-sdd"
-                          "migrate"
-                          "--root"
-                          root
-                          "--work"
-                          "demo"
-                          "--source"
-                          "work/demo/spec.md"
-                          "--backend"
-                          "fsharp-specification-v1"
-                          "--accept" ]
+                        [
+                            "typed-sdd"
+                            "migrate"
+                            "--root"
+                            root
+                            "--work"
+                            "demo"
+                            "--source"
+                            "work/demo/spec.md"
+                            "--backend"
+                            "fsharp-specification-v1"
+                            "--accept"
+                        ]
 
                 Assert.Equal(0, code)
                 let typedMarkdown = File.ReadAllBytes source
@@ -516,39 +584,43 @@ module TypedSddCommandTests =
             let v1Code, _, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--agent"
-                      "tern"
-                      "--session"
-                      "v1"
-                      "--backend"
-                      "fsharp-specification-v1" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--agent"
+                        "tern"
+                        "--session"
+                        "v1"
+                        "--backend"
+                        "fsharp-specification-v1"
+                    ]
 
             Assert.Equal(0, v1Code)
 
             let replaceCode, replaceReport, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--agent"
-                      "tern"
-                      "--session"
-                      "v2"
-                      "--backend"
-                      "quint"
-                      "--cache"
-                      cache
-                      "--accept" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--agent"
+                        "tern"
+                        "--session"
+                        "v2"
+                        "--backend"
+                        "quint"
+                        "--cache"
+                        cache
+                        "--accept"
+                    ]
 
             Assert.Equal(1, replaceCode)
             Assert.Contains("typedSdd.v2.migrationRequired", replaceReport)
@@ -559,22 +631,24 @@ module TypedSddCommandTests =
             let titleCode, titleReport, _ =
                 run
                     titleRoot
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      titleRoot
-                      "--work"
-                      "demo"
-                      "--title"
-                      "bad\nline"
-                      "--agent"
-                      "tern"
-                      "--session"
-                      "title"
-                      "--backend"
-                      "quint"
-                      "--cache"
-                      cache ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        titleRoot
+                        "--work"
+                        "demo"
+                        "--title"
+                        "bad\nline"
+                        "--agent"
+                        "tern"
+                        "--session"
+                        "title"
+                        "--backend"
+                        "quint"
+                        "--cache"
+                        cache
+                    ]
 
             Assert.Equal(1, titleCode)
             Assert.Contains("typedSdd.v2.titleInvalid", titleReport))
@@ -589,18 +663,22 @@ module TypedSddCommandTests =
             Assert.Contains("typedSdd.unknownArgument", stdout)
 
             for malformed in
-                [ [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo"; "--work"; "again" ]
-                  [ "typed-sdd"; "inspect"; "--root"; "--work"; "demo" ]
-                  [ "typed-sdd"
-                    "author"
-                    "--root"
-                    root
-                    "--work"
-                    "-h"
-                    "--agent"
-                    "a"
-                    "--session"
-                    "s" ] ] do
+                [
+                    [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo"; "--work"; "again" ]
+                    [ "typed-sdd"; "inspect"; "--root"; "--work"; "demo" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "-h"
+                        "--agent"
+                        "a"
+                        "--session"
+                        "s"
+                    ]
+                ] do
                 let malformedCode, malformedReport, _ = run root malformed
                 Assert.Equal(1, malformedCode)
                 Assert.Contains("typedSdd.unknownArgument", malformedReport))
@@ -622,24 +700,27 @@ module TypedSddCommandTests =
                 provenancePath,
                 ScaffoldProvenance.serialize
                     { provenance with
-                        EffectiveParameters = [ "lifecycle", "typed-sdd" ] }
+                        EffectiveParameters = [ "lifecycle", "typed-sdd" ]
+                    }
             )
 
             let authorCode, _, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--agent"
-                      "a"
-                      "--session"
-                      "s"
-                      "--backend"
-                      "fsharp-specification-v1" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--agent"
+                        "a"
+                        "--session"
+                        "s"
+                        "--backend"
+                        "fsharp-specification-v1"
+                    ]
 
             Assert.Equal(0, authorCode)
             let specificationPath = Path.Combine(root, "work", "demo", "spec.md")
@@ -670,24 +751,27 @@ module TypedSddCommandTests =
                 provenancePath,
                 ScaffoldProvenance.serialize
                     { provenance with
-                        EffectiveParameters = [ "lifecycle", "typed-sdd" ] }
+                        EffectiveParameters = [ "lifecycle", "typed-sdd" ]
+                    }
             )
 
             let authorCode, _, _ =
                 run
                     root
-                    [ "typed-sdd"
-                      "author"
-                      "--root"
-                      root
-                      "--work"
-                      "demo"
-                      "--agent"
-                      "a"
-                      "--session"
-                      "s"
-                      "--backend"
-                      "fsharp-specification-v1" ]
+                    [
+                        "typed-sdd"
+                        "author"
+                        "--root"
+                        root
+                        "--work"
+                        "demo"
+                        "--agent"
+                        "a"
+                        "--session"
+                        "s"
+                        "--backend"
+                        "fsharp-specification-v1"
+                    ]
 
             Assert.Equal(0, authorCode)
             let canonicalPath = Path.Combine(root, "work", "demo", "specification.fsx")
@@ -704,7 +788,8 @@ module TypedSddCommandTests =
                 manifestPath,
                 TypedAuthorityManifest.serialize
                     { manifest with
-                        CanonicalSha256 = TypedAuthorityManifest.sha256 canonicalBytes }
+                        CanonicalSha256 = TypedAuthorityManifest.sha256 canonicalBytes
+                    }
             )
 
             for command in [ "doctor"; "upgrade" ] do
@@ -725,36 +810,48 @@ module TypedSddCommandTests =
             let digest character = String(character, 64)
 
             let accepted =
-                { SchemaVersion = 1
-                  Revision = 4L
-                  Modules =
-                    [ { Id = identifier "EVID-001"
-                        Kind = WorkspaceModuleKind.EvidenceRequirement
-                        ContentSha256 = digest 'a'
-                        References = []
-                        Assumptions = []
-                        EvidenceObligationIds = [] } ] }
+                {
+                    SchemaVersion = 1
+                    Revision = 4L
+                    Modules =
+                        [
+                            {
+                                Id = identifier "EVID-001"
+                                Kind = WorkspaceModuleKind.EvidenceRequirement
+                                ContentSha256 = digest 'a'
+                                References = []
+                                Assumptions = []
+                                EvidenceObligationIds = []
+                            }
+                        ]
+                }
 
             let fingerprint =
                 WorkspaceLifecycle.fingerprint accepted
                 |> Result.defaultWith (sprintf "%A" >> failwith)
 
             let proposal identifierText character =
-                { SchemaVersion = 1
-                  IssueRef = "FS-GG/FS.GG.SDD#934"
-                  ProseSha256 = digest 'b'
-                  BaseFingerprint = fingerprint
-                  AuthoringDepth = AuthoringDepth.DirectQuint
-                  Changes =
-                    [ WorkspaceChange.Upsert
-                          { Id = identifier identifierText
-                            Kind = WorkspaceModuleKind.Decision
-                            ContentSha256 = digest character
-                            References = []
-                            Assumptions = []
-                            EvidenceObligationIds = [] } ]
-                  Disposition = ProposalDisposition.CoherentDelta
-                  EvidenceFingerprint = None }
+                {
+                    SchemaVersion = 1
+                    IssueRef = "FS-GG/FS.GG.SDD#934"
+                    ProseSha256 = digest 'b'
+                    BaseFingerprint = fingerprint
+                    AuthoringDepth = AuthoringDepth.DirectQuint
+                    Changes =
+                        [
+                            WorkspaceChange.Upsert
+                                {
+                                    Id = identifier identifierText
+                                    Kind = WorkspaceModuleKind.Decision
+                                    ContentSha256 = digest character
+                                    References = []
+                                    Assumptions = []
+                                    EvidenceObligationIds = []
+                                }
+                        ]
+                    Disposition = ProposalDisposition.CoherentDelta
+                    EvidenceFingerprint = None
+                }
 
             File.WriteAllText(
                 Path.Combine(root, "accepted.json"),
@@ -775,23 +872,27 @@ module TypedSddCommandTests =
             )
 
             for flag, expected in
-                [ "--json", "\"outcome\":\"succeeded\""
-                  "--plain", "reconcile: succeeded"
-                  "--rich", "# Reconciliation succeeded" ] do
+                [
+                    "--json", "\"outcome\":\"succeeded\""
+                    "--plain", "reconcile: succeeded"
+                    "--rich", "# Reconciliation succeeded"
+                ] do
                 let code, output, _ =
                     run
                         root
-                        [ "typed-sdd"
-                          "reconcile"
-                          "--root"
-                          root
-                          "--accepted"
-                          "accepted.json"
-                          "--left"
-                          "left.json"
-                          "--right"
-                          "right.json"
-                          flag ]
+                        [
+                            "typed-sdd"
+                            "reconcile"
+                            "--root"
+                            root
+                            "--accepted"
+                            "accepted.json"
+                            "--left"
+                            "left.json"
+                            "--right"
+                            "right.json"
+                            flag
+                        ]
 
                 Assert.Equal(0, code)
                 Assert.Contains(expected, output))
@@ -805,50 +906,66 @@ module TypedSddCommandTests =
             let digest character = String(character, 64)
 
             let accepted =
-                { SchemaVersion = 1
-                  Revision = 1L
-                  Modules =
-                    [ { Id = identifier "EVID-001"
-                        Kind = WorkspaceModuleKind.EvidenceRequirement
-                        ContentSha256 = digest 'a'
-                        References = []
-                        Assumptions = []
-                        EvidenceObligationIds = [] } ] }
+                {
+                    SchemaVersion = 1
+                    Revision = 1L
+                    Modules =
+                        [
+                            {
+                                Id = identifier "EVID-001"
+                                Kind = WorkspaceModuleKind.EvidenceRequirement
+                                ContentSha256 = digest 'a'
+                                References = []
+                                Assumptions = []
+                                EvidenceObligationIds = []
+                            }
+                        ]
+                }
 
             let fingerprint =
                 WorkspaceLifecycle.fingerprint accepted
                 |> Result.defaultWith (sprintf "%A" >> failwith)
 
             let source =
-                { Path = "model.qnt.md"
-                  Start = { Line = 1; Column = 1 }
-                  End = { Line = 1; Column = 10 } }
+                {
+                    Path = "model.qnt.md"
+                    Start = { Line = 1; Column = 1 }
+                    End = { Line = 1; Column = 10 }
+                }
 
             let export: QuintGeneralExport =
-                { Id = "EVID-001-EXPORT"
-                  ModuleName = "Workspace"
-                  DeclarationName = "EVID-001"
-                  Value = QuintString(digest 'a')
-                  Source = source }
+                {
+                    Id = "EVID-001-EXPORT"
+                    ModuleName = "Workspace"
+                    DeclarationName = "EVID-001"
+                    Value = QuintString(digest 'a')
+                    Source = source
+                }
 
             let contract =
-                { Schema = QuintContractV2.schema
-                  Profile = QuintGeneralProfile.identity
-                  Specification = "Workspace"
-                  Exports = [ export ]
-                  Catalogue =
-                    [ { Id = "EVID-001"
-                        Kind = "workspace-module"
-                        ExportId = export.Id
-                        Value = export.Value
-                        Source = source } ]
-                  ActionEffects = []
-                  Relationships = []
-                  VerificationProfiles = []
-                  Bounds = []
-                  Impacts = []
-                  Compatibility = []
-                  Digests = [ { Name = "source"; Sha256 = digest 'f' } ] }
+                {
+                    Schema = QuintContractV2.schema
+                    Profile = QuintGeneralProfile.identity
+                    Specification = "Workspace"
+                    Exports = [ export ]
+                    Catalogue =
+                        [
+                            {
+                                Id = "EVID-001"
+                                Kind = "workspace-module"
+                                ExportId = export.Id
+                                Value = export.Value
+                                Source = source
+                            }
+                        ]
+                    ActionEffects = []
+                    Relationships = []
+                    VerificationProfiles = []
+                    Bounds = []
+                    Impacts = []
+                    Compatibility = []
+                    Digests = [ { Name = "source"; Sha256 = digest 'f' } ]
+                }
 
             File.WriteAllText(
                 Path.Combine(root, "accepted.json"),
@@ -874,24 +991,28 @@ module TypedSddCommandTests =
                 )
 
             let args projection =
-                [ "typed-sdd"
-                  "correspond"
-                  "--root"
-                  root
-                  "--accepted"
-                  "accepted.json"
-                  "--contract"
-                  "contract.json"
-                  "--observations"
-                  "observations.json"
-                  projection ]
+                [
+                    "typed-sdd"
+                    "correspond"
+                    "--root"
+                    root
+                    "--accepted"
+                    "accepted.json"
+                    "--contract"
+                    "contract.json"
+                    "--observations"
+                    "observations.json"
+                    projection
+                ]
 
             writeObservations [ "generated-contract"; "source-binding"; "test"; "evidence-receipt" ]
 
             for projection, expected in
-                [ "--json", "\"expectedFingerprint\""
-                  "--plain", "EVID-001: satisfied"
-                  "--rich", "Expected fingerprint" ] do
+                [
+                    "--json", "\"expectedFingerprint\""
+                    "--plain", "EVID-001: satisfied"
+                    "--rich", "Expected fingerprint"
+                ] do
                 let code, output, _ = run root (args projection)
                 Assert.Equal(0, code)
                 Assert.Contains(expected, output)

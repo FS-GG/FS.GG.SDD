@@ -8,66 +8,114 @@ module QuintProfileContractTests =
     let private digest character = System.String(character, 64)
 
     let private source line =
-        { Path = "docs/specifications/example.md"
-          Start = { Line = line; Column = 1 }
-          End = { Line = line; Column = 20 } }
+        {
+            Path = "docs/specifications/example.md"
+            Start = { Line = line; Column = 1 }
+            End = { Line = line; Column = 20 }
+        }
 
     let private catalogue =
-        [ { Id = "ACT-Apply"
-            Kind = Action
-            Source = source 12 }
-          { Id = "STATE-Value"
-            Kind = StateVariable
-            Source = source 8 }
-          { Id = "REQ-Safety"
-            Kind = Requirement
-            Source = source 4 }
-          { Id = "INV-Safe"
-            Kind = Invariant
-            Source = source 20 }
-          { Id = "EV-Check"
-            Kind = Evidence
-            Source = source 24 } ]
+        [
+            {
+                Id = "ACT-Apply"
+                Kind = Action
+                Source = source 12
+            }
+            {
+                Id = "STATE-Value"
+                Kind = StateVariable
+                Source = source 8
+            }
+            {
+                Id = "REQ-Safety"
+                Kind = Requirement
+                Source = source 4
+            }
+            {
+                Id = "INV-Safe"
+                Kind = Invariant
+                Source = source 20
+            }
+            {
+                Id = "EV-Check"
+                Kind = Evidence
+                Source = source 24
+            }
+        ]
 
     let private contract () =
-        { Schema = QuintContract.schema
-          Profile = QuintProfile.identity
-          Specification = "ExampleSpecification"
-          Catalogue = catalogue
-          ActionEffects =
-            [ { ActionId = "ACT-Apply"
-                Reads = [ "STATE-Value" ]
-                Writes = [ "STATE-Value" ]
-                Subjects = [ "REQ-Safety" ] } ]
-          Relationships =
-            [ { FromId = "REQ-Safety"
-                Kind = VerifiedBy
-                ToId = "EV-Check" }
-              { FromId = "INV-Safe"
-                Kind = Requires
-                ToId = "REQ-Safety" } ]
-          VerificationProfiles =
-            [ { Id = "VERIFY-Bounded"
-                Kind = "apalache"
-                SubjectIds = [ "INV-Safe" ]
-                BoundIds = [ "BOUND-Steps" ] } ]
-          Bounds =
-            [ { Id = "BOUND-Steps"
-                Minimum = 0L
-                Maximum = 8L } ]
-          Impacts =
-            [ { SubjectId = "REQ-Safety"
-                Category = "contract"
-                Detail = "The safety obligation is externally visible." } ]
-          Compatibility =
-            [ { Surface = "generated-bindings"
-                Requirement = "additive"
-                Detail = "Profile 1 identifiers remain stable." } ]
-          Digests =
-            [ { Name = "canonicalSource"
-                Sha256 = digest 'a' }
-              { Name = "generatedModules"
-                Sha256 = digest 'b' } ] }
+        {
+            Schema = QuintContract.schema
+            Profile = QuintProfile.identity
+            Specification = "ExampleSpecification"
+            Catalogue = catalogue
+            ActionEffects =
+                [
+                    {
+                        ActionId = "ACT-Apply"
+                        Reads = [ "STATE-Value" ]
+                        Writes = [ "STATE-Value" ]
+                        Subjects = [ "REQ-Safety" ]
+                    }
+                ]
+            Relationships =
+                [
+                    {
+                        FromId = "REQ-Safety"
+                        Kind = VerifiedBy
+                        ToId = "EV-Check"
+                    }
+                    {
+                        FromId = "INV-Safe"
+                        Kind = Requires
+                        ToId = "REQ-Safety"
+                    }
+                ]
+            VerificationProfiles =
+                [
+                    {
+                        Id = "VERIFY-Bounded"
+                        Kind = "apalache"
+                        SubjectIds = [ "INV-Safe" ]
+                        BoundIds = [ "BOUND-Steps" ]
+                    }
+                ]
+            Bounds =
+                [
+                    {
+                        Id = "BOUND-Steps"
+                        Minimum = 0L
+                        Maximum = 8L
+                    }
+                ]
+            Impacts =
+                [
+                    {
+                        SubjectId = "REQ-Safety"
+                        Category = "contract"
+                        Detail = "The safety obligation is externally visible."
+                    }
+                ]
+            Compatibility =
+                [
+                    {
+                        Surface = "generated-bindings"
+                        Requirement = "additive"
+                        Detail = "Profile 1 identifiers remain stable."
+                    }
+                ]
+            Digests =
+                [
+                    {
+                        Name = "canonicalSource"
+                        Sha256 = digest 'a'
+                    }
+                    {
+                        Name = "generatedModules"
+                        Sha256 = digest 'b'
+                    }
+                ]
+        }
 
     let private expectOk =
         function
@@ -82,10 +130,12 @@ module QuintProfileContractTests =
     [<Fact>]
     let ``adapter refuses absent exact-output facts and wrong out-of-band version distinctly`` () =
         let observation version =
-            { Profile = QuintProfile.identity
-              QuintVersion = version
-              TypedEffectJson = "{}"
-              SourceBindings = [] }
+            {
+                Profile = QuintProfile.identity
+                QuintVersion = version
+                TypedEffectJson = "{}"
+                SourceBindings = []
+            }
 
         Assert.Contains(
             findings (QuintProfile.adaptTypedEffectJson (observation QuintProfile.quintVersion)),
@@ -100,16 +150,24 @@ module QuintProfileContractTests =
     [<Fact>]
     let ``profile diagnostics retain safe literate paths and ordered source ranges`` () =
         let invalid =
-            { Profile = QuintProfile.identity
-              QuintVersion = QuintProfile.quintVersion
-              Entries =
-                [ { Id = "bad"
-                    Kind = Requirement
-                    Source =
-                      { Path = "../escape.md"
-                        Start = { Line = 2; Column = 3 }
-                        End = { Line = 1; Column = 1 } } } ]
-              ActionEffects = [] }
+            {
+                Profile = QuintProfile.identity
+                QuintVersion = QuintProfile.quintVersion
+                Entries =
+                    [
+                        {
+                            Id = "bad"
+                            Kind = Requirement
+                            Source =
+                                {
+                                    Path = "../escape.md"
+                                    Start = { Line = 2; Column = 3 }
+                                    End = { Line = 1; Column = 1 }
+                                }
+                        }
+                    ]
+                ActionEffects = []
+            }
 
         let codes = QuintProfile.validate invalid |> List.map _.Code
         Assert.Contains("QUINT-PROFILE-ID", codes)
@@ -140,14 +198,23 @@ module QuintProfileContractTests =
         let invalid =
             { contract () with
                 Relationships =
-                    [ { FromId = "REQ-Missing"
-                        Kind = VerifiedBy
-                        ToId = "EV-Check" } ]
+                    [
+                        {
+                            FromId = "REQ-Missing"
+                            Kind = VerifiedBy
+                            ToId = "EV-Check"
+                        }
+                    ]
                 Bounds =
-                    [ { Id = "BOUND-Steps"
-                        Minimum = 9L
-                        Maximum = 2L } ]
-                Digests = [ { Name = "source"; Sha256 = "latest" } ] }
+                    [
+                        {
+                            Id = "BOUND-Steps"
+                            Minimum = 9L
+                            Maximum = 2L
+                        }
+                    ]
+                Digests = [ { Name = "source"; Sha256 = "latest" } ]
+            }
 
         let codes = QuintContract.validate invalid |> List.map _.Code
         Assert.Contains("QUINT-CONTRACT-REFERENCE", codes)
@@ -157,11 +224,13 @@ module QuintProfileContractTests =
     [<Fact>]
     let ``compilation fingerprint binds every semantic input and diff names changed component`` () =
         let inputs =
-            { SourceSha256 = digest '1'
-              FenceManifestSha256 = digest '2'
-              GeneratedModulesSha256 = digest '3'
-              ToolchainSha256 = digest '4'
-              Contract = contract () }
+            {
+                SourceSha256 = digest '1'
+                FenceManifestSha256 = digest '2'
+                GeneratedModulesSha256 = digest '3'
+                ToolchainSha256 = digest '4'
+                Contract = contract ()
+            }
 
         let first = QuintContract.fingerprint inputs |> expectOk
         let second = QuintContract.fingerprint inputs |> expectOk
@@ -171,9 +240,14 @@ module QuintProfileContractTests =
         let changed =
             { contract () with
                 Impacts =
-                    [ { SubjectId = "REQ-Safety"
-                        Category = "contract"
-                        Detail = "Changed integration meaning." } ] }
+                    [
+                        {
+                            SubjectId = "REQ-Safety"
+                            Category = "contract"
+                            Detail = "Changed integration meaning."
+                        }
+                    ]
+            }
 
         match QuintContract.semanticDiff (contract ()) changed |> expectOk with
         | QuintContractDiff.Changed changes -> Assert.Contains(changes, fun change -> change.Path = "/impacts")
@@ -183,7 +257,8 @@ module QuintProfileContractTests =
             findings (
                 QuintContract.fingerprint
                     { inputs with
-                        ToolchainSha256 = "moving-latest" }
+                        ToolchainSha256 = "moving-latest"
+                    }
             ),
             fun finding -> finding.Code = "QUINT-FINGERPRINT-DIGEST"
         )
@@ -201,18 +276,21 @@ module QuintProfileContractTests =
                         { effect with
                             Reads = List.rev effect.Reads
                             Writes = List.rev effect.Writes
-                            Subjects = List.rev effect.Subjects })
+                            Subjects = List.rev effect.Subjects
+                        })
                 Relationships = List.rev original.Relationships
                 VerificationProfiles =
                     original.VerificationProfiles
                     |> List.map (fun profile ->
                         { profile with
                             SubjectIds = List.rev profile.SubjectIds
-                            BoundIds = List.rev profile.BoundIds })
+                            BoundIds = List.rev profile.BoundIds
+                        })
                 Bounds = List.rev original.Bounds
                 Impacts = List.rev original.Impacts
                 Compatibility = List.rev original.Compatibility
-                Digests = List.rev original.Digests }
+                Digests = List.rev original.Digests
+            }
 
         Assert.Equal(
             QuintContract.serializeCanonical original |> expectOk,
@@ -225,21 +303,31 @@ module QuintProfileContractTests =
         """{"stage":"typechecking","modules":[{"id":100,"name":"Consumer","declarations":[{"id":1,"kind":"var","name":"state","typeAnnotation":{"id":2,"kind":"int"},"depth":0},{"id":20,"kind":"def","name":"rules","qualifier":"pureval","expr":{"id":19,"kind":"app","opcode":"Set","args":[{"id":18,"kind":"app","opcode":"Rec","args":[{"id":11,"kind":"str","value":"id"},{"id":12,"kind":"str","value":"RULE-B"},{"id":13,"kind":"str","value":"kind"},{"id":14,"kind":"str","value":"formula"},{"id":15,"kind":"str","value":"dependencies"},{"id":16,"kind":"app","opcode":"Set","args":[{"id":17,"kind":"str","value":"RULE-A"}]}]},{"id":10,"kind":"app","opcode":"Rec","args":[{"id":3,"kind":"str","value":"id"},{"id":4,"kind":"str","value":"RULE-A"},{"id":5,"kind":"str","value":"kind"},{"id":6,"kind":"str","value":"fact"},{"id":7,"kind":"str","value":"dependencies"},{"id":8,"kind":"app","opcode":"Set","args":[]}]}]},"depth":0},{"id":30,"kind":"def","name":"step","qualifier":"action","expr":{"id":29,"kind":"app","opcode":"assign","args":[{"id":27,"kind":"name","name":"state"},{"id":28,"kind":"int","value":1}]},"depth":0}]}],"table":{"30":{"id":30,"kind":"def","name":"step","qualifier":"action","expr":{"id":29,"kind":"app","opcode":"assign","args":[{"id":27,"kind":"name","name":"state"},{"id":28,"kind":"int","value":1}]}}},"types":{"30":{"kind":"bool"}},"effects":{"30":{"effect":{"kind":"concrete","components":[{"kind":"read","entity":{"kind":"concrete","stateVariables":[{"name":"state","reference":1}]}},{"kind":"update","entity":{"kind":"concrete","stateVariables":[{"name":"state","reference":1}]}}]},"effectVariables":[],"entityVariables":[]}},"errors":[],"warnings":[]}"""
 
     let private generalObservation profile =
-        { Profile = profile
-          QuintVersion = QuintGeneralProfile.quintVersion
-          TypedEffectJson = generalTypedEffect
-          ExportBindings =
-            [ { Id = "EXPORT-Rules"
-                ModuleName = "Consumer"
-                DeclarationName = "rules"
-                PromoteCatalogueRows = true
-                Source = source 30 } ]
-          ActionBindings =
-            [ { ModuleName = "Consumer"
-                CatalogueName = "step"
-                Id = "ACT-Step"
-                Kind = Action
-                Source = source 40 } ] }
+        {
+            Profile = profile
+            QuintVersion = QuintGeneralProfile.quintVersion
+            TypedEffectJson = generalTypedEffect
+            ExportBindings =
+                [
+                    {
+                        Id = "EXPORT-Rules"
+                        ModuleName = "Consumer"
+                        DeclarationName = "rules"
+                        PromoteCatalogueRows = true
+                        Source = source 30
+                    }
+                ]
+            ActionBindings =
+                [
+                    {
+                        ModuleName = "Consumer"
+                        CatalogueName = "step"
+                        Id = "ACT-Step"
+                        Kind = Action
+                        Source = source 40
+                    }
+                ]
+        }
 
     [<Fact>]
     let ``general profile accepts consumer exports without a program digest`` () =
@@ -269,11 +357,16 @@ module QuintProfileContractTests =
         let nonconstant =
             { generalObservation QuintGeneralProfile.identity with
                 ExportBindings =
-                    [ { Id = "EXPORT-Step"
-                        ModuleName = "Consumer"
-                        DeclarationName = "step"
-                        PromoteCatalogueRows = false
-                        Source = source 40 } ] }
+                    [
+                        {
+                            Id = "EXPORT-Step"
+                            ModuleName = "Consumer"
+                            DeclarationName = "step"
+                            PromoteCatalogueRows = false
+                            Source = source 40
+                        }
+                    ]
+            }
             |> QuintGeneralProfile.adaptTypedEffectJson
             |> findings
 
@@ -296,10 +389,13 @@ module QuintProfileContractTests =
                             Source =
                                 { binding.Source with
                                     Path = "../escape.md"
-                                    End = { Line = 1; Column = 1 } } })
+                                    End = { Line = 1; Column = 1 }
+                                }
+                        })
                 ActionBindings =
                     baseline.ActionBindings
-                    |> List.map (fun binding -> { binding with Kind = Requirement }) }
+                    |> List.map (fun binding -> { binding with Kind = Requirement })
+            }
 
         let codes =
             QuintGeneralProfile.adaptTypedEffectJson invalid |> findings |> List.map _.Code
@@ -315,11 +411,13 @@ module QuintProfileContractTests =
         let observation = generalObservation QuintGeneralProfile.identity
 
         let manifest =
-            { Schema = QuintGeneralBindingManifest.schema
-              Profile = observation.Profile
-              ModuleName = "ConsumerRules"
-              Exports = observation.ExportBindings
-              Actions = observation.ActionBindings }
+            {
+                Schema = QuintGeneralBindingManifest.schema
+                Profile = observation.Profile
+                ModuleName = "ConsumerRules"
+                Exports = observation.ExportBindings
+                Actions = observation.ActionBindings
+            }
 
         let canonical = QuintGeneralBindingManifest.serializeCanonical manifest |> expectOk
         let roundTrip = QuintGeneralBindingManifest.deserialize canonical |> expectOk
@@ -362,18 +460,20 @@ module QuintProfileContractTests =
             |> QuintGeneralProfile.adaptTypedEffectJson
             |> expectOk
 
-        { Schema = QuintContractV2.schema
-          Profile = QuintGeneralProfile.identity
-          Specification = "Consumer"
-          Exports = adapted.Exports
-          Catalogue = adapted.Catalogue
-          ActionEffects = adapted.ActionEffects
-          Relationships = []
-          VerificationProfiles = []
-          Bounds = []
-          Impacts = []
-          Compatibility = []
-          Digests = [ { Name = "source"; Sha256 = digest 'c' } ] }
+        {
+            Schema = QuintContractV2.schema
+            Profile = QuintGeneralProfile.identity
+            Specification = "Consumer"
+            Exports = adapted.Exports
+            Catalogue = adapted.Catalogue
+            ActionEffects = adapted.ActionEffects
+            Relationships = []
+            VerificationProfiles = []
+            Bounds = []
+            Impacts = []
+            Compatibility = []
+            Digests = [ { Name = "source"; Sha256 = digest 'c' } ]
+        }
 
     [<Fact>]
     let ``contract v2 and generic bindings preserve rich Quint values canonically`` () =

@@ -98,12 +98,14 @@ module internal HandlersSurface =
                 else
                     "cosmetic"
 
-            { Path = path
-              Classification = classification
-              RecommendedBump = bumpFor classification
-              AddedMembers = added |> List.sort
-              RemovedOrChangedMembers = removedOrChanged |> List.sort
-              UnparseableFallback = unparseable }
+            {
+                Path = path
+                Classification = classification
+                RecommendedBump = bumpFor classification
+                AddedMembers = added |> List.sort
+                RemovedOrChangedMembers = removedOrChanged |> List.sort
+                UnparseableFallback = unparseable
+            }
 
         let private severity classification =
             match classification with
@@ -122,9 +124,11 @@ module internal HandlersSurface =
                 else
                     sorted |> List.map (fun entry -> entry.Classification) |> List.maxBy severity
 
-            { Verdict = verdict
-              RecommendedBump = bumpFor verdict
-              Entries = sorted }
+            {
+                Verdict = verdict
+                RecommendedBump = bumpFor verdict
+                Entries = sorted
+            }
 
     /// Feature 094 (FS-GG/.github ADR-0025 reconcile step 3a): the coherent-set version obligation a
     /// classified mutation implies. Pure over the interpreted axis snapshot — no disk access here.
@@ -151,13 +155,16 @@ module internal HandlersSurface =
         let applyBump (version: Version.Version) bump : Version.Version =
             match bump with
             | "major" ->
-                { Major = version.Major + 1
-                  Minor = 0
-                  Patch = 0 }
+                {
+                    Major = version.Major + 1
+                    Minor = 0
+                    Patch = 0
+                }
             | "minor" ->
                 { version with
                     Minor = version.Minor + 1
-                    Patch = 0 }
+                    Patch = 0
+                }
             | _ -> version
 
         let private render (version: Version.Version) =
@@ -193,12 +200,14 @@ module internal HandlersSurface =
                         let suggestion = if requiredBump = "none" then text else render suggested
                         "resolved", Some text, Some suggestion
 
-            { AxisFile = axisFile
-              AxisProperty = axisProperty
-              AxisState = axisState
-              CurrentVersion = currentVersion
-              RequiredBump = requiredBump
-              SuggestedVersion = suggestedVersion }
+            {
+                AxisFile = axisFile
+                AxisProperty = axisProperty
+                AxisState = axisState
+                CurrentVersion = currentVersion
+                RequiredBump = requiredBump
+                SuggestedVersion = suggestedVersion
+            }
 
     // A candidate authored signature: ends with `.fsi`, and not inside a build-output tree
     // (`obj`/`bin`), which can hold compiler-generated signatures that are not the public surface.
@@ -239,9 +248,11 @@ module internal HandlersSurface =
         let sourceRoot = surfaceSourceRoot model.Request
         let baselineRoot = surfaceBaselineRoot model.Request
 
-        [ for s in listing sourceRoot model do
-              ReadFile s
-              ReadFile(baselinePathFor sourceRoot baselineRoot s) ]
+        [
+            for s in listing sourceRoot model do
+                ReadFile s
+                ReadFile(baselinePathFor sourceRoot baselineRoot s)
+        ]
         |> List.distinctBy effectKey
 
     let private readGate model =
@@ -451,20 +462,22 @@ module internal HandlersSurface =
             VersionAxis.prompt axisFile axisProperty axisSnapshot classification
 
         let summary =
-            { SourceRoot = normalizeRelativePath sourceRoot
-              BaselineRoot = normalizeRelativePath baselineRoot
-              Mode = if model.Request.SurfaceUpdate then "update" else "check"
-              CheckedCount = checkedCount
-              MissingBaselinePaths = missing
-              DriftedSourcePaths = drifted
-              OrphanBaselinePaths = orphans
-              UpdatedBaselinePaths = updated
-              // Decision #754's binding rule: a verdict may never report coherent over a subject it
-              // did not read. The third conjunct is the whole of #745 — without it this reads
-              // `true` on a `chmod 000` file, at exit 0, on a required gate.
-              IsCoherent = List.isEmpty missing && List.isEmpty drifted && List.isEmpty unreadable
-              Classification = classification
-              VersionBump = versionBump }
+            {
+                SourceRoot = normalizeRelativePath sourceRoot
+                BaselineRoot = normalizeRelativePath baselineRoot
+                Mode = if model.Request.SurfaceUpdate then "update" else "check"
+                CheckedCount = checkedCount
+                MissingBaselinePaths = missing
+                DriftedSourcePaths = drifted
+                OrphanBaselinePaths = orphans
+                UpdatedBaselinePaths = updated
+                // Decision #754's binding rule: a verdict may never report coherent over a subject it
+                // did not read. The third conjunct is the whole of #745 — without it this reads
+                // `true` on a `chmod 000` file, at exit 0, on a required gate.
+                IsCoherent = List.isEmpty missing && List.isEmpty drifted && List.isEmpty unreadable
+                Classification = classification
+                VersionBump = versionBump
+            }
 
         summary, (unreadable, writes)
 
@@ -487,7 +500,8 @@ module internal HandlersSurface =
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ effects },
+                        PendingEffects = model.PendingEffects @ effects
+                    },
                     effects
             | None ->
                 let summary, (unreadable, writes) = computeSummary model
@@ -521,10 +535,12 @@ module internal HandlersSurface =
                             && List.isEmpty summary.DriftedSourcePaths
                         )
                     then
-                        [ surfaceDrift
-                              (List.length summary.MissingBaselinePaths)
-                              (List.length summary.DriftedSourcePaths)
-                              (summary.MissingBaselinePaths @ summary.DriftedSourcePaths) ]
+                        [
+                            surfaceDrift
+                                (List.length summary.MissingBaselinePaths)
+                                (List.length summary.DriftedSourcePaths)
+                                (summary.MissingBaselinePaths @ summary.DriftedSourcePaths)
+                        ]
                     else
                         []
 
@@ -544,14 +560,16 @@ module internal HandlersSurface =
                     let bump = summary.VersionBump
 
                     if bump.RequiredBump = "major" || bump.RequiredBump = "minor" then
-                        [ surfaceVersionBumpRequired
-                              summary.Classification.Verdict
-                              bump.AxisFile
-                              bump.AxisProperty
-                              bump.AxisState
-                              bump.CurrentVersion
-                              bump.RequiredBump
-                              bump.SuggestedVersion ]
+                        [
+                            surfaceVersionBumpRequired
+                                summary.Classification.Verdict
+                                bump.AxisFile
+                                bump.AxisProperty
+                                bump.AxisState
+                                bump.CurrentVersion
+                                bump.RequiredBump
+                                bump.SuggestedVersion
+                        ]
                     else
                         []
 
@@ -563,5 +581,6 @@ module internal HandlersSurface =
                         @ driftDiagnostics
                         @ orphanDiagnostics
                         @ versionDiagnostics
-                    PendingEffects = model.PendingEffects @ writes },
+                    PendingEffects = model.PendingEffects @ writes
+                },
                 writes

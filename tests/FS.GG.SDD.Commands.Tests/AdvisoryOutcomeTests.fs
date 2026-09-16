@@ -28,14 +28,16 @@ module AdvisoryOutcomeTests =
         create id severity None None (sprintf "%s message" id) "correction" []
 
     let private change op : ArtifactChange =
-        { Path = "work/x/artifact.md"
-          Kind = "authoredArtifact"
-          Ownership = "authored"
-          Operation = op
-          BeforeDigest = None
-          AfterDigest = None
-          SafeWriteDecision = "write"
-          DiagnosticIds = [] }
+        {
+            Path = "work/x/artifact.md"
+            Kind = "authoredArtifact"
+            Ownership = "authored"
+            Operation = op
+            BeforeDigest = None
+            AfterDigest = None
+            SafeWriteDecision = "write"
+            DiagnosticIds = []
+        }
 
     [<Fact>]
     let ``an advisory info diagnostic alone is a clean no-op, never succeededWithWarnings`` () =
@@ -57,8 +59,10 @@ module AdvisoryOutcomeTests =
         Assert.Equal(
             CommandOutcome.SucceededWithWarnings,
             outcome
-                [ diag DiagnosticInfo "planAuthoringWindow"
-                  diag DiagnosticWarning "proseStructuredMismatch" ]
+                [
+                    diag DiagnosticInfo "planAuthoringWindow"
+                    diag DiagnosticWarning "proseStructuredMismatch"
+                ]
                 []
         )
 
@@ -67,8 +71,10 @@ module AdvisoryOutcomeTests =
         Assert.Equal(
             CommandOutcome.Blocked,
             outcome
-                [ diag DiagnosticInfo "planAuthoringWindow"
-                  diag DiagnosticError "missingRequiredEvidence" ]
+                [
+                    diag DiagnosticInfo "planAuthoringWindow"
+                    diag DiagnosticError "missingRequiredEvidence"
+                ]
                 []
         )
 

@@ -24,77 +24,81 @@ module internal Drift =
          |> List.collect (fun name ->
              Fsgg.Schemas.agentSkillRoots
              |> List.map (fun root -> Fsgg.SkillMirror.skillPath root name)))
-        @ [ ".fsgg/early-stage-guidance.md"
+        @ [
+            ".fsgg/early-stage-guidance.md"
             // 073/ADR-0018: the seeded regenerable-output `.gitignore` is part of the coherent
             // skeleton set — `doctor` reports it missing, `upgrade` no-clobber re-seeds it.
-            ".gitignore" ]
+            ".gitignore"
+        ]
         |> List.sort
 
     let expectedArtifactCount = List.length expectedArtifactPaths
 
     type DriftReport =
-        { HasProvenance: bool
-          ProviderName: string option
-          InstalledCliVersion: string
-          RequiredMinimumCliVersion: string option
-          // FS-GG/FS.GG.SDD#313: which of the two floors produced `RequiredMinimumCliVersion` —
-          // `providerDescriptor` / `scaffoldProvenance` / `workspaceFloor`. `None` iff there is no
-          // effective minimum. Without it a divergence between the provider floor and the
-          // workspace's `sdd.minToolVersion` is invisible in the report.
-          RequiredMinimumCliVersionSource: string option
-          CliAxis: string
-          CliBehindBy: string option
-          ExpectedArtifactCount: int
-          MissingArtifactPaths: string list
-          // 058/ADR-0014 §Decision 3: the content-addressed skill-drift surface — the concrete
-          // root/skill paths where a skill in the union (process OR product) is missing from a
-          // root, byte-divergent across roots, hash-mismatched against its canonical digest, or
-          // (FS-GG/FS.GG.SDD#750) outside its producer's complete declaration.
-          // Sorted, deduped. Non-empty ⇒ not coherent (advisory; `doctor` still exits 0).
-          // FS-GG/FS.GG.SDD#726: these name the offending FILE, not merely the skill — a divergent
-          // `<root>/skills/<id>/references/deep-detail.md` is reported at that path, because a skill
-          // is a directory and this surface used to see only its `SKILL.md`.
-          SkillDriftPaths: string list
-          // FS-GG/FS.GG.SDD#736: `SkillDriftPaths` split by the CONDITION that produced each entry.
-          // These name WHICH failure each path is, because they have four different repairs and
-          // only one of them is about bytes. Disjoint by construction (see `computeSkillDrift`),
-          // and their union is exactly `SkillDriftPaths`. #736 left the union itself unchanged;
-          // #750 added the fourth class, and it is the one change that MOVES the union in both
-          // directions — see `SkillDriftClasses.All`.
-          //
-          // A file at least one OTHER root carries and this one does not — an inconsistently applied
-          // edit, or a provider file dropped from one root. Since FS-GG/FS.GG.SDD#747 this no longer
-          // includes OS/VCS junk, which is excluded from the compared set (`IgnoredSkillJunkPaths`).
-          SkillNotMirroredPaths: string list
-          // No declared root carries a copy of the skill at all; there is nothing to mirror from.
-          SkillLostPaths: string list
-          // Every named root HAS the file and the bodies disagree (or disagree with the recorded
-          // digest). This is the condition the single pre-#736 advisory described.
-          SkillDivergentPaths: string list
-          // FS-GG/FS.GG.SDD#750: this root CARRIES a file that the skill's producer does not declare
-          // at all — `SkillMirror.DeclaredFileDrift.UndeclaredRoots`, fact 4. Only the owner-sourced
-          // class can reach it: it is the only one whose recorded declaration covers every file, and
-          // "outside the declaration" is unstatable without one. Reported at the roots that HAVE the
-          // file, which is what makes it a fourth class rather than a fourth spelling of the other
-          // three — every one of their sentences is false of it.
-          SkillUndeclaredPaths: string list
-          // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced skill copies (driver + product classes)
-          // this scaffold is EXPECTED to carry — per the recorded parameters + present-skill set —
-          // but is missing on disk. These are backfilled no-clobber by the `artifactReSeed` step,
-          // so they are folded into that step's `TargetPaths`; the field names them on their own for
-          // observability. Sorted, deduped. Non-empty ⇒ actionable (re-seed WouldApply, not coherent).
-          OwnerSkillBackfillPaths: string list
-          // FS-GG/FS.GG.SDD#747: the skill-copy files this run OBSERVED on disk and then EXCLUDED
-          // from the comparison as OS/VCS junk (`junkFileNames` / `junkFileSuffixes`). Sorted,
-          // deduped, and EMPTY unless the exclusion actually fired — it names files, never the rule.
-          //
-          // It exists so the exclusion can be STATED rather than assumed. Without it "this tree is
-          // converged" would be quietly conditional on an invisible subtraction, which is the same
-          // class of silent-narrowing defect #743 caught in its own fix; `HandlersUpgrade` appends
-          // the exclusion to its advisory whenever this is non-empty.
-          IgnoredSkillJunkPaths: string list
-          Steps: ReconciliationStep list
-          IsCoherent: bool }
+        {
+            HasProvenance: bool
+            ProviderName: string option
+            InstalledCliVersion: string
+            RequiredMinimumCliVersion: string option
+            // FS-GG/FS.GG.SDD#313: which of the two floors produced `RequiredMinimumCliVersion` —
+            // `providerDescriptor` / `scaffoldProvenance` / `workspaceFloor`. `None` iff there is no
+            // effective minimum. Without it a divergence between the provider floor and the
+            // workspace's `sdd.minToolVersion` is invisible in the report.
+            RequiredMinimumCliVersionSource: string option
+            CliAxis: string
+            CliBehindBy: string option
+            ExpectedArtifactCount: int
+            MissingArtifactPaths: string list
+            // 058/ADR-0014 §Decision 3: the content-addressed skill-drift surface — the concrete
+            // root/skill paths where a skill in the union (process OR product) is missing from a
+            // root, byte-divergent across roots, hash-mismatched against its canonical digest, or
+            // (FS-GG/FS.GG.SDD#750) outside its producer's complete declaration.
+            // Sorted, deduped. Non-empty ⇒ not coherent (advisory; `doctor` still exits 0).
+            // FS-GG/FS.GG.SDD#726: these name the offending FILE, not merely the skill — a divergent
+            // `<root>/skills/<id>/references/deep-detail.md` is reported at that path, because a skill
+            // is a directory and this surface used to see only its `SKILL.md`.
+            SkillDriftPaths: string list
+            // FS-GG/FS.GG.SDD#736: `SkillDriftPaths` split by the CONDITION that produced each entry.
+            // These name WHICH failure each path is, because they have four different repairs and
+            // only one of them is about bytes. Disjoint by construction (see `computeSkillDrift`),
+            // and their union is exactly `SkillDriftPaths`. #736 left the union itself unchanged;
+            // #750 added the fourth class, and it is the one change that MOVES the union in both
+            // directions — see `SkillDriftClasses.All`.
+            //
+            // A file at least one OTHER root carries and this one does not — an inconsistently applied
+            // edit, or a provider file dropped from one root. Since FS-GG/FS.GG.SDD#747 this no longer
+            // includes OS/VCS junk, which is excluded from the compared set (`IgnoredSkillJunkPaths`).
+            SkillNotMirroredPaths: string list
+            // No declared root carries a copy of the skill at all; there is nothing to mirror from.
+            SkillLostPaths: string list
+            // Every named root HAS the file and the bodies disagree (or disagree with the recorded
+            // digest). This is the condition the single pre-#736 advisory described.
+            SkillDivergentPaths: string list
+            // FS-GG/FS.GG.SDD#750: this root CARRIES a file that the skill's producer does not declare
+            // at all — `SkillMirror.DeclaredFileDrift.UndeclaredRoots`, fact 4. Only the owner-sourced
+            // class can reach it: it is the only one whose recorded declaration covers every file, and
+            // "outside the declaration" is unstatable without one. Reported at the roots that HAVE the
+            // file, which is what makes it a fourth class rather than a fourth spelling of the other
+            // three — every one of their sentences is false of it.
+            SkillUndeclaredPaths: string list
+            // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced skill copies (driver + product classes)
+            // this scaffold is EXPECTED to carry — per the recorded parameters + present-skill set —
+            // but is missing on disk. These are backfilled no-clobber by the `artifactReSeed` step,
+            // so they are folded into that step's `TargetPaths`; the field names them on their own for
+            // observability. Sorted, deduped. Non-empty ⇒ actionable (re-seed WouldApply, not coherent).
+            OwnerSkillBackfillPaths: string list
+            // FS-GG/FS.GG.SDD#747: the skill-copy files this run OBSERVED on disk and then EXCLUDED
+            // from the comparison as OS/VCS junk (`junkFileNames` / `junkFileSuffixes`). Sorted,
+            // deduped, and EMPTY unless the exclusion actually fired — it names files, never the rule.
+            //
+            // It exists so the exclusion can be STATED rather than assumed. Without it "this tree is
+            // converged" would be quietly conditional on an invisible subtraction, which is the same
+            // class of silent-narrowing defect #743 caught in its own fix; `HandlersUpgrade` appends
+            // the exclusion to its advisory whenever this is non-empty.
+            IgnoredSkillJunkPaths: string list
+            Steps: ReconciliationStep list
+            IsCoherent: bool
+        }
 
     // The content-addressed union covers THREE skill classes, each with the strongest authority it
     // actually has, and no stronger (FS-GG/FS.GG.SDD#733):
@@ -234,9 +238,11 @@ module internal Drift =
         let processSkills =
             SeededSkills.seededSkills ()
             |> List.map (fun skill ->
-                { SkillMirror.ExpectedSkill.Id = skill.Name
-                  SkillMirror.ExpectedSkill.Scope = SkillScope.Process
-                  SkillMirror.ExpectedSkill.Sha256 = "" })
+                {
+                    SkillMirror.ExpectedSkill.Id = skill.Name
+                    SkillMirror.ExpectedSkill.Scope = SkillScope.Process
+                    SkillMirror.ExpectedSkill.Sha256 = ""
+                })
 
         // Product (provider) skills carry the STABLE seed-time digest recorded in provenance, so
         // hash-match detects tampering even when all roots were edited identically — without the
@@ -244,9 +250,11 @@ module internal Drift =
         let productSkills =
             productSkillEntries provenance
             |> List.map (fun (id, digest) ->
-                { SkillMirror.ExpectedSkill.Id = id
-                  SkillMirror.ExpectedSkill.Scope = SkillScope.Product
-                  SkillMirror.ExpectedSkill.Sha256 = digest })
+                {
+                    SkillMirror.ExpectedSkill.Id = id
+                    SkillMirror.ExpectedSkill.Scope = SkillScope.Product
+                    SkillMirror.ExpectedSkill.Sha256 = digest
+                })
 
         processSkills @ productSkills
 
@@ -304,31 +312,35 @@ module internal Drift =
             |> List.filter (fun (id, _) -> not (Set.contains id alreadyExpected))
             |> List.groupBy fst
             |> List.map (fun (id, rows) ->
-                { SkillMirror.ExpectedSkillFiles.Id = id
-                  // Owner-sourced skills are delivered TO a product, so they are `Product` on the
-                  // one axis this type carries. `Scope` is reporting metadata here — the fold below
-                  // classifies by condition, not by scope.
-                  SkillMirror.ExpectedSkillFiles.Scope = SkillScope.Product
-                  SkillMirror.ExpectedSkillFiles.Files =
-                    rows
-                    // One row per (root × file): each relative path arrives once per root, and the
-                    // three carry the SAME recorded digest because `DriverSkills.plan` fans one
-                    // manifest `file.Sha256` into every root. Roots that DISAGREE mean the record was
-                    // partially written or hand-edited, and there is then no authority to arbitrate
-                    // with — electing one by sort order would invent one. Declare the path with an
-                    // EMPTY digest instead, which `verifyFileSet` reads as "no reference digest":
-                    // presence and cross-root identity still hold, and nothing is asserted that the
-                    // record cannot support.
-                    |> List.map snd
-                    |> List.distinct
-                    |> List.groupBy fst
-                    |> List.sortBy fst
-                    |> List.map (fun (relative, declared) ->
-                        { SkillManifestFile.RelativePath = relative
-                          SkillManifestFile.Sha256 =
-                            match declared |> List.map snd |> List.distinct with
-                            | [ single ] -> single
-                            | _ -> "" }) })
+                {
+                    SkillMirror.ExpectedSkillFiles.Id = id
+                    // Owner-sourced skills are delivered TO a product, so they are `Product` on the
+                    // one axis this type carries. `Scope` is reporting metadata here — the fold below
+                    // classifies by condition, not by scope.
+                    SkillMirror.ExpectedSkillFiles.Scope = SkillScope.Product
+                    SkillMirror.ExpectedSkillFiles.Files =
+                        rows
+                        // One row per (root × file): each relative path arrives once per root, and the
+                        // three carry the SAME recorded digest because `DriverSkills.plan` fans one
+                        // manifest `file.Sha256` into every root. Roots that DISAGREE mean the record was
+                        // partially written or hand-edited, and there is then no authority to arbitrate
+                        // with — electing one by sort order would invent one. Declare the path with an
+                        // EMPTY digest instead, which `verifyFileSet` reads as "no reference digest":
+                        // presence and cross-root identity still hold, and nothing is asserted that the
+                        // record cannot support.
+                        |> List.map snd
+                        |> List.distinct
+                        |> List.groupBy fst
+                        |> List.sortBy fst
+                        |> List.map (fun (relative, declared) ->
+                            {
+                                SkillManifestFile.RelativePath = relative
+                                SkillManifestFile.Sha256 =
+                                    match declared |> List.map snd |> List.distinct with
+                                    | [ single ] -> single
+                                    | _ -> ""
+                            })
+                })
             |> List.sortBy (fun skill -> skill.Id)
 
     /// FS-GG/FS.GG.SDD#733: every skill id the content-verified surface expects — the process ∪
@@ -371,11 +383,13 @@ module internal Drift =
     /// FS-GG/FS.GG.SDD#747: files ignored by EXACT name. Closed set — adding to it needs a code
     /// change and the #747 AC3 complement test below moves with it.
     let junkFileNames =
-        [ ".DS_Store" // macOS Finder
-          "Thumbs.db" // Windows Explorer thumbnail cache
-          "ehthumbs.db" // ditto, Vista+
-          "desktop.ini" // Windows folder settings
-          ".directory" ] // KDE Dolphin folder settings
+        [
+            ".DS_Store" // macOS Finder
+            "Thumbs.db" // Windows Explorer thumbnail cache
+            "ehthumbs.db" // ditto, Vista+
+            "desktop.ini" // Windows folder settings
+            ".directory"
+        ] // KDE Dolphin folder settings
 
     /// FS-GG/FS.GG.SDD#747: files ignored by EXACT suffix — merge leftovers and editor backups,
     /// which are named after the file they shadow and so cannot be listed by exact name.
@@ -385,12 +399,14 @@ module internal Drift =
     /// below is what enforces that, and it is the difference between a closed rule and a prefix of
     /// one.
     let junkFileSuffixes =
-        [ ".orig" // `git merge` / `patch` leftover
-          ".rej" // `patch` reject
-          ".bak"
-          ".swp" // vim swap
-          ".swo"
-          "~" ] // emacs/vi backup
+        [
+            ".orig" // `git merge` / `patch` leftover
+            ".rej" // `patch` reject
+            ".bak"
+            ".swp" // vim swap
+            ".swo"
+            "~"
+        ] // emacs/vi backup
 
     /// Does this skill-relative path NAME junk? Judged on the last segment only — an auxiliary may
     /// be nested (`references/deep-detail.md`), and it is the FILE name that identifies the junk.
@@ -499,8 +515,10 @@ module internal Drift =
         // later strengthened, this clause already reads the complete-file expectation shape and
         // will cover the product class without a second ignore-rule path.
         let declaredSkillFiles =
-            [ for skill in ownerExpected do
-                  for file in skill.Files -> skill.Id, file.RelativePath ]
+            [
+                for skill in ownerExpected do
+                    for file in skill.Files -> skill.Id, file.RelativePath
+            ]
             |> Set.ofList
 
         // `SKILL.md` needs no entry here: it is on neither junk list, and could not be — it is what
@@ -537,8 +555,10 @@ module internal Drift =
                 skillCopyOfPath path
                 |> Option.map (fun (root, id, relative) ->
                     (root, id),
-                    { SkillMirror.SkillFile.RelativePath = relative
-                      SkillMirror.SkillFile.Body = body }))
+                    {
+                        SkillMirror.SkillFile.RelativePath = relative
+                        SkillMirror.SkillFile.Body = body
+                    }))
             |> List.groupBy fst
             |> List.map (fun (copy, group) -> copy, group |> List.map snd)
             |> Map.ofList
@@ -580,23 +600,30 @@ module internal Drift =
             |> List.choose skillCopyOfPath
             |> List.groupBy (fun (root, id, _) -> root, id)
             |> List.map (fun ((root, id), group) ->
-                { SkillMirror.UnobservedSkillFiles.Root = root
-                  SkillMirror.UnobservedSkillFiles.Id = id
-                  SkillMirror.UnobservedSkillFiles.RelativePaths = group |> List.map (fun (_, _, relative) -> relative) })
+                {
+                    SkillMirror.UnobservedSkillFiles.Root = root
+                    SkillMirror.UnobservedSkillFiles.Id = id
+                    SkillMirror.UnobservedSkillFiles.RelativePaths =
+                        group |> List.map (fun (_, _, relative) -> relative)
+                })
 
         // One observation set for BOTH verify entry points, over the union of ids either of them
         // expects. A row for an id the fold in question does not expect is inert (each entry point
         // folds over its OWN `expected`), so sharing the set is what keeps the two from disagreeing
         // about what is on disk — the same reason `SkillMirror` shares its observation fold.
         let actual =
-            [ for id in
-                  (expected |> List.map (fun skill -> skill.Id))
-                  @ (ownerExpected |> List.map (fun skill -> skill.Id))
-                  |> List.distinct do
-                  for root in agentSkillRoots ->
-                      { SkillMirror.ActualSkillFiles.Root = root
-                        SkillMirror.ActualSkillFiles.Id = id
-                        SkillMirror.ActualSkillFiles.Files = copyFiles root id } ]
+            [
+                for id in
+                    (expected |> List.map (fun skill -> skill.Id))
+                    @ (ownerExpected |> List.map (fun skill -> skill.Id))
+                    |> List.distinct do
+                    for root in agentSkillRoots ->
+                        {
+                            SkillMirror.ActualSkillFiles.Root = root
+                            SkillMirror.ActualSkillFiles.Id = id
+                            SkillMirror.ActualSkillFiles.Files = copyFiles root id
+                        }
+            ]
 
         // The facts, normalized off the two verify shapes so ONE classification rule sees both.
         // `verifyFiles` reports `SkillFileDrift`, `verifyFileSet` reports `DeclaredFileDrift`; their
@@ -792,26 +819,32 @@ module internal Drift =
 
         let all = classified |> List.map snd |> List.distinct |> List.sort
 
-        { NotMirrored = pathsOf NotMirroredAt
-          Lost = pathsOf LostEverywhere
-          Divergent = pathsOf DivergentAt
-          Undeclared = pathsOf UndeclaredAt
-          All = all
-          IgnoredJunk = ignoredJunk }
+        {
+            NotMirrored = pathsOf NotMirroredAt
+            Lost = pathsOf LostEverywhere
+            Divergent = pathsOf DivergentAt
+            Undeclared = pathsOf UndeclaredAt
+            All = all
+            IgnoredJunk = ignoredJunk
+        }
 
     let private noTargetStep (stepId: ReconciliationStepId) preview : ReconciliationStep =
-        { StepId = stepId
-          Kind = stepId
-          DiffPreview = preview
-          Outcome = ReconciliationOutcome.NoTarget
-          TargetPaths = [] }
+        {
+            StepId = stepId
+            Kind = stepId
+            DiffPreview = preview
+            Outcome = ReconciliationOutcome.NoTarget
+            TargetPaths = []
+        }
 
     let private cliSelfUpdateStep installedVersion (minimumText: string) : ReconciliationStep =
-        { StepId = ReconciliationStepId.CliSelfUpdate
-          Kind = ReconciliationStepId.CliSelfUpdate
-          DiffPreview = $"installed {installedVersion} → target ≥{minimumText}"
-          Outcome = ReconciliationOutcome.WouldApply
-          TargetPaths = [] }
+        {
+            StepId = ReconciliationStepId.CliSelfUpdate
+            Kind = ReconciliationStepId.CliSelfUpdate
+            DiffPreview = $"installed {installedVersion} → target ≥{minimumText}"
+            Outcome = ReconciliationOutcome.WouldApply
+            TargetPaths = []
+        }
 
     // FS-GG/FS.GG.SDD#313: the source labels reported alongside the effective minimum, so a
     // divergence between the two floors is legible rather than silent.
@@ -901,28 +934,30 @@ module internal Drift =
                 | "behind", Some(minimum, _) -> [ cliSelfUpdateStep installedVersion minimum ]
                 | _ -> []
 
-            { HasProvenance = false
-              ProviderName = None
-              InstalledCliVersion = installedVersion
-              RequiredMinimumCliVersion = effectiveMinimum |> Option.map fst
-              RequiredMinimumCliVersionSource = effectiveMinimum |> Option.map snd
-              CliAxis = cliAxis
-              CliBehindBy = cliBehindBy
-              ExpectedArtifactCount = expectedArtifactCount
-              MissingArtifactPaths = []
-              SkillDriftPaths = []
-              SkillNotMirroredPaths = []
-              SkillLostPaths = []
-              SkillDivergentPaths = []
-              SkillUndeclaredPaths = []
-              // No provenance ⇒ not a scaffold ⇒ nothing to backfill (#624).
-              OwnerSkillBackfillPaths = []
-              // No provenance ⇒ no skill drift computed at all ⇒ nothing was compared, so nothing
-              // was excluded. Reporting an exclusion here would claim a subtraction this arm never
-              // made (#747).
-              IgnoredSkillJunkPaths = []
-              Steps = steps
-              IsCoherent = List.isEmpty steps }
+            {
+                HasProvenance = false
+                ProviderName = None
+                InstalledCliVersion = installedVersion
+                RequiredMinimumCliVersion = effectiveMinimum |> Option.map fst
+                RequiredMinimumCliVersionSource = effectiveMinimum |> Option.map snd
+                CliAxis = cliAxis
+                CliBehindBy = cliBehindBy
+                ExpectedArtifactCount = expectedArtifactCount
+                MissingArtifactPaths = []
+                SkillDriftPaths = []
+                SkillNotMirroredPaths = []
+                SkillLostPaths = []
+                SkillDivergentPaths = []
+                SkillUndeclaredPaths = []
+                // No provenance ⇒ not a scaffold ⇒ nothing to backfill (#624).
+                OwnerSkillBackfillPaths = []
+                // No provenance ⇒ no skill drift computed at all ⇒ nothing was compared, so nothing
+                // was excluded. Reporting an exclusion here would claim a subtraction this arm never
+                // made (#747).
+                IgnoredSkillJunkPaths = []
+                Steps = steps
+                IsCoherent = List.isEmpty steps
+            }
         | Some record ->
             // Live descriptor minimum wins over the provenance-recorded one — by *presence*, not
             // by parseability: a descriptor that declares an unparseable minimum still shadows the
@@ -977,11 +1012,13 @@ module internal Drift =
                 if List.isEmpty reSeedTargets then
                     noTargetStep ReconciliationStepId.ArtifactReSeed "no missing artifacts"
                 else
-                    { StepId = ReconciliationStepId.ArtifactReSeed
-                      Kind = ReconciliationStepId.ArtifactReSeed
-                      DiffPreview = reSeedTargets |> List.map (fun path -> $"+ {path} (new)") |> String.concat "\n"
-                      Outcome = ReconciliationOutcome.WouldApply
-                      TargetPaths = reSeedTargets }
+                    {
+                        StepId = ReconciliationStepId.ArtifactReSeed
+                        Kind = ReconciliationStepId.ArtifactReSeed
+                        DiffPreview = reSeedTargets |> List.map (fun path -> $"+ {path} (new)") |> String.concat "\n"
+                        Outcome = ReconciliationOutcome.WouldApply
+                        TargetPaths = reSeedTargets
+                    }
 
             let steps = [ cliStep; rePinStep; reSeedStep ]
 
@@ -994,29 +1031,31 @@ module internal Drift =
                 steps
                 |> List.exists (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
-            { HasProvenance = true
-              // 085: a dev-repo document carries no provider — report `None` rather than the
-              // empty provider field, so doctor/upgrade read as "tracked, provider-less" (a
-              // dev-repo) instead of naming an empty provider. Everything else — the seeded
-              // artifact axis, the `noTarget` re-pin, the coherent-by-absence CLI axis — is the
-              // shared path, so a dev-repo reconciles its seeded skeleton like any scaffold.
-              ProviderName = (if isDevRepo record then None else Some record.ProviderName)
-              InstalledCliVersion = installedVersion
-              RequiredMinimumCliVersion = validMinimum
-              RequiredMinimumCliVersionSource = effectiveMinimum |> Option.map snd
-              CliAxis = cliAxis
-              CliBehindBy = cliBehindBy
-              ExpectedArtifactCount = expectedArtifactCount
-              MissingArtifactPaths = missing
-              SkillDriftPaths = skillDrift.All
-              SkillNotMirroredPaths = skillDrift.NotMirrored
-              SkillLostPaths = skillDrift.Lost
-              SkillDivergentPaths = skillDrift.Divergent
-              SkillUndeclaredPaths = skillDrift.Undeclared
-              OwnerSkillBackfillPaths = ownerBackfillMissing
-              IgnoredSkillJunkPaths = skillDrift.IgnoredJunk
-              Steps = steps
-              IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All }
+            {
+                HasProvenance = true
+                // 085: a dev-repo document carries no provider — report `None` rather than the
+                // empty provider field, so doctor/upgrade read as "tracked, provider-less" (a
+                // dev-repo) instead of naming an empty provider. Everything else — the seeded
+                // artifact axis, the `noTarget` re-pin, the coherent-by-absence CLI axis — is the
+                // shared path, so a dev-repo reconciles its seeded skeleton like any scaffold.
+                ProviderName = (if isDevRepo record then None else Some record.ProviderName)
+                InstalledCliVersion = installedVersion
+                RequiredMinimumCliVersion = validMinimum
+                RequiredMinimumCliVersionSource = effectiveMinimum |> Option.map snd
+                CliAxis = cliAxis
+                CliBehindBy = cliBehindBy
+                ExpectedArtifactCount = expectedArtifactCount
+                MissingArtifactPaths = missing
+                SkillDriftPaths = skillDrift.All
+                SkillNotMirroredPaths = skillDrift.NotMirrored
+                SkillLostPaths = skillDrift.Lost
+                SkillDivergentPaths = skillDrift.Divergent
+                SkillUndeclaredPaths = skillDrift.Undeclared
+                OwnerSkillBackfillPaths = ownerBackfillMissing
+                IgnoredSkillJunkPaths = skillDrift.IgnoredJunk
+                Steps = steps
+                IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All
+            }
 
     /// `computeObserved` for a caller that observed everything it fed in — the spelling that
     /// predates the third state (FS-GG/FS.GG.SDD#760), unchanged in arity and in behaviour.

@@ -14,29 +14,33 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module WorkItem =
     type ParsedWorkItem =
-        { WorkId: WorkId
-          Project: ProjectLifecycleConfig option
-          SddPolicy: SddLifecyclePolicy option
-          Agents: AgentGuidanceConfig option
-          Metadata: WorkItemMetadata
-          PerformanceIntent: PerformanceIntentDeclaration option
-          Requirements: Requirement list
-          Decisions: Decision list
-          Tasks: WorkTask list
-          Evidence: EvidenceDeclaration list
-          MarkdownRequirementMentions: MarkdownRequirementMention list
-          Sources: SourceIdentity list
-          ExistingGeneratedViews: FileSnapshot list
-          GovernanceBoundaries: ArtifactRef list
-          Diagnostics: Diagnostic list }
+        {
+            WorkId: WorkId
+            Project: ProjectLifecycleConfig option
+            SddPolicy: SddLifecyclePolicy option
+            Agents: AgentGuidanceConfig option
+            Metadata: WorkItemMetadata
+            PerformanceIntent: PerformanceIntentDeclaration option
+            Requirements: Requirement list
+            Decisions: Decision list
+            Tasks: WorkTask list
+            Evidence: EvidenceDeclaration list
+            MarkdownRequirementMentions: MarkdownRequirementMention list
+            Sources: SourceIdentity list
+            ExistingGeneratedViews: FileSnapshot list
+            GovernanceBoundaries: ArtifactRef list
+            Diagnostics: Diagnostic list
+        }
 
     let requiredFiles workId =
-        [ ".fsgg/project.yml", ArtifactKind.ProjectConfig
-          ".fsgg/sdd.yml", ArtifactKind.SddConfig
-          ".fsgg/agents.yml", ArtifactKind.AgentsConfig
-          $"work/{workId}/spec.md", ArtifactKind.Spec
-          $"work/{workId}/tasks.yml", ArtifactKind.Tasks
-          $"work/{workId}/evidence.yml", ArtifactKind.Evidence ]
+        [
+            ".fsgg/project.yml", ArtifactKind.ProjectConfig
+            ".fsgg/sdd.yml", ArtifactKind.SddConfig
+            ".fsgg/agents.yml", ArtifactKind.AgentsConfig
+            $"work/{workId}/spec.md", ArtifactKind.Spec
+            $"work/{workId}/tasks.yml", ArtifactKind.Tasks
+            $"work/{workId}/evidence.yml", ArtifactKind.Evidence
+        ]
 
     let rawSchemaVersion (snapshot: FileSnapshot) kind =
         match kind with
@@ -63,15 +67,17 @@ module WorkItem =
         let source = sourceArtifact snapshot.Path kind
         let compatibility = rawSchemaVersion snapshot kind |> SchemaVersion.classifyRaw
 
-        { Artifact = source
-          Digest = SchemaVersion.sha256Text snapshot.Text
-          SchemaVersion = compatibility.Version
-          SchemaStatus = compatibility.Status
-          RawSchemaVersion =
-            if String.IsNullOrWhiteSpace compatibility.RawValue then
-                None
-            else
-                Some compatibility.RawValue }
+        {
+            Artifact = source
+            Digest = SchemaVersion.sha256Text snapshot.Text
+            SchemaVersion = compatibility.Version
+            SchemaStatus = compatibility.Status
+            RawSchemaVersion =
+                if String.IsNullOrWhiteSpace compatibility.RawValue then
+                    None
+                else
+                    Some compatibility.RawValue
+        }
 
     let defaultMetadata workId =
         let parsed =
@@ -79,20 +85,23 @@ module WorkItem =
             | Ok value -> value
             | Error _ -> { Value = workId }
 
-        { SchemaVersion = SchemaVersion.create 1
-          WorkId = parsed
-          Title = workId
-          Stage = LifecycleStage.Plan
-          ChangeTier = "tier1"
-          Status = "draft"
-          ProseStatus = None }
+        {
+            SchemaVersion = SchemaVersion.create 1
+            WorkId = parsed
+            Title = workId
+            Stage = LifecycleStage.Plan
+            ChangeTier = "tier1"
+            Status = "draft"
+            ProseStatus = None
+        }
 
     let loadWorkItemFromSnapshots (snapshots: FileSnapshot list) workId =
         let normalized =
             snapshots
             |> List.map (fun snapshot ->
                 { snapshot with
-                    Path = normalizePath snapshot.Path })
+                    Path = normalizePath snapshot.Path
+                })
 
         let byPath =
             normalized |> List.map (fun snapshot -> snapshot.Path, snapshot) |> Map.ofList
@@ -143,11 +152,13 @@ module WorkItem =
                 | Ok value -> value, []
                 | Error message ->
                     None,
-                    [ Diagnostics.workModelInconsistent
-                          (sourceArtifact $"work/{workId}/spec.md" ArtifactKind.Spec)
-                          $"Performance intent is malformed: {message}"
-                          "Correct the typed performanceIntent mapping in specification front matter."
-                          [] ]
+                    [
+                        Diagnostics.workModelInconsistent
+                            (sourceArtifact $"work/{workId}/spec.md" ArtifactKind.Spec)
+                            $"Performance intent is malformed: {message}"
+                            "Correct the typed performanceIntent mapping in specification front matter."
+                            []
+                    ]
 
         let requirements =
             specSnapshot |> Option.map parseRequirements |> Option.defaultValue []
@@ -217,9 +228,11 @@ module WorkItem =
                 || Set.contains snapshot.Path performanceArtifactPaths)
 
         let governanceBoundaries =
-            [ project |> Option.bind (fun project -> project.GovernancePolicyPath)
-              project |> Option.bind (fun project -> project.GovernanceCapabilitiesPath)
-              project |> Option.bind (fun project -> project.GovernanceToolingPath) ]
+            [
+                project |> Option.bind (fun project -> project.GovernancePolicyPath)
+                project |> Option.bind (fun project -> project.GovernanceCapabilitiesPath)
+                project |> Option.bind (fun project -> project.GovernanceToolingPath)
+            ]
             |> List.choose id
             |> List.map FS.GG.SDD.Artifacts.ArtifactRef.optionalGovernanceBoundary
             |> List.sortBy (fun artifact -> artifact.Path)
@@ -235,33 +248,37 @@ module WorkItem =
             else
                 let specArtifact = sourceArtifact $"work/{workId}/spec.md" ArtifactKind.Spec
 
-                [ Diagnostics.workModelInconsistent
-                      specArtifact
-                      $"Selected work id '{parsedWorkId.Value}' does not match spec front matter workId '{metadata.WorkId.Value}'."
-                      "Move the source under the matching work id or update spec front matter to the selected work id."
-                      [ parsedWorkId.Value; metadata.WorkId.Value ] ]
+                [
+                    Diagnostics.workModelInconsistent
+                        specArtifact
+                        $"Selected work id '{parsedWorkId.Value}' does not match spec front matter workId '{metadata.WorkId.Value}'."
+                        "Move the source under the matching work id or update spec front matter to the selected work id."
+                        [ parsedWorkId.Value; metadata.WorkId.Value ]
+                ]
 
-        { WorkId = parsedWorkId
-          Project = project
-          SddPolicy = sdd
-          Agents = agents
-          Metadata = metadata
-          PerformanceIntent = performanceIntent
-          Requirements = requirements
-          Decisions = decisions
-          Tasks = tasks
-          Evidence = evidence
-          MarkdownRequirementMentions = requirementMentions
-          Sources = sources
-          ExistingGeneratedViews = generatedViews
-          GovernanceBoundaries = governanceBoundaries
-          Diagnostics =
-            missingDiagnostics
-            @ projectDiagnostics
-            @ sddDiagnostics
-            @ agentDiagnostics
-            @ metadataDiagnostics
-            @ performanceIntentDiagnostics
-            @ selectedWorkItemDiagnostics
-            @ taskDiagnostics
-            @ evidenceDiagnostics }
+        {
+            WorkId = parsedWorkId
+            Project = project
+            SddPolicy = sdd
+            Agents = agents
+            Metadata = metadata
+            PerformanceIntent = performanceIntent
+            Requirements = requirements
+            Decisions = decisions
+            Tasks = tasks
+            Evidence = evidence
+            MarkdownRequirementMentions = requirementMentions
+            Sources = sources
+            ExistingGeneratedViews = generatedViews
+            GovernanceBoundaries = governanceBoundaries
+            Diagnostics =
+                missingDiagnostics
+                @ projectDiagnostics
+                @ sddDiagnostics
+                @ agentDiagnostics
+                @ metadataDiagnostics
+                @ performanceIntentDiagnostics
+                @ selectedWorkItemDiagnostics
+                @ taskDiagnostics
+                @ evidenceDiagnostics
+        }

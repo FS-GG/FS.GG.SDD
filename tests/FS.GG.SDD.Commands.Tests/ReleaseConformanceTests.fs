@@ -163,22 +163,24 @@ performanceIntent:
     // without hand-copying their fields or weakening the empty-array guard below.
     let analysisDiagnosticShape () =
         let readiness: AnalysisSummary =
-            { WorkId = workId
-              Stage = "analyze"
-              Status = "blocked"
-              AnalysisPath = $"readiness/{workId}/analysis.json"
-              SourceCount = 0
-              SourceRelationshipCount = 0
-              ReadyFindingCount = 0
-              AdvisoryCount = 0
-              WarningCount = 0
-              BlockingCount = 1
-              StaleSourceCount = 0
-              MissingDispositionCount = 0
-              MalformedSourceCount = 0
-              GeneratedViewFindingCount = 0
-              AcceptedDeferralCount = 0
-              Readiness = "needsCorrection" }
+            {
+                WorkId = workId
+                Stage = "analyze"
+                Status = "blocked"
+                AnalysisPath = $"readiness/{workId}/analysis.json"
+                SourceCount = 0
+                SourceRelationshipCount = 0
+                ReadyFindingCount = 0
+                AdvisoryCount = 0
+                WarningCount = 0
+                BlockingCount = 1
+                StaleSourceCount = 0
+                MissingDispositionCount = 0
+                MalformedSourceCount = 0
+                GeneratedViewFindingCount = 0
+                AcceptedDeferralCount = 0
+                Readiness = "needsCorrection"
+            }
 
         analysisJson
             workId
@@ -198,37 +200,45 @@ performanceIntent:
         let jsonProduced contract file =
             let observed = topKeys (read file)
 
-            { Contract = contract
-              Source = refOf ("readiness/<id>/" + contract)
-              Inventory =
-                if contract = "analysis.json" then
-                    Set.union (Set.ofList observed) (Set.ofList (analysisDiagnosticShape ()))
-                    |> Set.toList
-                else
-                    observed }
+            {
+                Contract = contract
+                Source = refOf ("readiness/<id>/" + contract)
+                Inventory =
+                    if contract = "analysis.json" then
+                        Set.union (Set.ofList observed) (Set.ofList (analysisDiagnosticShape ()))
+                        |> Set.toList
+                    else
+                        observed
+            }
 
         // Markdown projections: observed sections are the documented sections that
         // actually appear in the produced file (a missing one surfaces as drift).
         let mdProduced contract file =
             let text = read file
 
-            { Contract = contract
-              Source = refOf ("readiness/<id>/" + contract)
-              Inventory = documentedSections contract |> List.filter text.Contains }
+            {
+                Contract = contract
+                Source = refOf ("readiness/<id>/" + contract)
+                Inventory = documentedSections contract |> List.filter text.Contains
+            }
 
-        [ jsonProduced "work-model.json" "work-model.json"
-          jsonProduced "analysis.json" "analysis.json"
-          jsonProduced "verify.json" "verify.json"
-          jsonProduced "ship.json" "ship.json"
-          jsonProduced "ship-verdict.json" "ship-verdict.json"
-          jsonProduced "governance-handoff.json" "governance-handoff.json"
-          mdProduced "summary.md" "summary.md"
-          jsonProduced "agent-commands/<target>/guidance.json" "agent-commands/claude/guidance.json"
-          mdProduced "agent-commands/<target>/commands.md" "agent-commands/claude/commands.md"
-          mdProduced "agent-commands/<target>/skills.md" "agent-commands/claude/skills.md"
-          { Contract = "command-report (--json)"
-            Source = refOf "readiness/<id>/command-report"
-            Inventory = topKeys (serializeReport shipReport) } ]
+        [
+            jsonProduced "work-model.json" "work-model.json"
+            jsonProduced "analysis.json" "analysis.json"
+            jsonProduced "verify.json" "verify.json"
+            jsonProduced "ship.json" "ship.json"
+            jsonProduced "ship-verdict.json" "ship-verdict.json"
+            jsonProduced "governance-handoff.json" "governance-handoff.json"
+            mdProduced "summary.md" "summary.md"
+            jsonProduced "agent-commands/<target>/guidance.json" "agent-commands/claude/guidance.json"
+            mdProduced "agent-commands/<target>/commands.md" "agent-commands/claude/commands.md"
+            mdProduced "agent-commands/<target>/skills.md" "agent-commands/claude/skills.md"
+            {
+                Contract = "command-report (--json)"
+                Source = refOf "readiness/<id>/command-report"
+                Inventory = topKeys (serializeReport shipReport)
+            }
+        ]
 
     [<Fact>]
     let ``T015 every produced artifact conforms to its documented schema-reference entry (SC-003)`` () =

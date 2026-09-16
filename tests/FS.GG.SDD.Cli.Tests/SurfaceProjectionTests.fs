@@ -11,51 +11,65 @@ open Xunit
 /// path changes no JSON byte. Constructed reports.
 module SurfaceProjectionTests =
     let private interactiveColor =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 100
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 100
+            IsInputInteractive = true
+        }
 
     let private nonInteractive =
         { interactiveColor with
-            IsInteractive = false }
+            IsInteractive = false
+        }
 
     let private summary: SurfaceSummary =
-        { SourceRoot = "src"
-          BaselineRoot = "docs/api-surface"
-          Mode = "check"
-          CheckedCount = 3
-          MissingBaselinePaths = [ "docs/api-surface/Pkg/New.fsi" ]
-          DriftedSourcePaths = [ "src/Pkg/Changed.fsi" ]
-          OrphanBaselinePaths = [ "docs/api-surface/Pkg/Stale.fsi" ]
-          UpdatedBaselinePaths = []
-          IsCoherent = false
-          // Feature 087: the drifted `src/Pkg/Changed.fsi` classified breaking (a member changed).
-          Classification =
-            { Verdict = "breaking"
-              RecommendedBump = "major"
-              Entries =
-                [ { Path = "src/Pkg/Changed.fsi"
-                    Classification = "breaking"
+        {
+            SourceRoot = "src"
+            BaselineRoot = "docs/api-surface"
+            Mode = "check"
+            CheckedCount = 3
+            MissingBaselinePaths = [ "docs/api-surface/Pkg/New.fsi" ]
+            DriftedSourcePaths = [ "src/Pkg/Changed.fsi" ]
+            OrphanBaselinePaths = [ "docs/api-surface/Pkg/Stale.fsi" ]
+            UpdatedBaselinePaths = []
+            IsCoherent = false
+            // Feature 087: the drifted `src/Pkg/Changed.fsi` classified breaking (a member changed).
+            Classification =
+                {
+                    Verdict = "breaking"
                     RecommendedBump = "major"
-                    AddedMembers = [ "val changed: int -> string" ]
-                    RemovedOrChangedMembers = [ "val changed: int -> int" ]
-                    UnparseableFallback = false } ] }
-          // Feature 094: the breaking verdict implies a major bump off the resolved axis.
-          VersionBump =
-            { AxisFile = "Directory.Build.props"
-              AxisProperty = "Version"
-              AxisState = "resolved"
-              CurrentVersion = Some "0.8.0"
-              RequiredBump = "major"
-              SuggestedVersion = Some "1.0.0" } }
+                    Entries =
+                        [
+                            {
+                                Path = "src/Pkg/Changed.fsi"
+                                Classification = "breaking"
+                                RecommendedBump = "major"
+                                AddedMembers = [ "val changed: int -> string" ]
+                                RemovedOrChangedMembers = [ "val changed: int -> int" ]
+                                UnparseableFallback = false
+                            }
+                        ]
+                }
+            // Feature 094: the breaking verdict implies a major bump off the resolved axis.
+            VersionBump =
+                {
+                    AxisFile = "Directory.Build.props"
+                    AxisProperty = "Version"
+                    AxisState = "resolved"
+                    CurrentVersion = Some "0.8.0"
+                    RequiredBump = "major"
+                    SuggestedVersion = Some "1.0.0"
+                }
+        }
 
     let private report: CommandReport =
         { RichRenderingTests.sampleReport with
             Command = Surface
             Outcome = CommandOutcome.Blocked
             Specification = None
-            Surface = Some summary }
+            Surface = Some summary
+        }
 
     /// The same report with an unresolvable axis — the two optional scalars must project as explicit
     /// `null` (json) and `(none)` (text), never as an omitted key or an empty string.
@@ -68,7 +82,10 @@ module SurfaceProjectionTests =
                             { summary.VersionBump with
                                 AxisState = "undeterminable"
                                 CurrentVersion = None
-                                SuggestedVersion = None } } }
+                                SuggestedVersion = None
+                            }
+                    }
+        }
 
     [<Fact>]
     let ``surface json equals serializeReport and the rich path changes no byte`` () =

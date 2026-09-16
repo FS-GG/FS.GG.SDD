@@ -99,8 +99,10 @@ module internal HandlersEarly =
                 let specificationEffects =
                     match specText with
                     | Some text ->
-                        [ CreateDirectory($"work/{workId}")
-                          WriteFile(specPath workId, text, HybridArtifact MergePolicies.specification) ]
+                        [
+                            CreateDirectory($"work/{workId}")
+                            WriteFile(specPath workId, text, HybridArtifact MergePolicies.specification)
+                        ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -158,8 +160,10 @@ module internal HandlersEarly =
                 let clarificationEffects =
                     match clarificationText with
                     | Some text ->
-                        [ CreateDirectory($"work/{workId}")
-                          WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications) ]
+                        [
+                            CreateDirectory($"work/{workId}")
+                            WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications)
+                        ]
                     | None -> []
 
                 // Rides the blocked-seed channel, so it survives the H-4 gate — and nothing else
@@ -170,7 +174,9 @@ module internal HandlersEarly =
                 let blockedSeedEffects =
                     match clarificationSeedText with
                     | Some text ->
-                        [ WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications) ]
+                        [
+                            WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications)
+                        ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -245,8 +251,10 @@ module internal HandlersEarly =
                 let checklistEffects =
                     match checklistText with
                     | Some text ->
-                        [ CreateDirectory($"work/{workId}")
-                          WriteFile(checklistPath workId, text, HybridArtifact MergePolicies.checklist) ]
+                        [
+                            CreateDirectory($"work/{workId}")
+                            WriteFile(checklistPath workId, text, HybridArtifact MergePolicies.checklist)
+                        ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -330,8 +338,10 @@ module internal HandlersEarly =
                 let planEffects =
                     match planText with
                     | Some text ->
-                        [ CreateDirectory($"work/{workId}")
-                          WriteFile(planPath workId, text, HybridArtifact MergePolicies.plan) ]
+                        [
+                            CreateDirectory($"work/{workId}")
+                            WriteFile(planPath workId, text, HybridArtifact MergePolicies.plan)
+                        ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -430,8 +440,10 @@ module internal HandlersEarly =
                 let taskEffects =
                     match taskText with
                     | Some text ->
-                        [ CreateDirectory($"work/{workId}")
-                          WriteFile(tasksPath workId, text, HybridArtifact MergePolicies.tasks) ]
+                        [
+                            CreateDirectory($"work/{workId}")
+                            WriteFile(tasksPath workId, text, HybridArtifact MergePolicies.tasks)
+                        ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,

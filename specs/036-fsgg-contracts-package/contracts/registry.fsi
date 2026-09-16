@@ -13,14 +13,18 @@ module Registry =
     /// A dependency edge: `Consumer` depends on `Provider`, declaring the range of
     /// provider versions it is compatible with.
     type DependencyEdge =
-        { Consumer: string
-          Provider: string
-          CompatibleRange: string }
+        {
+            Consumer: string
+            Provider: string
+            CompatibleRange: string
+        }
 
     /// The typed model of `registry/dependencies.yml`.
     type RegistryModel =
-        { Components: RegistryComponent list
-          Edges: DependencyEdge list }
+        {
+            Components: RegistryComponent list
+            Edges: DependencyEdge list
+        }
 
     /// The coherence/completeness rule a diagnostic reports as violated (FR-009).
     type RegistryRule =
@@ -31,9 +35,11 @@ module Registry =
 
     /// A single actionable diagnostic naming the offending entry and the rule.
     type RegistryDiagnostic =
-        { Entry: string
-          Rule: RegistryRule
-          Message: string }
+        {
+            Entry: string
+            Rule: RegistryRule
+            Message: string
+        }
 
     /// Validation outcome: success has no diagnostics (SC-007).
     type ValidationResult =

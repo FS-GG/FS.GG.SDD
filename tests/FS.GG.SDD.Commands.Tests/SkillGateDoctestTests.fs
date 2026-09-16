@@ -30,19 +30,23 @@ module SkillGateDoctestTests =
     /// analyze/verify/ship emit generated readiness views, not an authored artifact you
     /// hand-write, so they carry no author-facing example to gate — deliberately exempt.
     let private gatedStageSkills =
-        [ "fs-gg-sdd-charter"
-          "fs-gg-sdd-specify"
-          "fs-gg-sdd-clarify"
-          "fs-gg-sdd-checklist"
-          "fs-gg-sdd-plan"
-          "fs-gg-sdd-tasks"
-          "fs-gg-sdd-evidence" ]
+        [
+            "fs-gg-sdd-charter"
+            "fs-gg-sdd-specify"
+            "fs-gg-sdd-clarify"
+            "fs-gg-sdd-checklist"
+            "fs-gg-sdd-plan"
+            "fs-gg-sdd-tasks"
+            "fs-gg-sdd-evidence"
+        ]
 
     type private Marker =
-        { Skill: string
-          Corpus: string option
-          Mode: string
-          Block: string }
+        {
+            Skill: string
+            Corpus: string option
+            Mode: string
+            Block: string
+        }
 
     // <!-- fsgg-sdd:example <attrs> --> immediately followed by a fenced code block.
     let private markerRegex =
@@ -68,13 +72,17 @@ module SkillGateDoctestTests =
     let private markersFor skill =
         let text = File.ReadAllText(Path.Combine(skillsDir, skill, "SKILL.md"))
 
-        [ for m in markerRegex.Matches text do
-              let corpus, mode = parseAttrs m.Groups.["attrs"].Value
+        [
+            for m in markerRegex.Matches text do
+                let corpus, mode = parseAttrs m.Groups.["attrs"].Value
 
-              { Skill = skill
-                Corpus = corpus
-                Mode = mode
-                Block = m.Groups.["body"].Value } ]
+                {
+                    Skill = skill
+                    Corpus = corpus
+                    Mode = mode
+                    Block = m.Groups.["body"].Value
+                }
+        ]
 
     let private normalize (s: string) =
         s.Replace("\r\n", "\n").Split('\n')
@@ -143,13 +151,15 @@ module SkillGateDoctestTests =
     /// are intentionally not seeded — the gates produce them fresh with current digests.
     let private authoredCorpusArtifacts =
         set
-            [ "charter.md"
-              "spec.md"
-              "clarifications.md"
-              "tasks.yml"
-              "evidence.yml"
-              "checklist.md"
-              "plan.md" ]
+            [
+                "charter.md"
+                "spec.md"
+                "clarifications.md"
+                "tasks.yml"
+                "evidence.yml"
+                "checklist.md"
+                "plan.md"
+            ]
 
     // FR-001/002/003: the corpus authored sources pass the REAL gates — the WHOLE cascade the
     // corpus claims to demonstrate, not a prefix of it.
@@ -206,11 +216,13 @@ module SkillGateDoctestTests =
     // deriving a duplicate for it), so the ladder passes T001..T004 and defers the fifth.
     let private ladderWithDeferral (includeVisibility: bool) =
         let passes =
-            [ for i in 1..4 ->
-                  sprintf
-                      "  - id: EV%03d\n    kind: verification\n    subject:\n      type: task\n      id: T%03d\n    result: pass"
-                      i
-                      i ]
+            [
+                for i in 1..4 ->
+                    sprintf
+                        "  - id: EV%03d\n    kind: verification\n    subject:\n      type: task\n      id: T%03d\n    result: pass"
+                        i
+                        i
+            ]
 
         let visibilityLine =
             if includeVisibility then

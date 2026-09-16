@@ -51,17 +51,21 @@ module MarkdownArtifactRoundTripPropertyTests =
             let! keep3 = Gen.elements [ true; false ]
 
             return
-                [ 1
-                  if keep2 then
-                      2
-                  if keep3 then
-                      3 ]
+                [
+                    1
+                    if keep2 then
+                        2
+                    if keep3 then
+                        3
+                ]
         }
 
     let private snapshotOf path text : FileSnapshot =
-        { Path = path
-          Text = text
-          RawBytes = None }
+        {
+            Path = path
+            Text = text
+            RawBytes = None
+        }
 
     // Assemble a document from a fixed prefix (front matter + H1 + prose, ending in a blank line)
     // and its ordered sections; an empty `lines` still emits the `## Heading` so `hasSection` holds.
@@ -84,17 +88,19 @@ module MarkdownArtifactRoundTripPropertyTests =
 
     // ── The uniform per-family case ────────────────────────────────────────────────────────────
     type private Family =
-        { Name: string
-          // selected units, includeTrailingSection -> full document text
-          Build: int list -> bool -> string
-          // text -> (missing standard sections, labelled id sets — each sorted)
-          ParseIds: string -> Result<string list * (string * string list) list, string>
-          // the re-run pure re-emit (`ensure*Sections`)
-          Ensure: string -> string
-          // the id sets the generator authored for these units — labels/order match ParseIds
-          Expected: int list -> (string * string list) list
-          // the heading `Build _ false` omits, re-seeded by Ensure
-          TrailingSection: string }
+        {
+            Name: string
+            // selected units, includeTrailingSection -> full document text
+            Build: int list -> bool -> string
+            // text -> (missing standard sections, labelled id sets — each sorted)
+            ParseIds: string -> Result<string list * (string * string list) list, string>
+            // the re-run pure re-emit (`ensure*Sections`)
+            Ensure: string -> string
+            // the id sets the generator authored for these units — labels/order match ParseIds
+            Expected: int list -> (string * string list) list
+            // the heading `Build _ false` omits, re-seeded by Ensure
+            TrailingSection: string
+        }
 
     // ── spec ───────────────────────────────────────────────────────────────────────────────────
     let private specWorkId = "011-spec-roundtrip"
@@ -102,44 +108,48 @@ module MarkdownArtifactRoundTripPropertyTests =
 
     let private specPrefix =
         prefixLines
-            [ "---"
-              "schemaVersion: 1"
-              $"workId: {specWorkId}"
-              "title: Spec Roundtrip"
-              "stage: specify"
-              "changeTier: tier1"
-              "status: specified"
-              "publicOrToolFacingImpact: true"
-              "---"
-              ""
-              "# Spec Roundtrip Specification"
-              ""
-              "Prose status: specified" ]
+            [
+                "---"
+                "schemaVersion: 1"
+                $"workId: {specWorkId}"
+                "title: Spec Roundtrip"
+                "stage: specify"
+                "changeTier: tier1"
+                "status: specified"
+                "publicOrToolFacingImpact: true"
+                "---"
+                ""
+                "# Spec Roundtrip Specification"
+                ""
+                "Prose status: specified"
+            ]
 
     let private specBuild (units: int list) (includeTrailing: bool) =
         assemble
             specPrefix
-            [ "User Value", [ "Create a native command." ]
-              "Scope", (units |> List.map (fun i -> sprintf "- SB-%03d: Scope boundary %d." i i))
-              "Non-Goals", [ "- SB-900: No external enforcement." ]
-              "User Stories", (units |> List.map (fun i -> sprintf "- US-%03d (P1): Story %d." i i))
-              "Acceptance Scenarios",
-              (units
-               |> List.map (fun i ->
-                   sprintf
-                       "- AC-%03d [US-%03d] [FR-%03d]: Given %d, when the command runs, then output exists."
-                       i
-                       i
-                       i
-                       i))
-              "Functional Requirements",
-              (units
-               |> List.map (fun i ->
-                   sprintf "- FR-%03d: Requirement %d. (Stories: US-%03d; Acceptance: AC-%03d)" i i i i))
-              "Ambiguities", [ "No material ambiguities recorded." ]
-              "Public Or Tool-Facing Impact", [ "- Command report JSON includes facts." ]
-              if includeTrailing then
-                  "Lifecycle Notes", [ "- Next lifecycle action: clarify." ] ]
+            [
+                "User Value", [ "Create a native command." ]
+                "Scope", (units |> List.map (fun i -> sprintf "- SB-%03d: Scope boundary %d." i i))
+                "Non-Goals", [ "- SB-900: No external enforcement." ]
+                "User Stories", (units |> List.map (fun i -> sprintf "- US-%03d (P1): Story %d." i i))
+                "Acceptance Scenarios",
+                (units
+                 |> List.map (fun i ->
+                     sprintf
+                         "- AC-%03d [US-%03d] [FR-%03d]: Given %d, when the command runs, then output exists."
+                         i
+                         i
+                         i
+                         i))
+                "Functional Requirements",
+                (units
+                 |> List.map (fun i ->
+                     sprintf "- FR-%03d: Requirement %d. (Stories: US-%03d; Acceptance: AC-%03d)" i i i i))
+                "Ambiguities", [ "No material ambiguities recorded." ]
+                "Public Or Tool-Facing Impact", [ "- Command report JSON includes facts." ]
+                if includeTrailing then
+                    "Lifecycle Notes", [ "- Next lifecycle action: clarify." ]
+            ]
 
     let private specParseIds (text: string) =
         match parseSpecificationFacts (snapshotOf specPath text) with
@@ -147,28 +157,34 @@ module MarkdownArtifactRoundTripPropertyTests =
         | Ok facts ->
             Ok(
                 facts.MissingStandardSections,
-                [ "US", facts.UserStoryIds |> List.map Identifiers.userStoryIdValue |> List.sort
-                  "FR", facts.RequirementIds |> List.map Identifiers.requirementIdValue |> List.sort
-                  "AC",
-                  facts.AcceptanceScenarioIds
-                  |> List.map Identifiers.acceptanceScenarioIdValue
-                  |> List.sort
-                  "SB", facts.ScopeBoundaryIds |> List.map Identifiers.scopeBoundaryIdValue |> List.sort ]
+                [
+                    "US", facts.UserStoryIds |> List.map Identifiers.userStoryIdValue |> List.sort
+                    "FR", facts.RequirementIds |> List.map Identifiers.requirementIdValue |> List.sort
+                    "AC",
+                    facts.AcceptanceScenarioIds
+                    |> List.map Identifiers.acceptanceScenarioIdValue
+                    |> List.sort
+                    "SB", facts.ScopeBoundaryIds |> List.map Identifiers.scopeBoundaryIdValue |> List.sort
+                ]
             )
 
     let private specExpected (units: int list) =
-        [ "US", units |> List.map (sprintf "US-%03d") |> List.sort
-          "FR", units |> List.map (sprintf "FR-%03d") |> List.sort
-          "AC", units |> List.map (sprintf "AC-%03d") |> List.sort
-          "SB", (units |> List.map (sprintf "SB-%03d")) @ [ "SB-900" ] |> List.sort ]
+        [
+            "US", units |> List.map (sprintf "US-%03d") |> List.sort
+            "FR", units |> List.map (sprintf "FR-%03d") |> List.sort
+            "AC", units |> List.map (sprintf "AC-%03d") |> List.sort
+            "SB", (units |> List.map (sprintf "SB-%03d")) @ [ "SB-900" ] |> List.sort
+        ]
 
     let private specFamily =
-        { Name = "spec"
-          Build = specBuild
-          ParseIds = specParseIds
-          Ensure = SpecifyAuthoring.ensureSpecificationSections
-          Expected = specExpected
-          TrailingSection = "Lifecycle Notes" }
+        {
+            Name = "spec"
+            Build = specBuild
+            ParseIds = specParseIds
+            Ensure = SpecifyAuthoring.ensureSpecificationSections
+            Expected = specExpected
+            TrailingSection = "Lifecycle Notes"
+        }
 
     // ── clarifications ───────────────────────────────────────────────────────────────────────────
     let private clarWorkId = "011-clar-roundtrip"
@@ -176,40 +192,44 @@ module MarkdownArtifactRoundTripPropertyTests =
 
     let private clarPrefix =
         prefixLines
-            [ "---"
-              "schemaVersion: 1"
-              $"workId: {clarWorkId}"
-              "title: Clar Roundtrip"
-              "stage: clarify"
-              "changeTier: tier1"
-              "status: clarified"
-              $"sourceSpec: work/{clarWorkId}/spec.md"
-              "publicOrToolFacingImpact: true"
-              "---"
-              ""
-              "# Clar Roundtrip Clarifications"
-              ""
-              "Prose status: clarified" ]
+            [
+                "---"
+                "schemaVersion: 1"
+                $"workId: {clarWorkId}"
+                "title: Clar Roundtrip"
+                "stage: clarify"
+                "changeTier: tier1"
+                "status: clarified"
+                $"sourceSpec: work/{clarWorkId}/spec.md"
+                "publicOrToolFacingImpact: true"
+                "---"
+                ""
+                "# Clar Roundtrip Clarifications"
+                ""
+                "Prose status: clarified"
+            ]
 
     let private clarBuild (units: int list) (includeTrailing: bool) =
         assemble
             clarPrefix
-            [ "Source Specification", [ $"- work/{clarWorkId}/spec.md" ]
-              "Clarification Questions",
-              (units
-               |> List.map (fun i ->
-                   sprintf "- CQ-%03d [AMB:AMB-%03d] [FR-%03d] blocking answered: Question %d?" i i i i))
-              "Answers",
-              (units
-               |> List.map (fun i -> sprintf "- CQ-%03d [AMB:AMB-%03d] decision: Answer %d recorded." i i i))
-              "Decisions",
-              (units
-               |> List.map (fun i ->
-                   sprintf "- DEC-%03d [CQ-%03d] [AMB:AMB-%03d] [FR-%03d]: Decision %d recorded." i i i i i))
-              "Accepted Deferrals", [ "No accepted deferrals recorded." ]
-              "Remaining Ambiguity", [ "- No remaining ambiguities recorded." ]
-              if includeTrailing then
-                  "Lifecycle Notes", [ "- Next lifecycle action: checklist." ] ]
+            [
+                "Source Specification", [ $"- work/{clarWorkId}/spec.md" ]
+                "Clarification Questions",
+                (units
+                 |> List.map (fun i ->
+                     sprintf "- CQ-%03d [AMB:AMB-%03d] [FR-%03d] blocking answered: Question %d?" i i i i))
+                "Answers",
+                (units
+                 |> List.map (fun i -> sprintf "- CQ-%03d [AMB:AMB-%03d] decision: Answer %d recorded." i i i))
+                "Decisions",
+                (units
+                 |> List.map (fun i ->
+                     sprintf "- DEC-%03d [CQ-%03d] [AMB:AMB-%03d] [FR-%03d]: Decision %d recorded." i i i i i))
+                "Accepted Deferrals", [ "No accepted deferrals recorded." ]
+                "Remaining Ambiguity", [ "- No remaining ambiguities recorded." ]
+                if includeTrailing then
+                    "Lifecycle Notes", [ "- Next lifecycle action: checklist." ]
+            ]
 
     let private clarParseIds (text: string) =
         match parseClarificationFacts (snapshotOf clarPath text) with
@@ -217,21 +237,27 @@ module MarkdownArtifactRoundTripPropertyTests =
         | Ok facts ->
             Ok(
                 facts.MissingStandardSections,
-                [ "CQ", facts.Questions |> List.map (fun q -> q.QuestionId.Value) |> List.sort
-                  "DEC", facts.Decisions |> List.map (fun d -> d.DecisionId.Value) |> List.sort ]
+                [
+                    "CQ", facts.Questions |> List.map (fun q -> q.QuestionId.Value) |> List.sort
+                    "DEC", facts.Decisions |> List.map (fun d -> d.DecisionId.Value) |> List.sort
+                ]
             )
 
     let private clarExpected (units: int list) =
-        [ "CQ", units |> List.map (sprintf "CQ-%03d") |> List.sort
-          "DEC", units |> List.map (sprintf "DEC-%03d") |> List.sort ]
+        [
+            "CQ", units |> List.map (sprintf "CQ-%03d") |> List.sort
+            "DEC", units |> List.map (sprintf "DEC-%03d") |> List.sort
+        ]
 
     let private clarFamily =
-        { Name = "clarifications"
-          Build = clarBuild
-          ParseIds = clarParseIds
-          Ensure = ClarifyAuthoring.ensureClarificationSections clarWorkId
-          Expected = clarExpected
-          TrailingSection = "Lifecycle Notes" }
+        {
+            Name = "clarifications"
+            Build = clarBuild
+            ParseIds = clarParseIds
+            Ensure = ClarifyAuthoring.ensureClarificationSections clarWorkId
+            Expected = clarExpected
+            TrailingSection = "Lifecycle Notes"
+        }
 
     // ── checklist ────────────────────────────────────────────────────────────────────────────────
     let private chkWorkId = "011-chk-roundtrip"
@@ -239,42 +265,48 @@ module MarkdownArtifactRoundTripPropertyTests =
 
     let private chkPrefix =
         prefixLines
-            [ "---"
-              "schemaVersion: 1"
-              $"workId: {chkWorkId}"
-              "title: Chk Roundtrip"
-              "stage: checklist"
-              "changeTier: tier1"
-              "status: checklistReady"
-              $"sourceSpec: work/{chkWorkId}/spec.md"
-              $"sourceClarifications: work/{chkWorkId}/clarifications.md"
-              "publicOrToolFacingImpact: true"
-              "---"
-              ""
-              "# Chk Roundtrip Checklist"
-              ""
-              "Prose status: checklistReady" ]
+            [
+                "---"
+                "schemaVersion: 1"
+                $"workId: {chkWorkId}"
+                "title: Chk Roundtrip"
+                "stage: checklist"
+                "changeTier: tier1"
+                "status: checklistReady"
+                $"sourceSpec: work/{chkWorkId}/spec.md"
+                $"sourceClarifications: work/{chkWorkId}/clarifications.md"
+                "publicOrToolFacingImpact: true"
+                "---"
+                ""
+                "# Chk Roundtrip Checklist"
+                ""
+                "Prose status: checklistReady"
+            ]
 
     let private chkBuild (units: int list) (includeTrailing: bool) =
         assemble
             chkPrefix
-            [ "Source Specification", [ $"- work/{chkWorkId}/spec.md" ]
-              "Source Clarifications", [ $"- work/{chkWorkId}/clarifications.md" ]
-              "Source Snapshot",
-              [ $"- spec: work/{chkWorkId}/spec.md sha256:{digestA} schemaVersion:1"
-                $"- clarifications: work/{chkWorkId}/clarifications.md sha256:{digestB} schemaVersion:1" ]
-              "Checklist Items",
-              (units
-               |> List.map (fun i -> sprintf "- CHK-%03d [FR-%03d] [AC-%03d] blocking: Item %d is testable." i i i i))
-              "Review Results",
-              (units
-               |> List.map (fun i ->
-                   sprintf "- CR-%03d [CHK:CHK-%03d] [FR-%03d] [AC-%03d] pass: Item %d verified." i i i i i))
-              "Accepted Deferrals", [ "No accepted deferrals recorded." ]
-              "Blocking Findings", [ "No blocking findings recorded." ]
-              "Advisory Notes", [ "- Advisory note." ]
-              if includeTrailing then
-                  "Lifecycle Notes", [ "- Next lifecycle action: plan." ] ]
+            [
+                "Source Specification", [ $"- work/{chkWorkId}/spec.md" ]
+                "Source Clarifications", [ $"- work/{chkWorkId}/clarifications.md" ]
+                "Source Snapshot",
+                [
+                    $"- spec: work/{chkWorkId}/spec.md sha256:{digestA} schemaVersion:1"
+                    $"- clarifications: work/{chkWorkId}/clarifications.md sha256:{digestB} schemaVersion:1"
+                ]
+                "Checklist Items",
+                (units
+                 |> List.map (fun i -> sprintf "- CHK-%03d [FR-%03d] [AC-%03d] blocking: Item %d is testable." i i i i))
+                "Review Results",
+                (units
+                 |> List.map (fun i ->
+                     sprintf "- CR-%03d [CHK:CHK-%03d] [FR-%03d] [AC-%03d] pass: Item %d verified." i i i i i))
+                "Accepted Deferrals", [ "No accepted deferrals recorded." ]
+                "Blocking Findings", [ "No blocking findings recorded." ]
+                "Advisory Notes", [ "- Advisory note." ]
+                if includeTrailing then
+                    "Lifecycle Notes", [ "- Next lifecycle action: plan." ]
+            ]
 
     let private chkParseIds (text: string) =
         match parseChecklistFacts (snapshotOf chkPath text) with
@@ -282,21 +314,27 @@ module MarkdownArtifactRoundTripPropertyTests =
         | Ok facts ->
             Ok(
                 facts.MissingStandardSections,
-                [ "CHK", facts.Items |> List.map (fun i -> i.ItemId.Value) |> List.sort
-                  "CR", facts.Results |> List.map (fun r -> r.ResultId.Value) |> List.sort ]
+                [
+                    "CHK", facts.Items |> List.map (fun i -> i.ItemId.Value) |> List.sort
+                    "CR", facts.Results |> List.map (fun r -> r.ResultId.Value) |> List.sort
+                ]
             )
 
     let private chkExpected (units: int list) =
-        [ "CHK", units |> List.map (sprintf "CHK-%03d") |> List.sort
-          "CR", units |> List.map (sprintf "CR-%03d") |> List.sort ]
+        [
+            "CHK", units |> List.map (sprintf "CHK-%03d") |> List.sort
+            "CR", units |> List.map (sprintf "CR-%03d") |> List.sort
+        ]
 
     let private chkFamily =
-        { Name = "checklist"
-          Build = chkBuild
-          ParseIds = chkParseIds
-          Ensure = ChecklistAuthoring.ensureChecklistSections chkWorkId
-          Expected = chkExpected
-          TrailingSection = "Lifecycle Notes" }
+        {
+            Name = "checklist"
+            Build = chkBuild
+            ParseIds = chkParseIds
+            Ensure = ChecklistAuthoring.ensureChecklistSections chkWorkId
+            Expected = chkExpected
+            TrailingSection = "Lifecycle Notes"
+        }
 
     // ── plan ─────────────────────────────────────────────────────────────────────────────────────
     let private planWorkId = "011-plan-roundtrip"
@@ -304,44 +342,50 @@ module MarkdownArtifactRoundTripPropertyTests =
 
     let private planPrefix =
         prefixLines
-            [ "---"
-              "schemaVersion: 1"
-              $"workId: {planWorkId}"
-              "title: Plan Roundtrip"
-              "stage: plan"
-              "changeTier: tier1"
-              "status: planned"
-              $"sourceSpec: work/{planWorkId}/spec.md"
-              $"sourceClarifications: work/{planWorkId}/clarifications.md"
-              $"sourceChecklist: work/{planWorkId}/checklist.md"
-              "publicOrToolFacingImpact: true"
-              "---"
-              ""
-              "# Plan Roundtrip Plan"
-              ""
-              "Prose status: planned" ]
+            [
+                "---"
+                "schemaVersion: 1"
+                $"workId: {planWorkId}"
+                "title: Plan Roundtrip"
+                "stage: plan"
+                "changeTier: tier1"
+                "status: planned"
+                $"sourceSpec: work/{planWorkId}/spec.md"
+                $"sourceClarifications: work/{planWorkId}/clarifications.md"
+                $"sourceChecklist: work/{planWorkId}/checklist.md"
+                "publicOrToolFacingImpact: true"
+                "---"
+                ""
+                "# Plan Roundtrip Plan"
+                ""
+                "Prose status: planned"
+            ]
 
     let private planBuild (units: int list) (includeTrailing: bool) =
         assemble
             planPrefix
-            [ "Source Snapshot",
-              [ $"- spec: work/{planWorkId}/spec.md sha256:{digestA} schemaVersion:1"
-                $"- clarifications: work/{planWorkId}/clarifications.md sha256:{digestB} schemaVersion:1"
-                $"- checklist: work/{planWorkId}/checklist.md sha256:{digestC} schemaVersion:1" ]
-              "Plan Scope", [ $"- Work item {planWorkId} is planned." ]
-              "Plan Decisions",
-              (units
-               |> List.map (fun i -> sprintf "- PD-%03d [FR-%03d] [AC-%03d] complete: Decision %d." i i i i))
-              "Contract Impact", [ "- PC-001 [PD-001] command report: fsgg-sdd plan JSON is tool-facing." ]
-              "Verification Obligations", [ "- VO-001 [PD-001] [PC-001] semanticTest: Run command tests." ]
-              "Performance Intent", [ "No performance intent is declared for this work item." ]
-              "Migration Posture", [ "- PM-001 [PC-001] diagnoseOnly: Plan schemaVersion 1 is accepted." ]
-              "Generated View Impact", [ "- GV-001 [PD-001] workModel: work-model refreshes from plan sources." ]
-              "Accepted Deferrals", [ "No accepted deferrals recorded." ]
-              "Planning Findings", [ "No blocking planning findings recorded." ]
-              "Advisory Notes", [ "- Advisory note." ]
-              if includeTrailing then
-                  "Lifecycle Notes", [ "- Next lifecycle action: tasks." ] ]
+            [
+                "Source Snapshot",
+                [
+                    $"- spec: work/{planWorkId}/spec.md sha256:{digestA} schemaVersion:1"
+                    $"- clarifications: work/{planWorkId}/clarifications.md sha256:{digestB} schemaVersion:1"
+                    $"- checklist: work/{planWorkId}/checklist.md sha256:{digestC} schemaVersion:1"
+                ]
+                "Plan Scope", [ $"- Work item {planWorkId} is planned." ]
+                "Plan Decisions",
+                (units
+                 |> List.map (fun i -> sprintf "- PD-%03d [FR-%03d] [AC-%03d] complete: Decision %d." i i i i))
+                "Contract Impact", [ "- PC-001 [PD-001] command report: fsgg-sdd plan JSON is tool-facing." ]
+                "Verification Obligations", [ "- VO-001 [PD-001] [PC-001] semanticTest: Run command tests." ]
+                "Performance Intent", [ "No performance intent is declared for this work item." ]
+                "Migration Posture", [ "- PM-001 [PC-001] diagnoseOnly: Plan schemaVersion 1 is accepted." ]
+                "Generated View Impact", [ "- GV-001 [PD-001] workModel: work-model refreshes from plan sources." ]
+                "Accepted Deferrals", [ "No accepted deferrals recorded." ]
+                "Planning Findings", [ "No blocking planning findings recorded." ]
+                "Advisory Notes", [ "- Advisory note." ]
+                if includeTrailing then
+                    "Lifecycle Notes", [ "- Next lifecycle action: tasks." ]
+            ]
 
     let private planParseIds (text: string) =
         match parsePlanFacts (snapshotOf planPath text) with
@@ -356,12 +400,14 @@ module MarkdownArtifactRoundTripPropertyTests =
         [ "PD", units |> List.map (sprintf "PD-%03d") |> List.sort ]
 
     let private planFamily =
-        { Name = "plan"
-          Build = planBuild
-          ParseIds = planParseIds
-          Ensure = PlanAuthoring.ensurePlanSections planWorkId
-          Expected = planExpected
-          TrailingSection = "Lifecycle Notes" }
+        {
+            Name = "plan"
+            Build = planBuild
+            ParseIds = planParseIds
+            Ensure = PlanAuthoring.ensurePlanSections planWorkId
+            Expected = planExpected
+            TrailingSection = "Lifecycle Notes"
+        }
 
     // ── The properties ─────────────────────────────────────────────────────────────────────────
 

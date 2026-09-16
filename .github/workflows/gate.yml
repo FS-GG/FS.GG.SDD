@@ -506,7 +506,7 @@ jobs:
   # check, so a failing run stays non-blocking by policy; `format` MUST be kept OUT of the
   # required-checks set (do not add it to any "all checks required" policy) — FR-005.
   #
-  # Fantomas is installed PINNED (7.0.5) to a repo-local --tool-path, deliberately WITHOUT
+  # Fantomas is installed PINNED (8.0.0) to a repo-local --tool-path, deliberately WITHOUT
   # touching .config/dotnet-tools.json (feature 065 research Decision 2 / FR-003).
   #
   # THE ORIGINAL REASON HAS LAPSED, and it is written down here rather than left to be
@@ -542,14 +542,14 @@ jobs:
       # Pinned install to a repo-local path; --allow-roll-forward lets a tool built for an
       # earlier net run on the net10 runtime this SDK ships.
       - name: Install pinned Fantomas (out-of-manifest)
-        run: dotnet tool install fantomas --version 7.0.5 --tool-path ./.fantomas-tool --allow-roll-forward
+        run: dotnet tool install fantomas --version 8.0.0 --tool-path ./.fantomas-tool
 
       # `.fantomasignore` scopes this to authored source (no obj/bin/generated .fs). On a
       # non-clean tree fantomas exits non-zero; surface the exact fix command as a GH error.
       - name: Check formatting
         run: |
           if ! ./.fantomas-tool/fantomas --check .; then
-            echo "::error::F# formatting drift. Reformat with the pinned formatter, then commit: dotnet tool install fantomas --version 7.0.5 --tool-path ./.fantomas-tool --allow-roll-forward && ./.fantomas-tool/fantomas ."
+            echo "::error::F# formatting drift. Reformat with the pinned formatter, then commit: dotnet tool install fantomas --version 8.0.0 --tool-path ./.fantomas-tool && ./.fantomas-tool/fantomas ."
             exit 1
           fi
 

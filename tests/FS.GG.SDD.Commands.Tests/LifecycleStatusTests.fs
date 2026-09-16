@@ -18,21 +18,27 @@ module LifecycleStatusTests =
     // SYNTHETIC: a directory-enumeration result standing in for the interpreter's directorySnapshot
     // (root-relative, forward-slashed, newline-joined paths). The real path is exercised via the CLI.
     let private enumResult (dir: string) (paths: string list) : CommandEffectResult =
-        { Effect = EnumerateDirectory dir
-          Succeeded = true
-          Read =
-            Bytes
-                { Path = dir
-                  Text = String.concat "\n" paths
-                  RawBytes = None }
-          Snapshot =
-            Some
-                { Path = dir
-                  Text = String.concat "\n" paths
-                  RawBytes = None }
-          Process = None
-          Confirmed = None
-          Diagnostic = None }
+        {
+            Effect = EnumerateDirectory dir
+            Succeeded = true
+            Read =
+                Bytes
+                    {
+                        Path = dir
+                        Text = String.concat "\n" paths
+                        RawBytes = None
+                    }
+            Snapshot =
+                Some
+                    {
+                        Path = dir
+                        Text = String.concat "\n" paths
+                        RawBytes = None
+                    }
+            Process = None
+            Confirmed = None
+            Diagnostic = None
+        }
 
     let private stateOf (status: LifecycleStatus) (command: SddCommand) =
         status.Stages
@@ -45,7 +51,9 @@ module LifecycleStatusTests =
     [<Fact>]
     let ``mid-lifecycle: current stage, prior stages done, successor next`` () =
         let effects =
-            [ enumResult "work" [ "work/x/charter.md"; "work/x/spec.md"; "work/x/clarifications.md" ] ]
+            [
+                enumResult "work" [ "work/x/charter.md"; "work/x/spec.md"; "work/x/clarifications.md" ]
+            ]
 
         let status =
             LifecycleSensing.deriveFromEffects Clarify (Some "x") CommandOutcome.Succeeded effects
@@ -64,8 +72,10 @@ module LifecycleStatusTests =
     let ``SC-006 non-contiguous progress renders true on-disk state`` () =
         // A later stage's artifact present while an earlier one is absent.
         let effects =
-            [ enumResult "work" [ "work/x/charter.md"; "work/x/spec.md" ]
-              enumResult "readiness" [ "readiness/x/verify.json" ] ]
+            [
+                enumResult "work" [ "work/x/charter.md"; "work/x/spec.md" ]
+                enumResult "readiness" [ "readiness/x/verify.json" ]
+            ]
 
         let status =
             LifecycleSensing.deriveFromEffects Ship (Some "x") CommandOutcome.Succeeded effects
@@ -150,7 +160,8 @@ module LifecycleStatusTests =
 
         let request =
             { TestSupport.request Clarify root with
-                WorkId = Some "084-demo" }
+                WorkId = Some "084-demo"
+            }
 
         let _, effects = Foundation.plan request
         Assert.Contains(EnumerateDirectory "work", effects)
@@ -211,10 +222,13 @@ module LifecycleStatusTests =
         let root = specifiedProject ()
 
         let reports =
-            [ TestSupport.runSpecify root "084-demo" "Demo"
-              TestSupport.runRequest
-                  { TestSupport.request Refresh root with
-                      WorkId = Some "084-demo" } ]
+            [
+                TestSupport.runSpecify root "084-demo" "Demo"
+                TestSupport.runRequest
+                    { TestSupport.request Refresh root with
+                        WorkId = Some "084-demo"
+                    }
+            ]
 
         for report in reports do
             Assert.Contains("\"lifecycleStatus\"", serializeReport report)

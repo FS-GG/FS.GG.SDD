@@ -8,14 +8,18 @@ module Provider =
     /// A declared build/test/run/verify command (Feature 035 H1 shape). Blank
     /// `Executable` is a MALFORMED declaration, distinct from absent/use-default.
     type DeclaredCommand =
-        { Executable: string
-          Arguments: string list }
+        {
+            Executable: string
+            Arguments: string list
+        }
 
     /// Preserved unchanged from SDD's current `ProviderDescriptor`.
     type ProviderParameterSpec =
-        { Key: string
-          Required: bool
-          Default: string option }
+        {
+            Key: string
+            Required: bool
+            Default: string option
+        }
 
     /// Extended template-provider descriptor. The first five fields are the exact
     /// current SDD record (additive guarantee, FR-006 Scenario 4); the rest are new.

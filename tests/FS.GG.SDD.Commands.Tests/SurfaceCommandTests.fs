@@ -23,7 +23,8 @@ module SurfaceCommandTests =
 
     let private surfaceReport update root =
         { request Surface root with
-            SurfaceUpdate = update }
+            SurfaceUpdate = update
+        }
         |> runRequest
 
     let private summaryOf (report: CommandReport) =
@@ -175,7 +176,8 @@ module SurfaceCommandTests =
 
         let report =
             { request Surface root with
-                Parameters = [ "sourceRoot", "lib"; "baselineRoot", "docs/surface" ] }
+                Parameters = [ "sourceRoot", "lib"; "baselineRoot", "docs/surface" ]
+            }
             |> runRequest
 
         let summary = summaryOf report
@@ -489,10 +491,12 @@ module SurfaceCommandTests =
     [<Fact>]
     let ``V5 — the prompt never changes an exit code in either mode`` () =
         let cases =
-            [ "additive", additiveFixture, 1
-              "breaking", breakingFixture, 1
-              "cosmetic", cosmeticFixture, 1
-              "coherent", coherentFixture, 0 ]
+            [
+                "additive", additiveFixture, 1
+                "breaking", breakingFixture, 1
+                "cosmetic", cosmeticFixture, 1
+                "coherent", coherentFixture, 0
+            ]
 
         for name, fixture, expectedCheckExit in cases do
             let checkRoot = fixture ()
@@ -549,7 +553,8 @@ module SurfaceCommandTests =
             let effects =
                 allPlannedEffects
                     { request Surface root with
-                        SurfaceUpdate = update }
+                        SurfaceUpdate = update
+                    }
 
             let mutating =
                 effects
@@ -690,7 +695,8 @@ module SurfaceCommandTests =
 
         let report =
             { request Surface root with
-                Parameters = [ "versionAxisProperty", "FsGgAudioVersion" ] }
+                Parameters = [ "versionAxisProperty", "FsGgAudioVersion" ]
+            }
             |> runRequest
 
         let bump = bumpOf report
@@ -707,7 +713,8 @@ module SurfaceCommandTests =
 
         let report =
             { request Surface root with
-                Parameters = [ "versionAxisFile", "build/Versions.props" ] }
+                Parameters = [ "versionAxisFile", "build/Versions.props" ]
+            }
             |> runRequest
 
         let bump = bumpOf report
@@ -742,7 +749,8 @@ module SurfaceCommandTests =
 
         let escaping =
             { request Surface root with
-                Parameters = [ "versionAxisFile", "../outside.props" ] }
+                Parameters = [ "versionAxisFile", "../outside.props" ]
+            }
 
         Assert.Equal("undeterminable", (bumpOf (runRequest escaping)).AxisState)
 
@@ -763,7 +771,8 @@ module SurfaceCommandTests =
 
         let escaping =
             { request Surface root with
-                Parameters = [ "versionAxisFile", "/etc/passwd" ] }
+                Parameters = [ "versionAxisFile", "/etc/passwd" ]
+            }
 
         Assert.Equal("undeterminable", (bumpOf (runRequest escaping)).AxisState)
 
@@ -788,7 +797,8 @@ module SurfaceCommandTests =
     let private surfaceWith update parameters root =
         { request Surface root with
             SurfaceUpdate = update
-            Parameters = parameters }
+            Parameters = parameters
+        }
 
     let private rootEscapes (report: CommandReport) =
         report.Diagnostics |> List.filter (fun d -> d.Id = "surface.rootEscape")

@@ -117,11 +117,13 @@ module TasksRoundTripPropertyTests =
     // back into `Skipped rationale`; an empty rationale is the writer default and outside the domain.
     let private status: Gen<TaskStatus> =
         Gen.oneof
-            [ Gen.constant TaskStatus.Pending
-              Gen.constant TaskStatus.InProgress
-              Gen.constant TaskStatus.Done
-              Gen.constant TaskStatus.Stale
-              Gen.map TaskStatus.Skipped safeToken ]
+            [
+                Gen.constant TaskStatus.Pending
+                Gen.constant TaskStatus.InProgress
+                Gen.constant TaskStatus.Done
+                Gen.constant TaskStatus.Stale
+                Gen.map TaskStatus.Skipped safeToken
+            ]
 
     // The task's own `Source` is provenance the reader assigns from the file path; it is excluded
     // from the compared partition, so any valid ref suffices for construction.
@@ -151,18 +153,20 @@ module TasksRoundTripPropertyTests =
                 idSubset (fun i -> createEvidenceId (sprintf "EV%03d" i) |> orFail "evId") (fun x -> x.Value)
 
             return
-                { Id = id
-                  Title = title
-                  Status = st
-                  Owner = owner
-                  Dependencies = dependencies
-                  Requirements = requirements
-                  Decisions = decisions
-                  SourceIds = sourceIds
-                  RequiredSkills = requiredSkills
-                  RequiredEvidence = requiredEvidence
-                  Source = provenanceSource
-                  SourceLocation = None }
+                {
+                    Id = id
+                    Title = title
+                    Status = st
+                    Owner = owner
+                    Dependencies = dependencies
+                    Requirements = requirements
+                    Decisions = decisions
+                    SourceIds = sourceIds
+                    RequiredSkills = requiredSkills
+                    RequiredEvidence = requiredEvidence
+                    Source = provenanceSource
+                    SourceLocation = None
+                }
         }
 
     let rec private sequenceGen (gens: Gen<'a> list) : Gen<'a list> =
@@ -178,12 +182,14 @@ module TasksRoundTripPropertyTests =
     // The authored inputs to a render: the two round-tripping front-matter scalars plus the task
     // list and the three note blocks. The tool-owned front matter is derived from `workId`.
     type private AuthoredTasks =
-        { Title: string
-          PublicOrToolFacingImpact: bool
-          Tasks: WorkTask list
-          AcceptedDeferrals: string list
-          AdvisoryNotes: string list
-          LifecycleNotes: string list }
+        {
+            Title: string
+            PublicOrToolFacingImpact: bool
+            Tasks: WorkTask list
+            AcceptedDeferrals: string list
+            AdvisoryNotes: string list
+            LifecycleNotes: string list
+        }
 
     let private model: Gen<AuthoredTasks> =
         gen {
@@ -206,12 +212,14 @@ module TasksRoundTripPropertyTests =
             let! lifecycleNotes = nonEmptyTokens
 
             return
-                { Title = title
-                  PublicOrToolFacingImpact = impact
-                  Tasks = tasks
-                  AcceptedDeferrals = acceptedDeferrals
-                  AdvisoryNotes = advisoryNotes
-                  LifecycleNotes = lifecycleNotes }
+                {
+                    Title = title
+                    PublicOrToolFacingImpact = impact
+                    Tasks = tasks
+                    AcceptedDeferrals = acceptedDeferrals
+                    AdvisoryNotes = advisoryNotes
+                    LifecycleNotes = lifecycleNotes
+                }
         }
 
     // ── The property ─────────────────────────────────────────────────────────────────────
@@ -224,24 +232,28 @@ module TasksRoundTripPropertyTests =
         let text =
             String.concat
                 "\n"
-                [ "schemaVersion: 1"
-                  "work:"
-                  $"  id: {workId}"
-                  "  title: template"
-                  "  stage: tasks"
-                  "  status: tasksReady"
-                  $"  sourceSpec: work/{workId}/spec.md"
-                  $"  sourceClarifications: work/{workId}/clarifications.md"
-                  $"  sourceChecklist: work/{workId}/checklist.md"
-                  $"  sourcePlan: work/{workId}/plan.md"
-                  "  publicOrToolFacingImpact: true"
-                  "tasks: []" ]
+                [
+                    "schemaVersion: 1"
+                    "work:"
+                    $"  id: {workId}"
+                    "  title: template"
+                    "  stage: tasks"
+                    "  status: tasksReady"
+                    $"  sourceSpec: work/{workId}/spec.md"
+                    $"  sourceClarifications: work/{workId}/clarifications.md"
+                    $"  sourceChecklist: work/{workId}/checklist.md"
+                    $"  sourcePlan: work/{workId}/plan.md"
+                    "  publicOrToolFacingImpact: true"
+                    "tasks: []"
+                ]
 
         match
             parseTaskFacts
-                { Path = tasksPath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = tasksPath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts.FrontMatter
         | Error diagnostics -> failwithf "base tasks.yml did not parse: %A" diagnostics
@@ -251,7 +263,8 @@ module TasksRoundTripPropertyTests =
     let private existingFrontMatter (authored: AuthoredTasks) : TaskFrontMatter =
         { baseFrontMatter with
             Title = authored.Title
-            PublicOrToolFacingImpact = Some authored.PublicOrToolFacingImpact }
+            PublicOrToolFacingImpact = Some authored.PublicOrToolFacingImpact
+        }
 
     let private renderText (authored: AuthoredTasks) =
         TaskGraphAuthoring.tasksArtifactText
@@ -270,46 +283,54 @@ module TasksRoundTripPropertyTests =
 
     // Project a task to its authored partition, dropping the parse-assigned provenance.
     let private authoredTask (task: WorkTask) =
-        {| Id = task.Id
-           Title = task.Title
-           Status = task.Status
-           Owner = task.Owner
-           Dependencies = task.Dependencies
-           Requirements = task.Requirements
-           Decisions = task.Decisions
-           SourceIds = task.SourceIds
-           RequiredSkills = task.RequiredSkills
-           RequiredEvidence = task.RequiredEvidence |}
+        {|
+            Id = task.Id
+            Title = task.Title
+            Status = task.Status
+            Owner = task.Owner
+            Dependencies = task.Dependencies
+            Requirements = task.Requirements
+            Decisions = task.Decisions
+            SourceIds = task.SourceIds
+            RequiredSkills = task.RequiredSkills
+            RequiredEvidence = task.RequiredEvidence
+        |}
 
     let private authoredPartition (authored: AuthoredTasks) =
         // Compare `publicOrToolFacingImpact` as the raw `bool option`, not `Option.defaultValue true`:
         // the generator always authors `Some`, and a well-formed render always emits the line, so a
         // regression that *dropped* the line for a `true`-valued model (parse → None) is caught here
         // too — collapsing None→true on the parsed side would mask that for every `true` seed.
-        {| Title = authored.Title
-           PublicOrToolFacingImpact = Some authored.PublicOrToolFacingImpact
-           Tasks = authored.Tasks |> List.map authoredTask |> List.sortBy (fun t -> t.Id.Value)
-           AcceptedDeferrals = authored.AcceptedDeferrals |> List.sort
-           AdvisoryNotes = authored.AdvisoryNotes |> List.sort
-           LifecycleNotes = authored.LifecycleNotes |}
+        {|
+            Title = authored.Title
+            PublicOrToolFacingImpact = Some authored.PublicOrToolFacingImpact
+            Tasks = authored.Tasks |> List.map authoredTask |> List.sortBy (fun t -> t.Id.Value)
+            AcceptedDeferrals = authored.AcceptedDeferrals |> List.sort
+            AdvisoryNotes = authored.AdvisoryNotes |> List.sort
+            LifecycleNotes = authored.LifecycleNotes
+        |}
 
     // The same projection over a parsed `TaskFacts`, so the two sides are compared like-for-like.
     let private parsedPartition (facts: TaskFacts) =
-        {| Title = facts.FrontMatter.Title
-           PublicOrToolFacingImpact = facts.FrontMatter.PublicOrToolFacingImpact
-           Tasks = facts.Tasks |> List.map authoredTask |> List.sortBy (fun t -> t.Id.Value)
-           AcceptedDeferrals = facts.AcceptedDeferrals
-           AdvisoryNotes = facts.AdvisoryNotes
-           LifecycleNotes = facts.LifecycleNotes |}
+        {|
+            Title = facts.FrontMatter.Title
+            PublicOrToolFacingImpact = facts.FrontMatter.PublicOrToolFacingImpact
+            Tasks = facts.Tasks |> List.map authoredTask |> List.sortBy (fun t -> t.Id.Value)
+            AcceptedDeferrals = facts.AcceptedDeferrals
+            AdvisoryNotes = facts.AdvisoryNotes
+            LifecycleNotes = facts.LifecycleNotes
+        |}
 
     let private roundTrips (authored: AuthoredTasks) =
         let text = renderText authored
 
         match
             parseTaskFacts
-                { Path = tasksPath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = tasksPath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwithf "round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
         | Ok facts -> authoredPartition authored = parsedPartition facts
@@ -323,30 +344,38 @@ module TasksRoundTripPropertyTests =
     [<Fact>]
     let ``round-trip preserves the custom title, publicOrToolFacingImpact false, and every task field`` () =
         let authored =
-            { Title = "Custom-Authored-Title"
-              PublicOrToolFacingImpact = false
-              Tasks =
-                [ { Id = createTaskId "T001" |> orFail "taskId"
-                    Title = "Do-the-work"
-                    Status = TaskStatus.Skipped "not-needed-yet"
-                    Owner = "team-sdd"
-                    Dependencies = [ createTaskId "T002" |> orFail "taskId" ]
-                    Requirements = [ createRequirementId "FR-001" |> orFail "reqId" ]
-                    Decisions = [ createDecisionId "DEC-001" |> orFail "decId" ]
-                    SourceIds = [ "AC-002"; "FR-001" ]
-                    RequiredSkills = [ "fsharp"; "yaml" ]
-                    RequiredEvidence = [ createEvidenceId "EV001" |> orFail "evId" ]
-                    Source = provenanceSource
-                    SourceLocation = None } ]
-              AcceptedDeferrals = [ "deferred-1" ]
-              AdvisoryNotes = [ "advisory-1" ]
-              LifecycleNotes = [ "kept-note" ] }
+            {
+                Title = "Custom-Authored-Title"
+                PublicOrToolFacingImpact = false
+                Tasks =
+                    [
+                        {
+                            Id = createTaskId "T001" |> orFail "taskId"
+                            Title = "Do-the-work"
+                            Status = TaskStatus.Skipped "not-needed-yet"
+                            Owner = "team-sdd"
+                            Dependencies = [ createTaskId "T002" |> orFail "taskId" ]
+                            Requirements = [ createRequirementId "FR-001" |> orFail "reqId" ]
+                            Decisions = [ createDecisionId "DEC-001" |> orFail "decId" ]
+                            SourceIds = [ "AC-002"; "FR-001" ]
+                            RequiredSkills = [ "fsharp"; "yaml" ]
+                            RequiredEvidence = [ createEvidenceId "EV001" |> orFail "evId" ]
+                            Source = provenanceSource
+                            SourceLocation = None
+                        }
+                    ]
+                AcceptedDeferrals = [ "deferred-1" ]
+                AdvisoryNotes = [ "advisory-1" ]
+                LifecycleNotes = [ "kept-note" ]
+            }
 
         match
             parseTaskFacts
-                { Path = tasksPath
-                  Text = renderText authored
-                  RawBytes = None }
+                {
+                    Path = tasksPath
+                    Text = renderText authored
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwithf "anchor round-trip parse failed: %A" diagnostics
         | Ok facts ->
@@ -364,21 +393,25 @@ module TasksRoundTripPropertyTests =
     [<Fact>]
     let ``round-trip preserves an empty task list as inline tasks: [] (#279)`` () =
         let authored =
-            { Title = "Empty-Tasks"
-              PublicOrToolFacingImpact = true
-              Tasks = []
-              AcceptedDeferrals = []
-              AdvisoryNotes = []
-              LifecycleNotes = [ "kept-note" ] }
+            {
+                Title = "Empty-Tasks"
+                PublicOrToolFacingImpact = true
+                Tasks = []
+                AcceptedDeferrals = []
+                AdvisoryNotes = []
+                LifecycleNotes = [ "kept-note" ]
+            }
 
         let text = renderText authored
         Assert.Contains("tasks: []", text) // inline marker, not `tasks:\n[]`
 
         match
             parseTaskFacts
-                { Path = tasksPath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = tasksPath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Error diagnostics ->
             failwithf "empty-tasks round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text

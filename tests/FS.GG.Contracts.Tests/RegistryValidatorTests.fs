@@ -6,14 +6,24 @@ open Xunit
 module RegistryValidatorTests =
 
     let private coherent: Registry.RegistryModel =
-        { Components =
-            [ { Id = "FS.GG.Contracts"
-                Version = "1.0.0" }
-              { Id = "FS.GG.SDD"; Version = "0.2.0" } ]
-          Edges =
-            [ { Consumer = "FS.GG.SDD"
-                Provider = "FS.GG.Contracts"
-                CompatibleRange = ">=1.0.0 <2.0.0" } ] }
+        {
+            Components =
+                [
+                    {
+                        Id = "FS.GG.Contracts"
+                        Version = "1.0.0"
+                    }
+                    { Id = "FS.GG.SDD"; Version = "0.2.0" }
+                ]
+            Edges =
+                [
+                    {
+                        Consumer = "FS.GG.SDD"
+                        Provider = "FS.GG.Contracts"
+                        CompatibleRange = ">=1.0.0 <2.0.0"
+                    }
+                ]
+        }
 
     let private rulesOf result =
         match result with
@@ -30,9 +40,14 @@ module RegistryValidatorTests =
         let model =
             { coherent with
                 Edges =
-                    [ { Consumer = "FS.GG.SDD"
-                        Provider = "FS.GG.Contracts"
-                        CompatibleRange = ">=2.0.0" } ] }
+                    [
+                        {
+                            Consumer = "FS.GG.SDD"
+                            Provider = "FS.GG.Contracts"
+                            CompatibleRange = ">=2.0.0"
+                        }
+                    ]
+            }
 
         match Registry.validate model with
         | Registry.Invalid [ d ] ->
@@ -45,8 +60,11 @@ module RegistryValidatorTests =
         let model =
             { coherent with
                 Components =
-                    [ { Id = "FS.GG.Contracts"; Version = "" }
-                      { Id = "FS.GG.SDD"; Version = "0.2.0" } ] }
+                    [
+                        { Id = "FS.GG.Contracts"; Version = "" }
+                        { Id = "FS.GG.SDD"; Version = "0.2.0" }
+                    ]
+            }
 
         match Registry.validate model with
         | Registry.Invalid diagnostics ->
@@ -66,9 +84,14 @@ module RegistryValidatorTests =
         let model =
             { coherent with
                 Edges =
-                    [ { Consumer = "FS.GG.SDD"
-                        Provider = "FS.GG.Absent"
-                        CompatibleRange = ">=1.0.0" } ] }
+                    [
+                        {
+                            Consumer = "FS.GG.SDD"
+                            Provider = "FS.GG.Absent"
+                            CompatibleRange = ">=1.0.0"
+                        }
+                    ]
+            }
 
         Assert.Contains(Registry.UnknownComponent, rulesOf (Registry.validate model))
 
@@ -77,9 +100,14 @@ module RegistryValidatorTests =
         let model =
             { coherent with
                 Components =
-                    [ { Id = "FS.GG.Contracts"
-                        Version = "not-a-version" }
-                      { Id = "FS.GG.SDD"; Version = "0.2.0" } ] }
+                    [
+                        {
+                            Id = "FS.GG.Contracts"
+                            Version = "not-a-version"
+                        }
+                        { Id = "FS.GG.SDD"; Version = "0.2.0" }
+                    ]
+            }
 
         Assert.Contains(Registry.MalformedVersion, rulesOf (Registry.validate model))
 
@@ -88,9 +116,14 @@ module RegistryValidatorTests =
         let model =
             { coherent with
                 Edges =
-                    [ { Consumer = "FS.GG.SDD"
-                        Provider = "FS.GG.Contracts"
-                        CompatibleRange = ">=garbage" } ] }
+                    [
+                        {
+                            Consumer = "FS.GG.SDD"
+                            Provider = "FS.GG.Contracts"
+                            CompatibleRange = ">=garbage"
+                        }
+                    ]
+            }
 
         Assert.Contains(Registry.MalformedVersion, rulesOf (Registry.validate model))
 
@@ -99,9 +132,14 @@ module RegistryValidatorTests =
         let model =
             { coherent with
                 Edges =
-                    [ { Consumer = ""
-                        Provider = "FS.GG.Contracts"
-                        CompatibleRange = ">=1.0.0 <2.0.0" } ] }
+                    [
+                        {
+                            Consumer = ""
+                            Provider = "FS.GG.Contracts"
+                            CompatibleRange = ">=1.0.0 <2.0.0"
+                        }
+                    ]
+            }
 
         match Registry.validate model with
         | Registry.Invalid diagnostics ->

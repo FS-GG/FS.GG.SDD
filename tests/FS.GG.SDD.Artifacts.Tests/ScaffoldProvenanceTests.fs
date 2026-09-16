@@ -8,9 +8,11 @@ open Xunit
 
 module ScaffoldProvenanceTests =
     let private snapshot text : FileSnapshot =
-        { Path = ".fsgg/providers.yml"
-          Text = text
-          RawBytes = None }
+        {
+            Path = ".fsgg/providers.yml"
+            Text = text
+            RawBytes = None
+        }
 
     let private validRegistry =
         """schemaVersion: 1
@@ -129,26 +131,34 @@ providers:
         | Ok _ -> failwith "Expected an out-of-range schema diagnostic."
 
     let private record =
-        { SchemaVersion = 1
-          Generator = SchemaVersion.currentGeneratorVersion ()
-          RequiredMinimumCliVersion = None
-          ProviderName = "fixture"
-          ProviderContractVersion = "1.0.0"
-          TemplateRef = "fsgg-fixture-app"
-          Outcome = "providerSucceeded"
-          ProducedPaths =
-            [ { Path = "src/Product/Program.fs"
-                Owner = GeneratedProduct
-                Sha256 = None }
-              { Path = "src/Product/App.fsproj"
-                Owner = GeneratedProduct
-                Sha256 = None } ]
-          MirroredPaths = []
-          SddOwnedPaths = []
-          DriverPaths = []
-          GameSkillPaths = []
-          RenderingSkillPaths = []
-          EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
+        {
+            SchemaVersion = 1
+            Generator = SchemaVersion.currentGeneratorVersion ()
+            RequiredMinimumCliVersion = None
+            ProviderName = "fixture"
+            ProviderContractVersion = "1.0.0"
+            TemplateRef = "fsgg-fixture-app"
+            Outcome = "providerSucceeded"
+            ProducedPaths =
+                [
+                    {
+                        Path = "src/Product/Program.fs"
+                        Owner = GeneratedProduct
+                        Sha256 = None
+                    }
+                    {
+                        Path = "src/Product/App.fsproj"
+                        Owner = GeneratedProduct
+                        Sha256 = None
+                    }
+                ]
+            MirroredPaths = []
+            SddOwnedPaths = []
+            DriverPaths = []
+            GameSkillPaths = []
+            RenderingSkillPaths = []
+            EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ]
+        }
 
     [<Fact>]
     let ``serialize then tryParse round-trips the record`` () =
@@ -236,7 +246,8 @@ providers:
     let ``serialize then tryParse round-trips requiredMinimumCliVersion Some`` () =
         let withMin =
             { record with
-                RequiredMinimumCliVersion = Some "0.3.0" }
+                RequiredMinimumCliVersion = Some "0.3.0"
+            }
 
         match tryParse (serialize withMin) with
         | Some parsed -> Assert.Equal(Some "0.3.0", parsed.RequiredMinimumCliVersion)
@@ -247,7 +258,8 @@ providers:
         let json =
             serialize
                 { record with
-                    RequiredMinimumCliVersion = None }
+                    RequiredMinimumCliVersion = None
+                }
 
         Assert.Contains("\"requiredMinimumCliVersion\": null", json)
 
@@ -261,7 +273,8 @@ providers:
         let json =
             serialize
                 { record with
-                    RequiredMinimumCliVersion = Some "0.3.0" }
+                    RequiredMinimumCliVersion = Some "0.3.0"
+                }
 
         Assert.True(json.IndexOf "\"generator\"" < json.IndexOf "\"requiredMinimumCliVersion\"")
         Assert.True(json.IndexOf "\"requiredMinimumCliVersion\"" < json.IndexOf "\"providerName\"")
@@ -271,7 +284,8 @@ providers:
     let ``serialize is byte-stable with a declared minimum`` () =
         let withMin =
             { record with
-                RequiredMinimumCliVersion = Some "0.3.0" }
+                RequiredMinimumCliVersion = Some "0.3.0"
+            }
 
         Assert.Equal(serialize withMin, serialize withMin)
 
@@ -299,16 +313,27 @@ providers:
     let private mirroredRecord =
         { record with
             ProducedPaths =
-                [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"
-                    Owner = GeneratedProduct
-                    Sha256 = None } ]
+                [
+                    {
+                        Path = ".agents/skills/fs-gg-elmish/SKILL.md"
+                        Owner = GeneratedProduct
+                        Sha256 = None
+                    }
+                ]
             MirroredPaths =
-                [ { Path = ".codex/skills/fs-gg-elmish/SKILL.md"
-                    Owner = Mirrored
-                    Sha256 = None }
-                  { Path = ".claude/skills/fs-gg-elmish/SKILL.md"
-                    Owner = Mirrored
-                    Sha256 = None } ] }
+                [
+                    {
+                        Path = ".codex/skills/fs-gg-elmish/SKILL.md"
+                        Owner = Mirrored
+                        Sha256 = None
+                    }
+                    {
+                        Path = ".claude/skills/fs-gg-elmish/SKILL.md"
+                        Owner = Mirrored
+                        Sha256 = None
+                    }
+                ]
+        }
 
     [<Fact>]
     let ``serialize then tryParse round-trips mirroredPaths and keeps schemaVersion 1`` () =
@@ -317,8 +342,10 @@ providers:
             Assert.Equal(1, parsed.SchemaVersion)
             // Sorted ascending by path; owner mirrored preserved.
             Assert.Equal<string list>(
-                [ ".claude/skills/fs-gg-elmish/SKILL.md"
-                  ".codex/skills/fs-gg-elmish/SKILL.md" ],
+                [
+                    ".claude/skills/fs-gg-elmish/SKILL.md"
+                    ".codex/skills/fs-gg-elmish/SKILL.md"
+                ],
                 parsed.MirroredPaths |> List.map (fun p -> p.Path)
             )
 
@@ -375,9 +402,14 @@ providers:
     let private sddOwnedRecord =
         { record with
             SddOwnedPaths =
-                [ { Path = ".config/dotnet-tools.json"
-                    Owner = Sdd
-                    Sha256 = None } ] }
+                [
+                    {
+                        Path = ".config/dotnet-tools.json"
+                        Owner = Sdd
+                        Sha256 = None
+                    }
+                ]
+        }
 
     [<Fact>]
     let ``serialize then tryParse round-trips sddOwnedPaths and keeps schemaVersion 1`` () =
@@ -453,13 +485,22 @@ providers:
     let private hashedRecord =
         { record with
             ProducedPaths =
-                [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"
-                    Owner = GeneratedProduct
-                    Sha256 = Some "abc123" } ]
+                [
+                    {
+                        Path = ".agents/skills/fs-gg-elmish/SKILL.md"
+                        Owner = GeneratedProduct
+                        Sha256 = Some "abc123"
+                    }
+                ]
             MirroredPaths =
-                [ { Path = ".claude/skills/fs-gg-elmish/SKILL.md"
-                    Owner = Mirrored
-                    Sha256 = Some "def456" } ] }
+                [
+                    {
+                        Path = ".claude/skills/fs-gg-elmish/SKILL.md"
+                        Owner = Mirrored
+                        Sha256 = Some "def456"
+                    }
+                ]
+        }
 
     [<Fact>]
     let ``serialize then tryParse round-trips per-path sha256 and keeps schemaVersion 1`` () =
@@ -496,12 +537,18 @@ providers:
     // ---- 085: the provider-less dev-repo provenance shape ----
 
     let private devRepoSeeds =
-        [ { Path = ".agents/skills/fs-gg-sdd-charter/SKILL.md"
-            Owner = ArtifactOwner.Sdd
-            Sha256 = None }
-          { Path = ".fsgg/early-stage-guidance.md"
-            Owner = ArtifactOwner.Sdd
-            Sha256 = None } ]
+        [
+            {
+                Path = ".agents/skills/fs-gg-sdd-charter/SKILL.md"
+                Owner = ArtifactOwner.Sdd
+                Sha256 = None
+            }
+            {
+                Path = ".fsgg/early-stage-guidance.md"
+                Owner = ArtifactOwner.Sdd
+                Sha256 = None
+            }
+        ]
 
     let private devRepo =
         devRepoRecord (SchemaVersion.currentGeneratorVersion ()) devRepoSeeds

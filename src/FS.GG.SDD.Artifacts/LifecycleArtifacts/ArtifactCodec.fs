@@ -12,9 +12,11 @@ module ArtifactCodec =
 
     [<NoEquality; NoComparison>]
     type FieldCodec<'M> =
-        { Key: string
-          Read: YamlMappingNode -> 'M -> Result<'M, string>
-          Write: 'M -> string option }
+        {
+            Key: string
+            Read: YamlMappingNode -> 'M -> Result<'M, string>
+            Write: 'M -> string option
+        }
 
     // --- minimal, round-trip-safe YAML scalar quoting ---
     // A plain scalar is emitted bare only when it cannot be misread on the way
@@ -41,20 +43,24 @@ module ArtifactCodec =
 
     // --- field constructors ---
     let optionalScalar (key: string) (get: 'M -> string option) (set: string option -> 'M -> 'M) : FieldCodec<'M> =
-        { Key = key
-          // null-aware: a bare `null`/`~`/empty plain scalar -> None; a quoted
-          // "null" keeps its style and reads as Some "null".
-          Read = fun mapping model -> Ok(set (tryScalarNonNullAt [ key ] (mapping :> YamlNode)) model)
-          Write = fun model -> get model |> Option.map (fun v -> $"{key}: {yamlScalar v}") }
+        {
+            Key = key
+            // null-aware: a bare `null`/`~`/empty plain scalar -> None; a quoted
+            // "null" keeps its style and reads as Some "null".
+            Read = fun mapping model -> Ok(set (tryScalarNonNullAt [ key ] (mapping :> YamlNode)) model)
+            Write = fun model -> get model |> Option.map (fun v -> $"{key}: {yamlScalar v}")
+        }
 
     let requiredScalar (key: string) (get: 'M -> string) (set: string -> 'M -> 'M) : FieldCodec<'M> =
-        { Key = key
-          Read =
-            fun mapping model ->
-                match tryScalarAt [ key ] (mapping :> YamlNode) with
-                | Some value -> Ok(set value model)
-                | None -> Error $"required field '{key}' is missing"
-          Write = fun model -> Some $"{key}: {yamlScalar (get model)}" }
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    match tryScalarAt [ key ] (mapping :> YamlNode) with
+                    | Some value -> Ok(set value model)
+                    | None -> Error $"required field '{key}' is missing"
+            Write = fun model -> Some $"{key}: {yamlScalar (get model)}"
+        }
 
     let defaultedScalar
         (key: string)
@@ -62,24 +68,28 @@ module ArtifactCodec =
         (get: 'M -> string)
         (set: string -> 'M -> 'M)
         : FieldCodec<'M> =
-        { Key = key
-          // Reads the key, or `fallback` when the key is absent — never errors. Mirrors the
-          // `tryScalarAt |> Option.defaultValue` reader for keys like evidence `sourceRef.kind`.
-          Read =
-            fun mapping model ->
-                match tryScalarAt [ key ] (mapping :> YamlNode) with
-                | Some value -> Ok(set value model)
-                | None -> Ok(set fallback model)
-          Write = fun model -> Some $"{key}: {yamlScalar (get model)}" }
+        {
+            Key = key
+            // Reads the key, or `fallback` when the key is absent — never errors. Mirrors the
+            // `tryScalarAt |> Option.defaultValue` reader for keys like evidence `sourceRef.kind`.
+            Read =
+                fun mapping model ->
+                    match tryScalarAt [ key ] (mapping :> YamlNode) with
+                    | Some value -> Ok(set value model)
+                    | None -> Ok(set fallback model)
+            Write = fun model -> Some $"{key}: {yamlScalar (get model)}"
+        }
 
     let inlineList (key: string) (get: 'M -> string list) (set: string list -> 'M -> 'M) : FieldCodec<'M> =
-        { Key = key
-          Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
-          Write =
-            fun model ->
-                match get model with
-                | [] -> None
-                | items -> Some(sprintf "%s: [%s]" key (items |> List.map yamlScalar |> String.concat ", ")) }
+        {
+            Key = key
+            Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
+            Write =
+                fun model ->
+                    match get model with
+                    | [] -> None
+                    | items -> Some(sprintf "%s: [%s]" key (items |> List.map yamlScalar |> String.concat ", "))
+        }
 
     let private renderInlineAlways (key: string) (items: string list) =
         match items |> List.distinct |> List.sort with
@@ -90,9 +100,11 @@ module ArtifactCodec =
         // Like `inlineList` but for a fixed-shape record where the key is always present: an empty
         // list renders `key: []` rather than omitting the line. Distinct+sorted on write (matching
         // the legacy `yamlInlineList`); reader preserves order.
-        { Key = key
-          Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
-          Write = fun model -> Some(renderInlineAlways key (get model)) }
+        {
+            Key = key
+            Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
+            Write = fun model -> Some(renderInlineAlways key (get model))
+        }
 
     let refList
         (key: string)
@@ -105,16 +117,18 @@ module ArtifactCodec =
         // (mirroring `parseTaskIds`/etc.); the malformed-ref DIAGNOSTICS stay the semantic layer's
         // job (computed via `malformedRefs`), so nothing is silently lost, the codec owns only the
         // value round-trip. Always present (`key: []` when empty), distinct+sorted on write.
-        { Key = key
-          Read =
-            fun mapping model ->
-                Ok(
-                    set
-                        (scalarList [ key ] (mapping :> YamlNode)
-                         |> List.choose (create >> Result.toOption))
-                        model
-                )
-          Write = fun model -> Some(renderInlineAlways key (get model |> List.map value)) }
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    Ok(
+                        set
+                            (scalarList [ key ] (mapping :> YamlNode)
+                             |> List.choose (create >> Result.toOption))
+                            model
+                    )
+            Write = fun model -> Some(renderInlineAlways key (get model |> List.map value))
+        }
 
     let mappedScalar
         (key: string)
@@ -126,52 +140,60 @@ module ArtifactCodec =
         // A scalar mapped through a total pair: render via `toStr`, read via `ofStr` (which must be
         // total — it supplies a default for an unrecognised token, like the lenient `parseEvidenceKind`).
         // An absent key keeps the seed value. Always writes.
-        { Key = key
-          Read =
-            fun mapping model ->
-                match tryScalarAt [ key ] (mapping :> YamlNode) with
-                | Some value -> Ok(set (ofStr value) model)
-                | None -> Ok model
-          Write = fun model -> Some $"{key}: {yamlScalar (toStr (get model))}" }
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    match tryScalarAt [ key ] (mapping :> YamlNode) with
+                    | Some value -> Ok(set (ofStr value) model)
+                    | None -> Ok model
+            Write = fun model -> Some $"{key}: {yamlScalar (toStr (get model))}"
+        }
 
     let boolScalar (key: string) (fallback: bool) (get: 'M -> bool) (set: bool -> 'M -> 'M) : FieldCodec<'M> =
         // Mirrors `boolAt`: only an explicit case-insensitive `true`/`false` is honoured; anything
         // else (absent, null, junk) reads as `fallback`. Always writes `key: true|false`.
-        { Key = key
-          Read =
-            fun mapping model ->
-                match tryScalarAt [ key ] (mapping :> YamlNode) with
-                | Some value when value.Equals("true", StringComparison.OrdinalIgnoreCase) -> Ok(set true model)
-                | Some value when value.Equals("false", StringComparison.OrdinalIgnoreCase) -> Ok(set false model)
-                | _ -> Ok(set fallback model)
-          Write = fun model -> Some(sprintf "%s: %b" key (get model)) }
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    match tryScalarAt [ key ] (mapping :> YamlNode) with
+                    | Some value when value.Equals("true", StringComparison.OrdinalIgnoreCase) -> Ok(set true model)
+                    | Some value when value.Equals("false", StringComparison.OrdinalIgnoreCase) -> Ok(set false model)
+                    | _ -> Ok(set fallback model)
+            Write = fun model -> Some(sprintf "%s: %b" key (get model))
+        }
 
     let intScalar (key: string) (fallback: int) (get: 'M -> int) (set: int -> 'M -> 'M) : FieldCodec<'M> =
         // Mirrors `boolScalar`: only a well-formed invariant-culture integer is honoured; anything
         // else (absent, null, junk, overflowing) reads as `fallback`. Always writes `key: N`.
         // Invariant culture on both directions so a receipt's counts do not depend on the machine
         // that rendered them.
-        { Key = key
-          Read =
-            fun mapping model ->
-                match tryScalarAt [ key ] (mapping :> YamlNode) with
-                | Some value ->
-                    match Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture) with
-                    | true, parsed -> Ok(set parsed model)
-                    | _ -> Ok(set fallback model)
-                | None -> Ok(set fallback model)
-          Write = fun model -> Some(sprintf "%s: %d" key (get model)) }
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    match tryScalarAt [ key ] (mapping :> YamlNode) with
+                    | Some value ->
+                        match Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture) with
+                        | true, parsed -> Ok(set parsed model)
+                        | _ -> Ok(set fallback model)
+                    | None -> Ok(set fallback model)
+            Write = fun model -> Some(sprintf "%s: %d" key (get model))
+        }
 
     let scalarBlock (key: string) (get: 'M -> string list) (set: string list -> 'M -> 'M) : FieldCodec<'M> =
-        { Key = key
-          Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
-          Write =
-            fun model ->
-                match get model with
-                | [] -> None
-                | items ->
-                    let lines = items |> List.map (fun v -> $"  - {yamlScalar v}")
-                    Some(key + ":\n" + String.concat "\n" lines) }
+        {
+            Key = key
+            Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
+            Write =
+                fun model ->
+                    match get model with
+                    | [] -> None
+                    | items ->
+                        let lines = items |> List.map (fun v -> $"  - {yamlScalar v}")
+                        Some(key + ":\n" + String.concat "\n" lines)
+        }
 
     // --- fold (decode) / map (render) over the one shared field list ---
     let keys (fields: FieldCodec<'M> list) =
@@ -210,13 +232,15 @@ module ArtifactCodec =
         : FieldCodec<'M> =
         // An always-present nested mapping: `key:` then the sub-record's fields indented two spaces.
         // An absent key keeps the seed sub-record.
-        { Key = key
-          Read =
-            fun mapping model ->
-                match tryNodeAt [ key ] (mapping :> YamlNode) |> Option.bind tryMapping with
-                | Some sub -> parseMapping subFields subSeed sub |> Result.map (fun s -> set s model)
-                | None -> Ok model
-          Write = fun model -> Some(key + ":\n" + indentLines 2 (render subFields (get model))) }
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    match tryNodeAt [ key ] (mapping :> YamlNode) |> Option.bind tryMapping with
+                    | Some sub -> parseMapping subFields subSeed sub |> Result.map (fun s -> set s model)
+                    | None -> Ok model
+            Write = fun model -> Some(key + ":\n" + indentLines 2 (render subFields (get model)))
+        }
 
     let optionalNestedVia
         (key: string)
@@ -232,18 +256,20 @@ module ArtifactCodec =
         // — returning `None` rejects the draft (e.g. a blank synthetic disclosure, keeping the
         // undisclosed-synthetic gate honest, FS.GG.SDD#180). `lower` projects the field back to the
         // draft for rendering. Omits the key entirely when the field is `None`.
-        { Key = key
-          Read =
-            fun mapping model ->
-                match tryNodeAt [ key ] (mapping :> YamlNode) |> Option.bind tryMapping with
-                | Some sub ->
-                    parseMapping subFields subSeed sub
-                    |> Result.map (fun draft -> set (lift draft) model)
-                | None -> Ok(set None model)
-          Write =
-            fun model ->
-                get model
-                |> Option.map (fun field -> key + ":\n" + indentLines 2 (render subFields (lower field))) }
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    match tryNodeAt [ key ] (mapping :> YamlNode) |> Option.bind tryMapping with
+                    | Some sub ->
+                        parseMapping subFields subSeed sub
+                        |> Result.map (fun draft -> set (lift draft) model)
+                    | None -> Ok(set None model)
+            Write =
+                fun model ->
+                    get model
+                    |> Option.map (fun field -> key + ":\n" + indentLines 2 (render subFields (lower field)))
+        }
 
     let recordList
         (key: string)
@@ -255,30 +281,32 @@ module ArtifactCodec =
         // A block sequence of sub-records, always present (`key: []` when empty). Each element
         // decodes via `foldInto subFields subSeed`; a malformed element is dropped (it never yields
         // a mapping), mirroring the legacy per-record parsers.
-        { Key = key
-          Read =
-            fun mapping model ->
-                match trySequenceAt [ key ] (mapping :> YamlNode) with
-                | None -> Ok(set [] model)
-                | Some sequence ->
-                    let items =
-                        sequence.Children
-                        |> Seq.choose tryMapping
-                        |> Seq.choose (fun sub -> parseMapping subFields subSeed sub |> Result.toOption)
-                        |> Seq.toList
+        {
+            Key = key
+            Read =
+                fun mapping model ->
+                    match trySequenceAt [ key ] (mapping :> YamlNode) with
+                    | None -> Ok(set [] model)
+                    | Some sequence ->
+                        let items =
+                            sequence.Children
+                            |> Seq.choose tryMapping
+                            |> Seq.choose (fun sub -> parseMapping subFields subSeed sub |> Result.toOption)
+                            |> Seq.toList
 
-                    Ok(set items model)
-          Write =
-            fun model ->
-                match get model with
-                | [] -> Some(sprintf "%s: []" key)
-                | items ->
-                    let lines =
-                        items
-                        |> List.map (fun item -> listItemLines 2 (render subFields item))
-                        |> String.concat "\n"
+                        Ok(set items model)
+            Write =
+                fun model ->
+                    match get model with
+                    | [] -> Some(sprintf "%s: []" key)
+                    | items ->
+                        let lines =
+                            items
+                            |> List.map (fun item -> listItemLines 2 (render subFields item))
+                            |> String.concat "\n"
 
-                    Some(key + ":\n" + lines) }
+                        Some(key + ":\n" + lines)
+        }
 
     let decode (fields: FieldCodec<'M> list) (seed: 'M) (text: string) : Result<'M, string> =
         match parseYamlDocument text with

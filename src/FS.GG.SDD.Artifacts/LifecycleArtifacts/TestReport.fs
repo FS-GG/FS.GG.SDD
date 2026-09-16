@@ -153,16 +153,18 @@ module TestReport =
                         else
 
                             Ok
-                                { Source = source
-                                  Digest = $"sha256:{digest.Value}"
-                                  DigestContract = "exact-bytes-v1"
-                                  // Derived, never copied from the report's own summary attribute (FR-005):
-                                  // TRX says `outcome="Completed"` for a run with failures, and JUnit has no
-                                  // outcome at all. The counts are the only thing both formats agree on.
-                                  Outcome = (if failed = 0 then "passed" else "failed")
-                                  Passed = passed
-                                  Failed = failed
-                                  Skipped = skipped }))
+                                {
+                                    Source = source
+                                    Digest = $"sha256:{digest.Value}"
+                                    DigestContract = "exact-bytes-v1"
+                                    // Derived, never copied from the report's own summary attribute (FR-005):
+                                    // TRX says `outcome="Completed"` for a run with failures, and JUnit has no
+                                    // outcome at all. The counts are the only thing both formats agree on.
+                                    Outcome = (if failed = 0 then "passed" else "failed")
+                                    Passed = passed
+                                    Failed = failed
+                                    Skipped = skipped
+                                }))
 
     /// Text-only compatibility entry point. New command-path receipts use `parseBytes`.
     let parse (source: string) (text: string) : Result<ObservedRun, string> =

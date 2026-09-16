@@ -24,14 +24,18 @@ module ValidationRunner =
     module RC = FS.GG.SDD.Artifacts.ReleaseContract
 
     type RunnerOptions =
-        { OnlyMatrix: string option
-          Plan: MatrixPlan option
-          InjectedDivergences: (string * (string * string) list) list }
+        {
+            OnlyMatrix: string option
+            Plan: MatrixPlan option
+            InjectedDivergences: (string * (string * string) list) list
+        }
 
     let defaultOptions =
-        { OnlyMatrix = None
-          Plan = None
-          InjectedDivergences = [] }
+        {
+            OnlyMatrix = None
+            Plan = None
+            InjectedDivergences = []
+        }
 
     // ---- canned fixture content (mirrors the real-fixture drivers in TestSupport;
     // the library cannot reference the test assembly, so the inputs are replicated) ----
@@ -54,34 +58,36 @@ module ValidationRunner =
     // ---- command driving (mirrors Program.fs run loop) ----
 
     let baseRequest command root =
-        { Command = command
-          ProjectRoot = root
-          WorkId = None
-          Title = None
-          InputText = None
-          OutputFormat = Json
-          DryRun = false
-          GeneratorVersion = generator
-          Provider = None
-          Parameters = []
-          Force = false
-          TemplateUpdate = true
-          AssumeYes = false
-          IsInteractive = false
-          Artifact = None
-          Explain = false
-          FromTests = None
-          FromTestReport = None
-          SyncObservedRun = None
-          SurfaceUpdate = false
-          AcceptUpstream = false
-          // ADR-0035 stage 3b flipped the CLI default to require an observed run (FS.GG.SDD#497).
-          // The validate harness deliberately keeps the pre-flip opt-out: its matrix fixtures are
-          // unobserved by construction, so mirroring the flipped default would turn every verify/ship
-          // cell blocking and corrupt the deterministic validation-report against reality it does not
-          // measure. validate exercises command × projection × state; the receipt gate is a distinct
-          // axis covered where receipts are actually recorded.
-          RequireObserved = false }
+        {
+            Command = command
+            ProjectRoot = root
+            WorkId = None
+            Title = None
+            InputText = None
+            OutputFormat = Json
+            DryRun = false
+            GeneratorVersion = generator
+            Provider = None
+            Parameters = []
+            Force = false
+            TemplateUpdate = true
+            AssumeYes = false
+            IsInteractive = false
+            Artifact = None
+            Explain = false
+            FromTests = None
+            FromTestReport = None
+            SyncObservedRun = None
+            SurfaceUpdate = false
+            AcceptUpstream = false
+            // ADR-0035 stage 3b flipped the CLI default to require an observed run (FS.GG.SDD#497).
+            // The validate harness deliberately keeps the pre-flip opt-out: its matrix fixtures are
+            // unobserved by construction, so mirroring the flipped default would turn every verify/ship
+            // cell blocking and corrupt the deterministic validation-report against reality it does not
+            // measure. validate exercises command × projection × state; the receipt gate is a distinct
+            // axis covered where receipts are actually recorded.
+            RequireObserved = false
+        }
 
     let runRequest (request: CommandRequest) = driveToReport request
 
@@ -89,7 +95,8 @@ module ValidationRunner =
         { baseRequest command root with
             WorkId = Some fixtureWorkId
             Title = Some fixtureTitle
-            InputText = inputText }
+            InputText = inputText
+        }
 
     let runWork command root inputText =
         runRequest (workRequest command root inputText)
@@ -483,9 +490,11 @@ module ValidationRunner =
                 | GeneratedViewContract(_, RC.Json) ->
                     findProducedFile fullRoot entry.Contract
                     |> Option.map (fun file ->
-                        { Contract = entry.Contract
-                          Source = entry.SourceArtifact
-                          Inventory = fullDepthKeys (File.ReadAllText file) }))
+                        {
+                            Contract = entry.Contract
+                            Source = entry.SourceArtifact
+                            Inventory = fullDepthKeys (File.ReadAllText file)
+                        }))
 
         let diagnostics = evaluate release produced
 
@@ -524,10 +533,16 @@ module ValidationRunner =
                     else
                         SkippedWithReason $"produced artifact for {entry.Contract} not resolved in fixture"
 
-            [ { Coordinates = baselineCoordinates
-                Status = baselineStatus }
-              { Coordinates = conformanceCoordinates
-                Status = conformanceStatus } ])
+            [
+                {
+                    Coordinates = baselineCoordinates
+                    Status = baselineStatus
+                }
+                {
+                    Coordinates = conformanceCoordinates
+                    Status = conformanceStatus
+                }
+            ])
 
     let evaluateCompatibilityCells (release: ReleaseReadiness) (fullRoot: string) =
         let handoffContractVersion =
@@ -567,10 +582,16 @@ module ValidationRunner =
                 else
                     Pass
 
-            [ { Coordinates = handoffCoordinates
-                Status = handoffStatus }
-              { Coordinates = specKitCoordinates
-                Status = specKitStatus } ])
+            [
+                {
+                    Coordinates = handoffCoordinates
+                    Status = handoffStatus
+                }
+                {
+                    Coordinates = specKitCoordinates
+                    Status = specKitStatus
+                }
+            ])
 
     // ---- host perturbation ----
 
@@ -652,19 +673,21 @@ module ValidationRunner =
         // scaffold semantic suite and the cross-repo Rendering proof, not these
         // matrices (mirrors the harness needing no Governance runtime). The exhaustive
         // `token` match above still forces a compile-time decision for any new case.
-        [ Init
-          Charter
-          Specify
-          Clarify
-          Checklist
-          Plan
-          Tasks
-          Analyze
-          Evidence
-          Verify
-          Ship
-          Agents
-          Refresh ]
+        [
+            Init
+            Charter
+            Specify
+            Clarify
+            Checklist
+            Plan
+            Tasks
+            Analyze
+            Evidence
+            Verify
+            Ship
+            Agents
+            Refresh
+        ]
         // `lint`/`<stage> --explain` are excluded here like scaffold/doctor/upgrade: lint requires
         // an `<artifact>` argument and is covered by its own read-only semantic suite (feature 076).
         // `surface` (feature 086) is likewise excluded — a cross-cutting API-surface baseline verb
@@ -710,25 +733,30 @@ module ValidationRunner =
             |> Set.toList
             |> List.map (fun token ->
                 lifecycleMatrixName,
-                { Coordinates = [ "command", token ]
-                  Status =
-                    CoverageGap $"command '{token}' is in the real SddCommand surface but no lifecycle cell covers it" })
+                {
+                    Coordinates = [ "command", token ]
+                    Status =
+                        CoverageGap
+                            $"command '{token}' is in the real SddCommand surface but no lifecycle cell covers it"
+                })
 
         let staleCommands =
             Set.difference declaredCommands realCommands
             |> Set.toList
             |> List.map (fun token ->
                 lifecycleMatrixName,
-                { Coordinates = [ "command", token ]
-                  Status =
-                    Fail(
-                        failure
-                            lifecycleMatrixName
-                            [ "command", token ]
-                            ""
-                            "declared command no longer exists in the real SddCommand surface"
-                            "Remove the stale command from the validation plan."
-                    ) })
+                {
+                    Coordinates = [ "command", token ]
+                    Status =
+                        Fail(
+                            failure
+                                lifecycleMatrixName
+                                [ "command", token ]
+                                ""
+                                "declared command no longer exists in the real SddCommand surface"
+                                "Remove the stale command from the validation plan."
+                        )
+                })
 
         let declaredContracts = Set.ofList plan.BaselineContracts
 
@@ -740,25 +768,30 @@ module ValidationRunner =
             |> Set.toList
             |> List.map (fun contract ->
                 baselineMatrixName,
-                { Coordinates = [ "contract", contract ]
-                  Status =
-                    CoverageGap $"catalog contract '{contract}' is in release-readiness but no baseline cell covers it" })
+                {
+                    Coordinates = [ "contract", contract ]
+                    Status =
+                        CoverageGap
+                            $"catalog contract '{contract}' is in release-readiness but no baseline cell covers it"
+                })
 
         let staleContracts =
             Set.difference declaredContracts realContracts
             |> Set.toList
             |> List.map (fun contract ->
                 baselineMatrixName,
-                { Coordinates = [ "contract", contract ]
-                  Status =
-                    Fail(
-                        failure
-                            baselineMatrixName
-                            [ "contract", contract ]
-                            ""
-                            "declared contract is absent from the release catalog"
-                            "Remove the stale contract or restore it to release-readiness.json."
-                    ) })
+                {
+                    Coordinates = [ "contract", contract ]
+                    Status =
+                        Fail(
+                            failure
+                                baselineMatrixName
+                                [ "contract", contract ]
+                                ""
+                                "declared contract is absent from the release catalog"
+                                "Remove the stale contract or restore it to release-readiness.json."
+                        )
+                })
 
         let declaredViews = Set.ofList plan.DeterminismOutputs
 
@@ -778,9 +811,12 @@ module ValidationRunner =
                     |> List.filter (fun view -> not (Set.contains view declaredViews))
                     |> List.map (fun view ->
                         determinismMatrixName,
-                        { Coordinates = [ "output", view ]
-                          Status =
-                            CoverageGap $"produced view '{view}' is in readiness/ but no determinism cell covers it" })
+                        {
+                            Coordinates = [ "output", view ]
+                            Status =
+                                CoverageGap
+                                    $"produced view '{view}' is in readiness/ but no determinism cell covers it"
+                        })
 
         commandGaps @ staleCommands @ contractGaps @ staleContracts @ viewGaps
 
@@ -935,7 +971,8 @@ module ValidationRunner =
                             (fun current cell ->
                                 let evaluated =
                                     { cell with
-                                        Status = evaluateCell matrix.Name cell }
+                                        Status = evaluateCell matrix.Name cell
+                                    }
 
                                 update (CellEvaluated(matrix.Name, evaluated)) current |> fst)
                             state)

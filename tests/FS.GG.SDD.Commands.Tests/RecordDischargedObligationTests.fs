@@ -45,12 +45,14 @@ module RecordDischargedObligationTests =
 
     let private runVerify root =
         { TestSupport.verifyRequest root workId title with
-            RequireObserved = true }
+            RequireObserved = true
+        }
         |> TestSupport.runRequest
 
     let private runShip root =
         { TestSupport.shipRequest root workId title with
-            RequireObserved = true }
+            RequireObserved = true
+        }
         |> TestSupport.runRequest
 
     let private parsedEvidence root =
@@ -58,9 +60,11 @@ module RecordDischargedObligationTests =
 
         match
             Evidence.parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"evidence.yml did not parse: {diagnostics}"
@@ -126,9 +130,11 @@ module RecordDischargedObligationTests =
             TestSupport.readRelative root tasksPath
             |> fun text ->
                 Task.parseTaskFacts
-                    { Path = tasksPath
-                      Text = text
-                      RawBytes = None }
+                    {
+                        Path = tasksPath
+                        Text = text
+                        RawBytes = None
+                    }
         with
         | Error diagnostics -> failwith $"tasks.yml did not parse: {diagnostics}"
         | Ok facts ->
@@ -156,9 +162,11 @@ module RecordDischargedObligationTests =
 
         match
             Verify.parseVerificationView
-                { Path = verifyPath
-                  Text = view
-                  RawBytes = None }
+                {
+                    Path = verifyPath
+                    Text = view
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwith $"verify.json did not parse: {diagnostics}"
         | Ok parsed ->
@@ -185,9 +193,11 @@ module RecordDischargedObligationTests =
 
         match
             Verify.parseVerificationView
-                { Path = verifyPath
-                  Text = TestSupport.readRelative root verifyPath
-                  RawBytes = None }
+                {
+                    Path = verifyPath
+                    Text = TestSupport.readRelative root verifyPath
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwith $"verify.json did not parse: {diagnostics}"
         | Ok parsed -> Assert.All(parsed.EvidenceDispositions, fun d -> Assert.True d.Observed)
@@ -428,9 +438,11 @@ module RecordDischargedObligationTests =
 
         match
             Verify.parseVerificationView
-                { Path = verifyPath
-                  Text = legacy
-                  RawBytes = None }
+                {
+                    Path = verifyPath
+                    Text = legacy
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwith $"a pre-#865 verify.json must still parse: {diagnostics}"
         | Ok parsed ->

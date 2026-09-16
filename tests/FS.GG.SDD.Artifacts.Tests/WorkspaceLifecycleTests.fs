@@ -16,62 +16,76 @@ module WorkspaceLifecycleTests =
         | Ok _ -> failwith "expected an error result"
 
     let private moduleOf identifier kind digest references assumptions evidence =
-        { Id = id identifier
-          Kind = kind
-          ContentSha256 = digest
-          References = references |> List.map id
-          Assumptions = assumptions
-          EvidenceObligationIds = evidence |> List.map id }
+        {
+            Id = id identifier
+            Kind = kind
+            ContentSha256 = digest
+            References = references |> List.map id
+            Assumptions = assumptions
+            EvidenceObligationIds = evidence |> List.map id
+        }
 
     let private accepted =
-        { SchemaVersion = 1
-          Revision = 7L
-          Modules =
-            [ moduleOf
-                  "PROD-001"
-                  WorkspaceModuleKind.ProductSpecification
-                  (hash 'a')
-                  []
-                  [ "users require deterministic state" ]
-                  [ "EVID-001" ]
-              moduleOf "EVID-001" WorkspaceModuleKind.EvidenceRequirement (hash 'b') [] [] []
-              moduleOf "DECIS-001" WorkspaceModuleKind.Decision (hash 'c') [ "PROD-001" ] [] [] ] }
+        {
+            SchemaVersion = 1
+            Revision = 7L
+            Modules =
+                [
+                    moduleOf
+                        "PROD-001"
+                        WorkspaceModuleKind.ProductSpecification
+                        (hash 'a')
+                        []
+                        [ "users require deterministic state" ]
+                        [ "EVID-001" ]
+                    moduleOf "EVID-001" WorkspaceModuleKind.EvidenceRequirement (hash 'b') [] [] []
+                    moduleOf "DECIS-001" WorkspaceModuleKind.Decision (hash 'c') [ "PROD-001" ] [] []
+                ]
+        }
 
     let private proposal changes disposition =
-        { SchemaVersion = 1
-          IssueRef = "FS-GG/FS.GG.SDD#927"
-          ProseSha256 = hash 'd'
-          BaseFingerprint =
-            WorkspaceLifecycle.fingerprint accepted
-            |> Result.defaultWith (sprintf "%A" >> failwith)
-          AuthoringDepth = AuthoringDepth.Freeform
-          Changes = changes
-          Disposition = disposition
-          EvidenceFingerprint = None }
+        {
+            SchemaVersion = 1
+            IssueRef = "FS-GG/FS.GG.SDD#927"
+            ProseSha256 = hash 'd'
+            BaseFingerprint =
+                WorkspaceLifecycle.fingerprint accepted
+                |> Result.defaultWith (sprintf "%A" >> failwith)
+            AuthoringDepth = AuthoringDepth.Freeform
+            Changes = changes
+            Disposition = disposition
+            EvidenceFingerprint = None
+        }
 
     let private receipt =
-        { AcceptedBy = "maintainer@example.invalid"
-          EvidenceRefs = [ "github:review/1" ]
-          AcceptedAtUtc = "2026-09-15T12:00:00Z" }
+        {
+            AcceptedBy = "maintainer@example.invalid"
+            EvidenceRefs = [ "github:review/1" ]
+            AcceptedAtUtc = "2026-09-15T12:00:00Z"
+        }
 
     [<Fact>]
     let ``all seven module kinds have stable canonical fingerprints`` () =
         let kinds =
-            [ WorkspaceModuleKind.ProductSpecification
-              WorkspaceModuleKind.Decision
-              WorkspaceModuleKind.WorkChange
-              WorkspaceModuleKind.RepositoryProfile
-              WorkspaceModuleKind.CiObligation
-              WorkspaceModuleKind.ExternalContract
-              WorkspaceModuleKind.EvidenceRequirement ]
+            [
+                WorkspaceModuleKind.ProductSpecification
+                WorkspaceModuleKind.Decision
+                WorkspaceModuleKind.WorkChange
+                WorkspaceModuleKind.RepositoryProfile
+                WorkspaceModuleKind.CiObligation
+                WorkspaceModuleKind.ExternalContract
+                WorkspaceModuleKind.EvidenceRequirement
+            ]
 
         let model =
-            { SchemaVersion = 1
-              Revision = 1L
-              Modules =
-                kinds
-                |> List.mapi (fun index kind ->
-                    moduleOf (sprintf "MODUL-%03d" (index + 1)) kind (hash (char (int 'a' + (index % 6)))) [] [] []) }
+            {
+                SchemaVersion = 1
+                Revision = 1L
+                Modules =
+                    kinds
+                    |> List.mapi (fun index kind ->
+                        moduleOf (sprintf "MODUL-%03d" (index + 1)) kind (hash (char (int 'a' + (index % 6)))) [] [] [])
+            }
 
         Assert.Empty(WorkspaceLifecycle.validate model)
 
@@ -79,7 +93,8 @@ module WorkspaceLifecycleTests =
             WorkspaceLifecycle.fingerprint model,
             WorkspaceLifecycle.fingerprint
                 { model with
-                    Modules = List.rev model.Modules }
+                    Modules = List.rev model.Modules
+                }
         )
 
     [<Fact>]
@@ -93,11 +108,13 @@ module WorkspaceLifecycleTests =
     [<Fact>]
     let ``accepted opaque requires complete debt ownership and evidence`` () =
         let opaque =
-            { Debt = ""
-              AffectedSubjects = []
-              Reason = ""
-              ResponsibleHuman = ""
-              EvidenceRefs = [] }
+            {
+                Debt = ""
+                AffectedSubjects = []
+                Reason = ""
+                ResponsibleHuman = ""
+                EvidenceRefs = []
+            }
 
         let findings =
             proposal [] (ProposalDisposition.AcceptedOpaque opaque)
@@ -169,7 +186,8 @@ module WorkspaceLifecycleTests =
 
         let stale =
             { proposal [] ProposalDisposition.CoherentDelta with
-                BaseFingerprint = hash '0' }
+                BaseFingerprint = hash '0'
+            }
 
         Assert.Contains(
             WorkspaceLifecycle.validateProposal accepted stale,
@@ -207,9 +225,11 @@ module WorkspaceLifecycleTests =
                     |> List.map (fun item ->
                         if item.Id = id "PROD-001" then
                             { item with
-                                Assumptions = [ "a newer assumption" ] }
+                                Assumptions = [ "a newer assumption" ]
+                            }
                         else
-                            item) }
+                            item)
+            }
 
         let diff =
             WorkspaceLifecycle.semanticDiff accepted changed
@@ -219,8 +239,10 @@ module WorkspaceLifecycleTests =
 
         let duplicate =
             proposal
-                [ WorkspaceChange.Remove(id "DECIS-001")
-                  WorkspaceChange.Remove(id "DECIS-001") ]
+                [
+                    WorkspaceChange.Remove(id "DECIS-001")
+                    WorkspaceChange.Remove(id "DECIS-001")
+                ]
                 ProposalDisposition.CoherentDelta
 
         Assert.Contains(
@@ -231,16 +253,22 @@ module WorkspaceLifecycleTests =
     [<Fact>]
     let ``migration stays dry-run until every source and decision is complete`` () =
         let sources =
-            [ { Path = ".fsgg/sdd.yml"
-                OriginalSha256 = hash 'a'
-                Lifecycle = LegacyLifecycle.Sdd
-                Classification = LegacyMigrationClassification.Migrated
-                TargetPath = Some ".fsgg/typed-sdd/manifest.json" }
-              { Path = "specs/legacy/spec.md"
-                OriginalSha256 = hash 'b'
-                Lifecycle = LegacyLifecycle.SpecKit
-                Classification = LegacyMigrationClassification.Ambiguous "heading has two meanings"
-                TargetPath = None } ]
+            [
+                {
+                    Path = ".fsgg/sdd.yml"
+                    OriginalSha256 = hash 'a'
+                    Lifecycle = LegacyLifecycle.Sdd
+                    Classification = LegacyMigrationClassification.Migrated
+                    TargetPath = Some ".fsgg/typed-sdd/manifest.json"
+                }
+                {
+                    Path = "specs/legacy/spec.md"
+                    OriginalSha256 = hash 'b'
+                    Lifecycle = LegacyLifecycle.SpecKit
+                    Classification = LegacyMigrationClassification.Ambiguous "heading has two meanings"
+                    TargetPath = None
+                }
+            ]
 
         let incomplete, findings =
             WorkspaceMigration.plan "quint-specification-v1" (hash 'c') sources []
@@ -253,7 +281,8 @@ module WorkspaceLifecycleTests =
             |> List.map (fun item ->
                 if item.Path.StartsWith("specs/", StringComparison.Ordinal) then
                     { item with
-                        Classification = LegacyMigrationClassification.Preserved }
+                        Classification = LegacyMigrationClassification.Preserved
+                    }
                 else
                     item)
 

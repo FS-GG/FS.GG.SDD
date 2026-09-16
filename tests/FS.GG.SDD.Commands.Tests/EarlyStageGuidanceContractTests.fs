@@ -84,11 +84,13 @@ module EarlyStageGuidanceContractTests =
     let ``charter headings equal the live charter standard sections`` () =
         // The charter standard sections are owned by the early-parsing layer.
         let live =
-            [ "Identity"
-              "Principles"
-              "Scope Boundaries"
-              "Policy Pointers"
-              "Lifecycle Notes" ]
+            [
+                "Identity"
+                "Principles"
+                "Scope Boundaries"
+                "Policy Pointers"
+                "Lifecycle Notes"
+            ]
 
         Assert.Equal<string list>(live, headingsFor "charter")
 
@@ -111,15 +113,17 @@ module EarlyStageGuidanceContractTests =
     // proving the documented ^PREFIX-\d{3,}$ shape.
     let private idValidator =
         dict
-            [ "FR", (createRequirementId >> Result.isOk)
-              "US", (createUserStoryId >> Result.isOk)
-              "AC", (createAcceptanceScenarioId >> Result.isOk)
-              "SB", (createScopeBoundaryId >> Result.isOk)
-              "AMB", (createAmbiguityId >> Result.isOk)
-              "CQ", (createClarificationQuestionId >> Result.isOk)
-              "DEC", (createDecisionId >> Result.isOk)
-              "CHK", (createChecklistItemId >> Result.isOk)
-              "CR", (createChecklistResultId >> Result.isOk) ]
+            [
+                "FR", (createRequirementId >> Result.isOk)
+                "US", (createUserStoryId >> Result.isOk)
+                "AC", (createAcceptanceScenarioId >> Result.isOk)
+                "SB", (createScopeBoundaryId >> Result.isOk)
+                "AMB", (createAmbiguityId >> Result.isOk)
+                "CQ", (createClarificationQuestionId >> Result.isOk)
+                "DEC", (createDecisionId >> Result.isOk)
+                "CHK", (createChecklistItemId >> Result.isOk)
+                "CR", (createChecklistResultId >> Result.isOk)
+            ]
 
     [<Fact>]
     let ``every stable-id prefix the guidance names is a real Identifiers prefix`` () =
@@ -175,21 +179,25 @@ module EarlyStageGuidanceContractTests =
             let text =
                 String.concat
                     "\n"
-                    [ "---"
-                      "schemaVersion: 1"
-                      "workId: 001-early-stage-guard"
-                      "stage: specify"
-                      "---"
-                      ""
-                      "## Functional Requirements"
-                      ""
-                      line ]
+                    [
+                        "---"
+                        "schemaVersion: 1"
+                        "workId: 001-early-stage-guard"
+                        "stage: specify"
+                        "---"
+                        ""
+                        "## Functional Requirements"
+                        ""
+                        line
+                    ]
 
             match
                 Specification.parseSpecificationFacts
-                    { Path = "work/001-early-stage-guard/spec.md"
-                      Text = text
-                      RawBytes = None }
+                    {
+                        Path = "work/001-early-stage-guard/spec.md"
+                        Text = text
+                        RawBytes = None
+                    }
             with
             | Ok facts ->
                 Assert.True(
@@ -209,9 +217,11 @@ module EarlyStageGuidanceContractTests =
 
             match
                 Evidence.parseEvidence
-                    { Path = "work/001-early-stage-guard/evidence.yml"
-                      Text = text
-                      RawBytes = None }
+                    {
+                        Path = "work/001-early-stage-guard/evidence.yml"
+                        Text = text
+                        RawBytes = None
+                    }
             with
             | Ok declarations ->
                 Assert.NotEmpty declarations

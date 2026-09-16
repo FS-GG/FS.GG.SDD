@@ -18,7 +18,8 @@ module ClarifyCommandTests =
 
         let specifyRequest =
             { TestSupport.specifyRequest root workId title with
-                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+                InputText = Some TestSupport.specifyIntentWithAmbiguity
+            }
 
         TestSupport.runRequest specifyRequest |> ignore
         root
@@ -36,7 +37,8 @@ module ClarifyCommandTests =
 
         let specifyRequest =
             { TestSupport.specifyRequest root workId title with
-                InputText = Some intent }
+                InputText = Some intent
+            }
 
         TestSupport.runRequest specifyRequest |> ignore
         root
@@ -51,7 +53,8 @@ module ClarifyCommandTests =
     let runClarifyWith input root =
         let request =
             { TestSupport.clarifyRequest root workId title with
-                InputText = input }
+                InputText = input
+            }
 
         TestSupport.runRequest request
 
@@ -409,7 +412,8 @@ module ClarifyCommandTests =
 
         let request =
             { TestSupport.clarifyRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -445,7 +449,8 @@ module ClarifyCommandTests =
 
         let request =
             { TestSupport.clarifyRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -581,14 +586,16 @@ module ClarifyCommandTests =
 
         let specifyRequest =
             { TestSupport.specifyRequest root workId specTitle with
-                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+                InputText = Some TestSupport.specifyIntentWithAmbiguity
+            }
 
         TestSupport.runRequest specifyRequest |> ignore
         root
 
     let private runClarifyWithoutTitle root =
         { TestSupport.clarifyRequest root workId specTitle with
-            Title = None }
+            Title = None
+        }
         |> TestSupport.runRequest
 
     [<Fact>]
@@ -609,7 +616,8 @@ module ClarifyCommandTests =
         let root = initializedWithSpecTitle ()
 
         { TestSupport.clarifyRequest root workId specTitle with
-            Title = Some "Override" }
+            Title = Some "Override"
+        }
         |> TestSupport.runRequest
         |> ignore
 
@@ -640,7 +648,8 @@ module ClarifyCommandTests =
         let report =
             { TestSupport.clarifyRequest root workId specTitle with
                 Title = None
-                InputText = None }
+                InputText = None
+            }
             |> TestSupport.runRequest
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)

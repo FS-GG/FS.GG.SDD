@@ -41,16 +41,18 @@ module GitignoreNegationTests =
     let private materializeReadinessTree root (prefix: string) (workId: string) =
         let at name = $"{prefix}{workId}/{name}"
 
-        [ "work-model.json"
-          "analysis.json"
-          "verify.json"
-          "ship.json"
-          "ship-verdict.json"
-          "governance-handoff.json"
-          "summary.md"
-          "agent-commands/claude/guidance.json"
-          "agent-commands/claude/commands.md"
-          "agent-commands/claude/skills.md" ]
+        [
+            "work-model.json"
+            "analysis.json"
+            "verify.json"
+            "ship.json"
+            "ship-verdict.json"
+            "governance-handoff.json"
+            "summary.md"
+            "agent-commands/claude/guidance.json"
+            "agent-commands/claude/commands.md"
+            "agent-commands/claude/skills.md"
+        ]
         |> List.iter (fun name -> write root (at name) "{}\n")
 
     /// The paths `git add -A` would stage, restricted to those under `prefix`.
@@ -97,15 +99,17 @@ module GitignoreNegationTests =
         materializeReadinessTree root "readiness/" "003-demo"
 
         for ignored in
-            [ "readiness/003-demo/ship.json"
-              "readiness/003-demo/verify.json"
-              "readiness/003-demo/work-model.json"
-              "readiness/003-demo/analysis.json"
-              "readiness/003-demo/summary.md"
-              "readiness/003-demo/governance-handoff.json"
-              "readiness/003-demo/agent-commands/claude/guidance.json"
-              "readiness/003-demo/agent-commands/claude/commands.md"
-              "readiness/003-demo/agent-commands/claude/skills.md" ] do
+            [
+                "readiness/003-demo/ship.json"
+                "readiness/003-demo/verify.json"
+                "readiness/003-demo/work-model.json"
+                "readiness/003-demo/analysis.json"
+                "readiness/003-demo/summary.md"
+                "readiness/003-demo/governance-handoff.json"
+                "readiness/003-demo/agent-commands/claude/guidance.json"
+                "readiness/003-demo/agent-commands/claude/commands.md"
+                "readiness/003-demo/agent-commands/claude/skills.md"
+            ] do
             Assert.True(isIgnored root ignored, $"expected {ignored} to be ignored")
 
         Assert.False(
@@ -128,8 +132,10 @@ module GitignoreNegationTests =
 
         Assert.Equal<Set<string>>(
             Set.ofList
-                [ "readiness/003-demo/pinned-proof.json"
-                  "readiness/003-demo/ship-verdict.json" ],
+                [
+                    "readiness/003-demo/pinned-proof.json"
+                    "readiness/003-demo/ship-verdict.json"
+                ],
             stagedUnder root "readiness/"
         )
 

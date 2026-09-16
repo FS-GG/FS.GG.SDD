@@ -210,10 +210,12 @@ module internal HandlersDependencySurface =
     let private bodyReads baselineRoot model =
         let committed = committedTargets baselineRoot model
 
-        [ for target in allTargets baselineRoot model do
-              ReadPackageSurface target
-          for packageId, version in committed do
-              ReadFile(DependencySurface.capturePath baselineRoot packageId version) ]
+        [
+            for target in allTargets baselineRoot model do
+                ReadPackageSurface target
+            for packageId, version in committed do
+                ReadFile(DependencySurface.capturePath baselineRoot packageId version)
+        ]
         |> List.distinctBy effectKey
 
     let private readGate baselineRoot model =
@@ -273,12 +275,14 @@ module internal HandlersDependencySurface =
 
                 let packageId, version = target
 
-                { PackageId = packageId
-                  Version = version
-                  Status = status
-                  CommittedSha256 = committedSha
-                  ObservedSha256 = observed |> Option.map DependencySurface.symbolDigest
-                  ObservedSymbolCount = observed |> Option.map List.length |> Option.defaultValue 0 })
+                {
+                    PackageId = packageId
+                    Version = version
+                    Status = status
+                    CommittedSha256 = committedSha
+                    ObservedSha256 = observed |> Option.map DependencySurface.symbolDigest
+                    ObservedSymbolCount = observed |> Option.map List.length |> Option.defaultValue 0
+                })
 
         let idsWithStatus wanted =
             entries
@@ -318,19 +322,21 @@ module internal HandlersDependencySurface =
             |> List.sort
 
         let summary =
-            { BaselineRoot = normalizeRelativePath baselineRoot
-              Mode = if update then "update" else "check"
-              CheckedCount = List.length targets
-              Entries = entries |> List.sortBy (fun entry -> targetId (entry.PackageId, entry.Version))
-              DriftedPackages = incoherentPackages
-              UnavailablePackages = idsWithStatus "unavailable"
-              UpdatedPackages = idsWithStatus "written"
-              // Decision #754: a verdict may never report coherent over a subject it did not read.
-              // `incoherentPackages` can only ever name targets the run actually DISCOVERED, and an
-              // unreadable `plan.md` (or `work` listing) removes targets from discovery — so
-              // without the second conjunct the emptier the run's blind spot made the target set,
-              // the more coherent it reported itself.
-              IsCoherent = List.isEmpty incoherentPackages && List.isEmpty unreadable }
+            {
+                BaselineRoot = normalizeRelativePath baselineRoot
+                Mode = if update then "update" else "check"
+                CheckedCount = List.length targets
+                Entries = entries |> List.sortBy (fun entry -> targetId (entry.PackageId, entry.Version))
+                DriftedPackages = incoherentPackages
+                UnavailablePackages = idsWithStatus "unavailable"
+                UpdatedPackages = idsWithStatus "written"
+                // Decision #754: a verdict may never report coherent over a subject it did not read.
+                // `incoherentPackages` can only ever name targets the run actually DISCOVERED, and an
+                // unreadable `plan.md` (or `work` listing) removes targets from discovery — so
+                // without the second conjunct the emptier the run's blind spot made the target set,
+                // the more coherent it reported itself.
+                IsCoherent = List.isEmpty incoherentPackages && List.isEmpty unreadable
+            }
 
         summary, writes
 
@@ -346,7 +352,8 @@ module internal HandlersDependencySurface =
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ effects },
+                        PendingEffects = model.PendingEffects @ effects
+                    },
                     effects
             | None ->
                 match restoreGate baselineRoot model with
@@ -355,7 +362,8 @@ module internal HandlersDependencySurface =
                         model, []
                     else
                         { model with
-                            PendingEffects = model.PendingEffects @ effects },
+                            PendingEffects = model.PendingEffects @ effects
+                        },
                         effects
                 | None ->
                     match readGate baselineRoot model with
@@ -364,7 +372,8 @@ module internal HandlersDependencySurface =
                             model, []
                         else
                             { model with
-                                PendingEffects = model.PendingEffects @ effects },
+                                PendingEffects = model.PendingEffects @ effects
+                            },
                             effects
                     | None ->
                         let unreadable = unreadableSubjects baselineRoot model
@@ -406,5 +415,6 @@ module internal HandlersDependencySurface =
                                 @ unreadableDiagnostics
                                 @ driftDiagnostics
                                 @ unavailableDiagnostics
-                            PendingEffects = model.PendingEffects @ writes },
+                            PendingEffects = model.PendingEffects @ writes
+                        },
                         writes

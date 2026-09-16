@@ -11,71 +11,86 @@ open Xunit
 /// `--text` with zero ANSI; the rich path changes no JSON byte. Constructed reports.
 module RemediationProjectionTests =
     let private interactiveColor =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 100
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 100
+            IsInputInteractive = true
+        }
 
     let private nonInteractive =
         { interactiveColor with
-            IsInteractive = false }
+            IsInteractive = false
+        }
 
     let private step (id: ReconciliationStepId) (outcome: ReconciliationOutcome) targets : ReconciliationStep =
-        { StepId = id
-          Kind = id
-          DiffPreview = $"{reconciliationStepIdValue id} preview"
-          Outcome = outcome
-          TargetPaths = targets }
+        {
+            StepId = id
+            Kind = id
+            DiffPreview = $"{reconciliationStepIdValue id} preview"
+            Outcome = outcome
+            TargetPaths = targets
+        }
 
     let private doctorSummary: DoctorSummary =
-        { HasProvenance = true
-          ProviderName = Some "rendering"
-          InstalledCliVersion = "0.2.1"
-          RequiredMinimumCliVersion = Some "9.9.9"
-          RequiredMinimumCliVersionSource = Some "workspaceFloor"
-          CliAxis = "behind"
-          CliBehindBy = Some "0.2.1 -> 9.9.9"
-          ExpectedArtifactCount = 31
-          MissingArtifactPaths = [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ]
-          SkillDriftPaths = []
-          PreviewSteps =
-            [ step ReconciliationStepId.CliSelfUpdate ReconciliationOutcome.WouldApply []
-              step ReconciliationStepId.TemplateRePin ReconciliationOutcome.NoTarget []
-              step
-                  ReconciliationStepId.ArtifactReSeed
-                  ReconciliationOutcome.WouldApply
-                  [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
-          IsCoherent = false }
+        {
+            HasProvenance = true
+            ProviderName = Some "rendering"
+            InstalledCliVersion = "0.2.1"
+            RequiredMinimumCliVersion = Some "9.9.9"
+            RequiredMinimumCliVersionSource = Some "workspaceFloor"
+            CliAxis = "behind"
+            CliBehindBy = Some "0.2.1 -> 9.9.9"
+            ExpectedArtifactCount = 31
+            MissingArtifactPaths = [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ]
+            SkillDriftPaths = []
+            PreviewSteps =
+                [
+                    step ReconciliationStepId.CliSelfUpdate ReconciliationOutcome.WouldApply []
+                    step ReconciliationStepId.TemplateRePin ReconciliationOutcome.NoTarget []
+                    step
+                        ReconciliationStepId.ArtifactReSeed
+                        ReconciliationOutcome.WouldApply
+                        [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ]
+                ]
+            IsCoherent = false
+        }
 
     let private upgradeSummary: UpgradeSummary =
-        { HasProvenance = true
-          Mode = "assumeYes"
-          AlreadyCoherent = false
-          Steps =
-            [ step
-                  ReconciliationStepId.ArtifactReSeed
-                  ReconciliationOutcome.Applied
-                  [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
-          AppliedStepIds = [ ReconciliationStepId.ArtifactReSeed ]
-          SkippedStepIds = []
-          FailedStepIds = []
-          SkillDriftPaths = []
-          ResidualDrift = false
-          NextActionHint = "Reconciliation complete; run fsgg-sdd doctor to confirm coherence." }
+        {
+            HasProvenance = true
+            Mode = "assumeYes"
+            AlreadyCoherent = false
+            Steps =
+                [
+                    step
+                        ReconciliationStepId.ArtifactReSeed
+                        ReconciliationOutcome.Applied
+                        [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ]
+                ]
+            AppliedStepIds = [ ReconciliationStepId.ArtifactReSeed ]
+            SkippedStepIds = []
+            FailedStepIds = []
+            SkillDriftPaths = []
+            ResidualDrift = false
+            NextActionHint = "Reconciliation complete; run fsgg-sdd doctor to confirm coherence."
+        }
 
     let private doctorReport: CommandReport =
         { RichRenderingTests.sampleReport with
             Command = Doctor
             Outcome = CommandOutcome.SucceededWithWarnings
             Specification = None
-            Doctor = Some doctorSummary }
+            Doctor = Some doctorSummary
+        }
 
     let private upgradeReport: CommandReport =
         { RichRenderingTests.sampleReport with
             Command = Upgrade
             Outcome = CommandOutcome.Succeeded
             Specification = None
-            Upgrade = Some upgradeSummary }
+            Upgrade = Some upgradeSummary
+        }
 
     [<Fact>]
     let ``doctor json equals serializeReport and the rich path changes no byte`` () =
@@ -136,15 +151,21 @@ module RemediationProjectionTests =
                 Some
                     { doctorSummary with
                         SkillDriftPaths =
-                            [ ".codex/skills/fs-gg-sdd-plan/SKILL.md"
-                              ".claude/skills/fs-gg-sdd-ship/SKILL.md" ] } }
+                            [
+                                ".codex/skills/fs-gg-sdd-plan/SKILL.md"
+                                ".claude/skills/fs-gg-sdd-ship/SKILL.md"
+                            ]
+                    }
+        }
 
     let private driftedUpgradeReport: CommandReport =
         { upgradeReport with
             Upgrade =
                 Some
                     { upgradeSummary with
-                        SkillDriftPaths = [ ".agents/skills/fs-gg-sdd-verify/SKILL.md" ] } }
+                        SkillDriftPaths = [ ".agents/skills/fs-gg-sdd-verify/SKILL.md" ]
+                    }
+        }
 
     [<Fact>]
     let ``skillDriftPaths appear in doctor text and rich, and JSON stays byte-identical`` () =

@@ -23,9 +23,11 @@ module ShipCommandTests =
     let specPath = $"work/{workId}/spec.md"
 
     type CliResult =
-        { ExitCode: int
-          StdOut: string
-          StdErr: string }
+        {
+            ExitCode: int
+            StdOut: string
+            StdErr: string
+        }
 
     let initializedVerifiedProject () =
         let root = TestSupport.tempDirectory ()
@@ -42,9 +44,11 @@ module ShipCommandTests =
             @ extraArgs
             |> TestSupport.runCliRaw 60000
 
-        { ExitCode = exitCode
-          StdOut = stdout
-          StdErr = stderr }
+        {
+            ExitCode = exitCode
+            StdOut = stdout
+            StdErr = stderr
+        }
 
     // --- Feature 092 (ADR-0026): the committed compact ship verdict ---
 
@@ -72,9 +76,11 @@ module ShipCommandTests =
 
         match
             parseShipView
-                { Path = shipPath
-                  Text = shipJson
-                  RawBytes = None }
+                {
+                    Path = shipPath
+                    Text = shipJson
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwith $"ship.json did not parse: {diagnostics}."
         | Ok view ->
@@ -165,9 +171,11 @@ module ShipCommandTests =
 
         match
             parseShipView
-                { Path = shipPath
-                  Text = shipJson
-                  RawBytes = None }
+                {
+                    Path = shipPath
+                    Text = shipJson
+                    RawBytes = None
+                }
         with
         | Ok view ->
             Assert.Equal("shipReady", view.Readiness)
@@ -314,7 +322,8 @@ module ShipCommandTests =
 
         let request =
             { TestSupport.shipRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -367,7 +376,8 @@ module ShipCommandTests =
 
         let request =
             { TestSupport.shipRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -497,9 +507,11 @@ module ShipCommandTests =
         // …and the same invariant in the committed verdict, which is the only one that reaches git.
         match
             parseShipView
-                { Path = shipPath
-                  Text = TestSupport.readRelative root shipPath
-                  RawBytes = None }
+                {
+                    Path = shipPath
+                    Text = TestSupport.readRelative root shipPath
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwith $"ship.json did not parse: {diagnostics}."
         | Ok view ->

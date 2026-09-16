@@ -12,62 +12,76 @@ open Xunit
 /// changes no JSON byte. Built from a constructed report (no template engine).
 module ScaffoldParityTests =
     let private interactiveColor =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 100
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 100
+            IsInputInteractive = true
+        }
 
     let private nonInteractive =
         { interactiveColor with
-            IsInteractive = false }
+            IsInteractive = false
+        }
 
     let private scaffoldSummary: ScaffoldSummary =
-        { ProviderName = Some "fixture"
-          ProviderContractVersion = Some "1.0.0"
-          RequiredMinimumCliVersion = Some "0.3.0"
-          Outcome = "providerSucceeded"
-          SkeletonCreated = true
-          ProviderInvoked = true
-          ProducedPathCount = 2
-          ProducedPaths = [ "App.fsproj"; "Program.fs"; ".agents/skills/fs-gg-elmish/SKILL.md" ]
-          MirroredPaths =
-            [ ".claude/skills/fs-gg-elmish/SKILL.md"
-              ".codex/skills/fs-gg-elmish/SKILL.md" ]
-          MaterializedDriverPaths =
-            [ ".agents/skills/padd-item/SKILL.md"
-              ".agents/skills/work-board/SKILL.md"
-              ".agents/skills/work-roadmap/SKILL.md"
-              ".claude/skills/padd-item/SKILL.md"
-              ".claude/skills/work-board/SKILL.md"
-              ".claude/skills/work-roadmap/SKILL.md"
-              ".codex/skills/padd-item/SKILL.md"
-              ".codex/skills/work-board/SKILL.md"
-              ".codex/skills/work-roadmap/SKILL.md" ]
-          MaterializedGameSkillPaths =
-            [ ".agents/skills/fs-gg-playtest/SKILL.md"
-              ".claude/skills/fs-gg-playtest/SKILL.md"
-              ".codex/skills/fs-gg-playtest/SKILL.md" ]
-          // FS.GG.SDD#864: the fourth channel projects its own list, so the rich/plain parity
-          // fixture carries a NON-EMPTY one — an empty list would prove only that the projections
-          // agree about nothing.
-          MaterializedRenderingSkillPaths =
-            [ ".agents/skills/fs-gg-feedback-report/SKILL.md"
-              ".claude/skills/fs-gg-feedback-report/SKILL.md"
-              ".codex/skills/fs-gg-feedback-report/SKILL.md" ]
-          EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
-          RepoInitOutcome = "initialized"
-          ToolManifestOutcome = "pinned"
-          ExecutableScriptCount = 0
-          ExecutableScriptsSkipped = 0
-          NextActionHint = "SDD skeleton ready; begin the lifecycle at charter."
-          ProviderInvocation = None }
+        {
+            ProviderName = Some "fixture"
+            ProviderContractVersion = Some "1.0.0"
+            RequiredMinimumCliVersion = Some "0.3.0"
+            Outcome = "providerSucceeded"
+            SkeletonCreated = true
+            ProviderInvoked = true
+            ProducedPathCount = 2
+            ProducedPaths = [ "App.fsproj"; "Program.fs"; ".agents/skills/fs-gg-elmish/SKILL.md" ]
+            MirroredPaths =
+                [
+                    ".claude/skills/fs-gg-elmish/SKILL.md"
+                    ".codex/skills/fs-gg-elmish/SKILL.md"
+                ]
+            MaterializedDriverPaths =
+                [
+                    ".agents/skills/padd-item/SKILL.md"
+                    ".agents/skills/work-board/SKILL.md"
+                    ".agents/skills/work-roadmap/SKILL.md"
+                    ".claude/skills/padd-item/SKILL.md"
+                    ".claude/skills/work-board/SKILL.md"
+                    ".claude/skills/work-roadmap/SKILL.md"
+                    ".codex/skills/padd-item/SKILL.md"
+                    ".codex/skills/work-board/SKILL.md"
+                    ".codex/skills/work-roadmap/SKILL.md"
+                ]
+            MaterializedGameSkillPaths =
+                [
+                    ".agents/skills/fs-gg-playtest/SKILL.md"
+                    ".claude/skills/fs-gg-playtest/SKILL.md"
+                    ".codex/skills/fs-gg-playtest/SKILL.md"
+                ]
+            // FS.GG.SDD#864: the fourth channel projects its own list, so the rich/plain parity
+            // fixture carries a NON-EMPTY one — an empty list would prove only that the projections
+            // agree about nothing.
+            MaterializedRenderingSkillPaths =
+                [
+                    ".agents/skills/fs-gg-feedback-report/SKILL.md"
+                    ".claude/skills/fs-gg-feedback-report/SKILL.md"
+                    ".codex/skills/fs-gg-feedback-report/SKILL.md"
+                ]
+            EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
+            RepoInitOutcome = "initialized"
+            ToolManifestOutcome = "pinned"
+            ExecutableScriptCount = 0
+            ExecutableScriptsSkipped = 0
+            NextActionHint = "SDD skeleton ready; begin the lifecycle at charter."
+            ProviderInvocation = None
+        }
 
     let private report: CommandReport =
         { RichRenderingTests.sampleReport with
             Command = Scaffold
             Outcome = CommandOutcome.Succeeded
             Specification = None
-            Scaffold = Some scaffoldSummary }
+            Scaffold = Some scaffoldSummary
+        }
 
     [<Fact>]
     let ``scaffold json projection equals serializeReport and the rich path changes no byte`` () =
@@ -177,7 +191,9 @@ module ScaffoldParityTests =
                             RepoInitOutcome = "initialized"
                             ToolManifestOutcome = "pinned"
                             ExecutableScriptCount = 1
-                            ExecutableScriptsSkipped = 0 } }
+                            ExecutableScriptsSkipped = 0
+                        }
+            }
 
         // Rich is a pure projection: it changes no JSON byte.
         let before = serializeReport postInstReport
@@ -209,13 +225,16 @@ module ScaffoldParityTests =
             Diagnostics = [ scaffoldCliBehindMinimum "0.2.1" "0.3.0" ]
             NextAction =
                 Some
-                    { ActionId = "reseedSeededSkills"
-                      Command = Some Init
-                      WorkId = None
-                      Reason =
-                        "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
-                      RequiredArtifacts = [ ".claude/skills"; ".codex/skills"; ".fsgg/early-stage-guidance.md" ]
-                      BlockingDiagnosticIds = [] } }
+                    {
+                        ActionId = "reseedSeededSkills"
+                        Command = Some Init
+                        WorkId = None
+                        Reason =
+                            "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
+                        RequiredArtifacts = [ ".claude/skills"; ".codex/skills"; ".fsgg/early-stage-guidance.md" ]
+                        BlockingDiagnosticIds = []
+                    }
+        }
 
     [<Fact>]
     let ``behind-minimum advisory is fact-identical across json text and rich`` () =
@@ -266,13 +285,17 @@ module ScaffoldParityTests =
                         Outcome = "providerFailed"
                         ProviderInvocation =
                             Some
-                                { CommandLine = "dotnet new fsgg-fixture-app -o . --productName Acme"
-                                  ProcessStarted = true
-                                  ExitCode = Some 127
-                                  StandardOutput = "produced partial output"
-                                  StandardOutputTruncated = false
-                                  StandardError = "option --productName was not recognized"
-                                  StandardErrorTruncated = false } } }
+                                {
+                                    CommandLine = "dotnet new fsgg-fixture-app -o . --productName Acme"
+                                    ProcessStarted = true
+                                    ExitCode = Some 127
+                                    StandardOutput = "produced partial output"
+                                    StandardOutputTruncated = false
+                                    StandardError = "option --productName was not recognized"
+                                    StandardErrorTruncated = false
+                                }
+                    }
+        }
 
     [<Fact>]
     let ``scaffold provider-defect output facts are identical across json text and rich`` () =
@@ -318,7 +341,9 @@ module ScaffoldParityTests =
                     Some
                         { scaffoldSummary with
                             ProducedPathCount = lifecycleProducedPaths.Length
-                            ProducedPaths = lifecycleProducedPaths } }
+                            ProducedPaths = lifecycleProducedPaths
+                        }
+            }
 
         // Rich is a pure projection: it changes no JSON byte.
         let before = serializeReport lifecycleReport

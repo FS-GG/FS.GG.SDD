@@ -18,9 +18,11 @@ module AnalyzeCommandTests =
     let tasksPath = $"work/{workId}/tasks.yml"
 
     type CliResult =
-        { ExitCode: int
-          StdOut: string
-          StdErr: string }
+        {
+            ExitCode: int
+            StdOut: string
+            StdErr: string
+        }
 
     let initializedTasksReadyProject () =
         let root = TestSupport.tempDirectory ()
@@ -32,9 +34,11 @@ module AnalyzeCommandTests =
             [ "analyze"; "--root"; root; "--work"; workId ] @ extraArgs
             |> TestSupport.runCliRaw 30000
 
-        { ExitCode = exitCode
-          StdOut = stdout
-          StdErr = stderr }
+        {
+            ExitCode = exitCode
+            StdOut = stdout
+            StdErr = stderr
+        }
 
     [<Fact>]
     let ``analyze creates generated analysis view with real filesystem evidence`` () =
@@ -60,9 +64,11 @@ module AnalyzeCommandTests =
 
         match
             parseAnalysisView
-                { Path = analysisPath
-                  Text = analysisJson
-                  RawBytes = None }
+                {
+                    Path = analysisPath
+                    Text = analysisJson
+                    RawBytes = None
+                }
         with
         | Ok view -> Assert.Equal("implementationReady", view.Readiness.Status)
         | Error diagnostics -> failwith $"Generated analysis view did not parse: {diagnostics}."
@@ -133,7 +139,8 @@ module AnalyzeCommandTests =
 
         let request =
             { TestSupport.analyzeRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -160,7 +167,8 @@ module AnalyzeCommandTests =
 
         let request =
             { TestSupport.analyzeRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport

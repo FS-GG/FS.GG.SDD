@@ -8,15 +8,19 @@ open FS.GG.SDD.Artifacts.TypedSpecifications
 
 module internal QuintTypedSddRollback =
     type private Entry =
-        { OriginalPath: string
-          BackupPath: string
-          Sha256: string
-          Bytes: int64 }
+        {
+            OriginalPath: string
+            BackupPath: string
+            Sha256: string
+            Bytes: int64
+        }
 
     let private diagnostic id message correction : TypedLifecycleDiagnostic =
-        { Id = id
-          Message = message
-          Correction = correction }
+        {
+            Id = id
+            Message = message
+            Correction = correction
+        }
 
     let private containedPath (root: string) (relative: string) =
         if String.IsNullOrWhiteSpace relative || Path.IsPathRooted relative then
@@ -77,16 +81,18 @@ module internal QuintTypedSddRollback =
                     then
                         invalidOp "entry does not match the closed schema"
 
-                    { OriginalPath =
-                        item.GetProperty("originalPath").GetString()
-                        |> Option.ofObj
-                        |> Option.defaultValue ""
-                      BackupPath =
-                        item.GetProperty("backupPath").GetString()
-                        |> Option.ofObj
-                        |> Option.defaultValue ""
-                      Sha256 = item.GetProperty("sha256").GetString() |> Option.ofObj |> Option.defaultValue ""
-                      Bytes = item.GetProperty("bytes").GetInt64() })
+                    {
+                        OriginalPath =
+                            item.GetProperty("originalPath").GetString()
+                            |> Option.ofObj
+                            |> Option.defaultValue ""
+                        BackupPath =
+                            item.GetProperty("backupPath").GetString()
+                            |> Option.ofObj
+                            |> Option.defaultValue ""
+                        Sha256 = item.GetProperty("sha256").GetString() |> Option.ofObj |> Option.defaultValue ""
+                        Bytes = item.GetProperty("bytes").GetInt64()
+                    })
                 |> Seq.toList
                 |> Ok
         with ex ->
@@ -131,10 +137,12 @@ module internal QuintTypedSddRollback =
                         if not (List.isEmpty findings) then
                             invalidOp $"v1 authority is not valid: {findings.Head.Message}"
 
-                        [ authorityRelative
-                          authority.CanonicalPath
-                          authority.NormalizedPath
-                          authority.MarkdownPath ]
+                        [
+                            authorityRelative
+                            authority.CanonicalPath
+                            authority.NormalizedPath
+                            authority.MarkdownPath
+                        ]
                     | Ok(QuintSpecificationV1 _) -> invalidOp "authority is already manifest-v2"
                     | Error finding -> invalidOp finding.Message
                 else
@@ -157,10 +165,12 @@ module internal QuintTypedSddRollback =
                     let bytes = File.ReadAllBytes full
                     let backup = $"{basePath}/{index:D4}.bin"
 
-                    { OriginalPath = original
-                      BackupPath = backup
-                      Sha256 = TypedAuthorityManifest.sha256 bytes
-                      Bytes = int64 bytes.Length },
+                    {
+                        OriginalPath = original
+                        BackupPath = backup
+                        Sha256 = TypedAuthorityManifest.sha256 bytes
+                        Bytes = int64 bytes.Length
+                    },
                     (backup, bytes))
                 |> List.unzip
 
@@ -168,17 +178,21 @@ module internal QuintTypedSddRollback =
             let inventoryBytes = encode entries
 
             let rollback: QuintTypedSddHost.Rollback =
-                { ManifestPath = inventoryPath
-                  ManifestBytes = inventoryBytes
-                  Writes = backupWrites @ [ inventoryPath, inventoryBytes ] }
+                {
+                    ManifestPath = inventoryPath
+                    ManifestBytes = inventoryBytes
+                    Writes = backupWrites @ [ inventoryPath, inventoryBytes ]
+                }
 
             Ok rollback
         with ex ->
             Error
-                [ diagnostic
-                      "typedSdd.v2.rollbackSnapshotFailed"
-                      ex.Message
-                      "Restore the complete readable v1 authority before migration." ]
+                [
+                    diagnostic
+                        "typedSdd.v2.rollbackSnapshotFailed"
+                        ex.Message
+                        "Restore the complete readable v1 authority before migration."
+                ]
 
     let restore rootPath workId (authority: QuintAuthorityManifest) apply =
         match authority.RollbackManifestPath, authority.RollbackManifestSha256 with
@@ -259,13 +273,17 @@ module internal QuintTypedSddRollback =
                     raise ex
             with ex ->
                 Error
-                    [ diagnostic
-                          "typedSdd.v2.rollbackFailed"
-                          ex.Message
-                          "Restore the authenticated rollback inventory and retry; the live tree was preserved." ]
+                    [
+                        diagnostic
+                            "typedSdd.v2.rollbackFailed"
+                            ex.Message
+                            "Restore the authenticated rollback inventory and retry; the live tree was preserved."
+                    ]
         | _ ->
             Error
-                [ diagnostic
-                      "typedSdd.v2.rollbackMissing"
-                      "Manifest-v2 has no authenticated rollback inventory."
-                      "Rollback is available only after accepted v1 migration." ]
+                [
+                    diagnostic
+                        "typedSdd.v2.rollbackMissing"
+                        "Manifest-v2 has no authenticated rollback inventory."
+                        "Rollback is available only after accepted v1 migration."
+                ]

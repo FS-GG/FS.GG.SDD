@@ -16,15 +16,17 @@ module Options =
     // request.DryRun`), and `--explain` is answered on every command (feature 076: one with no
     // primary artifact reports `explainUnsupported` rather than rejecting the token).
     let globalOptions =
-        [ valued "--root"
-          flag "--json"
-          flag "--text"
-          flag "--rich"
-          flag "--force-color"
-          flag "--dry-run"
-          flag "--explain"
-          flag "--help"
-          flag "-h" ]
+        [
+            valued "--root"
+            flag "--json"
+            flag "--text"
+            flag "--rich"
+            flag "--force-color"
+            flag "--dry-run"
+            flag "--explain"
+            flag "--help"
+            flag "-h"
+        ]
 
     let private work = valued "--work"
     let private title = valued "--title"
@@ -38,11 +40,13 @@ module Options =
         | Specify
         | Clarify -> [ work; title; valued "--input" ]
         | Evidence ->
-            [ work
-              title
-              valued "--from-tests"
-              valued "--from-test-report"
-              valued "--sync-observed-run" ]
+            [
+                work
+                title
+                valued "--from-tests"
+                valued "--from-test-report"
+                valued "--sync-observed-run"
+            ]
         | Plan -> [ work; title; flag "--accept-upstream" ]
         // FS.GG.SDD#350 / ADR-0035: BOTH stages take the flag, and that is not redundancy.
         // `verify` gates on the evidence; `ship` re-gates on the RECORD verify wrote, because a

@@ -74,14 +74,24 @@ module RegistryDelegationTests =
     // SemVer grammar to Fsgg.Version. The comparator engine still lives in Registry;
     // only the parse/triple grammar was extracted.
     let private modelWithRange (range: string) : Registry.RegistryModel =
-        { Components =
-            [ { Id = "FS.GG.Contracts"
-                Version = "1.0.0" }
-              { Id = "FS.GG.SDD"; Version = "0.2.0" } ]
-          Edges =
-            [ { Consumer = "FS.GG.SDD"
-                Provider = "FS.GG.Contracts"
-                CompatibleRange = range } ] }
+        {
+            Components =
+                [
+                    {
+                        Id = "FS.GG.Contracts"
+                        Version = "1.0.0"
+                    }
+                    { Id = "FS.GG.SDD"; Version = "0.2.0" }
+                ]
+            Edges =
+                [
+                    {
+                        Consumer = "FS.GG.SDD"
+                        Provider = "FS.GG.Contracts"
+                        CompatibleRange = range
+                    }
+                ]
+        }
 
     [<Theory>]
     [<InlineData(">=1.0.0 <2.0.0")>] // 1.0.0 in range

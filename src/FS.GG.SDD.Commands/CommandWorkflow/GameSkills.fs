@@ -70,26 +70,30 @@ module internal GameSkills =
     /// three fail-closed classes surfaced as scaffold diagnostics. All lists are id-sorted /
     /// path-ordered and deterministic.
     type GameSkillOutcome =
-        { Writes: CommandEffect list
-          ProvenancePaths: (string * string) list
-          MaterializedIds: string list
-          // The declared `scope` of each materialized owner-skill id (from its manifest row), so a
-          // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
-          MaterializedScopes: Map<string, string>
-          VerifyFailedIds: string list
-          PredicateUnevaluatedIds: string list
-          NamespaceCollisionIds: string list
-          ManifestError: string option }
+        {
+            Writes: CommandEffect list
+            ProvenancePaths: (string * string) list
+            MaterializedIds: string list
+            // The declared `scope` of each materialized owner-skill id (from its manifest row), so a
+            // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
+            MaterializedScopes: Map<string, string>
+            VerifyFailedIds: string list
+            PredicateUnevaluatedIds: string list
+            NamespaceCollisionIds: string list
+            ManifestError: string option
+        }
 
     let empty =
-        { Writes = []
-          ProvenancePaths = []
-          MaterializedIds = []
-          MaterializedScopes = Map.empty
-          VerifyFailedIds = []
-          PredicateUnevaluatedIds = []
-          NamespaceCollisionIds = []
-          ManifestError = None }
+        {
+            Writes = []
+            ProvenancePaths = []
+            MaterializedIds = []
+            MaterializedScopes = Map.empty
+            VerifyFailedIds = []
+            PredicateUnevaluatedIds = []
+            NamespaceCollisionIds = []
+            ManifestError = None
+        }
 
     // The whole `fs-gg-sdd-*` namespace is SDD-owned skeleton (CLAUDE.md; `isSddTree` reserves
     // `.agents/skills/fs-gg-sdd-`), so a delivered row anywhere in it is rejected — a prefix guard,
@@ -104,10 +108,12 @@ module internal GameSkills =
 
     // The intermediate per-row classification, folded into the four output classes.
     type private Classified =
-        { Collisions: string list
-          PredicateUnevaluated: string list
-          VerifyFailed: string list
-          Materializable: (string * string * string) list } // (id, body, sha256)
+        {
+            Collisions: string list
+            PredicateUnevaluated: string list
+            VerifyFailed: string list
+            Materializable: (string * string * string) list
+        } // (id, body, sha256)
 
     let private classifyEntry
         (parameters: Map<string, string>)
@@ -119,12 +125,14 @@ module internal GameSkills =
             acc // Any non-product row belongs to another delivery seam.
         elif entry.Id.StartsWith(reservedNamespacePrefix, System.StringComparison.Ordinal) then
             { acc with
-                Collisions = acc.Collisions @ [ entry.Id ] }
+                Collisions = acc.Collisions @ [ entry.Id ]
+            }
         else
             match ProductPredicate.evaluate entry.MaterializesWhen parameters with
             | None ->
                 { acc with
-                    PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ] }
+                    PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ]
+                }
             | Some false -> acc // deliberately not materialized off-profile (predicate held false)
             | Some true ->
                 // FS-GG/FS.GG.SDD#752 AC3 — ONE provenance class, ONE digest domain. The body
@@ -137,12 +145,14 @@ module internal GameSkills =
                 match Map.tryFind entry.Id bodies with
                 | Some body when Fsgg.SkillMirror.sha256 body = entry.Sha256 ->
                     { acc with
-                        Materializable = acc.Materializable @ [ entry.Id, body, entry.Sha256 ] }
+                        Materializable = acc.Materializable @ [ entry.Id, body, entry.Sha256 ]
+                    }
                 | _ ->
                     // Body absent or digest mismatch: cannot produce a verified body ⇒ fail
                     // closed, write nothing for this row (FR-003).
                     { acc with
-                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
+                        VerifyFailed = acc.VerifyFailed @ [ entry.Id ]
+                    }
 
     /// Plan owner-skill materialization from an explicit manifest text + id→body map, gated by the
     /// effective scaffold parameter set. The pure core of `plan`, factored out so the fail-closed
@@ -159,13 +169,16 @@ module internal GameSkills =
             match GameSkillManifest.tryParse text with
             | Error message ->
                 { empty with
-                    ManifestError = Some message }
+                    ManifestError = Some message
+                }
             | Ok manifest ->
                 let classified =
-                    ({ Collisions = []
-                       PredicateUnevaluated = []
-                       VerifyFailed = []
-                       Materializable = [] },
+                    ({
+                        Collisions = []
+                        PredicateUnevaluated = []
+                        VerifyFailed = []
+                        Materializable = []
+                     },
                      manifest.Skills |> List.sortBy (fun skill -> skill.Id))
                     ||> List.fold (classifyEntry parameters bodies)
 
@@ -187,27 +200,30 @@ module internal GameSkills =
                     |> List.map (fun (id, body, _) -> id, body)
                     |> Fsgg.SkillMirror.mirror Fsgg.Schemas.agentSkillRoots
 
-                { Writes =
-                    mirrorWrites
-                    |> List.map (fun write -> WriteFile(write.Path, write.Body, AgentGuidanceTarget))
-                  ProvenancePaths =
-                    mirrorWrites
-                    |> List.map (fun write ->
-                        let sha256 =
-                            Fsgg.SkillMirror.skillIdOfPath write.Path
-                            |> Option.bind (fun id -> Map.tryFind id shaById)
-                            |> Option.defaultValue ""
+                {
+                    Writes =
+                        mirrorWrites
+                        |> List.map (fun write -> WriteFile(write.Path, write.Body, AgentGuidanceTarget))
+                    ProvenancePaths =
+                        mirrorWrites
+                        |> List.map (fun write ->
+                            let sha256 =
+                                Fsgg.SkillMirror.skillIdOfPath write.Path
+                                |> Option.bind (fun id -> Map.tryFind id shaById)
+                                |> Option.defaultValue ""
 
-                        write.Path, sha256)
-                  MaterializedIds = classified.Materializable |> List.map (fun (id, _, _) -> id)
-                  MaterializedScopes =
-                    classified.Materializable
-                    |> List.choose (fun (id, _, _) -> Map.tryFind id scopeById |> Option.map (fun scope -> id, scope))
-                    |> Map.ofList
-                  VerifyFailedIds = classified.VerifyFailed
-                  PredicateUnevaluatedIds = classified.PredicateUnevaluated
-                  NamespaceCollisionIds = classified.Collisions
-                  ManifestError = None }
+                            write.Path, sha256)
+                    MaterializedIds = classified.Materializable |> List.map (fun (id, _, _) -> id)
+                    MaterializedScopes =
+                        classified.Materializable
+                        |> List.choose (fun (id, _, _) ->
+                            Map.tryFind id scopeById |> Option.map (fun scope -> id, scope))
+                        |> Map.ofList
+                    VerifyFailedIds = classified.VerifyFailed
+                    PredicateUnevaluatedIds = classified.PredicateUnevaluated
+                    NamespaceCollisionIds = classified.Collisions
+                    ManifestError = None
+                }
 
     /// Plan owner-skill materialization from the CLI's embedded package bytes, gated by the
     /// effective scaffold parameter set (`profile`, …) for `materializes-when` evaluation. Pure —

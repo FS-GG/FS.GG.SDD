@@ -15,22 +15,28 @@ open Xunit
 module ArtifactCodecTests =
 
     type private Toy =
-        { Name: string // required scalar
-          Note: string option // optional scalar (null-aware)
-          Tags: string list // inline list
-          Steps: string list } // scalar block
+        {
+            Name: string // required scalar
+            Note: string option // optional scalar (null-aware)
+            Tags: string list // inline list
+            Steps: string list
+        } // scalar block
 
     let private fields: ArtifactCodec.FieldCodec<Toy> list =
-        [ ArtifactCodec.requiredScalar "name" (fun m -> m.Name) (fun v m -> { m with Name = v })
-          ArtifactCodec.optionalScalar "note" (fun m -> m.Note) (fun v m -> { m with Note = v })
-          ArtifactCodec.inlineList "tags" (fun m -> m.Tags) (fun v m -> { m with Tags = v })
-          ArtifactCodec.scalarBlock "steps" (fun m -> m.Steps) (fun v m -> { m with Steps = v }) ]
+        [
+            ArtifactCodec.requiredScalar "name" (fun m -> m.Name) (fun v m -> { m with Name = v })
+            ArtifactCodec.optionalScalar "note" (fun m -> m.Note) (fun v m -> { m with Note = v })
+            ArtifactCodec.inlineList "tags" (fun m -> m.Tags) (fun v m -> { m with Tags = v })
+            ArtifactCodec.scalarBlock "steps" (fun m -> m.Steps) (fun v m -> { m with Steps = v })
+        ]
 
     let private seed =
-        { Name = ""
-          Note = None
-          Tags = []
-          Steps = [] }
+        {
+            Name = ""
+            Note = None
+            Tags = []
+            Steps = []
+        }
 
     let private roundtrip (m: Toy) =
         match ArtifactCodec.decode fields seed (ArtifactCodec.render fields m) with
@@ -40,10 +46,12 @@ module ArtifactCodecTests =
     [<Fact>]
     let ``round-trips a fully populated model`` () =
         let m =
-            { Name = "demo"
-              Note = Some "hello world"
-              Tags = [ "a"; "b" ]
-              Steps = [ "s1"; "s2" ] }
+            {
+                Name = "demo"
+                Note = Some "hello world"
+                Tags = [ "a"; "b" ]
+                Steps = [ "s1"; "s2" ]
+            }
 
         Assert.Equal<Toy>(m, roundtrip m)
 
@@ -52,10 +60,12 @@ module ArtifactCodecTests =
         let text =
             ArtifactCodec.render
                 fields
-                { Name = "demo"
-                  Note = None
-                  Tags = []
-                  Steps = [] }
+                {
+                    Name = "demo"
+                    Note = None
+                    Tags = []
+                    Steps = []
+                }
 
         Assert.Equal("name: demo", text) // only the required field, nothing else
         Assert.DoesNotContain("note", text)
@@ -89,7 +99,8 @@ module ArtifactCodecTests =
         let m =
             { seed with
                 Name = "demo"
-                Note = Some "null" }
+                Note = Some "null"
+            }
 
         Assert.Contains("\"null\"", ArtifactCodec.render fields m)
         Assert.Equal<Toy>(m, roundtrip m)
@@ -97,10 +108,12 @@ module ArtifactCodecTests =
     [<Fact>]
     let ``render is deterministic and ordered by the field list`` () =
         let m =
-            { Name = "demo"
-              Note = Some "n"
-              Tags = [ "a" ]
-              Steps = [ "s" ] }
+            {
+                Name = "demo"
+                Note = Some "n"
+                Tags = [ "a" ]
+                Steps = [ "s" ]
+            }
 
         let a = ArtifactCodec.render fields m
         Assert.Equal(a, ArtifactCodec.render fields m)
@@ -142,12 +155,16 @@ module ArtifactCodecTests =
     // --- new combinators wired for the evidence records (FS.GG.SDD#260) ---
 
     type private Kinded =
-        { Kind: string // defaulted scalar
-          Extra: string option }
+        {
+            Kind: string // defaulted scalar
+            Extra: string option
+        }
 
     let private kindedFields: ArtifactCodec.FieldCodec<Kinded> list =
-        [ ArtifactCodec.defaultedScalar "kind" "artifact" (fun m -> m.Kind) (fun v m -> { m with Kind = v })
-          ArtifactCodec.optionalScalar "extra" (fun m -> m.Extra) (fun v m -> { m with Extra = v }) ]
+        [
+            ArtifactCodec.defaultedScalar "kind" "artifact" (fun m -> m.Kind) (fun v m -> { m with Kind = v })
+            ArtifactCodec.optionalScalar "extra" (fun m -> m.Extra) (fun v m -> { m with Extra = v })
+        ]
 
     let private kindedSeed = { Kind = "artifact"; Extra = None }
 
@@ -176,31 +193,37 @@ module ArtifactCodecTests =
     // the byte behaviour is pinned before the declaration is refactored onto them.
 
     type private Typed =
-        { Kind: string // mappedScalar (total render/read pair)
-          Flag: bool // boolScalar
-          Refs: string list // refList (lenient, always-present, distinct+sorted)
-          Tags: string list } // alwaysInlineList
+        {
+            Kind: string // mappedScalar (total render/read pair)
+            Flag: bool // boolScalar
+            Refs: string list // refList (lenient, always-present, distinct+sorted)
+            Tags: string list
+        } // alwaysInlineList
 
     // A total mapping: unknown tokens fold to "other" (as parseEvidenceKind folds to Verification).
     let private kindOfStr s =
         if s = "a" || s = "b" then s else "other"
 
     let private typedFields: ArtifactCodec.FieldCodec<Typed> list =
-        [ ArtifactCodec.mappedScalar "kind" id kindOfStr (fun m -> m.Kind) (fun v m -> { m with Kind = v })
-          ArtifactCodec.boolScalar "flag" false (fun m -> m.Flag) (fun v m -> { m with Flag = v })
-          ArtifactCodec.refList
-              "refs"
-              (fun s -> if s.StartsWith "R" then Ok s else Error "bad")
-              id
-              (fun m -> m.Refs)
-              (fun v m -> { m with Refs = v })
-          ArtifactCodec.alwaysInlineList "tags" (fun m -> m.Tags) (fun v m -> { m with Tags = v }) ]
+        [
+            ArtifactCodec.mappedScalar "kind" id kindOfStr (fun m -> m.Kind) (fun v m -> { m with Kind = v })
+            ArtifactCodec.boolScalar "flag" false (fun m -> m.Flag) (fun v m -> { m with Flag = v })
+            ArtifactCodec.refList
+                "refs"
+                (fun s -> if s.StartsWith "R" then Ok s else Error "bad")
+                id
+                (fun m -> m.Refs)
+                (fun v m -> { m with Refs = v })
+            ArtifactCodec.alwaysInlineList "tags" (fun m -> m.Tags) (fun v m -> { m with Tags = v })
+        ]
 
     let private typedSeed =
-        { Kind = "other"
-          Flag = false
-          Refs = []
-          Tags = [] }
+        {
+            Kind = "other"
+            Flag = false
+            Refs = []
+            Tags = []
+        }
 
     [<Fact>]
     let ``mappedScalar round-trips a known token and folds an unknown one via ofStr`` () =
@@ -234,7 +257,8 @@ module ArtifactCodecTests =
             ArtifactCodec.render
                 typedFields
                 { typedSeed with
-                    Refs = [ "R2"; "R1"; "R2" ] }
+                    Refs = [ "R2"; "R1"; "R2" ]
+                }
         )
 
         Assert.Contains("refs: []", ArtifactCodec.render typedFields typedSeed) // empty -> [], never omitted
@@ -248,7 +272,8 @@ module ArtifactCodecTests =
             ArtifactCodec.render
                 typedFields
                 { typedSeed with
-                    Tags = [ "y"; "x"; "y" ] }
+                    Tags = [ "y"; "x"; "y" ]
+                }
         )
 
     // --- indented combinators: nested mapping + block sequence of sub-records (FS.GG.SDD#260) ---
@@ -259,25 +284,33 @@ module ArtifactCodecTests =
     type private Leaf = { A: string; B: string option }
 
     let private leafFields: ArtifactCodec.FieldCodec<Leaf> list =
-        [ ArtifactCodec.requiredScalar "a" (fun m -> m.A) (fun v m -> { m with A = v })
-          ArtifactCodec.optionalScalar "b" (fun m -> m.B) (fun v m -> { m with B = v }) ]
+        [
+            ArtifactCodec.requiredScalar "a" (fun m -> m.A) (fun v m -> { m with A = v })
+            ArtifactCodec.optionalScalar "b" (fun m -> m.B) (fun v m -> { m with B = v })
+        ]
 
     let private leafSeed = { A = ""; B = None }
 
     type private Parent =
-        { Name: string
-          Sub: Leaf
-          Items: Leaf list }
+        {
+            Name: string
+            Sub: Leaf
+            Items: Leaf list
+        }
 
     let private parentFields: ArtifactCodec.FieldCodec<Parent> list =
-        [ ArtifactCodec.requiredScalar "name" (fun m -> m.Name) (fun v m -> { m with Name = v })
-          ArtifactCodec.nested "sub" leafFields leafSeed (fun m -> m.Sub) (fun v m -> { m with Sub = v })
-          ArtifactCodec.recordList "items" leafFields leafSeed (fun m -> m.Items) (fun v m -> { m with Items = v }) ]
+        [
+            ArtifactCodec.requiredScalar "name" (fun m -> m.Name) (fun v m -> { m with Name = v })
+            ArtifactCodec.nested "sub" leafFields leafSeed (fun m -> m.Sub) (fun v m -> { m with Sub = v })
+            ArtifactCodec.recordList "items" leafFields leafSeed (fun m -> m.Items) (fun v m -> { m with Items = v })
+        ]
 
     let private parentSeed =
-        { Name = ""
-          Sub = leafSeed
-          Items = [] }
+        {
+            Name = ""
+            Sub = leafSeed
+            Items = []
+        }
 
     [<Fact>]
     let ``nested renders key then two-space-indented sub-fields`` () =
@@ -286,7 +319,8 @@ module ArtifactCodecTests =
                 parentFields
                 { parentSeed with
                     Name = "p"
-                    Sub = { A = "x"; B = Some "y" } }
+                    Sub = { A = "x"; B = Some "y" }
+                }
 
         Assert.Contains("sub:\n  a: x\n  b: y", text) // sub-fields indented exactly two spaces
         Assert.Contains("items: []", text) // empty recordList stays present
@@ -298,7 +332,8 @@ module ArtifactCodecTests =
                 parentFields
                 { parentSeed with
                     Name = "p"
-                    Items = [ { A = "x"; B = Some "y" }; { A = "z"; B = None } ] }
+                    Items = [ { A = "x"; B = Some "y" }; { A = "z"; B = None } ]
+                }
 
         // First field on the `- ` marker, the rest two spaces deeper; an absent optional omits its line.
         Assert.Contains("items:\n  - a: x\n    b: y\n  - a: z", text)
@@ -306,9 +341,11 @@ module ArtifactCodecTests =
     [<Fact>]
     let ``nested + recordList round-trip through decode`` () =
         let model =
-            { Name = "p"
-              Sub = { A = "x"; B = Some "y" }
-              Items = [ { A = "m"; B = None }; { A = "n"; B = Some "o" } ] }
+            {
+                Name = "p"
+                Sub = { A = "x"; B = Some "y" }
+                Items = [ { A = "m"; B = None }; { A = "n"; B = Some "o" } ]
+            }
 
         match ArtifactCodec.decode parentFields parentSeed (ArtifactCodec.render parentFields model) with
         | Ok back -> Assert.Equal<Parent>(model, back)
@@ -322,8 +359,10 @@ module ArtifactCodecTests =
     type private Holder = { D: Field option }
 
     let private draftFields: ArtifactCodec.FieldCodec<Draft> list =
-        [ ArtifactCodec.optionalScalar "x" (fun m -> m.X) (fun v m -> { m with X = v })
-          ArtifactCodec.optionalScalar "y" (fun m -> m.Y) (fun v m -> { m with Y = v }) ]
+        [
+            ArtifactCodec.optionalScalar "x" (fun m -> m.X) (fun v m -> { m with X = v })
+            ArtifactCodec.optionalScalar "y" (fun m -> m.Y) (fun v m -> { m with Y = v })
+        ]
 
     let private liftField (d: Draft) =
         match d.X, d.Y with
@@ -331,14 +370,16 @@ module ArtifactCodecTests =
         | _ -> None
 
     let private holderFields: ArtifactCodec.FieldCodec<Holder> list =
-        [ ArtifactCodec.optionalNestedVia
-              "d"
-              draftFields
-              { X = None; Y = None }
-              liftField
-              (fun (f: Field) -> { X = Some f.X; Y = Some f.Y })
-              (fun m -> m.D)
-              (fun v m -> { m with D = v }) ]
+        [
+            ArtifactCodec.optionalNestedVia
+                "d"
+                draftFields
+                { X = None; Y = None }
+                liftField
+                (fun (f: Field) -> { X = Some f.X; Y = Some f.Y })
+                (fun m -> m.D)
+                (fun v m -> { m with D = v })
+        ]
 
     [<Fact>]
     let ``optionalNestedVia rejects a bare-null draft and round-trips a populated one`` () =
@@ -425,36 +466,43 @@ module ArtifactCodecTests =
                 Uri = Some "urival"
                 Digest = Some "digestval"
                 RelatedSourceId = Some "relatedval"
-                Result = Some "resultval" }
+                Result = Some "resultval"
+            }
 
         assertCoupled
             [ "SourceLocation" ]
             typeof<EvidenceSourceReference>
             EvidenceCodec.sourceRefFields
             model
-            [ "ReferenceId", [ "id", "id: idval" ]
-              "Kind", [ "kind", "kind: kindval" ]
-              "Path", [ "path", "path: pathval" ]
-              "Uri", [ "uri", "uri: urival" ]
-              "Digest", [ "digest", "digest: digestval" ]
-              "RelatedSourceId", [ "relatedSourceId", "relatedSourceId: relatedval" ]
-              "Result", [ "result", "result: resultval" ] ]
+            [
+                "ReferenceId", [ "id", "id: idval" ]
+                "Kind", [ "kind", "kind: kindval" ]
+                "Path", [ "path", "path: pathval" ]
+                "Uri", [ "uri", "uri: urival" ]
+                "Digest", [ "digest", "digest: digestval" ]
+                "RelatedSourceId", [ "relatedSourceId", "relatedSourceId: relatedval" ]
+                "Result", [ "result", "result: resultval" ]
+            ]
 
     [<Fact>]
     let ``disclosureFields couple to every authored SyntheticDisclosure field (T031/#290)`` () =
         // The codec operates over the null-aware `DisclosureDraft`, whose fields mirror the authored
         // `SyntheticDisclosure` one-for-one (the coupling is asserted against the authored record).
         let model: EvidenceCodec.DisclosureDraft =
-            { StandsInFor = Some "standsval"
-              Reason = Some "reasonval" }
+            {
+                StandsInFor = Some "standsval"
+                Reason = Some "reasonval"
+            }
 
         assertCoupled
             []
             typeof<SyntheticDisclosure>
             EvidenceCodec.disclosureFields
             model
-            [ "StandsInFor", [ "standsInFor", "standsInFor: standsval" ]
-              "Reason", [ "reason", "reason: reasonval" ] ]
+            [
+                "StandsInFor", [ "standsInFor", "standsInFor: standsval" ]
+                "Reason", [ "reason", "reason: reasonval" ]
+            ]
 
     [<Fact>]
     let ``declarationFields couple to every authored EvidenceDeclaration field (T031/#290)`` () =
@@ -469,8 +517,10 @@ module ArtifactCodecTests =
                 Id = createEvidenceId "EV009" |> orFail "evId"
                 Kind = EvidenceKind.Verification
                 Subject =
-                    { SubjectType = "subjtypeval"
-                      Id = "subjidval" }
+                    {
+                        SubjectType = "subjtypeval"
+                        Id = "subjidval"
+                    }
                 TaskRefs = [ createTaskId "T007" |> orFail "taskId" ]
                 RequirementRefs = [ createRequirementId "FR-007" |> orFail "reqId" ]
                 AcceptanceScenarioRefs = [ createAcceptanceScenarioId "AC-007" |> orFail "acId" ]
@@ -480,31 +530,40 @@ module ArtifactCodecTests =
                 ObligationRefs = [ "obligval" ]
                 ArtifactRefs = [ artifactRef ]
                 SourceRefs =
-                    [ { EvidenceCodec.sourceRefSeed with
-                          Kind = "srckindval" } ]
+                    [
+                        { EvidenceCodec.sourceRefSeed with
+                            Kind = "srckindval"
+                        }
+                    ]
                 Result = "advisory"
                 Synthetic = true
                 SyntheticDisclosure =
                     Some
-                        { StandsInFor = "standsval"
-                          Reason = "reasonval" }
+                        {
+                            StandsInFor = "standsval"
+                            Reason = "reasonval"
+                        }
                 ObservedRun =
                     Some
-                        { Source = "observedsourceval"
-                          Digest = "sha256:" + String.replicate 64 "b"
-                          DigestContract = "exact-bytes-v1"
-                          Outcome = "passed"
-                          Passed = 7
-                          Failed = 0
-                          Skipped = 3 }
+                        {
+                            Source = "observedsourceval"
+                            Digest = "sha256:" + String.replicate 64 "b"
+                            DigestContract = "exact-bytes-v1"
+                            Outcome = "passed"
+                            Passed = 7
+                            Failed = 0
+                            Skipped = 3
+                        }
                 RecordReceipt =
                     Some
-                        { Kind = "decision"
-                          Locator = "docs/recordlocatorval.md"
-                          LocatorContract = "durable-locator-v1"
-                          Digest = "sha256:" + String.replicate 64 "c"
-                          Statement = "statementval"
-                          RecordedAt = "2026-08-15T00:00:00Z" }
+                        {
+                            Kind = "decision"
+                            Locator = "docs/recordlocatorval.md"
+                            LocatorContract = "durable-locator-v1"
+                            Digest = "sha256:" + String.replicate 64 "c"
+                            Statement = "statementval"
+                            RecordedAt = "2026-08-15T00:00:00Z"
+                        }
                 JourneyReceipt =
                     Some
                         { EvidenceCodec.journeyReceiptSeed with
@@ -528,59 +587,68 @@ module ArtifactCodecTests =
                             ObservedReportSource = "journeyreportval"
                             ObservedReportDigest = "sha256:" + String.replicate 64 "6"
                             ObservedTestName = "testnameval"
-                            ObservedTestOutcome = "passed" }
+                            ObservedTestOutcome = "passed"
+                        }
                 PerformanceBudget =
                     Some
-                        { ArtifactPath = "readiness/perfval.txt"
-                          Intent = None
-                          TargetFps = 61
-                          WorkloadIds = [ "workloadval" ]
-                          StressWorkloadIds = [ "stressval" ]
-                          WorkloadDefinitionDigests = [ "workloadval=sha256:workload"; "stressval=sha256:stress" ]
-                          CurrencyToken = "commit:abc123"
-                          CapturedAfterUtc = "2026-07-25T00:00:00Z"
-                          MaxP95Ms = 16.7m
-                          MaxP99Ms = 25.1m
-                          MaxCatchUpFrames = 2
-                          MeasurementScope = "scopeperfval"
-                          RequiredCapability = "capabilityval"
-                          LiveCompositorRequired = true
-                          DeferralIssue = Some "FS-GG/Game#321" }
+                        {
+                            ArtifactPath = "readiness/perfval.txt"
+                            Intent = None
+                            TargetFps = 61
+                            WorkloadIds = [ "workloadval" ]
+                            StressWorkloadIds = [ "stressval" ]
+                            WorkloadDefinitionDigests = [ "workloadval=sha256:workload"; "stressval=sha256:stress" ]
+                            CurrencyToken = "commit:abc123"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
+                            MaxP95Ms = 16.7m
+                            MaxP99Ms = 25.1m
+                            MaxCatchUpFrames = 2
+                            MeasurementScope = "scopeperfval"
+                            RequiredCapability = "capabilityval"
+                            LiveCompositorRequired = true
+                            DeferralIssue = Some "FS-GG/Game#321"
+                        }
                 Rationale = Some "rationaleval"
                 Owner = Some "ownerval"
                 Scope = Some "scopeval"
                 LaterLifecycleVisibility = Some "visibilityval"
-                Notes = [ "noteval" ] }
+                Notes = [ "noteval" ]
+            }
 
         assertCoupled
             [ "Source"; "SourceLocation" ]
             typeof<EvidenceDeclaration>
             EvidenceCodec.declarationFields
             model
-            [ "Id", [ "id", "id: EV009" ]
-              "Kind", [ "kind", "kind: verification" ]
-              "Subject", [ "subject", "subject:\n  type: subjtypeval" ]
-              "TaskRefs", [ "taskRefs", "taskRefs: [T007]" ]
-              "RequirementRefs", [ "requirementRefs", "requirementRefs: [FR-007]" ]
-              "AcceptanceScenarioRefs", [ "acceptanceScenarioRefs", "acceptanceScenarioRefs: [AC-007]" ]
-              "ClarificationDecisionRefs", [ "clarificationDecisionRefs", "clarificationDecisionRefs: [DEC-007]" ]
-              "ChecklistResultRefs", [ "checklistResultRefs", "checklistResultRefs: [CR-007]" ]
-              "PlanDecisionRefs", [ "planDecisionRefs", "planDecisionRefs: [PD-007]" ]
-              "ObligationRefs", [ "obligationRefs", "obligationRefs: [obligval]" ]
-              "ArtifactRefs", [ "artifacts", $"artifacts: [{artifactRef.Path}]" ]
-              "SourceRefs", [ "sourceRefs", "sourceRefs:\n  - kind: srckindval" ]
-              "Result", [ "result", "result: advisory" ]
-              "Synthetic", [ "synthetic", "synthetic: true" ]
-              "SyntheticDisclosure", [ "syntheticDisclosure", "syntheticDisclosure:\n  standsInFor: standsval" ]
-              "ObservedRun", [ "observedRun", "observedRun:\n  source: observedsourceval" ]
-              "RecordReceipt", [ "recordReceipt", "recordReceipt:\n  kind: decision" ]
-              "JourneyReceipt", [ "journeyReceipt", "journeyReceipt:\n  schemaVersion: 1" ]
-              "PerformanceBudget", [ "performanceBudget", "performanceBudget:\n  artifactPath: readiness/perfval.txt" ]
-              "Rationale", [ "rationale", "rationale: rationaleval" ]
-              "Owner", [ "owner", "owner: ownerval" ]
-              "Scope", [ "scope", "scope: scopeval" ]
-              "LaterLifecycleVisibility", [ "laterLifecycleVisibility", "laterLifecycleVisibility: visibilityval" ]
-              "Notes", [ "notes", "notes: [noteval]" ] ]
+            [
+                "Id", [ "id", "id: EV009" ]
+                "Kind", [ "kind", "kind: verification" ]
+                "Subject", [ "subject", "subject:\n  type: subjtypeval" ]
+                "TaskRefs", [ "taskRefs", "taskRefs: [T007]" ]
+                "RequirementRefs", [ "requirementRefs", "requirementRefs: [FR-007]" ]
+                "AcceptanceScenarioRefs", [ "acceptanceScenarioRefs", "acceptanceScenarioRefs: [AC-007]" ]
+                "ClarificationDecisionRefs", [ "clarificationDecisionRefs", "clarificationDecisionRefs: [DEC-007]" ]
+                "ChecklistResultRefs", [ "checklistResultRefs", "checklistResultRefs: [CR-007]" ]
+                "PlanDecisionRefs", [ "planDecisionRefs", "planDecisionRefs: [PD-007]" ]
+                "ObligationRefs", [ "obligationRefs", "obligationRefs: [obligval]" ]
+                "ArtifactRefs", [ "artifacts", $"artifacts: [{artifactRef.Path}]" ]
+                "SourceRefs", [ "sourceRefs", "sourceRefs:\n  - kind: srckindval" ]
+                "Result", [ "result", "result: advisory" ]
+                "Synthetic", [ "synthetic", "synthetic: true" ]
+                "SyntheticDisclosure", [ "syntheticDisclosure", "syntheticDisclosure:\n  standsInFor: standsval" ]
+                "ObservedRun", [ "observedRun", "observedRun:\n  source: observedsourceval" ]
+                "RecordReceipt", [ "recordReceipt", "recordReceipt:\n  kind: decision" ]
+                "JourneyReceipt", [ "journeyReceipt", "journeyReceipt:\n  schemaVersion: 1" ]
+                "PerformanceBudget",
+                [
+                    "performanceBudget", "performanceBudget:\n  artifactPath: readiness/perfval.txt"
+                ]
+                "Rationale", [ "rationale", "rationale: rationaleval" ]
+                "Owner", [ "owner", "owner: ownerval" ]
+                "Scope", [ "scope", "scope: scopeval" ]
+                "LaterLifecycleVisibility", [ "laterLifecycleVisibility", "laterLifecycleVisibility: visibilityval" ]
+                "Notes", [ "notes", "notes: [noteval]" ]
+            ]
 
     [<Fact>]
     let ``taskFields couple to every authored WorkTask field (T031/#290)`` () =
@@ -596,24 +664,29 @@ module ArtifactCodecTests =
                 Decisions = [ createDecisionId "DEC-007" |> orFail "decId" ]
                 SourceIds = [ "SRCIDVAL" ]
                 RequiredSkills = [ "skillval" ]
-                RequiredEvidence = [ createEvidenceId "EV007" |> orFail "evId" ] }
+                RequiredEvidence = [ createEvidenceId "EV007" |> orFail "evId" ]
+            }
 
         assertCoupled
             [ "Id"; "Source"; "SourceLocation" ]
             typeof<WorkTask>
             TaskCodec.taskFields
             model
-            [ "Title", [ "title", "title: titleval" ]
-              "Status",
-              [ "status", "status: skipped"
-                "skipRationale", "skipRationale: skiprationaleval" ]
-              "Owner", [ "owner", "owner: ownerval" ]
-              "Dependencies", [ "dependencies", "dependencies: [T007]" ]
-              "Requirements", [ "requirements", "requirements: [FR-007]" ]
-              "Decisions", [ "decisions", "decisions: [DEC-007]" ]
-              "SourceIds", [ "sourceIds", "sourceIds: [SRCIDVAL]" ]
-              "RequiredSkills", [ "requiredSkills", "requiredSkills: [skillval]" ]
-              "RequiredEvidence", [ "requiredEvidence", "requiredEvidence: [EV007]" ] ]
+            [
+                "Title", [ "title", "title: titleval" ]
+                "Status",
+                [
+                    "status", "status: skipped"
+                    "skipRationale", "skipRationale: skiprationaleval"
+                ]
+                "Owner", [ "owner", "owner: ownerval" ]
+                "Dependencies", [ "dependencies", "dependencies: [T007]" ]
+                "Requirements", [ "requirements", "requirements: [FR-007]" ]
+                "Decisions", [ "decisions", "decisions: [DEC-007]" ]
+                "SourceIds", [ "sourceIds", "sourceIds: [SRCIDVAL]" ]
+                "RequiredSkills", [ "requiredSkills", "requiredSkills: [skillval]" ]
+                "RequiredEvidence", [ "requiredEvidence", "requiredEvidence: [EV007]" ]
+            ]
 
     // === The ArtifactCodec migration boundary is complete (ADR-0002 §Note; re-scopes #338) ===
     // Every authored/lifecycle artifact is round-tripped by exactly ONE mechanism. This manifest is
@@ -628,20 +701,22 @@ module ArtifactCodecTests =
         | NotRoundTripped // readiness JSON / read-only / generated view — not an authored round-trip artifact
 
     let private migrationBoundary: (string * RoundTrip) list =
-        [ "tasks.yml", Codec
-          "evidence.yml", Codec
-          "spec.md", TextSpaceIdentity
-          "clarifications.md", TextSpaceIdentity
-          "checklist.md", TextSpaceIdentity
-          "plan.md", TextSpaceIdentity
-          "charter.md", TextSpaceIdentity
-          "analysis.json", NotRoundTripped
-          "verify.json", NotRoundTripped
-          "ship.json", NotRoundTripped
-          "registryDocument", NotRoundTripped
-          "config", NotRoundTripped
-          "requirementModel", NotRoundTripped
-          "guidance", NotRoundTripped ]
+        [
+            "tasks.yml", Codec
+            "evidence.yml", Codec
+            "spec.md", TextSpaceIdentity
+            "clarifications.md", TextSpaceIdentity
+            "checklist.md", TextSpaceIdentity
+            "plan.md", TextSpaceIdentity
+            "charter.md", TextSpaceIdentity
+            "analysis.json", NotRoundTripped
+            "verify.json", NotRoundTripped
+            "ship.json", NotRoundTripped
+            "registryDocument", NotRoundTripped
+            "config", NotRoundTripped
+            "requirementModel", NotRoundTripped
+            "guidance", NotRoundTripped
+        ]
 
     [<Fact>]
     let ``the ArtifactCodec migration boundary is complete`` () =

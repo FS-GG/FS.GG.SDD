@@ -16,7 +16,8 @@ module CommandReportJsonTests =
 
         let request =
             { TestSupport.request Init root with
-                DryRun = true }
+                DryRun = true
+            }
 
         TestSupport.runRequest request
 
@@ -86,7 +87,8 @@ module CommandReportJsonTests =
 
         let request =
             { TestSupport.charterRequest root "004-charter-command" "Charter Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -106,7 +108,8 @@ module CommandReportJsonTests =
 
         let request =
             { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -132,12 +135,14 @@ module CommandReportJsonTests =
 
         TestSupport.runRequest
             { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with
-                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+                InputText = Some TestSupport.specifyIntentWithAmbiguity
+            }
         |> ignore
 
         let request =
             { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -164,12 +169,14 @@ module CommandReportJsonTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         let request =
             { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -192,14 +199,16 @@ module CommandReportJsonTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore
 
         let request =
             { TestSupport.planRequest root "008-plan-command" "Plan Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -220,7 +229,8 @@ module CommandReportJsonTests =
 
         let request =
             { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport

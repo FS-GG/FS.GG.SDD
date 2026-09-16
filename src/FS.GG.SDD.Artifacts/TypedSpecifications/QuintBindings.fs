@@ -6,22 +6,28 @@ open System.Security.Cryptography
 open System.Text
 
 type QuintBindingDiagnostic =
-    { Code: string
-      Path: string
-      Message: string }
+    {
+        Code: string
+        Path: string
+        Message: string
+    }
 
 type QuintGeneratedBindings =
-    { CanonicalJson: string
-      ContractFingerprint: string
-      Identifiers: string list
-      FSharpSource: string
-      FableSource: string }
+    {
+        CanonicalJson: string
+        ContractFingerprint: string
+        Identifiers: string list
+        FSharpSource: string
+        FableSource: string
+    }
 
 module private BindingInternal =
     let diagnostic code path message : QuintBindingDiagnostic =
-        { Code = code
-          Path = path
-          Message = message }
+        {
+            Code = code
+            Path = path
+            Message = message
+        }
 
     let sortDiagnostics diagnostics =
         diagnostics
@@ -50,71 +56,73 @@ module private BindingInternal =
 
     let reserved =
         set
-            [ "Abstract"
-              "And"
-              "As"
-              "Assert"
-              "Base"
-              "Begin"
-              "Class"
-              "Default"
-              "Delegate"
-              "Do"
-              "Done"
-              "Downcast"
-              "Downto"
-              "Elif"
-              "Else"
-              "End"
-              "Exception"
-              "Extern"
-              "False"
-              "Finally"
-              "Fixed"
-              "For"
-              "Fun"
-              "Function"
-              "Global"
-              "If"
-              "In"
-              "Inherit"
-              "Inline"
-              "Interface"
-              "Internal"
-              "Lazy"
-              "Let"
-              "Match"
-              "Member"
-              "Module"
-              "Mutable"
-              "Namespace"
-              "New"
-              "Not"
-              "Null"
-              "Of"
-              "Open"
-              "Or"
-              "Override"
-              "Private"
-              "Public"
-              "Rec"
-              "Return"
-              "Sig"
-              "Static"
-              "Struct"
-              "Then"
-              "To"
-              "True"
-              "Try"
-              "Type"
-              "Upcast"
-              "Use"
-              "Val"
-              "Void"
-              "When"
-              "While"
-              "With"
-              "Yield" ]
+            [
+                "Abstract"
+                "And"
+                "As"
+                "Assert"
+                "Base"
+                "Begin"
+                "Class"
+                "Default"
+                "Delegate"
+                "Do"
+                "Done"
+                "Downcast"
+                "Downto"
+                "Elif"
+                "Else"
+                "End"
+                "Exception"
+                "Extern"
+                "False"
+                "Finally"
+                "Fixed"
+                "For"
+                "Fun"
+                "Function"
+                "Global"
+                "If"
+                "In"
+                "Inherit"
+                "Inline"
+                "Interface"
+                "Internal"
+                "Lazy"
+                "Let"
+                "Match"
+                "Member"
+                "Module"
+                "Mutable"
+                "Namespace"
+                "New"
+                "Not"
+                "Null"
+                "Of"
+                "Open"
+                "Or"
+                "Override"
+                "Private"
+                "Public"
+                "Rec"
+                "Return"
+                "Sig"
+                "Static"
+                "Struct"
+                "Then"
+                "To"
+                "True"
+                "Try"
+                "Type"
+                "Upcast"
+                "Use"
+                "Val"
+                "Void"
+                "When"
+                "While"
+                "With"
+                "Yield"
+            ]
 
     let identifier (wireName: string) =
         let words =
@@ -188,34 +196,36 @@ module private BindingInternal =
                     StringComparer.Ordinal.Compare(kindText left.Kind, kindText right.Kind))
 
         let bindingDiagnostics =
-            [ if String.IsNullOrWhiteSpace moduleName || identifier moduleName <> moduleName then
-                  diagnostic
-                      "QBD-MODULE-NAME"
-                      "$.moduleName"
-                      "Module name must already be one generated PascalCase identifier."
+            [
+                if String.IsNullOrWhiteSpace moduleName || identifier moduleName <> moduleName then
+                    diagnostic
+                        "QBD-MODULE-NAME"
+                        "$.moduleName"
+                        "Module name must already be one generated PascalCase identifier."
 
-              for id, items in rows |> List.groupBy (fun item -> item.Id) |> List.sortBy fst do
-                  if items.Length > 1 then
-                      diagnostic
-                          "QBD-CATALOGUE-ID-DUPLICATE"
-                          "$.catalogue"
-                          $"Catalogue identity '%s{id}' cannot generate more than one binding."
+                for id, items in rows |> List.groupBy (fun item -> item.Id) |> List.sortBy fst do
+                    if items.Length > 1 then
+                        diagnostic
+                            "QBD-CATALOGUE-ID-DUPLICATE"
+                            "$.catalogue"
+                            $"Catalogue identity '%s{id}' cannot generate more than one binding."
 
-              for generated, items in rows |> List.groupBy (fun item -> identifier item.Id) |> List.sortBy fst do
-                  if String.IsNullOrEmpty generated then
-                      let ids = items |> List.map (fun item -> item.Id) |> List.sort |> String.concat ", "
+                for generated, items in rows |> List.groupBy (fun item -> identifier item.Id) |> List.sortBy fst do
+                    if String.IsNullOrEmpty generated then
+                        let ids = items |> List.map (fun item -> item.Id) |> List.sort |> String.concat ", "
 
-                      diagnostic
-                          "QBD-IDENTIFIER-EMPTY"
-                          "$.catalogue"
-                          $"Catalogue identities [%s{ids}] do not contain an ASCII letter or digit."
-                  elif items.Length > 1 then
-                      let ids = items |> List.map (fun item -> item.Id) |> List.sort |> String.concat ", "
+                        diagnostic
+                            "QBD-IDENTIFIER-EMPTY"
+                            "$.catalogue"
+                            $"Catalogue identities [%s{ids}] do not contain an ASCII letter or digit."
+                    elif items.Length > 1 then
+                        let ids = items |> List.map (fun item -> item.Id) |> List.sort |> String.concat ", "
 
-                      diagnostic
-                          "QBD-IDENTIFIER-COLLISION"
-                          "$.catalogue"
-                          $"Catalogue identities [%s{ids}] collide as generated identifier '%s{generated}'." ]
+                        diagnostic
+                            "QBD-IDENTIFIER-COLLISION"
+                            "$.catalogue"
+                            $"Catalogue identities [%s{ids}] collide as generated identifier '%s{generated}'."
+            ]
 
         sortDiagnostics (contractDiagnostics @ bindingDiagnostics)
 
@@ -307,11 +317,13 @@ module QuintBindings =
                     |> List.map (fun row -> BindingInternal.identifier row.Id)
 
                 Ok
-                    { CanonicalJson = canonicalJson
-                      ContractFingerprint = fingerprint
-                      Identifiers = identifiers
-                      FSharpSource = source
-                      FableSource = source }
+                    {
+                        CanonicalJson = canonicalJson
+                        ContractFingerprint = fingerprint
+                        Identifiers = identifiers
+                        FSharpSource = source
+                        FableSource = source
+                    }
 
 module private BindingV2Internal =
     let rec valueSource =
@@ -401,8 +413,10 @@ module private BindingV2Internal =
         |> ignore
 
         let ids =
-            [ yield! contract.Exports |> List.map _.Id
-              yield! contract.Catalogue |> List.map _.Id ]
+            [
+                yield! contract.Exports |> List.map _.Id
+                yield! contract.Catalogue |> List.map _.Id
+            ]
             |> List.distinct
             |> List.sort
 
@@ -471,32 +485,36 @@ module QuintBindingsV2 =
             |> List.map (fun item -> BindingInternal.diagnostic item.Code item.Path item.Message)
 
         let ids =
-            [ yield! contract.Exports |> List.map _.Id
-              yield! contract.Catalogue |> List.map _.Id ]
+            [
+                yield! contract.Exports |> List.map _.Id
+                yield! contract.Catalogue |> List.map _.Id
+            ]
 
         let bindingDiagnostics =
-            [ if
-                  String.IsNullOrWhiteSpace moduleName
-                  || BindingInternal.identifier moduleName <> moduleName
-              then
-                  yield
-                      BindingInternal.diagnostic
-                          "QBD-MODULE-NAME"
-                          "$.moduleName"
-                          "Module name must already be one generated PascalCase identifier."
-              for generated, rows in ids |> List.groupBy BindingInternal.identifier |> List.sortBy fst do
-                  if String.IsNullOrEmpty generated then
-                      yield
-                          BindingInternal.diagnostic
-                              "QBD-IDENTIFIER-EMPTY"
-                              "$.catalogue"
-                              "An identity cannot generate an F# identifier."
-                  elif rows.Length > 1 then
-                      yield
-                          BindingInternal.diagnostic
-                              "QBD-IDENTIFIER-COLLISION"
-                              "$.catalogue"
-                              $"Identities collide as generated identifier '%s{generated}'." ]
+            [
+                if
+                    String.IsNullOrWhiteSpace moduleName
+                    || BindingInternal.identifier moduleName <> moduleName
+                then
+                    yield
+                        BindingInternal.diagnostic
+                            "QBD-MODULE-NAME"
+                            "$.moduleName"
+                            "Module name must already be one generated PascalCase identifier."
+                for generated, rows in ids |> List.groupBy BindingInternal.identifier |> List.sortBy fst do
+                    if String.IsNullOrEmpty generated then
+                        yield
+                            BindingInternal.diagnostic
+                                "QBD-IDENTIFIER-EMPTY"
+                                "$.catalogue"
+                                "An identity cannot generate an F# identifier."
+                    elif rows.Length > 1 then
+                        yield
+                            BindingInternal.diagnostic
+                                "QBD-IDENTIFIER-COLLISION"
+                                "$.catalogue"
+                                $"Identities collide as generated identifier '%s{generated}'."
+            ]
 
         match BindingInternal.sortDiagnostics (contractDiagnostics @ bindingDiagnostics) with
         | diagnostics when not diagnostics.IsEmpty -> Error diagnostics
@@ -512,8 +530,10 @@ module QuintBindingsV2 =
                 let source = BindingV2Internal.source moduleName fingerprint canonicalJson contract
 
                 Ok
-                    { CanonicalJson = canonicalJson
-                      ContractFingerprint = fingerprint
-                      Identifiers = ids |> List.distinct |> List.sort |> List.map BindingInternal.identifier
-                      FSharpSource = source
-                      FableSource = source }
+                    {
+                        CanonicalJson = canonicalJson
+                        ContractFingerprint = fingerprint
+                        Identifiers = ids |> List.distinct |> List.sort |> List.map BindingInternal.identifier
+                        FSharpSource = source
+                        FableSource = source
+                    }

@@ -122,14 +122,16 @@ module internal ReportAssembly =
             |> Option.map (fun summary ->
                 summary.ProducedPaths
                 |> List.map (fun path ->
-                    { Path = path
-                      Kind = "product"
-                      Ownership = ArtifactOwner.GeneratedProduct |> ArtifactRefModule.ownerValue
-                      Operation = ArtifactOperation.Create
-                      BeforeDigest = None
-                      AfterDigest = None
-                      SafeWriteDecision = "externalProvider"
-                      DiagnosticIds = [] }))
+                    {
+                        Path = path
+                        Kind = "product"
+                        Ownership = ArtifactOwner.GeneratedProduct |> ArtifactRefModule.ownerValue
+                        Operation = ArtifactOperation.Create
+                        BeforeDigest = None
+                        AfterDigest = None
+                        SafeWriteDecision = "externalProvider"
+                        DiagnosticIds = []
+                    }))
             |> Option.defaultValue []
 
         let changes =
@@ -149,105 +151,110 @@ module internal ReportAssembly =
                 reportOutcome
                 model.InterpretedEffects
 
-        { SchemaVersion = 1
-          // Additive optional command blocks/fields bump the semantic reportVersion one minor while
-          // `schemaVersion` stays Stable (1): 1.1.0 added `lifecycleStatus` (feature 084); 1.2.0
-          // adds `surface` (feature 086); 1.3.0 adds `surface.classification` (feature 087).
-          // A *removal* forces a major bump (versioning-policy.md, "Change class to bump rule"):
-          // feature 093 (FS-GG/FS.GG.SDD#164) removed `specification.unresolvedAmbiguityCount`, so
-          // reportVersion goes 1.3.0 -> 2.0.0. 2.1.0 then adds `surface.versionBump` (feature 094).
-          // 2.2.0 adds the top-level `coherent` fact (FS-GG/FS.GG.SDD#183). 2.3.0 adds the top-level
-          // `toolVersion` fact (FS-GG/FS.GG.SDD#305). 2.4.0 adds `scaffold.toolManifestOutcome`
-          // (FS-GG/FS.GG.SDD#315). 2.5.0 adds `doctor.requiredMinimumCliVersionSource`
-          // (FS-GG/FS.GG.SDD#313). 2.6.0 adds `dependencySurface` (feature 105, FS.GG.SDD#569).
-          ReportVersion = "2.6.0"
-          // The version of the CLI that produced this report, so a stale toolchain is legible in the
-          // artifact rather than only in the shell that ran it (FS-GG/FS.GG.SDD#305). Same source as
-          // `fsgg-sdd --version`, injected into the request at the CLI edge.
-          ToolVersion = model.Request.GeneratorVersion.Version
-          Command = model.Request.Command
-          // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
-          // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not
-          // echo the request root here (feature 063, FR-007).
-          ProjectRoot = "."
-          OutputFormat = model.Request.OutputFormat
-          DryRun = model.Request.DryRun
-          Outcome = reportOutcome
-          Coherent = coherent reportOutcome changes
-          WorkId = model.Request.WorkId
-          ChangedArtifacts = changes
-          Specification = model.Specification
-          Clarification = model.Clarification
-          Checklist = model.Checklist
-          Plan = model.Plan
-          Tasks = model.Tasks
-          Analysis = model.Analysis
-          Evidence = model.Evidence
-          Verification = model.Verification
-          Ship = model.Ship
-          AgentGuidance = model.AgentGuidance
-          Refresh = model.Refresh
-          Scaffold = model.Scaffold
-          Doctor = model.Doctor
-          Upgrade = model.Upgrade
-          Lint = model.Lint
-          Surface = model.Surface
-          DependencySurface = model.DependencySurface
-          GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
-          Diagnostics = diagnostics
-          GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction =
-            nextAction
-                diagnostics
-                reportOutcome
-                lifecycleStatus
-                model.Request
-                model.Checklist
-                model.Plan
-                model.Tasks
-                model.Analysis
-                model.Evidence
-                model.Verification
-                model.Ship
-                model.AgentGuidance
-                model.Refresh
-                model.Doctor
-                model.Upgrade
-          Help = None
-          LifecycleStatus = lifecycleStatus }
+        {
+            SchemaVersion = 1
+            // Additive optional command blocks/fields bump the semantic reportVersion one minor while
+            // `schemaVersion` stays Stable (1): 1.1.0 added `lifecycleStatus` (feature 084); 1.2.0
+            // adds `surface` (feature 086); 1.3.0 adds `surface.classification` (feature 087).
+            // A *removal* forces a major bump (versioning-policy.md, "Change class to bump rule"):
+            // feature 093 (FS-GG/FS.GG.SDD#164) removed `specification.unresolvedAmbiguityCount`, so
+            // reportVersion goes 1.3.0 -> 2.0.0. 2.1.0 then adds `surface.versionBump` (feature 094).
+            // 2.2.0 adds the top-level `coherent` fact (FS-GG/FS.GG.SDD#183). 2.3.0 adds the top-level
+            // `toolVersion` fact (FS-GG/FS.GG.SDD#305). 2.4.0 adds `scaffold.toolManifestOutcome`
+            // (FS-GG/FS.GG.SDD#315). 2.5.0 adds `doctor.requiredMinimumCliVersionSource`
+            // (FS-GG/FS.GG.SDD#313). 2.6.0 adds `dependencySurface` (feature 105, FS.GG.SDD#569).
+            ReportVersion = "2.6.0"
+            // The version of the CLI that produced this report, so a stale toolchain is legible in the
+            // artifact rather than only in the shell that ran it (FS-GG/FS.GG.SDD#305). Same source as
+            // `fsgg-sdd --version`, injected into the request at the CLI edge.
+            ToolVersion = model.Request.GeneratorVersion.Version
+            Command = model.Request.Command
+            // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
+            // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not
+            // echo the request root here (feature 063, FR-007).
+            ProjectRoot = "."
+            OutputFormat = model.Request.OutputFormat
+            DryRun = model.Request.DryRun
+            Outcome = reportOutcome
+            Coherent = coherent reportOutcome changes
+            WorkId = model.Request.WorkId
+            ChangedArtifacts = changes
+            Specification = model.Specification
+            Clarification = model.Clarification
+            Checklist = model.Checklist
+            Plan = model.Plan
+            Tasks = model.Tasks
+            Analysis = model.Analysis
+            Evidence = model.Evidence
+            Verification = model.Verification
+            Ship = model.Ship
+            AgentGuidance = model.AgentGuidance
+            Refresh = model.Refresh
+            Scaffold = model.Scaffold
+            Doctor = model.Doctor
+            Upgrade = model.Upgrade
+            Lint = model.Lint
+            Surface = model.Surface
+            DependencySurface = model.DependencySurface
+            GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
+            Diagnostics = diagnostics
+            GovernanceCompatibility = sortGovernance governanceCompatibility
+            NextAction =
+                nextAction
+                    diagnostics
+                    reportOutcome
+                    lifecycleStatus
+                    model.Request
+                    model.Checklist
+                    model.Plan
+                    model.Tasks
+                    model.Analysis
+                    model.Evidence
+                    model.Verification
+                    model.Ship
+                    model.AgentGuidance
+                    model.Refresh
+                    model.Doctor
+                    model.Upgrade
+            Help = None
+            LifecycleStatus = lifecycleStatus
+        }
 
     /// §3.5: build the informational help report. Help carries no diagnostics and no changed
     /// artifacts → `NoChange` → exit 0, routed to stdout. `Help` is populated; `NextAction`
     /// is dropped (help is a discoverability surface, not a lifecycle step).
     let helpReport (request: CommandRequest) (summary: HelpSummary) =
         let model =
-            { Request = request
-              PendingEffects = []
-              InterpretedEffects = []
-              Diagnostics = []
-              Specification = None
-              Clarification = None
-              Checklist = None
-              Plan = None
-              Tasks = None
-              Analysis = None
-              Evidence = None
-              Verification = None
-              Ship = None
-              AgentGuidance = None
-              Refresh = None
-              Scaffold = None
-              Doctor = None
-              Upgrade = None
-              Lint = None
-              Surface = None
-              DependencySurface = None
-              GeneratedViews = []
-              Report = None }
+            {
+                Request = request
+                PendingEffects = []
+                InterpretedEffects = []
+                Diagnostics = []
+                Specification = None
+                Clarification = None
+                Checklist = None
+                Plan = None
+                Tasks = None
+                Analysis = None
+                Evidence = None
+                Verification = None
+                Ship = None
+                AgentGuidance = None
+                Refresh = None
+                Scaffold = None
+                Doctor = None
+                Upgrade = None
+                Lint = None
+                Surface = None
+                DependencySurface = None
+                GeneratedViews = []
+                Report = None
+            }
 
         { buildReport model with
             Help = Some summary
-            NextAction = None }
+            NextAction = None
+        }
 
     // A blocked command escalates to exit 2 (the tool-defect class) when any diagnostic
     // carries the typed `IsToolDefect` bit (set at construction via `markToolDefect`);

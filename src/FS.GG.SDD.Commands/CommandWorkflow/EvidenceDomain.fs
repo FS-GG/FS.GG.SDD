@@ -15,19 +15,23 @@ module internal EvidenceDomain =
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
     let sourceSnapshot label path text : EvidenceSourceSnapshot =
-        { Label = label
-          Path = path
-          Digest = Some((SchemaVersionModule.sha256Text text).Value)
-          SchemaVersion = Some 1
-          SourceLocation = None }
+        {
+            Label = label
+            Path = path
+            Digest = Some((SchemaVersionModule.sha256Text text).Value)
+            SchemaVersion = Some 1
+            SourceLocation = None
+        }
 
     let currentSourceSnapshots workId specText clarificationText checklistText planText tasksText analysisText =
-        [ sourceSnapshot "spec" (specPath workId) specText
-          sourceSnapshot "clarifications" (clarificationPath workId) clarificationText
-          sourceSnapshot "checklist" (checklistPath workId) checklistText
-          sourceSnapshot "plan" (planPath workId) planText
-          sourceSnapshot "tasks" (tasksPath workId) tasksText
-          sourceSnapshot "analysis" (analysisPath workId) analysisText ]
+        [
+            sourceSnapshot "spec" (specPath workId) specText
+            sourceSnapshot "clarifications" (clarificationPath workId) clarificationText
+            sourceSnapshot "checklist" (checklistPath workId) checklistText
+            sourceSnapshot "plan" (planPath workId) planText
+            sourceSnapshot "tasks" (tasksPath workId) tasksText
+            sourceSnapshot "analysis" (analysisPath workId) analysisText
+        ]
 
     let sourceSnapshotStale (current: EvidenceSourceSnapshot list) (recorded: EvidenceSourceSnapshot list) =
         let currentMap =
@@ -73,37 +77,39 @@ module internal EvidenceDomain =
 
             ids
             |> List.map (fun id ->
-                { ObligationId = id
-                  Kind = "taskEvidence"
-                  SourceArtifactPath = task.Source.Path
-                  SourceId = Some task.Id.Value
-                  LinkedTaskIds = [ task.Id ]
-                  LinkedRequirementIds = task.Requirements
-                  LinkedDecisionIds = task.Decisions |> List.map _.Value
-                  LinkedSourceIds = task.SourceIds
-                  ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
-                  RequiredEvidenceKinds =
-                    if
-                        isGameplayTestTagged task.RequiredSkills
-                        || isProductionJourneyTagged task.RequiredSkills
-                    then
-                        realTestEvidenceKinds
-                    else
-                        []
-                  // FS.GG.SDD#865: the obligation states WHAT CLASS OF EVIDENCE could ever discharge it.
-                  // Derived here, at the one place an obligation is minted, from the authored task tag
-                  // (DEC-003) — and derived through `dischargeClassFromTags` rather than by testing the
-                  // tag inline, so the tag has exactly one meaning-site.
-                  DischargeClass = dischargeClassFromTags task.RequiredSkills
-                  RequiredSkillOrCapabilityTags = task.RequiredSkills
-                  Blocking = true
-                  Correction =
-                    if isRecordDischargeTagged task.RequiredSkills then
-                        // A record obligation's correction must not tell the author to run a suite that
-                        // cannot exist for it. Naming the receipt is the whole remedy.
-                        $"Add evidence {id} for {task.Id.Value} with result: pass, synthetic: false, and a recordReceipt naming the durable record that discharges it (kind: decision | issue | commit), or an accepted deferral linked to {task.Id.Value}."
-                    else
-                        $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
+                {
+                    ObligationId = id
+                    Kind = "taskEvidence"
+                    SourceArtifactPath = task.Source.Path
+                    SourceId = Some task.Id.Value
+                    LinkedTaskIds = [ task.Id ]
+                    LinkedRequirementIds = task.Requirements
+                    LinkedDecisionIds = task.Decisions |> List.map _.Value
+                    LinkedSourceIds = task.SourceIds
+                    ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
+                    RequiredEvidenceKinds =
+                        if
+                            isGameplayTestTagged task.RequiredSkills
+                            || isProductionJourneyTagged task.RequiredSkills
+                        then
+                            realTestEvidenceKinds
+                        else
+                            []
+                    // FS.GG.SDD#865: the obligation states WHAT CLASS OF EVIDENCE could ever discharge it.
+                    // Derived here, at the one place an obligation is minted, from the authored task tag
+                    // (DEC-003) — and derived through `dischargeClassFromTags` rather than by testing the
+                    // tag inline, so the tag has exactly one meaning-site.
+                    DischargeClass = dischargeClassFromTags task.RequiredSkills
+                    RequiredSkillOrCapabilityTags = task.RequiredSkills
+                    Blocking = true
+                    Correction =
+                        if isRecordDischargeTagged task.RequiredSkills then
+                            // A record obligation's correction must not tell the author to run a suite that
+                            // cannot exist for it. Naming the receipt is the whole remedy.
+                            $"Add evidence {id} for {task.Id.Value} with result: pass, synthetic: false, and a recordReceipt naming the durable record that discharges it (kind: decision | issue | commit), or an accepted deferral linked to {task.Id.Value}."
+                        else
+                            $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}."
+                }))
         |> List.groupBy _.ObligationId
         |> List.map (fun (_, group) ->
             let mergedTags =
@@ -121,4 +127,5 @@ module internal EvidenceDomain =
                 // it in the same record — and, downstream, with the `RecordRequirement` flag the `ED-`
                 // and `TD-` ladders derive from those same merged tags.
                 DischargeClass = dischargeClassFromTags mergedTags
-                RequiredEvidenceKinds = group |> List.collect _.RequiredEvidenceKinds |> List.distinct })
+                RequiredEvidenceKinds = group |> List.collect _.RequiredEvidenceKinds |> List.distinct
+            })

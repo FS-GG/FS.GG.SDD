@@ -29,7 +29,8 @@ module UnauthoredScaffoldTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore

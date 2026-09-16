@@ -9,37 +9,49 @@ let identifier value =
 let extension =
     RequirementsDraft.empty
     |> RequirementsDraft.addAcceptance
-        { Id = identifier "AC-001"
-          StoryIds = [ identifier "US-001" ]
-          RequirementIds = [ identifier "FR-001" ]
-          Statement = "Compilation succeeds." }
+        {
+            Id = identifier "AC-001"
+            StoryIds = [ identifier "US-001" ]
+            RequirementIds = [ identifier "FR-001" ]
+            Statement = "Compilation succeeds."
+        }
     |> RequirementsDraft.addRequirement
-        { Id = identifier "FR-001"
-          Statement = "The model compiles."
-          AcceptanceIds = [ identifier "AC-001" ]
-          EvidenceObligationIds = [] }
+        {
+            Id = identifier "FR-001"
+            Statement = "The model compiles."
+            AcceptanceIds = [ identifier "AC-001" ]
+            EvidenceObligationIds = []
+        }
     |> RequirementsDraft.addStory
-        { Id = identifier "US-001"
-          Priority = "P1"
-          Statement = "A consumer compiles a typed model." }
+        {
+            Id = identifier "US-001"
+            Priority = "P1"
+            Statement = "A consumer compiles a typed model."
+        }
     |> RequirementsDraft.addScope
-        { Id = identifier "SB-001"
-          Statement = "Typed requirements." }
+        {
+            Id = identifier "SB-001"
+            Statement = "Typed requirements."
+        }
     |> RequirementsDraft.withUserValue "A clean consumer uses the preview."
     |> RequirementsDraft.build
 
 let model =
-    { Identity = identifier "SPEC-001"
-      SchemaVersion = 1
-      Provenance =
-        { Agent = "consumer"
-          Session = "clean"
-          SourcePath = "spec.md"
-          SourceRevision = String.replicate 64 "a"
-          AuthoredAtUtc = "2026-08-24T12:00:00Z" }
-      Intent = "Exercise the public package."
-      EvidenceObligations = []
-      Extension = extension }
+    {
+        Identity = identifier "SPEC-001"
+        SchemaVersion = 1
+        Provenance =
+            {
+                Agent = "consumer"
+                Session = "clean"
+                SourcePath = "spec.md"
+                SourceRevision = String.replicate 64 "a"
+                AuthoredAtUtc = "2026-08-24T12:00:00Z"
+            }
+        Intent = "Exercise the public package."
+        EvidenceObligations = []
+        Extension = extension
+    }
 
 match SpecificationCompiler.compile RequirementsExtension.contract model with
 | Error findings -> failwithf "compile failed: %A" findings

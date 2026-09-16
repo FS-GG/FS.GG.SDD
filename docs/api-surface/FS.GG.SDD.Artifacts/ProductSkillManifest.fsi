@@ -30,13 +30,15 @@ module ProductSkillManifest =
     /// parse→amend→serialize round-trip preserves every provider row faithfully — including, at
     /// v2, every per-file digest the provider declared. `Files` is `[]` for a v1 row.
     type ProductManifestEntry =
-        { Id: string
-          Scope: string
-          Sha256: string
-          ResolvablePath: string option
-          MaterializesWhen: string
-          SuppliedBy: string option
-          Files: ProductManifestFile list }
+        {
+            Id: string
+            Scope: string
+            Sha256: string
+            ResolvablePath: string option
+            MaterializesWhen: string
+            SuppliedBy: string option
+            Files: ProductManifestFile list
+        }
 
     /// Why `amend` declined to rewrite a manifest. Every case is a fact the caller must SAY —
     /// mapping any of them to "no manifest writes" silently is the FS.GG.SDD#739 defect, which

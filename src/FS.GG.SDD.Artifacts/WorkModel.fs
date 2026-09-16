@@ -11,115 +11,137 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 
 module WorkModel =
     type ProjectSummary =
-        { Id: string
-          DefaultWorkRoot: string
-          Profile: string option }
+        {
+            Id: string
+            DefaultWorkRoot: string
+            Profile: string option
+        }
 
     type SourceEntry =
-        { Path: string
-          Kind: string
-          Owner: string
-          SchemaVersion: int
-          RawSchemaVersion: string option
-          SchemaStatus: string
-          SourceDigest: SourceDigest }
+        {
+            Path: string
+            Kind: string
+            Owner: string
+            SchemaVersion: int
+            RawSchemaVersion: string option
+            SchemaStatus: string
+            SourceDigest: SourceDigest
+        }
 
     type WorkItemSummary =
-        { Id: string
-          Title: string
-          Stage: string
-          ChangeTier: string
-          Status: string }
+        {
+            Id: string
+            Title: string
+            Stage: string
+            ChangeTier: string
+            Status: string
+        }
 
     type RequirementEntry =
-        { Id: string
-          Title: string
-          Text: string
-          AcceptanceCriteria: string list
-          Priority: string option
-          Classification: string list
-          Source: string
-          SourceLocation: SourceLocation option
-          LinkedTaskIds: string list
-          LinkedEvidenceIds: string list }
+        {
+            Id: string
+            Title: string
+            Text: string
+            AcceptanceCriteria: string list
+            Priority: string option
+            Classification: string list
+            Source: string
+            SourceLocation: SourceLocation option
+            LinkedTaskIds: string list
+            LinkedEvidenceIds: string list
+        }
 
     type DecisionEntry =
-        { Id: string
-          Title: string
-          Decision: string
-          RequirementRefs: string list
-          StoryRefs: string list
-          AcceptanceRefs: string list
-          Source: string
-          SourceLocation: SourceLocation option
-          LinkedTaskIds: string list }
+        {
+            Id: string
+            Title: string
+            Decision: string
+            RequirementRefs: string list
+            StoryRefs: string list
+            AcceptanceRefs: string list
+            Source: string
+            SourceLocation: SourceLocation option
+            LinkedTaskIds: string list
+        }
 
     type TaskEntry =
-        { Id: string
-          Title: string
-          Status: string
-          Owner: string
-          Dependencies: string list
-          Requirements: string list
-          Decisions: string list
-          SourceIds: string list
-          RequiredSkills: string list
-          RequiredEvidence: string list
-          Source: string
-          SourceLocation: SourceLocation option }
+        {
+            Id: string
+            Title: string
+            Status: string
+            Owner: string
+            Dependencies: string list
+            Requirements: string list
+            Decisions: string list
+            SourceIds: string list
+            RequiredSkills: string list
+            RequiredEvidence: string list
+            Source: string
+            SourceLocation: SourceLocation option
+        }
 
     type EvidenceEntry =
-        { Id: string
-          Kind: string
-          SubjectType: string
-          SubjectId: string
-          TaskRefs: string list
-          RequirementRefs: string list
-          ArtifactRefs: string list
-          Result: string
-          Synthetic: bool
-          PerformanceBudget: PerformanceBudgetDeclaration option
-          PerformanceEvidenceArtifact: PerformanceEvidenceArtifact option
-          PerformanceMeasurements: PerformanceEvidenceMeasurement list
-          Rationale: string option
-          Source: string
-          SourceLocation: SourceLocation option }
+        {
+            Id: string
+            Kind: string
+            SubjectType: string
+            SubjectId: string
+            TaskRefs: string list
+            RequirementRefs: string list
+            ArtifactRefs: string list
+            Result: string
+            Synthetic: bool
+            PerformanceBudget: PerformanceBudgetDeclaration option
+            PerformanceEvidenceArtifact: PerformanceEvidenceArtifact option
+            PerformanceMeasurements: PerformanceEvidenceMeasurement list
+            Rationale: string option
+            Source: string
+            SourceLocation: SourceLocation option
+        }
 
     type GovernanceBoundaryEntry =
-        { Path: string
-          Owner: string
-          RequiredBySdd: bool
-          Relationship: string }
+        {
+            Path: string
+            Owner: string
+            RequiredBySdd: bool
+            Relationship: string
+        }
 
     type WorkModel =
-        { SchemaVersion: int
-          ModelVersion: string
-          WorkId: string
-          Project: ProjectSummary
-          Sources: SourceEntry list
-          WorkItem: WorkItemSummary
-          PerformanceIntent: PerformanceIntentDeclaration option
-          Requirements: RequirementEntry list
-          Decisions: DecisionEntry list
-          Tasks: TaskEntry list
-          Evidence: EvidenceEntry list
-          GeneratedViews: GenerationManifest list
-          Diagnostics: Diagnostic list
-          GovernanceBoundaries: GovernanceBoundaryEntry list }
+        {
+            SchemaVersion: int
+            ModelVersion: string
+            WorkId: string
+            Project: ProjectSummary
+            Sources: SourceEntry list
+            WorkItem: WorkItemSummary
+            PerformanceIntent: PerformanceIntentDeclaration option
+            Requirements: RequirementEntry list
+            Decisions: DecisionEntry list
+            Tasks: TaskEntry list
+            Evidence: EvidenceEntry list
+            GeneratedViews: GenerationManifest list
+            Diagnostics: Diagnostic list
+            GovernanceBoundaries: GovernanceBoundaryEntry list
+        }
 
     type WorkModelGenerationRequest =
-        { WorkId: string
-          Snapshots: FileSnapshot list
-          GeneratorVersion: GeneratorVersion
-          ExpectedOutputPath: string option }
+        {
+            WorkId: string
+            Snapshots: FileSnapshot list
+            GeneratorVersion: GeneratorVersion
+            ExpectedOutputPath: string option
+        }
 
     type WorkModelGenerationResult =
-        { WorkId: string
-          OutputPath: string
-          Model: WorkModel
-          Json: string
-          OutputDigest: OutputDigest
-          Diagnostics: Diagnostic list }
+        {
+            WorkId: string
+            OutputPath: string
+            Model: WorkModel
+            Json: string
+            OutputDigest: OutputDigest
+            Diagnostics: Diagnostic list
+        }
 
     let taskStatusValue status =
         match status with
@@ -143,16 +165,18 @@ module WorkModel =
     let sourceEntries (parsed: ParsedWorkItem) =
         parsed.Sources
         |> List.map (fun source ->
-            { Path = source.Artifact.Path
-              Kind = ArtifactRef.kindValue source.Artifact.Kind
-              Owner = ArtifactRef.ownerValue source.Artifact.Owner
-              SchemaVersion =
-                source.SchemaVersion
-                |> Option.map (fun version -> version.Major)
-                |> Option.defaultValue 0
-              RawSchemaVersion = source.RawSchemaVersion
-              SchemaStatus = SchemaVersion.statusValue source.SchemaStatus
-              SourceDigest = source.Digest })
+            {
+                Path = source.Artifact.Path
+                Kind = ArtifactRef.kindValue source.Artifact.Kind
+                Owner = ArtifactRef.ownerValue source.Artifact.Owner
+                SchemaVersion =
+                    source.SchemaVersion
+                    |> Option.map (fun version -> version.Major)
+                    |> Option.defaultValue 0
+                RawSchemaVersion = source.RawSchemaVersion
+                SchemaStatus = SchemaVersion.statusValue source.SchemaStatus
+                SourceDigest = source.Digest
+            })
         |> List.sortBy (fun source -> source.Path)
 
     let duplicateDiagnostics artifact (idSelector: 'a -> string) locationSelector values =
@@ -175,8 +199,10 @@ module WorkModel =
                     None)
 
     let unknown id artifact correction =
-        [ Diagnostics.unknownReference artifact id correction
-          Diagnostics.workModelInconsistent artifact $"Reference '{id}' does not resolve." correction [ id ] ]
+        [
+            Diagnostics.unknownReference artifact id correction
+            Diagnostics.workModelInconsistent artifact $"Reference '{id}' does not resolve." correction [ id ]
+        ]
 
     let referenceDiagnostics (parsed: ParsedWorkItem) =
         let requirementIds =
@@ -197,49 +223,58 @@ module WorkModel =
         // exactly the one where the declaration — and possibly the whole file — is absent. The
         // shape matches `WorkItem.requiredFiles`' own declaration for this artifact.
         let evidenceArtifact: ArtifactRef =
-            { Path = $"work/{parsed.WorkId.Value}/evidence.yml"
-              Kind = ArtifactKind.Evidence
-              Owner = ArtifactOwner.Sdd
-              RequiredBySdd = true }
+            {
+                Path = $"work/{parsed.WorkId.Value}/evidence.yml"
+                Kind = ArtifactKind.Evidence
+                Owner = ArtifactOwner.Sdd
+                RequiredBySdd = true
+            }
 
         let taskDiagnostics =
             parsed.Tasks
             |> List.collect (fun task ->
                 let artifact = task.Source
 
-                [ task.Requirements
-                  |> List.collect (fun id ->
-                      if Set.contains id.Value requirementIds then
-                          []
-                      else
-                          unknown id.Value artifact "Declare the requirement in spec.md or update the task reference.")
-                  task.Decisions
-                  |> List.collect (fun id ->
-                      if Set.contains id.Value decisionIds then
-                          []
-                      else
-                          unknown
-                              id.Value
-                              artifact
-                              "Declare the decision in plan or clarification artifacts, or update the task reference.")
-                  task.Dependencies
-                  |> List.collect (fun id ->
-                      if Set.contains id.Value taskIds then
-                          []
-                      else
-                          unknown id.Value artifact "Declare the dependency task or remove the dependency.")
-                  // FS.GG.SDD#869: the one DOWNSTREAM edge. `evidence.yml` is authored by a LATER
-                  // stage, so an unresolved reference here is an incomplete lifecycle rather than
-                  // an inconsistent one and must not block derivation — see
-                  // `Diagnostics.undeclaredEvidenceObligation` for the deadlock it caused and for
-                  // why relocating the check loses no enforcement. The three edges above stay on
-                  // `unknown`, unchanged.
-                  task.RequiredEvidence
-                  |> List.collect (fun id ->
-                      if Set.contains id.Value evidenceIds then
-                          []
-                      else
-                          [ Diagnostics.undeclaredEvidenceObligation evidenceArtifact id.Value artifact.Path ]) ]
+                [
+                    task.Requirements
+                    |> List.collect (fun id ->
+                        if Set.contains id.Value requirementIds then
+                            []
+                        else
+                            unknown
+                                id.Value
+                                artifact
+                                "Declare the requirement in spec.md or update the task reference.")
+                    task.Decisions
+                    |> List.collect (fun id ->
+                        if Set.contains id.Value decisionIds then
+                            []
+                        else
+                            unknown
+                                id.Value
+                                artifact
+                                "Declare the decision in plan or clarification artifacts, or update the task reference.")
+                    task.Dependencies
+                    |> List.collect (fun id ->
+                        if Set.contains id.Value taskIds then
+                            []
+                        else
+                            unknown id.Value artifact "Declare the dependency task or remove the dependency.")
+                    // FS.GG.SDD#869: the one DOWNSTREAM edge. `evidence.yml` is authored by a LATER
+                    // stage, so an unresolved reference here is an incomplete lifecycle rather than
+                    // an inconsistent one and must not block derivation — see
+                    // `Diagnostics.undeclaredEvidenceObligation` for the deadlock it caused and for
+                    // why relocating the check loses no enforcement. The three edges above stay on
+                    // `unknown`, unchanged.
+                    task.RequiredEvidence
+                    |> List.collect (fun id ->
+                        if Set.contains id.Value evidenceIds then
+                            []
+                        else
+                            [
+                                Diagnostics.undeclaredEvidenceObligation evidenceArtifact id.Value artifact.Path
+                            ])
+                ]
                 |> List.concat)
 
         let evidenceDiagnostics =
@@ -247,21 +282,23 @@ module WorkModel =
             |> List.collect (fun evidence ->
                 let artifact = evidence.Source
 
-                [ evidence.TaskRefs
-                  |> List.collect (fun id ->
-                      if Set.contains id.Value taskIds then
-                          []
-                      else
-                          unknown id.Value artifact "Declare the task in tasks.yml or update the evidence subject.")
-                  evidence.RequirementRefs
-                  |> List.collect (fun id ->
-                      if Set.contains id.Value requirementIds then
-                          []
-                      else
-                          unknown
-                              id.Value
-                              artifact
-                              "Declare the requirement in spec.md or update the evidence reference.") ]
+                [
+                    evidence.TaskRefs
+                    |> List.collect (fun id ->
+                        if Set.contains id.Value taskIds then
+                            []
+                        else
+                            unknown id.Value artifact "Declare the task in tasks.yml or update the evidence subject.")
+                    evidence.RequirementRefs
+                    |> List.collect (fun id ->
+                        if Set.contains id.Value requirementIds then
+                            []
+                        else
+                            unknown
+                                id.Value
+                                artifact
+                                "Declare the requirement in spec.md or update the evidence reference.")
+                ]
                 |> List.concat)
 
         taskDiagnostics @ evidenceDiagnostics
@@ -420,10 +457,12 @@ module WorkModel =
                     | Ok value -> value
                     | Error message -> invalidArg "spec" message
 
-            [ Diagnostics.proseStructuredMismatch
-                  artifact
-                  "Markdown prose status disagrees with structured work metadata."
-                  "Use structured metadata for executable decisions and update prose to match." ]
+            [
+                Diagnostics.proseStructuredMismatch
+                    artifact
+                    "Markdown prose status disagrees with structured work metadata."
+                    "Use structured metadata for executable decisions and update prose to match."
+            ]
         | _ -> []
 
     let missingEvidenceDiagnostics (parsed: ParsedWorkItem) =
@@ -488,23 +527,27 @@ module WorkModel =
         else
             match parsed.PerformanceIntent with
             | None ->
-                [ error
-                      "Interactive/render-loop work is missing a typed performanceIntent declaration."
-                      "Declare performanceIntent in spec.md front matter before implementation."
-                      [] ]
+                [
+                    error
+                        "Interactive/render-loop work is missing a typed performanceIntent declaration."
+                        "Declare performanceIntent in spec.md front matter before implementation."
+                        []
+                ]
             | Some intent ->
                 let disposition = intent.Disposition.Trim().ToLowerInvariant()
 
-                [ for problem in performanceIntentProblems intent do
-                      error
-                          $"Performance intent is not ready: {problem}."
-                          "Correct the typed performanceIntent declaration before implementation."
-                          [ intent.Id ]
-                  if disposition = "deferred" then
-                      error
-                          "Performance intent is deliberately deferred; its acceptance target remains unresolved."
-                          "Resolve the open blocking performance-debt issue and replace the deferral with active or supported not-applicable intent."
-                          ([ intent.Id ] @ (intent.DeferralIssue |> Option.toList)) ]
+                [
+                    for problem in performanceIntentProblems intent do
+                        error
+                            $"Performance intent is not ready: {problem}."
+                            "Correct the typed performanceIntent declaration before implementation."
+                            [ intent.Id ]
+                    if disposition = "deferred" then
+                        error
+                            "Performance intent is deliberately deferred; its acceptance target remains unresolved."
+                            "Resolve the open blocking performance-debt issue and replace the deferral with active or supported not-applicable intent."
+                            ([ intent.Id ] @ (intent.DeferralIssue |> Option.toList))
+                ]
 
     let validationDiagnostics (parsed: ParsedWorkItem) =
         let specArtifact =
@@ -558,34 +601,36 @@ module WorkModel =
                 | Ok value -> value
                 | Error message -> invalidArg "evidence" message
 
-        [ duplicateDiagnostics
-              specArtifact
-              (fun (item: Requirement) -> item.Id.Value)
-              (fun item -> item.SourceLocation)
-              parsed.Requirements
-          duplicateDiagnostics
-              specArtifact
-              (fun (item: Decision) -> item.Id.Value)
-              (fun item -> item.SourceLocation)
-              parsed.Decisions
-          duplicateDiagnostics
-              taskArtifact
-              (fun (item: WorkTask) -> item.Id.Value)
-              (fun item -> item.SourceLocation)
-              parsed.Tasks
-          duplicateDiagnostics
-              evidenceArtifact
-              (fun (item: EvidenceDeclaration) -> item.Id.Value)
-              (fun item -> item.SourceLocation)
-              parsed.Evidence
-          referenceDiagnostics parsed
-          cycleDiagnostics parsed
-          proseDiagnostics parsed
-          staleDiagnostics parsed
-          missingEvidenceDiagnostics parsed
-          requirementTypingDiagnostics parsed
-          performanceIntentDiagnostics specArtifact parsed
-          schemaCompatibilityDiagnostics parsed ]
+        [
+            duplicateDiagnostics
+                specArtifact
+                (fun (item: Requirement) -> item.Id.Value)
+                (fun item -> item.SourceLocation)
+                parsed.Requirements
+            duplicateDiagnostics
+                specArtifact
+                (fun (item: Decision) -> item.Id.Value)
+                (fun item -> item.SourceLocation)
+                parsed.Decisions
+            duplicateDiagnostics
+                taskArtifact
+                (fun (item: WorkTask) -> item.Id.Value)
+                (fun item -> item.SourceLocation)
+                parsed.Tasks
+            duplicateDiagnostics
+                evidenceArtifact
+                (fun (item: EvidenceDeclaration) -> item.Id.Value)
+                (fun item -> item.SourceLocation)
+                parsed.Evidence
+            referenceDiagnostics parsed
+            cycleDiagnostics parsed
+            proseDiagnostics parsed
+            staleDiagnostics parsed
+            missingEvidenceDiagnostics parsed
+            requirementTypingDiagnostics parsed
+            performanceIntentDiagnostics specArtifact parsed
+            schemaCompatibilityDiagnostics parsed
+        ]
         |> List.concat
 
     let generatedViews (parsed: ParsedWorkItem) =
@@ -613,134 +658,151 @@ module WorkModel =
             |> List.map (fun evaluation -> evaluation.DeclarationId, evaluation)
             |> Map.ofList
 
-        { SchemaVersion = 1
-          // 1.1.0: additive `requirements[].classification` facet (ADR-0048, feature WI-3). The
-          // schema major stays 1 — the field is additive and optional-valued (empty = unclassified)
-          // — so the change bumps the model's minor per docs/release/versioning-policy.md.
-          ModelVersion = "1.2.0"
-          WorkId = parsed.WorkId.Value
-          Project =
-            { Id =
-                parsed.Project
-                |> Option.map (fun project -> project.ProjectId)
-                |> Option.defaultValue "unknown"
-              DefaultWorkRoot =
-                parsed.Project
-                |> Option.map (fun project -> project.DefaultWorkRoot)
-                |> Option.defaultValue "work"
-              Profile = parsed.Project |> Option.bind _.Profile }
-          Sources = sourceEntries parsed
-          WorkItem =
-            { Id = parsed.WorkId.Value
-              Title = parsed.Metadata.Title
-              Stage = Identifiers.stageValue parsed.Metadata.Stage
-              ChangeTier = parsed.Metadata.ChangeTier
-              Status = parsed.Metadata.Status }
-          PerformanceIntent = parsed.PerformanceIntent
-          Requirements =
-            parsed.Requirements
-            |> List.map (fun requirement ->
-                let linkedTaskIds =
-                    parsed.Tasks
-                    |> List.filter (fun task ->
-                        task.Requirements |> List.exists (fun id -> id.Value = requirement.Id.Value))
-                    |> List.map (fun task -> task.Id.Value)
-                    |> List.sort
+        {
+            SchemaVersion = 1
+            // 1.1.0: additive `requirements[].classification` facet (ADR-0048, feature WI-3). The
+            // schema major stays 1 — the field is additive and optional-valued (empty = unclassified)
+            // — so the change bumps the model's minor per docs/release/versioning-policy.md.
+            ModelVersion = "1.2.0"
+            WorkId = parsed.WorkId.Value
+            Project =
+                {
+                    Id =
+                        parsed.Project
+                        |> Option.map (fun project -> project.ProjectId)
+                        |> Option.defaultValue "unknown"
+                    DefaultWorkRoot =
+                        parsed.Project
+                        |> Option.map (fun project -> project.DefaultWorkRoot)
+                        |> Option.defaultValue "work"
+                    Profile = parsed.Project |> Option.bind _.Profile
+                }
+            Sources = sourceEntries parsed
+            WorkItem =
+                {
+                    Id = parsed.WorkId.Value
+                    Title = parsed.Metadata.Title
+                    Stage = Identifiers.stageValue parsed.Metadata.Stage
+                    ChangeTier = parsed.Metadata.ChangeTier
+                    Status = parsed.Metadata.Status
+                }
+            PerformanceIntent = parsed.PerformanceIntent
+            Requirements =
+                parsed.Requirements
+                |> List.map (fun requirement ->
+                    let linkedTaskIds =
+                        parsed.Tasks
+                        |> List.filter (fun task ->
+                            task.Requirements |> List.exists (fun id -> id.Value = requirement.Id.Value))
+                        |> List.map (fun task -> task.Id.Value)
+                        |> List.sort
 
-                let linkedEvidenceIds =
-                    parsed.Evidence
-                    |> List.filter (fun evidence ->
-                        evidence.RequirementRefs
-                        |> List.exists (fun id -> id.Value = requirement.Id.Value))
-                    |> List.map (fun evidence -> evidence.Id.Value)
-                    |> List.sort
+                    let linkedEvidenceIds =
+                        parsed.Evidence
+                        |> List.filter (fun evidence ->
+                            evidence.RequirementRefs
+                            |> List.exists (fun id -> id.Value = requirement.Id.Value))
+                        |> List.map (fun evidence -> evidence.Id.Value)
+                        |> List.sort
 
-                { Id = requirement.Id.Value
-                  Title = requirement.Title
-                  Text = requirement.Text
-                  AcceptanceCriteria = requirement.AcceptanceCriteria
-                  Priority = requirement.Priority
-                  Classification = requirement.Classification
-                  Source = requirement.Source.Path
-                  SourceLocation = requirement.SourceLocation
-                  LinkedTaskIds = linkedTaskIds
-                  LinkedEvidenceIds = linkedEvidenceIds })
-            |> List.sortBy (fun requirement -> requirement.Id)
-          Decisions =
-            parsed.Decisions
-            |> List.map (fun decision ->
-                let linkedTaskIds =
-                    parsed.Tasks
-                    |> List.filter (fun task -> task.Decisions |> List.exists (fun id -> id.Value = decision.Id.Value))
-                    |> List.map (fun task -> task.Id.Value)
-                    |> List.sort
+                    {
+                        Id = requirement.Id.Value
+                        Title = requirement.Title
+                        Text = requirement.Text
+                        AcceptanceCriteria = requirement.AcceptanceCriteria
+                        Priority = requirement.Priority
+                        Classification = requirement.Classification
+                        Source = requirement.Source.Path
+                        SourceLocation = requirement.SourceLocation
+                        LinkedTaskIds = linkedTaskIds
+                        LinkedEvidenceIds = linkedEvidenceIds
+                    })
+                |> List.sortBy (fun requirement -> requirement.Id)
+            Decisions =
+                parsed.Decisions
+                |> List.map (fun decision ->
+                    let linkedTaskIds =
+                        parsed.Tasks
+                        |> List.filter (fun task ->
+                            task.Decisions |> List.exists (fun id -> id.Value = decision.Id.Value))
+                        |> List.map (fun task -> task.Id.Value)
+                        |> List.sort
 
-                { Id = decision.Id.Value
-                  Title = decision.Title
-                  Decision = decision.Decision
-                  RequirementRefs = decision.RequirementRefs |> List.map _.Value
-                  StoryRefs = decision.StoryRefs |> List.map _.Value
-                  AcceptanceRefs = decision.AcceptanceRefs |> List.map _.Value
-                  Source = decision.Source.Path
-                  SourceLocation = decision.SourceLocation
-                  LinkedTaskIds = linkedTaskIds })
-            |> List.sortBy (fun decision -> decision.Id)
-          Tasks =
-            parsed.Tasks
-            |> List.map (fun task ->
-                { Id = task.Id.Value
-                  Title = task.Title
-                  Status = taskStatusValue task.Status
-                  Owner = task.Owner
-                  Dependencies = task.Dependencies |> List.map (fun id -> id.Value) |> List.sort
-                  Requirements = task.Requirements |> List.map (fun id -> id.Value) |> List.sort
-                  Decisions = task.Decisions |> List.map (fun id -> id.Value) |> List.sort
-                  SourceIds = task.SourceIds |> List.sort
-                  RequiredSkills = task.RequiredSkills |> List.sort
-                  RequiredEvidence = task.RequiredEvidence |> List.map (fun id -> id.Value) |> List.sort
-                  Source = task.Source.Path
-                  SourceLocation = task.SourceLocation })
-            |> List.sortBy (fun task -> task.Id)
-          Evidence =
-            parsed.Evidence
-            |> List.map (fun evidence ->
-                { Id = evidence.Id.Value
-                  Kind = evidenceKindValue evidence.Kind
-                  SubjectType = evidence.Subject.SubjectType
-                  SubjectId = evidence.Subject.Id
-                  TaskRefs = evidence.TaskRefs |> List.map (fun id -> id.Value) |> List.distinct |> List.sort
-                  RequirementRefs =
-                    evidence.RequirementRefs
-                    |> List.map (fun id -> id.Value)
-                    |> List.distinct
-                    |> List.sort
-                  ArtifactRefs = evidence.ArtifactRefs |> List.map (fun artifact -> artifact.Path) |> List.sort
-                  Result = evidence.Result
-                  Synthetic = evidence.Synthetic
-                  PerformanceBudget = evidence.PerformanceBudget
-                  PerformanceEvidenceArtifact =
-                    performanceByDeclaration
-                    |> Map.tryFind evidence.Id.Value
-                    |> Option.bind _.Artifact
-                  PerformanceMeasurements =
-                    performanceByDeclaration
-                    |> Map.tryFind evidence.Id.Value
-                    |> Option.map _.Measurements
-                    |> Option.defaultValue []
-                  Rationale = evidence.Rationale
-                  Source = evidence.Source.Path
-                  SourceLocation = evidence.SourceLocation })
-            |> List.sortBy (fun evidence -> evidence.Id)
-          GeneratedViews = generatedViews parsed
-          Diagnostics = diagnostics
-          GovernanceBoundaries =
-            parsed.GovernanceBoundaries
-            |> List.map (fun artifact ->
-                { Path = artifact.Path
-                  Owner = ArtifactRef.ownerValue artifact.Owner
-                  RequiredBySdd = artifact.RequiredBySdd
-                  Relationship = "optionalCompatibilityBoundary" })
-            |> List.sortBy (fun boundary -> boundary.Path) }
+                    {
+                        Id = decision.Id.Value
+                        Title = decision.Title
+                        Decision = decision.Decision
+                        RequirementRefs = decision.RequirementRefs |> List.map _.Value
+                        StoryRefs = decision.StoryRefs |> List.map _.Value
+                        AcceptanceRefs = decision.AcceptanceRefs |> List.map _.Value
+                        Source = decision.Source.Path
+                        SourceLocation = decision.SourceLocation
+                        LinkedTaskIds = linkedTaskIds
+                    })
+                |> List.sortBy (fun decision -> decision.Id)
+            Tasks =
+                parsed.Tasks
+                |> List.map (fun task ->
+                    {
+                        Id = task.Id.Value
+                        Title = task.Title
+                        Status = taskStatusValue task.Status
+                        Owner = task.Owner
+                        Dependencies = task.Dependencies |> List.map (fun id -> id.Value) |> List.sort
+                        Requirements = task.Requirements |> List.map (fun id -> id.Value) |> List.sort
+                        Decisions = task.Decisions |> List.map (fun id -> id.Value) |> List.sort
+                        SourceIds = task.SourceIds |> List.sort
+                        RequiredSkills = task.RequiredSkills |> List.sort
+                        RequiredEvidence = task.RequiredEvidence |> List.map (fun id -> id.Value) |> List.sort
+                        Source = task.Source.Path
+                        SourceLocation = task.SourceLocation
+                    })
+                |> List.sortBy (fun task -> task.Id)
+            Evidence =
+                parsed.Evidence
+                |> List.map (fun evidence ->
+                    {
+                        Id = evidence.Id.Value
+                        Kind = evidenceKindValue evidence.Kind
+                        SubjectType = evidence.Subject.SubjectType
+                        SubjectId = evidence.Subject.Id
+                        TaskRefs = evidence.TaskRefs |> List.map (fun id -> id.Value) |> List.distinct |> List.sort
+                        RequirementRefs =
+                            evidence.RequirementRefs
+                            |> List.map (fun id -> id.Value)
+                            |> List.distinct
+                            |> List.sort
+                        ArtifactRefs = evidence.ArtifactRefs |> List.map (fun artifact -> artifact.Path) |> List.sort
+                        Result = evidence.Result
+                        Synthetic = evidence.Synthetic
+                        PerformanceBudget = evidence.PerformanceBudget
+                        PerformanceEvidenceArtifact =
+                            performanceByDeclaration
+                            |> Map.tryFind evidence.Id.Value
+                            |> Option.bind _.Artifact
+                        PerformanceMeasurements =
+                            performanceByDeclaration
+                            |> Map.tryFind evidence.Id.Value
+                            |> Option.map _.Measurements
+                            |> Option.defaultValue []
+                        Rationale = evidence.Rationale
+                        Source = evidence.Source.Path
+                        SourceLocation = evidence.SourceLocation
+                    })
+                |> List.sortBy (fun evidence -> evidence.Id)
+            GeneratedViews = generatedViews parsed
+            Diagnostics = diagnostics
+            GovernanceBoundaries =
+                parsed.GovernanceBoundaries
+                |> List.map (fun artifact ->
+                    {
+                        Path = artifact.Path
+                        Owner = ArtifactRef.ownerValue artifact.Owner
+                        RequiredBySdd = artifact.RequiredBySdd
+                        Relationship = "optionalCompatibilityBoundary"
+                    })
+                |> List.sortBy (fun boundary -> boundary.Path)
+        }
 
     let blockingDiagnostics (model: WorkModel) =
         model.Diagnostics
@@ -749,11 +811,13 @@ module WorkModel =
     let governanceBoundaryEntries (model: WorkModel) = model.GovernanceBoundaries
 
     type NormalizedGuidanceModel =
-        { WorkId: string
-          Stage: string
-          Commands: GuidanceCommandEntry list
-          Skills: GuidanceSkillEntry list
-          SourceIdentities: string list }
+        {
+            WorkId: string
+            Stage: string
+            Commands: GuidanceCommandEntry list
+            Skills: GuidanceSkillEntry list
+            SourceIdentities: string list
+        }
 
     // ---- work-model.json reader (the agent-guidance derivation source) ----
 
@@ -813,8 +877,10 @@ module WorkModel =
         jmProp name element
         |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
         |> Option.map (fun location ->
-            ({ Line = jmInt "line" location
-               Column = jmInt "column" location }
+            ({
+                Line = jmInt "line" location
+                Column = jmInt "column" location
+            }
             : SourceLocation))
 
     let jmArray name element =
@@ -851,19 +917,21 @@ module WorkModel =
         | _ -> DiagnosticInfo
 
     let parseEmbeddedDiagnostic (element: JsonElement) : Diagnostic =
-        { Id = jmString "id" element
-          Severity = jmSeverity (jmString "severity" element)
-          Artifact = None
-          Location = None
-          Message = jmString "message" element
-          Correction = jmString "correction" element
-          RelatedIds = jmStringList "relatedIds" element
-          // Round-tripped diagnostics carry no defect bit — it is not serialized and the
-          // exit-code decision never reads parsed diagnostics (see feature 062 research).
-          IsToolDefect = false
-          // Likewise the defect sub-classifier tag is not serialized; classification only ever
-          // keys on freshly-built diagnostics, never round-tripped ones.
-          DefectTag = None }
+        {
+            Id = jmString "id" element
+            Severity = jmSeverity (jmString "severity" element)
+            Artifact = None
+            Location = None
+            Message = jmString "message" element
+            Correction = jmString "correction" element
+            RelatedIds = jmStringList "relatedIds" element
+            // Round-tripped diagnostics carry no defect bit — it is not serialized and the
+            // exit-code decision never reads parsed diagnostics (see feature 062 research).
+            IsToolDefect = false
+            // Likewise the defect sub-classifier tag is not serialized; classification only ever
+            // keys on freshly-built diagnostics, never round-tripped ones.
+            DefectTag = None
+        }
 
     // ---- FS-GG/FS.GG.SDD#266 (ADR-0002 Gap D, finding 2) round-trip helpers ----
     // `parseWorkModel` used to hardcode `Sources = []` and `GeneratedViews = []`, so a model rebuilt
@@ -876,8 +944,10 @@ module WorkModel =
         jmProp name element
         |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
         |> Option.map (fun digest ->
-            ({ Algorithm = jmString "algorithm" digest
-               Value = jmString "value" digest }
+            ({
+                Algorithm = jmString "algorithm" digest
+                Value = jmString "value" digest
+            }
             : SourceDigest))
         |> Option.defaultValue ({ Algorithm = "sha256"; Value = "" }: SourceDigest)
 
@@ -885,8 +955,10 @@ module WorkModel =
         jmProp name element
         |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
         |> Option.map (fun digest ->
-            ({ Algorithm = jmString "algorithm" digest
-               Value = jmString "value" digest }
+            ({
+                Algorithm = jmString "algorithm" digest
+                Value = jmString "value" digest
+            }
             : OutputDigest))
 
     // Reverse of `GenerationManifest.viewKindValue` / `currencyStatusValue`. Total: an unrecognized
@@ -912,16 +984,18 @@ module WorkModel =
         | _ -> CurrencyMalformed
 
     let parseSourceEntry (item: JsonElement) : SourceEntry =
-        { Path = jmString "path" item
-          Kind = jmString "kind" item
-          Owner = jmString "owner" item
-          SchemaVersion = jmInt "schemaVersion" item |> Option.defaultValue 0
-          RawSchemaVersion =
-            (match jmString "rawSchemaVersion" item with
-             | "" -> None
-             | value -> Some value)
-          SchemaStatus = jmString "schemaStatus" item
-          SourceDigest = jmSourceDigest "sourceDigest" item }
+        {
+            Path = jmString "path" item
+            Kind = jmString "kind" item
+            Owner = jmString "owner" item
+            SchemaVersion = jmInt "schemaVersion" item |> Option.defaultValue 0
+            RawSchemaVersion =
+                (match jmString "rawSchemaVersion" item with
+                 | "" -> None
+                 | value -> Some value)
+            SchemaStatus = jmString "schemaStatus" item
+            SourceDigest = jmSourceDigest "sourceDigest" item
+        }
 
     // `writeManifestSource` persists only path/digest/schemaVersion; `SchemaStatus` and
     // `RawSchemaVersion` are not serialized, so they default here — re-serialization stays
@@ -937,11 +1011,13 @@ module WorkModel =
         | Error _ -> None
         | Ok artifact ->
             Some
-                { Artifact = artifact
-                  Digest = jmSourceDigest "digest" item
-                  SchemaVersion = jmInt "schemaVersion" item |> Option.map SchemaVersion.create
-                  SchemaStatus = Current
-                  RawSchemaVersion = None }
+                {
+                    Artifact = artifact
+                    Digest = jmSourceDigest "digest" item
+                    SchemaVersion = jmInt "schemaVersion" item |> Option.map SchemaVersion.create
+                    SchemaStatus = Current
+                    RawSchemaVersion = None
+                }
 
     let parseGeneratedView (item: JsonElement) : GenerationManifest option =
         match
@@ -954,23 +1030,27 @@ module WorkModel =
         | Error _ -> None
         | Ok view ->
             Some
-                { View = view
-                  Kind = jmViewKind (jmString "kind" item)
-                  SchemaVersion = SchemaVersion.create (jmInt "schemaVersion" item |> Option.defaultValue 1)
-                  Generator =
-                    jmProp "generator" item
-                    |> Option.map (fun generator ->
-                        ({ Id = jmString "id" generator
-                           Version = jmString "version" generator }
-                        : GeneratorVersion))
-                    |> Option.defaultValue (SchemaVersion.currentGeneratorVersion ())
-                  Sources =
-                    jmArray "sources" item
-                    |> List.choose parseManifestSource
-                    |> List.sortBy (fun source -> source.Artifact.Path)
-                  OutputDigest = jmOutputDigest "outputDigest" item
-                  Currency = jmCurrency (jmString "currency" item)
-                  Diagnostics = [] }
+                {
+                    View = view
+                    Kind = jmViewKind (jmString "kind" item)
+                    SchemaVersion = SchemaVersion.create (jmInt "schemaVersion" item |> Option.defaultValue 1)
+                    Generator =
+                        jmProp "generator" item
+                        |> Option.map (fun generator ->
+                            ({
+                                Id = jmString "id" generator
+                                Version = jmString "version" generator
+                            }
+                            : GeneratorVersion))
+                        |> Option.defaultValue (SchemaVersion.currentGeneratorVersion ())
+                    Sources =
+                        jmArray "sources" item
+                        |> List.choose parseManifestSource
+                        |> List.sortBy (fun source -> source.Artifact.Path)
+                    OutputDigest = jmOutputDigest "outputDigest" item
+                    Currency = jmCurrency (jmString "currency" item)
+                    Diagnostics = []
+                }
 
     let parseWorkModel (snapshot: FileSnapshot) : Result<WorkModel, Diagnostic list> =
         let artifact =
@@ -1002,255 +1082,306 @@ module WorkModel =
 
                 if String.IsNullOrWhiteSpace workId then
                     Error
-                        [ Diagnostics.workModelInconsistent
-                              artifact
-                              "Work model is missing a workId."
-                              "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
-                              [ snapshot.Path ] ]
+                        [
+                            Diagnostics.workModelInconsistent
+                                artifact
+                                "Work model is missing a workId."
+                                "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
+                                [ snapshot.Path ]
+                        ]
                 else
                     Ok
-                        { SchemaVersion = version
-                          ModelVersion = jmString "modelVersion" root
-                          WorkId = workId
-                          Project =
-                            jmProp "project" root
-                            |> Option.map (fun project ->
-                                { Id = jmString "id" project
-                                  DefaultWorkRoot = jmString "defaultWorkRoot" project
-                                  Profile =
-                                    match jmString "profile" project with
-                                    | "" -> None
-                                    | value -> Some value })
-                            |> Option.defaultValue
-                                { Id = "unknown"
-                                  DefaultWorkRoot = "work"
-                                  Profile = None }
-                          Sources =
-                            jmArray "sources" root
-                            |> List.map parseSourceEntry
-                            |> List.sortBy (fun source -> source.Path)
-                          WorkItem =
-                            workItem
-                            |> Option.map (fun item ->
-                                { Id = jmString "id" item
-                                  Title = jmString "title" item
-                                  Stage = jmString "stage" item
-                                  ChangeTier = jmString "changeTier" item
-                                  Status = jmString "status" item })
-                            |> Option.defaultValue
-                                { Id = workId
-                                  Title = workId
-                                  Stage = stage
-                                  ChangeTier = "tier1"
-                                  Status = "draft" }
-                          PerformanceIntent =
-                            jmProp "performanceIntent" root
-                            |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
-                            |> Option.map (fun intent ->
-                                { Id = jmString "id" intent
-                                  Disposition = jmString "disposition" intent
-                                  TargetFps = jmInt "targetFps" intent |> Option.defaultValue 0
-                                  WorkloadIds = jmStringList "workloadIds" intent |> List.sort
-                                  WorkloadDefinitionDigests =
-                                    jmStringList "workloadDefinitionDigests" intent |> List.sort
-                                  MaximumExpectedScale = jmString "maximumExpectedScale" intent
-                                  MaxP95Ms = jmDecimal "maxP95Ms" intent |> Option.defaultValue -1m
-                                  MaxP99Ms = jmDecimal "maxP99Ms" intent |> Option.defaultValue -1m
-                                  MaxCatchUpFrames = jmInt "maxCatchUpFrames" intent |> Option.defaultValue -1
-                                  StructuralCostBudgets = jmStringList "structuralCostBudgets" intent |> List.sort
-                                  RequiredCapability = jmString "requiredCapability" intent
-                                  LiveCompositorRequired =
-                                    jmBool "liveCompositorRequired" intent |> Option.defaultValue false
-                                  DeferralIssue =
-                                    match jmString "deferralIssue" intent with
-                                    | "" -> None
-                                    | value -> Some value
-                                  EvidenceRefs = jmStringList "evidenceRefs" intent |> List.sort
-                                  Rationale =
-                                    match jmString "rationale" intent with
-                                    | "" -> None
-                                    | value -> Some value })
-                          Requirements =
-                            jmArray "requirements" root
-                            |> List.map (fun item ->
-                                { Id = jmString "id" item
-                                  Title = jmString "title" item
-                                  Text = jmString "text" item
-                                  AcceptanceCriteria = jmStringList "acceptanceCriteria" item
-                                  Priority =
-                                    (match jmString "priority" item with
-                                     | "" -> None
-                                     | value -> Some value)
-                                  // Absent on a pre-1.1.0 model → empty (unclassified), which is the
-                                  // correct read of an FR that predates the facet.
-                                  Classification = jmStringList "classification" item
-                                  Source = jmString "source" item
-                                  SourceLocation = jmLocation "sourceLocation" item
-                                  LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort
-                                  LinkedEvidenceIds = jmStringList "linkedEvidenceIds" item |> List.sort })
-                            |> List.sortBy (fun requirement -> requirement.Id)
-                          Decisions =
-                            jmArray "decisions" root
-                            |> List.map (fun item ->
-                                { Id = jmString "id" item
-                                  Title = jmString "title" item
-                                  Decision = jmString "decision" item
-                                  RequirementRefs = jmStringList "requirementRefs" item |> List.sort
-                                  StoryRefs = jmStringList "storyRefs" item |> List.sort
-                                  AcceptanceRefs = jmStringList "acceptanceRefs" item |> List.sort
-                                  Source = jmString "source" item
-                                  SourceLocation = jmLocation "sourceLocation" item
-                                  LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort })
-                            |> List.sortBy (fun decision -> decision.Id)
-                          Tasks =
-                            jmArray "tasks" root
-                            |> List.map (fun item ->
-                                { Id = jmString "id" item
-                                  Title = jmString "title" item
-                                  Status = jmString "status" item
-                                  Owner = jmString "owner" item
-                                  Dependencies = jmStringList "dependencies" item |> List.sort
-                                  // Upper-normalize the three reference fields to mirror the in-memory
-                                  // path. `deriveGuidanceModel` unions all three and dedupes with a
-                                  // case-sensitive `List.distinct`, so a hand-edited `work-model.json`
-                                  // mixing `requirements: ["FR-001"]` with `sourceIds: ["fr-001"]` would
-                                  // otherwise yield a duplicated `relatedIds` coverage clause and a
-                                  // `behaviorModelDigest` no normalized re-run reproduces (#215).
-                                  Requirements = jmStringList "requirements" item |> upperTypedIds
-                                  Decisions = jmStringList "decisions" item |> upperTypedIds
-                                  SourceIds = jmStringList "sourceIds" item |> upperSourceIds
-                                  RequiredSkills = jmStringList "requiredSkills" item |> List.sort
-                                  RequiredEvidence = jmStringList "requiredEvidence" item |> List.sort
-                                  Source = jmString "source" item
-                                  SourceLocation = jmLocation "sourceLocation" item })
-                            |> List.sortBy (fun task -> task.Id)
-                          Evidence =
-                            jmArray "evidence" root
-                            |> List.map (fun item ->
-                                { Id = jmString "id" item
-                                  Kind = jmString "kind" item
-                                  SubjectType = jmString "subjectType" item
-                                  SubjectId = jmString "subjectId" item
-                                  TaskRefs = jmStringList "taskRefs" item |> List.sort
-                                  RequirementRefs = jmStringList "requirementRefs" item |> List.sort
-                                  ArtifactRefs = jmStringList "artifactRefs" item |> List.sort
-                                  Result = jmString "result" item
-                                  Synthetic =
-                                    (jmProp "synthetic" item
-                                     |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
-                                  PerformanceBudget =
-                                    jmProp "performanceBudget" item
-                                    |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
-                                    |> Option.map (fun budget ->
-                                        { ArtifactPath = jmString "artifactPath" budget
-                                          Intent =
-                                            jmProp "intent" budget
-                                            |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
-                                            |> Option.map (fun intent ->
-                                                { Id = jmString "id" intent
-                                                  Disposition = jmString "disposition" intent
-                                                  TargetFps = jmInt "targetFps" intent |> Option.defaultValue 0
-                                                  WorkloadIds = jmStringList "workloadIds" intent |> List.sort
-                                                  WorkloadDefinitionDigests =
-                                                    jmStringList "workloadDefinitionDigests" intent |> List.sort
-                                                  MaximumExpectedScale = jmString "maximumExpectedScale" intent
-                                                  MaxP95Ms = jmDecimal "maxP95Ms" intent |> Option.defaultValue -1m
-                                                  MaxP99Ms = jmDecimal "maxP99Ms" intent |> Option.defaultValue -1m
-                                                  MaxCatchUpFrames =
-                                                    jmInt "maxCatchUpFrames" intent |> Option.defaultValue -1
-                                                  StructuralCostBudgets =
-                                                    jmStringList "structuralCostBudgets" intent |> List.sort
-                                                  RequiredCapability = jmString "requiredCapability" intent
-                                                  LiveCompositorRequired =
-                                                    jmBool "liveCompositorRequired" intent
-                                                    |> Option.defaultValue false
-                                                  DeferralIssue =
-                                                    match jmString "deferralIssue" intent with
-                                                    | "" -> None
-                                                    | value -> Some value
-                                                  EvidenceRefs = jmStringList "evidenceRefs" intent |> List.sort
-                                                  Rationale =
-                                                    match jmString "rationale" intent with
-                                                    | "" -> None
-                                                    | value -> Some value })
-                                          TargetFps = jmInt "targetFps" budget |> Option.defaultValue 0
-                                          WorkloadIds = jmStringList "workloadIds" budget |> List.sort
-                                          StressWorkloadIds = jmStringList "stressWorkloadIds" budget |> List.sort
-                                          WorkloadDefinitionDigests =
-                                            jmStringList "workloadDefinitionDigests" budget |> List.sort
-                                          CurrencyToken = jmString "currencyToken" budget
-                                          CapturedAfterUtc = jmString "capturedAfterUtc" budget
-                                          MaxP95Ms = jmDecimal "maxP95Ms" budget |> Option.defaultValue -1m
-                                          MaxP99Ms = jmDecimal "maxP99Ms" budget |> Option.defaultValue -1m
-                                          MaxCatchUpFrames = jmInt "maxCatchUpFrames" budget |> Option.defaultValue -1
-                                          MeasurementScope = jmString "measurementScope" budget
-                                          RequiredCapability = jmString "requiredCapability" budget
-                                          LiveCompositorRequired =
-                                            jmBool "liveCompositorRequired" budget |> Option.defaultValue false
-                                          DeferralIssue =
-                                            match jmString "deferralIssue" budget with
+                        {
+                            SchemaVersion = version
+                            ModelVersion = jmString "modelVersion" root
+                            WorkId = workId
+                            Project =
+                                jmProp "project" root
+                                |> Option.map (fun project ->
+                                    {
+                                        Id = jmString "id" project
+                                        DefaultWorkRoot = jmString "defaultWorkRoot" project
+                                        Profile =
+                                            match jmString "profile" project with
                                             | "" -> None
-                                            | value -> Some value })
-                                  PerformanceEvidenceArtifact =
-                                    jmProp "performanceEvidenceArtifact" item
-                                    |> Option.bind (fun artifact ->
-                                        match parsePerformanceEvidence (artifact.GetRawText()) with
-                                        | Ok value -> Some value
-                                        | Error _ -> None)
-                                  PerformanceMeasurements =
-                                    jmArray "performanceMeasurements" item
-                                    |> List.choose (fun measured ->
-                                        match
-                                            jmString "workloadId" measured,
-                                            jmDecimal "p95Ms" measured,
-                                            jmDecimal "p99Ms" measured,
-                                            jmInt "maxCatchUpFrames" measured
-                                        with
-                                        | workloadId, Some p95, Some p99, Some catchUp when
-                                            not (String.IsNullOrWhiteSpace workloadId)
-                                            ->
-                                            Some(
-                                                { WorkloadId = workloadId
-                                                  P95Ms = p95
-                                                  P99Ms = p99
-                                                  MaxCatchUpFrames = catchUp }
-                                                : PerformanceEvidenceMeasurement
-                                            )
-                                        | _ -> None)
-                                  Rationale =
-                                    (match jmString "rationale" item with
-                                     | "" -> None
-                                     | value -> Some value)
-                                  Source = jmString "source" item
-                                  SourceLocation = jmLocation "sourceLocation" item })
-                            |> List.sortBy (fun evidence -> evidence.Id)
-                          GeneratedViews = jmArray "generatedViews" root |> List.choose parseGeneratedView
-                          Diagnostics =
-                            jmArray "diagnostics" root
-                            |> List.map parseEmbeddedDiagnostic
-                            |> Diagnostics.sort
-                          GovernanceBoundaries =
-                            jmArray "governanceBoundaries" root
-                            |> List.map (fun item ->
-                                { Path = jmString "path" item
-                                  Owner = jmString "owner" item
-                                  RequiredBySdd =
-                                    (jmProp "requiredBySdd" item
-                                     |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
-                                  Relationship = jmString "relationship" item })
-                            |> List.sortBy (fun boundary -> boundary.Path) }
+                                            | value -> Some value
+                                    })
+                                |> Option.defaultValue
+                                    {
+                                        Id = "unknown"
+                                        DefaultWorkRoot = "work"
+                                        Profile = None
+                                    }
+                            Sources =
+                                jmArray "sources" root
+                                |> List.map parseSourceEntry
+                                |> List.sortBy (fun source -> source.Path)
+                            WorkItem =
+                                workItem
+                                |> Option.map (fun item ->
+                                    {
+                                        Id = jmString "id" item
+                                        Title = jmString "title" item
+                                        Stage = jmString "stage" item
+                                        ChangeTier = jmString "changeTier" item
+                                        Status = jmString "status" item
+                                    })
+                                |> Option.defaultValue
+                                    {
+                                        Id = workId
+                                        Title = workId
+                                        Stage = stage
+                                        ChangeTier = "tier1"
+                                        Status = "draft"
+                                    }
+                            PerformanceIntent =
+                                jmProp "performanceIntent" root
+                                |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+                                |> Option.map (fun intent ->
+                                    {
+                                        Id = jmString "id" intent
+                                        Disposition = jmString "disposition" intent
+                                        TargetFps = jmInt "targetFps" intent |> Option.defaultValue 0
+                                        WorkloadIds = jmStringList "workloadIds" intent |> List.sort
+                                        WorkloadDefinitionDigests =
+                                            jmStringList "workloadDefinitionDigests" intent |> List.sort
+                                        MaximumExpectedScale = jmString "maximumExpectedScale" intent
+                                        MaxP95Ms = jmDecimal "maxP95Ms" intent |> Option.defaultValue -1m
+                                        MaxP99Ms = jmDecimal "maxP99Ms" intent |> Option.defaultValue -1m
+                                        MaxCatchUpFrames = jmInt "maxCatchUpFrames" intent |> Option.defaultValue -1
+                                        StructuralCostBudgets =
+                                            jmStringList "structuralCostBudgets" intent |> List.sort
+                                        RequiredCapability = jmString "requiredCapability" intent
+                                        LiveCompositorRequired =
+                                            jmBool "liveCompositorRequired" intent |> Option.defaultValue false
+                                        DeferralIssue =
+                                            match jmString "deferralIssue" intent with
+                                            | "" -> None
+                                            | value -> Some value
+                                        EvidenceRefs = jmStringList "evidenceRefs" intent |> List.sort
+                                        Rationale =
+                                            match jmString "rationale" intent with
+                                            | "" -> None
+                                            | value -> Some value
+                                    })
+                            Requirements =
+                                jmArray "requirements" root
+                                |> List.map (fun item ->
+                                    {
+                                        Id = jmString "id" item
+                                        Title = jmString "title" item
+                                        Text = jmString "text" item
+                                        AcceptanceCriteria = jmStringList "acceptanceCriteria" item
+                                        Priority =
+                                            (match jmString "priority" item with
+                                             | "" -> None
+                                             | value -> Some value)
+                                        // Absent on a pre-1.1.0 model → empty (unclassified), which is the
+                                        // correct read of an FR that predates the facet.
+                                        Classification = jmStringList "classification" item
+                                        Source = jmString "source" item
+                                        SourceLocation = jmLocation "sourceLocation" item
+                                        LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort
+                                        LinkedEvidenceIds = jmStringList "linkedEvidenceIds" item |> List.sort
+                                    })
+                                |> List.sortBy (fun requirement -> requirement.Id)
+                            Decisions =
+                                jmArray "decisions" root
+                                |> List.map (fun item ->
+                                    {
+                                        Id = jmString "id" item
+                                        Title = jmString "title" item
+                                        Decision = jmString "decision" item
+                                        RequirementRefs = jmStringList "requirementRefs" item |> List.sort
+                                        StoryRefs = jmStringList "storyRefs" item |> List.sort
+                                        AcceptanceRefs = jmStringList "acceptanceRefs" item |> List.sort
+                                        Source = jmString "source" item
+                                        SourceLocation = jmLocation "sourceLocation" item
+                                        LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort
+                                    })
+                                |> List.sortBy (fun decision -> decision.Id)
+                            Tasks =
+                                jmArray "tasks" root
+                                |> List.map (fun item ->
+                                    {
+                                        Id = jmString "id" item
+                                        Title = jmString "title" item
+                                        Status = jmString "status" item
+                                        Owner = jmString "owner" item
+                                        Dependencies = jmStringList "dependencies" item |> List.sort
+                                        // Upper-normalize the three reference fields to mirror the in-memory
+                                        // path. `deriveGuidanceModel` unions all three and dedupes with a
+                                        // case-sensitive `List.distinct`, so a hand-edited `work-model.json`
+                                        // mixing `requirements: ["FR-001"]` with `sourceIds: ["fr-001"]` would
+                                        // otherwise yield a duplicated `relatedIds` coverage clause and a
+                                        // `behaviorModelDigest` no normalized re-run reproduces (#215).
+                                        Requirements = jmStringList "requirements" item |> upperTypedIds
+                                        Decisions = jmStringList "decisions" item |> upperTypedIds
+                                        SourceIds = jmStringList "sourceIds" item |> upperSourceIds
+                                        RequiredSkills = jmStringList "requiredSkills" item |> List.sort
+                                        RequiredEvidence = jmStringList "requiredEvidence" item |> List.sort
+                                        Source = jmString "source" item
+                                        SourceLocation = jmLocation "sourceLocation" item
+                                    })
+                                |> List.sortBy (fun task -> task.Id)
+                            Evidence =
+                                jmArray "evidence" root
+                                |> List.map (fun item ->
+                                    {
+                                        Id = jmString "id" item
+                                        Kind = jmString "kind" item
+                                        SubjectType = jmString "subjectType" item
+                                        SubjectId = jmString "subjectId" item
+                                        TaskRefs = jmStringList "taskRefs" item |> List.sort
+                                        RequirementRefs = jmStringList "requirementRefs" item |> List.sort
+                                        ArtifactRefs = jmStringList "artifactRefs" item |> List.sort
+                                        Result = jmString "result" item
+                                        Synthetic =
+                                            (jmProp "synthetic" item
+                                             |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
+                                        PerformanceBudget =
+                                            jmProp "performanceBudget" item
+                                            |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+                                            |> Option.map (fun budget ->
+                                                {
+                                                    ArtifactPath = jmString "artifactPath" budget
+                                                    Intent =
+                                                        jmProp "intent" budget
+                                                        |> Option.filter (fun value ->
+                                                            value.ValueKind = JsonValueKind.Object)
+                                                        |> Option.map (fun intent ->
+                                                            {
+                                                                Id = jmString "id" intent
+                                                                Disposition = jmString "disposition" intent
+                                                                TargetFps =
+                                                                    jmInt "targetFps" intent |> Option.defaultValue 0
+                                                                WorkloadIds =
+                                                                    jmStringList "workloadIds" intent |> List.sort
+                                                                WorkloadDefinitionDigests =
+                                                                    jmStringList "workloadDefinitionDigests" intent
+                                                                    |> List.sort
+                                                                MaximumExpectedScale =
+                                                                    jmString "maximumExpectedScale" intent
+                                                                MaxP95Ms =
+                                                                    jmDecimal "maxP95Ms" intent
+                                                                    |> Option.defaultValue -1m
+                                                                MaxP99Ms =
+                                                                    jmDecimal "maxP99Ms" intent
+                                                                    |> Option.defaultValue -1m
+                                                                MaxCatchUpFrames =
+                                                                    jmInt "maxCatchUpFrames" intent
+                                                                    |> Option.defaultValue -1
+                                                                StructuralCostBudgets =
+                                                                    jmStringList "structuralCostBudgets" intent
+                                                                    |> List.sort
+                                                                RequiredCapability =
+                                                                    jmString "requiredCapability" intent
+                                                                LiveCompositorRequired =
+                                                                    jmBool "liveCompositorRequired" intent
+                                                                    |> Option.defaultValue false
+                                                                DeferralIssue =
+                                                                    match jmString "deferralIssue" intent with
+                                                                    | "" -> None
+                                                                    | value -> Some value
+                                                                EvidenceRefs =
+                                                                    jmStringList "evidenceRefs" intent |> List.sort
+                                                                Rationale =
+                                                                    match jmString "rationale" intent with
+                                                                    | "" -> None
+                                                                    | value -> Some value
+                                                            })
+                                                    TargetFps = jmInt "targetFps" budget |> Option.defaultValue 0
+                                                    WorkloadIds = jmStringList "workloadIds" budget |> List.sort
+                                                    StressWorkloadIds =
+                                                        jmStringList "stressWorkloadIds" budget |> List.sort
+                                                    WorkloadDefinitionDigests =
+                                                        jmStringList "workloadDefinitionDigests" budget |> List.sort
+                                                    CurrencyToken = jmString "currencyToken" budget
+                                                    CapturedAfterUtc = jmString "capturedAfterUtc" budget
+                                                    MaxP95Ms = jmDecimal "maxP95Ms" budget |> Option.defaultValue -1m
+                                                    MaxP99Ms = jmDecimal "maxP99Ms" budget |> Option.defaultValue -1m
+                                                    MaxCatchUpFrames =
+                                                        jmInt "maxCatchUpFrames" budget |> Option.defaultValue -1
+                                                    MeasurementScope = jmString "measurementScope" budget
+                                                    RequiredCapability = jmString "requiredCapability" budget
+                                                    LiveCompositorRequired =
+                                                        jmBool "liveCompositorRequired" budget
+                                                        |> Option.defaultValue false
+                                                    DeferralIssue =
+                                                        match jmString "deferralIssue" budget with
+                                                        | "" -> None
+                                                        | value -> Some value
+                                                })
+                                        PerformanceEvidenceArtifact =
+                                            jmProp "performanceEvidenceArtifact" item
+                                            |> Option.bind (fun artifact ->
+                                                match parsePerformanceEvidence (artifact.GetRawText()) with
+                                                | Ok value -> Some value
+                                                | Error _ -> None)
+                                        PerformanceMeasurements =
+                                            jmArray "performanceMeasurements" item
+                                            |> List.choose (fun measured ->
+                                                match
+                                                    jmString "workloadId" measured,
+                                                    jmDecimal "p95Ms" measured,
+                                                    jmDecimal "p99Ms" measured,
+                                                    jmInt "maxCatchUpFrames" measured
+                                                with
+                                                | workloadId, Some p95, Some p99, Some catchUp when
+                                                    not (String.IsNullOrWhiteSpace workloadId)
+                                                    ->
+                                                    Some(
+                                                        {
+                                                            WorkloadId = workloadId
+                                                            P95Ms = p95
+                                                            P99Ms = p99
+                                                            MaxCatchUpFrames = catchUp
+                                                        }
+                                                        : PerformanceEvidenceMeasurement
+                                                    )
+                                                | _ -> None)
+                                        Rationale =
+                                            (match jmString "rationale" item with
+                                             | "" -> None
+                                             | value -> Some value)
+                                        Source = jmString "source" item
+                                        SourceLocation = jmLocation "sourceLocation" item
+                                    })
+                                |> List.sortBy (fun evidence -> evidence.Id)
+                            GeneratedViews = jmArray "generatedViews" root |> List.choose parseGeneratedView
+                            Diagnostics =
+                                jmArray "diagnostics" root
+                                |> List.map parseEmbeddedDiagnostic
+                                |> Diagnostics.sort
+                            GovernanceBoundaries =
+                                jmArray "governanceBoundaries" root
+                                |> List.map (fun item ->
+                                    {
+                                        Path = jmString "path" item
+                                        Owner = jmString "owner" item
+                                        RequiredBySdd =
+                                            (jmProp "requiredBySdd" item
+                                             |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
+                                        Relationship = jmString "relationship" item
+                                    })
+                                |> List.sortBy (fun boundary -> boundary.Path)
+                        }
             | _ ->
                 Error
-                    [ Diagnostics.malformedSchemaVersion
-                          artifact
-                          "Work model is missing or has malformed schemaVersion." ]
+                    [
+                        Diagnostics.malformedSchemaVersion
+                            artifact
+                            "Work model is missing or has malformed schemaVersion."
+                    ]
         with ex ->
             Error
-                [ Diagnostics.workModelInconsistent
-                      artifact
-                      $"Work model JSON is malformed: {ex.Message}"
-                      "Regenerate readiness/<id>/work-model.json with valid JSON."
-                      [ snapshot.Path ] ]
+                [
+                    Diagnostics.workModelInconsistent
+                        artifact
+                        $"Work model JSON is malformed: {ex.Message}"
+                        "Regenerate readiness/<id>/work-model.json with valid JSON."
+                        [ snapshot.Path ]
+                ]
 
     // ---- normalized guidance model derivation (pure over the work model) ----
 
@@ -1279,11 +1410,13 @@ module WorkModel =
                         let coverage = String.concat ", " ids
                         $"Carry out lifecycle task {task.Id} ({task.Status}) covering {coverage}."
 
-                { Id = task.Id
-                  Title = task.Title
-                  Stage = model.WorkItem.Stage
-                  Purpose = purpose
-                  RelatedIds = relatedIds })
+                {
+                    Id = task.Id
+                    Title = task.Title
+                    Stage = model.WorkItem.Stage
+                    Purpose = purpose
+                    RelatedIds = relatedIds
+                })
             |> List.sortBy (fun command -> command.Id)
 
         let skills =
@@ -1294,10 +1427,12 @@ module WorkModel =
                 let taskIds = pairs |> List.map snd |> List.distinct |> List.sort
                 let taskList = String.concat ", " taskIds
 
-                { Id = skill
-                  Title = skill
-                  Capability = $"Required by tasks: {taskList}."
-                  RelatedIds = taskIds })
+                {
+                    Id = skill
+                    Title = skill
+                    Capability = $"Required by tasks: {taskList}."
+                    RelatedIds = taskIds
+                })
             |> List.sortBy (fun skill -> skill.Id)
 
         let sourceIdentities =
@@ -1307,11 +1442,13 @@ module WorkModel =
             |> List.distinct
             |> List.sort
 
-        { WorkId = model.WorkId
-          Stage = model.WorkItem.Stage
-          Commands = commands
-          Skills = skills
-          SourceIdentities = sourceIdentities }
+        {
+            WorkId = model.WorkId
+            Stage = model.WorkItem.Stage
+            Commands = commands
+            Skills = skills
+            SourceIdentities = sourceIdentities
+        }
 
     let behaviorModelDigest (model: NormalizedGuidanceModel) : SourceDigest =
         let commandText =
@@ -1319,11 +1456,13 @@ module WorkModel =
             |> List.map (fun command ->
                 String.concat
                     "|"
-                    [ command.Id
-                      command.Title
-                      command.Stage
-                      command.Purpose
-                      String.concat "," command.RelatedIds ])
+                    [
+                        command.Id
+                        command.Title
+                        command.Stage
+                        command.Purpose
+                        String.concat "," command.RelatedIds
+                    ])
             |> String.concat "\n"
 
         let skillText =

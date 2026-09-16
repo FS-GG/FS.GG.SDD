@@ -118,15 +118,17 @@ module RenderingSkillsTests =
         let outcome = RenderingSkills.plan gameProfile
 
         for id in
-            [ "fs-gg-elmish"
-              "fs-gg-feedback-report"
-              "fs-gg-game-shell"
-              "fs-gg-project"
-              "fs-gg-scene"
-              "fs-gg-skiaviewer"
-              "fs-gg-symbol-design"
-              "fs-gg-symbology"
-              "fs-gg-testing" ] do
+            [
+                "fs-gg-elmish"
+                "fs-gg-feedback-report"
+                "fs-gg-game-shell"
+                "fs-gg-project"
+                "fs-gg-scene"
+                "fs-gg-skiaviewer"
+                "fs-gg-symbol-design"
+                "fs-gg-symbology"
+                "fs-gg-testing"
+            ] do
             Assert.Contains(id, outcome.MaterializedIds)
 
         Assert.Empty outcome.VerifyFailedIds
@@ -302,7 +304,8 @@ module RenderingSkillsTests =
     let ``only the declared legacy Game Rendering collisions may yield`` () =
         let unexpected =
             { RenderingSkills.empty with
-                YieldedIds = [ "fs-gg-unrelated-owner-conflict" ] }
+                YieldedIds = [ "fs-gg-unrelated-owner-conflict" ]
+            }
 
         let diagnostic =
             Assert.Single(HandlersScaffold.renderingSkillDiagnostics unexpected)
@@ -316,24 +319,32 @@ module RenderingSkillsTests =
         // an operator which package to go and fix. Each outcome shape is fed to the production
         // projection; the assertion is the id it emits.
         let cases =
-            [ { RenderingSkills.empty with
-                  ManifestError = Some "boom" },
-              "scaffold.renderingSkillManifestMalformed"
-              { RenderingSkills.empty with
-                  NamespaceCollisionIds = [ "fs-gg-sdd-plan" ] },
-              "scaffold.renderingSkillNamespaceCollision"
-              { RenderingSkills.empty with
-                  VerifyFailedIds = [ "fs-gg-widget" ] },
-              "scaffold.renderingSkillVerifyFailed"
-              { RenderingSkills.empty with
-                  PredicateUnevaluatedIds = [ "fs-gg-widget" ] },
-              "scaffold.renderingSkillPredicateUnevaluated"
-              { RenderingSkills.empty with
-                  YieldedIds = [ "fs-gg-collision" ] },
-              "scaffold.renderingSkillChannelYielded"
-              { RenderingSkills.empty with
-                  UndeliverableSidecars = [ "fs-gg-widget/scripts/x.fsx" ] },
-              "scaffold.renderingSkillSidecarsUndeclared" ]
+            [
+                { RenderingSkills.empty with
+                    ManifestError = Some "boom"
+                },
+                "scaffold.renderingSkillManifestMalformed"
+                { RenderingSkills.empty with
+                    NamespaceCollisionIds = [ "fs-gg-sdd-plan" ]
+                },
+                "scaffold.renderingSkillNamespaceCollision"
+                { RenderingSkills.empty with
+                    VerifyFailedIds = [ "fs-gg-widget" ]
+                },
+                "scaffold.renderingSkillVerifyFailed"
+                { RenderingSkills.empty with
+                    PredicateUnevaluatedIds = [ "fs-gg-widget" ]
+                },
+                "scaffold.renderingSkillPredicateUnevaluated"
+                { RenderingSkills.empty with
+                    YieldedIds = [ "fs-gg-collision" ]
+                },
+                "scaffold.renderingSkillChannelYielded"
+                { RenderingSkills.empty with
+                    UndeliverableSidecars = [ "fs-gg-widget/scripts/x.fsx" ]
+                },
+                "scaffold.renderingSkillSidecarsUndeclared"
+            ]
 
         for outcome, expectedId in cases do
             let ids =
@@ -362,21 +373,24 @@ module RenderingSkillsTests =
             [ Diagnostics.DiagnosticError, true ],
             severityOf
                 { RenderingSkills.empty with
-                    VerifyFailedIds = [ "fs-gg-widget" ] }
+                    VerifyFailedIds = [ "fs-gg-widget" ]
+                }
         )
 
         Assert.Equal<(Diagnostics.DiagnosticSeverity * bool) list>(
             [ Diagnostics.DiagnosticWarning, false ],
             severityOf
                 { RenderingSkills.empty with
-                    UndeliverableSidecars = [ "fs-gg-widget/scripts/x.fsx" ] }
+                    UndeliverableSidecars = [ "fs-gg-widget/scripts/x.fsx" ]
+                }
         )
 
         Assert.Equal<(Diagnostics.DiagnosticSeverity * bool) list>(
             [ Diagnostics.DiagnosticWarning, false ],
             severityOf
                 { RenderingSkills.empty with
-                    YieldedIds = [ "fs-gg-collision" ] }
+                    YieldedIds = [ "fs-gg-collision" ]
+                }
         )
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
@@ -535,8 +549,10 @@ module RenderingSkillsTests =
 
         let files =
             Map.ofList
-                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                  ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+                [
+                    ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                    ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar
+                ]
 
         let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
         Assert.Empty outcome.VerifyFailedIds
@@ -613,9 +629,11 @@ module RenderingSkillsTests =
 
         let extra =
             Map.ofList
-                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                  ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar
-                  ("fs-gg-widget", "extra.fsx"), System.Text.Encoding.UTF8.GetBytes "x" ]
+                [
+                    ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                    ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar
+                    ("fs-gg-widget", "extra.fsx"), System.Text.Encoding.UTF8.GetBytes "x"
+                ]
 
         for files in [ missing; extra ] do
             let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
@@ -639,8 +657,10 @@ module RenderingSkillsTests =
 
         let files =
             Map.ofList
-                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                  ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+                [
+                    ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                    ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar
+                ]
 
         let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
         Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
@@ -653,11 +673,13 @@ module RenderingSkillsTests =
         let digest = Fsgg.SkillMirror.sha256 sidecar
 
         for path in
-            [ "/escape.fsx"
-              "../escape.fsx"
-              "scripts\\escape.fsx"
-              "scripts/./escape.fsx"
-              "scripts//escape.fsx" ] do
+            [
+                "/escape.fsx"
+                "../escape.fsx"
+                "scripts\\escape.fsx"
+                "scripts/./escape.fsx"
+                "scripts//escape.fsx"
+            ] do
             let jsonPath = System.Text.Json.JsonSerializer.Serialize path
 
             let manifest =
@@ -672,8 +694,10 @@ module RenderingSkillsTests =
 
             let files =
                 Map.ofList
-                    [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                      ("fs-gg-widget", path), System.Text.Encoding.UTF8.GetBytes sidecar ]
+                    [
+                        ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                        ("fs-gg-widget", path), System.Text.Encoding.UTF8.GetBytes sidecar
+                    ]
 
             let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
             Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
@@ -697,8 +721,10 @@ module RenderingSkillsTests =
 
         let files =
             Map.ofList
-                [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
-                  ("fs-gg-widget", nested), System.Text.Encoding.UTF8.GetBytes sidecar ]
+                [
+                    ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                    ("fs-gg-widget", nested), System.Text.Encoding.UTF8.GetBytes sidecar
+                ]
 
         let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
         Assert.Empty outcome.VerifyFailedIds

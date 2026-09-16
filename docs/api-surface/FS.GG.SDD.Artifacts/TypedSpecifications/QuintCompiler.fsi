@@ -3,77 +3,89 @@ namespace FS.GG.SDD.Artifacts.TypedSpecifications
 /// Stable compilation identity. Profile 1 accepts integration facts here; profile 2 derives every
 /// semantic section from promoted Quint catalogue rows and accepts only specification/provenance digests.
 type QuintContractMetadata =
-    { Specification: string
-      Relationships: QuintRelationship list
-      VerificationProfiles: QuintVerificationProfile list
-      Bounds: QuintFiniteBound list
-      Impacts: QuintImpact list
-      Compatibility: QuintCompatibility list
-      Digests: QuintSemanticDigest list }
+    {
+        Specification: string
+        Relationships: QuintRelationship list
+        VerificationProfiles: QuintVerificationProfile list
+        Bounds: QuintFiniteBound list
+        Impacts: QuintImpact list
+        Compatibility: QuintCompatibility list
+        Digests: QuintSemanticDigest list
+    }
 
 /// Complete pure observation for the explicit general profile.
 type QuintGeneralObservedCompilation =
-    { ModuleName: string
-      Toolchain: QuintToolchainManifest
-      Cache: QuintCacheObservation list
-      ProcessRequests: QuintProcessRequest list
-      Endpoint: QuintEndpointState
-      ProcessObservations: QuintProcessObservation list
-      Source: QuintMarkdownSource
-      FenceManifest: QuintFenceManifest
-      Extraction: QuintExtractionObservation
-      SourceMap: QuintSourceMap
-      TypedEffect: QuintGeneralTypedEffectObservation
-      Metadata: QuintContractMetadata }
+    {
+        ModuleName: string
+        Toolchain: QuintToolchainManifest
+        Cache: QuintCacheObservation list
+        ProcessRequests: QuintProcessRequest list
+        Endpoint: QuintEndpointState
+        ProcessObservations: QuintProcessObservation list
+        Source: QuintMarkdownSource
+        FenceManifest: QuintFenceManifest
+        Extraction: QuintExtractionObservation
+        SourceMap: QuintSourceMap
+        TypedEffect: QuintGeneralTypedEffectObservation
+        Metadata: QuintContractMetadata
+    }
 
 /// Complete pure observation offered after a host executes already-resolved local tools.
 type QuintObservedCompilation =
-    { ModuleName: string
-      Toolchain: QuintToolchainManifest
-      Cache: QuintCacheObservation list
-      ProcessRequests: QuintProcessRequest list
-      Endpoint: QuintEndpointState
-      ProcessObservations: QuintProcessObservation list
-      Source: QuintMarkdownSource
-      FenceManifest: QuintFenceManifest
-      Extraction: QuintExtractionObservation
-      SourceMap: QuintSourceMap
-      TypedEffect: QuintTypedEffectObservation
-      Metadata: QuintContractMetadata }
+    {
+        ModuleName: string
+        Toolchain: QuintToolchainManifest
+        Cache: QuintCacheObservation list
+        ProcessRequests: QuintProcessRequest list
+        Endpoint: QuintEndpointState
+        ProcessObservations: QuintProcessObservation list
+        Source: QuintMarkdownSource
+        FenceManifest: QuintFenceManifest
+        Extraction: QuintExtractionObservation
+        SourceMap: QuintSourceMap
+        TypedEffect: QuintTypedEffectObservation
+        Metadata: QuintContractMetadata
+    }
 
 /// Content-addressed receipt for one accepted observed compilation.
 type QuintCompilationReceipt =
-    { Schema: string
-      SourceSha256: string
-      FenceManifestSha256: string
-      GeneratedModulesSha256: string
-      ToolchainSha256: string
-      TypedEffectSha256: string
-      ContractSha256: string
-      CompilationFingerprint: string
-      ProcessSteps: string list }
+    {
+        Schema: string
+        SourceSha256: string
+        FenceManifestSha256: string
+        GeneratedModulesSha256: string
+        ToolchainSha256: string
+        TypedEffectSha256: string
+        ContractSha256: string
+        CompilationFingerprint: string
+        ProcessSteps: string list
+    }
 
 /// Stable outputs from the pure compiler composition.
 type QuintCompilationOutput =
-    { Plan: QuintCompilationPlan
-      Contract: QuintCompiledContract
-      CanonicalContract: string
-      CompilationFingerprint: string
-      Bindings: QuintGeneratedBindings
-      Receipt: QuintCompilationReceipt
-      CanonicalReceipt: string }
+    {
+        Plan: QuintCompilationPlan
+        Contract: QuintCompiledContract
+        CanonicalContract: string
+        CompilationFingerprint: string
+        Bindings: QuintGeneratedBindings
+        Receipt: QuintCompilationReceipt
+        CanonicalReceipt: string
+    }
 
 /// Stable profile-2 outputs from the pure compiler composition.
 type QuintGeneralCompilationOutput =
-    { Plan: QuintCompilationPlan
-      Contract: QuintCompiledContractV2
-      CanonicalContract: string
-      CompilationFingerprint: string
-      BindingManifest: QuintGeneralBindingManifest
-      CanonicalBindingManifest: string
-      Bindings: QuintGeneratedBindings
-      Receipt: QuintCompilationReceipt
-      CanonicalReceipt: string }
+    {
+        Plan: QuintCompilationPlan
+        Contract: QuintCompiledContractV2
+        CanonicalContract: string
+        CompilationFingerprint: string
+        BindingManifest: QuintGeneralBindingManifest
+        CanonicalBindingManifest: string
+        Bindings: QuintGeneratedBindings
+        Receipt: QuintCompilationReceipt
+        CanonicalReceipt: string
+    }
 
 [<RequireQualifiedAccess>]
 module QuintCompiler =

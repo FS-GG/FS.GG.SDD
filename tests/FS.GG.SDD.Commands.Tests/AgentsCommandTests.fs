@@ -27,9 +27,11 @@ module AgentsCommandTests =
 
         match
             parseGeneratedAgentGuidance
-                { Path = path
-                  Text = TestSupport.readRelative root path
-                  RawBytes = None }
+                {
+                    Path = path
+                    Text = TestSupport.readRelative root path
+                    RawBytes = None
+                }
         with
         | Ok manifest -> manifest
         | Error diagnostics -> failwith $"Expected a well-formed {target} manifest, got: {diagnostics}"
@@ -421,11 +423,13 @@ module AgentsCommandTests =
         let root = initializedVerifiedProject ()
 
         let preserved =
-            [ "CLAUDE.md"
-              "AGENTS.md"
-              ".fsgg/agents.yml"
-              $"work/{workId}/spec.md"
-              $"work/{workId}/tasks.yml" ]
+            [
+                "CLAUDE.md"
+                "AGENTS.md"
+                ".fsgg/agents.yml"
+                $"work/{workId}/spec.md"
+                $"work/{workId}/tasks.yml"
+            ]
 
         let before =
             preserved |> List.map (fun path -> path, TestSupport.readRelative root path)
@@ -442,7 +446,8 @@ module AgentsCommandTests =
         let report =
             TestSupport.runRequest
                 { TestSupport.agentsRequest root workId with
-                    DryRun = true }
+                    DryRun = true
+                }
 
         Assert.False(TestSupport.existsRelative root $"{claudeRoot}/guidance.json")
         Assert.False(TestSupport.existsRelative root $"{codexRoot}/guidance.json")

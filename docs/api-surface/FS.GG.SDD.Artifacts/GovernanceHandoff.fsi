@@ -27,34 +27,44 @@ module GovernanceHandoff =
         | Skipped
 
     type EvidenceNode =
-        { Id: string
-          State: DeclaredEvidenceState
-          Rationale: string option }
+        {
+            Id: string
+            State: DeclaredEvidenceState
+            Rationale: string option
+        }
 
     type EvidenceEdge =
-        { Dependent: string
-          Dependency: string }
+        {
+            Dependent: string
+            Dependency: string
+        }
 
     type EvidenceProjection =
-        { Nodes: EvidenceNode list
-          Dependencies: EvidenceEdge list }
+        {
+            Nodes: EvidenceNode list
+            Dependencies: EvidenceEdge list
+        }
 
     type PerformanceEvidenceProjection = Fsgg.Schemas.GovernanceHandoffPerformanceEvidence
 
     type GovernedReference =
-        { Path: string
-          Owner: string
-          Relationship: string
-          Kind: string option
-          Operation: string option }
+        {
+            Path: string
+            Owner: string
+            Relationship: string
+            Kind: string option
+            Operation: string option
+        }
 
     type GovernanceConfigPresence =
-        { PolicyPresent: bool
-          PolicyPointer: string option
-          CapabilitiesPresent: bool
-          CapabilitiesPointer: string option
-          ToolingPresent: bool
-          ToolingPointer: string option }
+        {
+            PolicyPresent: bool
+            PolicyPointer: string option
+            CapabilitiesPresent: bool
+            CapabilitiesPointer: string option
+            ToolingPresent: bool
+            ToolingPointer: string option
+        }
 
     /// Merge-boundary readiness mirrored from `ShipSummary`/`VerificationSummary`.
     /// Advisory inputs to a Governance decision, never a verdict.
@@ -74,17 +84,19 @@ module GovernanceHandoff =
         }
 
     type GovernanceHandoff =
-        { SchemaVersion: int
-          ContractVersion: string
-          GeneratorVersion: GeneratorVersion
-          WorkId: string
-          Sources: SourceIdentity list
-          Evidence: EvidenceProjection
-          PerformanceEvidence: PerformanceEvidenceProjection list
-          GovernedReferences: GovernedReference list
-          GovernanceConfig: GovernanceConfigPresence
-          Readiness: ReadinessFacts
-          Diagnostics: Diagnostic list }
+        {
+            SchemaVersion: int
+            ContractVersion: string
+            GeneratorVersion: GeneratorVersion
+            WorkId: string
+            Sources: SourceIdentity list
+            Evidence: EvidenceProjection
+            PerformanceEvidence: PerformanceEvidenceProjection list
+            GovernedReferences: GovernedReference list
+            GovernanceConfig: GovernanceConfigPresence
+            Readiness: ReadinessFacts
+            Diagnostics: Diagnostic list
+        }
 
     /// Serialized token for a declared evidence state (identical to `Kernel.Json`).
     val declaredEvidenceStateValue: state: DeclaredEvidenceState -> string

@@ -13,26 +13,30 @@ type LifecycleLane =
     | LegacySpecKit
 
 type TypedAuthorityManifest =
-    { SchemaVersion: int
-      Lifecycle: string
-      Backend: string
-      CompilerIdentity: string
-      PackageIdentity: string
-      ExtensionIdentity: string
-      CanonicalPath: string
-      CanonicalSha256: string
-      NormalizedPath: string
-      NormalizedSha256: string
-      MarkdownPath: string
-      MarkdownSha256: string
-      AuthoringAgent: string
-      AuthoringSession: string
-      RollbackSourceSha256: string option }
+    {
+        SchemaVersion: int
+        Lifecycle: string
+        Backend: string
+        CompilerIdentity: string
+        PackageIdentity: string
+        ExtensionIdentity: string
+        CanonicalPath: string
+        CanonicalSha256: string
+        NormalizedPath: string
+        NormalizedSha256: string
+        MarkdownPath: string
+        MarkdownSha256: string
+        AuthoringAgent: string
+        AuthoringSession: string
+        RollbackSourceSha256: string option
+    }
 
 type TypedLifecycleDiagnostic =
-    { Id: string
-      Message: string
-      Correction: string }
+    {
+        Id: string
+        Message: string
+        Correction: string
+    }
 
 [<RequireQualifiedAccess>]
 module LifecycleLane =
@@ -60,9 +64,11 @@ module LifecycleLane =
         | Some "spec-kit" -> Ok LegacySpecKit
         | Some unsupported ->
             Error
-                { Id = "typedSdd.lifecycleUnsupported"
-                  Message = $"Lifecycle '{unsupported}' is not supported."
-                  Correction = "Choose one of: none, sdd, typed-sdd, spec-kit." }
+                {
+                    Id = "typedSdd.lifecycleUnsupported"
+                    Message = $"Lifecycle '{unsupported}' is not supported."
+                    Correction = "Choose one of: none, sdd, typed-sdd, spec-kit."
+                }
 
 [<RequireQualifiedAccess>]
 module TypedAuthorityManifest =
@@ -101,9 +107,11 @@ module TypedAuthorityManifest =
         Encoding.UTF8.GetString(stream.ToArray()) + "\n"
 
     let private diagnostic id message correction =
-        { Id = id
-          Message = message
-          Correction = correction }
+        {
+            Id = id
+            Message = message
+            Correction = correction
+        }
 
     let deserialize (text: string) =
         try
@@ -134,21 +142,23 @@ module TypedAuthorityManifest =
                 )
             else
                 Ok
-                    { SchemaVersion = schemaVersion
-                      Lifecycle = required "lifecycle"
-                      Backend = required "backend"
-                      CompilerIdentity = required "compilerIdentity"
-                      PackageIdentity = required "packageIdentity"
-                      ExtensionIdentity = required "extensionIdentity"
-                      CanonicalPath = required "canonicalPath"
-                      CanonicalSha256 = required "canonicalSha256"
-                      NormalizedPath = required "normalizedPath"
-                      NormalizedSha256 = required "normalizedSha256"
-                      MarkdownPath = required "markdownPath"
-                      MarkdownSha256 = required "markdownSha256"
-                      AuthoringAgent = required "authoringAgent"
-                      AuthoringSession = required "authoringSession"
-                      RollbackSourceSha256 = rollback }
+                    {
+                        SchemaVersion = schemaVersion
+                        Lifecycle = required "lifecycle"
+                        Backend = required "backend"
+                        CompilerIdentity = required "compilerIdentity"
+                        PackageIdentity = required "packageIdentity"
+                        ExtensionIdentity = required "extensionIdentity"
+                        CanonicalPath = required "canonicalPath"
+                        CanonicalSha256 = required "canonicalSha256"
+                        NormalizedPath = required "normalizedPath"
+                        NormalizedSha256 = required "normalizedSha256"
+                        MarkdownPath = required "markdownPath"
+                        MarkdownSha256 = required "markdownSha256"
+                        AuthoringAgent = required "authoringAgent"
+                        AuthoringSession = required "authoringSession"
+                        RollbackSourceSha256 = rollback
+                    }
         with ex ->
             Error(diagnostic "typedSdd.authorityMalformed" ex.Message "Regenerate the Typed SDD authority manifest.")
 
@@ -173,93 +183,97 @@ module TypedAuthorityManifest =
 
             String.concat
                 "\n"
-                [ "---"
-                  "schemaVersion: 1"
-                  $"workId: {workId}"
-                  $"title: {title}"
-                  "stage: specify"
-                  "changeTier: tier1"
-                  "status: specified"
-                  $"publicOrToolFacingImpact: {publicImpact}"
-                  "---"
-                  ""
-                  body ])
+                [
+                    "---"
+                    "schemaVersion: 1"
+                    $"workId: {workId}"
+                    $"title: {title}"
+                    "stage: specify"
+                    "changeTier: tier1"
+                    "status: specified"
+                    $"publicOrToolFacingImpact: {publicImpact}"
+                    "---"
+                    ""
+                    body
+                ])
 
     let validate expectedPackageIdentity compilerAvailable canonicalBytes normalizedBytes markdownBytes manifest =
-        [ if
-              manifest.Lifecycle <> "typed-sdd"
-              || manifest.Backend <> "fsharp-specification-v1"
-          then
-              yield
-                  diagnostic
-                      "typedSdd.wrongLifecycle"
-                      "Provenance does not select the Typed SDD F# backend."
-                      "Select lifecycle=typed-sdd and refresh provenance."
-          if manifest.CompilerIdentity <> "dotnet-fsi/net10.0" then
-              yield
-                  diagnostic
-                      "typedSdd.compilerIdentityMismatch"
-                      $"Compiler identity '{manifest.CompilerIdentity}' is unsupported."
-                      "Re-author with the pinned dotnet-fsi/net10.0 compiler."
-          if not compilerAvailable then
-              yield
-                  diagnostic
-                      "typedSdd.compilerUnavailable"
-                      "The recorded F# compiler is unavailable."
-                      "Install a compatible .NET SDK and restore the pinned tool manifest."
-          if manifest.PackageIdentity <> expectedPackageIdentity then
-              yield
-                  diagnostic
-                      "typedSdd.identityMismatch"
-                      "The authority package identity differs from the installed producer."
-                      "Install the exact package identity recorded by provenance, or upgrade explicitly."
-          if manifest.ExtensionIdentity <> "fsgg.requirements-extension/v1" then
-              yield
-                  diagnostic
-                      "typedSdd.extensionIdentityMismatch"
-                      $"Extension identity '{manifest.ExtensionIdentity}' is unsupported."
-                      "Migrate or re-author with fsgg.requirements-extension/v1."
-          if
-              String.IsNullOrWhiteSpace manifest.AuthoringAgent
-              || String.IsNullOrWhiteSpace manifest.AuthoringSession
-          then
-              yield
-                  diagnostic
-                      "typedSdd.authoringReceiptMissing"
-                      "The authority has no complete authoring agent/session receipt."
-                      "Re-author with --agent and --session."
-          match canonicalBytes with
-          | None ->
-              yield
-                  diagnostic
-                      "typedSdd.canonicalMissing"
-                      "The canonical F# specification is missing."
-                      "Restore or author the canonical specification.fsx."
-          | Some bytes when sha256 bytes <> manifest.CanonicalSha256 ->
-              yield
-                  diagnostic
-                      "typedSdd.directCanonicalEdit"
-                      "The canonical F# source changed outside an authoring receipt."
-                      "Run the Typed SDD author operation to accept and recompile the edit."
-          | _ -> ()
-          match normalizedBytes, markdownBytes with
-          | None, _
-          | _, None ->
-              yield
-                  diagnostic
-                      "typedSdd.projectionMissing"
-                      "A required Typed SDD projection is missing."
-                      "Run typed-sdd inspect --refresh."
-          | Some normalized, Some markdown when
-              sha256 normalized <> manifest.NormalizedSha256
-              || sha256 markdown <> manifest.MarkdownSha256
-              ->
-              yield
-                  diagnostic
-                      "typedSdd.staleProjection"
-                      "A Typed SDD projection is stale or was edited."
-                      "Regenerate projections from the canonical F# source."
-          | _ -> () ]
+        [
+            if
+                manifest.Lifecycle <> "typed-sdd"
+                || manifest.Backend <> "fsharp-specification-v1"
+            then
+                yield
+                    diagnostic
+                        "typedSdd.wrongLifecycle"
+                        "Provenance does not select the Typed SDD F# backend."
+                        "Select lifecycle=typed-sdd and refresh provenance."
+            if manifest.CompilerIdentity <> "dotnet-fsi/net10.0" then
+                yield
+                    diagnostic
+                        "typedSdd.compilerIdentityMismatch"
+                        $"Compiler identity '{manifest.CompilerIdentity}' is unsupported."
+                        "Re-author with the pinned dotnet-fsi/net10.0 compiler."
+            if not compilerAvailable then
+                yield
+                    diagnostic
+                        "typedSdd.compilerUnavailable"
+                        "The recorded F# compiler is unavailable."
+                        "Install a compatible .NET SDK and restore the pinned tool manifest."
+            if manifest.PackageIdentity <> expectedPackageIdentity then
+                yield
+                    diagnostic
+                        "typedSdd.identityMismatch"
+                        "The authority package identity differs from the installed producer."
+                        "Install the exact package identity recorded by provenance, or upgrade explicitly."
+            if manifest.ExtensionIdentity <> "fsgg.requirements-extension/v1" then
+                yield
+                    diagnostic
+                        "typedSdd.extensionIdentityMismatch"
+                        $"Extension identity '{manifest.ExtensionIdentity}' is unsupported."
+                        "Migrate or re-author with fsgg.requirements-extension/v1."
+            if
+                String.IsNullOrWhiteSpace manifest.AuthoringAgent
+                || String.IsNullOrWhiteSpace manifest.AuthoringSession
+            then
+                yield
+                    diagnostic
+                        "typedSdd.authoringReceiptMissing"
+                        "The authority has no complete authoring agent/session receipt."
+                        "Re-author with --agent and --session."
+            match canonicalBytes with
+            | None ->
+                yield
+                    diagnostic
+                        "typedSdd.canonicalMissing"
+                        "The canonical F# specification is missing."
+                        "Restore or author the canonical specification.fsx."
+            | Some bytes when sha256 bytes <> manifest.CanonicalSha256 ->
+                yield
+                    diagnostic
+                        "typedSdd.directCanonicalEdit"
+                        "The canonical F# source changed outside an authoring receipt."
+                        "Run the Typed SDD author operation to accept and recompile the edit."
+            | _ -> ()
+            match normalizedBytes, markdownBytes with
+            | None, _
+            | _, None ->
+                yield
+                    diagnostic
+                        "typedSdd.projectionMissing"
+                        "A required Typed SDD projection is missing."
+                        "Run typed-sdd inspect --refresh."
+            | Some normalized, Some markdown when
+                sha256 normalized <> manifest.NormalizedSha256
+                || sha256 markdown <> manifest.MarkdownSha256
+                ->
+                yield
+                    diagnostic
+                        "typedSdd.staleProjection"
+                        "A Typed SDD projection is stale or was edited."
+                        "Regenerate projections from the canonical F# source."
+            | _ -> ()
+        ]
 
     let validateDerivation (canonicalBytes: byte array) (normalizedBytes: byte array) (markdownBytes: byte array) =
         let marker = "let normalizedSpecificationJson = \"\"\""
@@ -267,19 +281,23 @@ module TypedAuthorityManifest =
         let start = canonical.IndexOf(marker, StringComparison.Ordinal)
 
         if start < 0 then
-            [ diagnostic
-                  "typedSdd.canonicalMalformed"
-                  "Canonical source does not declare normalizedSpecificationJson."
-                  "Restore the generated authority shape." ]
+            [
+                diagnostic
+                    "typedSdd.canonicalMalformed"
+                    "Canonical source does not declare normalizedSpecificationJson."
+                    "Restore the generated authority shape."
+            ]
         else
             let valueStart = start + marker.Length
             let finish = canonical.IndexOf("\"\"\"", valueStart, StringComparison.Ordinal)
 
             if finish < 0 then
-                [ diagnostic
-                      "typedSdd.canonicalMalformed"
-                      "Canonical normalizedSpecificationJson is unterminated."
-                      "Restore the generated authority shape." ]
+                [
+                    diagnostic
+                        "typedSdd.canonicalMalformed"
+                        "Canonical normalizedSpecificationJson is unterminated."
+                        "Restore the generated authority shape."
+                ]
             else
                 let normalized =
                     canonical.Substring(valueStart, finish - valueStart).Replace("\"\"\\\"", "\"\"\"")
@@ -303,20 +321,24 @@ module TypedAuthorityManifest =
                         let expectedNormalizedBytes = Encoding.UTF8.GetBytes(expectedNormalized + "\n")
                         let expectedMarkdownBytes = Encoding.UTF8.GetBytes markdown
 
-                        [ if normalizedBytes <> expectedNormalizedBytes then
-                              yield
-                                  diagnostic
-                                      "typedSdd.normalizedNotDerived"
-                                      "The normalized projection is not derived from canonical F#."
-                                      "Re-author to regenerate projections from canonical F#."
-                          if markdownBytes <> expectedMarkdownBytes then
-                              yield
-                                  diagnostic
-                                      "typedSdd.markdownNotDerived"
-                                      "The Markdown projection is not derived from canonical F#."
-                                      "Re-author to regenerate projections from canonical F#." ]
+                        [
+                            if normalizedBytes <> expectedNormalizedBytes then
+                                yield
+                                    diagnostic
+                                        "typedSdd.normalizedNotDerived"
+                                        "The normalized projection is not derived from canonical F#."
+                                        "Re-author to regenerate projections from canonical F#."
+                            if markdownBytes <> expectedMarkdownBytes then
+                                yield
+                                    diagnostic
+                                        "typedSdd.markdownNotDerived"
+                                        "The Markdown projection is not derived from canonical F#."
+                                        "Re-author to regenerate projections from canonical F#."
+                        ]
                     | _ ->
-                        [ diagnostic
-                              "typedSdd.projectionFailed"
-                              "Canonical F# could not produce its required projections."
-                              "Correct the canonical typed model." ]
+                        [
+                            diagnostic
+                                "typedSdd.projectionFailed"
+                                "Canonical F# could not produce its required projections."
+                                "Correct the canonical typed model."
+                        ]

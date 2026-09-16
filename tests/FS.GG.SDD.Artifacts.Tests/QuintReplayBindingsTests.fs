@@ -13,86 +13,118 @@ module QuintReplayBindingsTests =
         | Error findings -> failwithf "expected success, got %A" findings
 
     let private sourceRange: QuintSourceRange =
-        { Path = "docs/experiments/quint-q1/slices/login.md"
-          Start = { Line = 10; Column = 1 }
-          End = { Line = 10; Column = 12 } }
+        {
+            Path = "docs/experiments/quint-q1/slices/login.md"
+            Start = { Line = 10; Column = 1 }
+            End = { Line = 10; Column = 12 }
+        }
 
     let private entry id kind : QuintCatalogueEntry =
-        { Id = id
-          Kind = kind
-          Source = sourceRange }
+        {
+            Id = id
+            Kind = kind
+            Source = sourceRange
+        }
 
     let private contract: QuintCompiledContract =
-        { Schema = QuintContract.schema
-          Profile = QuintProfile.identity
-          Specification = "LoginSpec"
-          Catalogue =
-            [ entry "SESSION-ID" QuintCatalogueKind.StateVariable
-              entry "ADVANCE" QuintCatalogueKind.Action ]
-          ActionEffects =
-            [ { ActionId = "ADVANCE"
-                Reads = [ "SESSION-ID" ]
-                Writes = [ "SESSION-ID" ]
-                Subjects = [ "SESSION-ID" ] } ]
-          Relationships = []
-          VerificationProfiles = []
-          Bounds = []
-          Impacts = []
-          Compatibility = []
-          Digests = [] }
+        {
+            Schema = QuintContract.schema
+            Profile = QuintProfile.identity
+            Specification = "LoginSpec"
+            Catalogue =
+                [
+                    entry "SESSION-ID" QuintCatalogueKind.StateVariable
+                    entry "ADVANCE" QuintCatalogueKind.Action
+                ]
+            ActionEffects =
+                [
+                    {
+                        ActionId = "ADVANCE"
+                        Reads = [ "SESSION-ID" ]
+                        Writes = [ "SESSION-ID" ]
+                        Subjects = [ "SESSION-ID" ]
+                    }
+                ]
+            Relationships = []
+            VerificationProfiles = []
+            Bounds = []
+            Impacts = []
+            Compatibility = []
+            Digests = []
+        }
 
     let private replaySource: QuintReplaySourceBinding =
-        { Path = sourceRange.Path
-          Line = 10
-          Column = 1 }
+        {
+            Path = sourceRange.Path
+            Line = 10
+            Column = 1
+        }
 
     let private state bindings =
         let draft: QuintReplayState =
-            { Identity = digest
-              Bindings = bindings }
+            {
+                Identity = digest
+                Bindings = bindings
+            }
 
         { draft with
-            Identity = QuintReplay.stateFingerprint draft |> expectOk }
+            Identity = QuintReplay.stateFingerprint draft |> expectOk
+        }
 
     let private initialState =
         state
-            [ "attempts", QuintReplayValue.Integer "0"
-              "session", QuintReplayValue.Text "pending" ]
+            [
+                "attempts", QuintReplayValue.Integer "0"
+                "session", QuintReplayValue.Text "pending"
+            ]
 
     let private expectedState =
         state
-            [ "attempts", QuintReplayValue.Integer "1"
-              "session", QuintReplayValue.Text "accepted" ]
+            [
+                "attempts", QuintReplayValue.Integer "1"
+                "session", QuintReplayValue.Text "accepted"
+            ]
 
     let private environment contractFingerprint : QuintReplayEnvironment =
-        { Seed = "923"
-          Bounds = [ "steps", 1L ]
-          ToolFingerprint = digest
-          ProfileFingerprint = digest
-          ContractFingerprint = contractFingerprint
-          AdapterFingerprint = digest
-          ImplementationFingerprint = digest }
+        {
+            Seed = "923"
+            Bounds = [ "steps", 1L ]
+            ToolFingerprint = digest
+            ProfileFingerprint = digest
+            ContractFingerprint = contractFingerprint
+            AdapterFingerprint = digest
+            ImplementationFingerprint = digest
+        }
 
     let private trace contractFingerprint : QuintReplayTrace =
         let draft =
-            { SchemaVersion = 1
-              TraceIdentity = digest
-              Environment = environment contractFingerprint
-              Initial = initialState
-              Steps =
-                [ { Index = 1
-                    Action = "ADVANCE"
-                    Source = replaySource
-                    Expected = expectedState } ] }
+            {
+                SchemaVersion = 1
+                TraceIdentity = digest
+                Environment = environment contractFingerprint
+                Initial = initialState
+                Steps =
+                    [
+                        {
+                            Index = 1
+                            Action = "ADVANCE"
+                            Source = replaySource
+                            Expected = expectedState
+                        }
+                    ]
+            }
 
         { draft with
-            TraceIdentity = QuintReplay.traceFingerprint draft |> expectOk }
+            TraceIdentity = QuintReplay.traceFingerprint draft |> expectOk
+        }
 
     let private observation actual : QuintReplayObservation =
-        { Index = 1
-          Action = "ADVANCE"
-          Source = replaySource
-          Actual = actual }
+        {
+            Index = 1
+            Action = "ADVANCE"
+            Source = replaySource
+            Actual = actual
+        }
 
     let private replayDiagnosticCodes (findings: QuintReplayDiagnostic list) =
         findings |> List.map _.Code |> Set.ofList
@@ -115,8 +147,10 @@ module QuintReplayBindingsTests =
 
         let wrongState =
             state
-                [ "attempts", QuintReplayValue.Integer "1"
-                  "session", QuintReplayValue.Text "rejected" ]
+                [
+                    "attempts", QuintReplayValue.Integer "1"
+                    "session", QuintReplayValue.Text "rejected"
+                ]
 
         match QuintReplay.compare (trace bindings.ContractFingerprint) [ observation wrongState ] with
         | Ok(QuintReplayResult.Diverged divergence) ->
@@ -137,22 +171,33 @@ module QuintReplayBindingsTests =
             |> File.ReadAllText
 
         let source =
-            { Path = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
-              Line = 17
-              Column = 1 }
+            {
+                Path = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
+                Line = 17
+                Column = 1
+            }
 
         let context =
-            { Environment =
-                { environment bindings.ContractFingerprint with
-                    Seed = "92220"
-                    Bounds = [ "maxSamples", 1L; "transitions", 2L ] }
-              Steps =
-                [ { Index = 1
-                    Action = "ApplyDamage"
-                    Source = source }
-                  { Index = 2
-                    Action = "ApplyDamage"
-                    Source = source } ] }
+            {
+                Environment =
+                    { environment bindings.ContractFingerprint with
+                        Seed = "92220"
+                        Bounds = [ "maxSamples", 1L; "transitions", 2L ]
+                    }
+                Steps =
+                    [
+                        {
+                            Index = 1
+                            Action = "ApplyDamage"
+                            Source = source
+                        }
+                        {
+                            Index = 2
+                            Action = "ApplyDamage"
+                            Source = source
+                        }
+                    ]
+            }
 
         let exact = QuintReplay.decodeItf context fixture |> expectOk
         Assert.Empty(QuintReplay.validateTrace exact)
@@ -162,10 +207,12 @@ module QuintReplayBindingsTests =
         let observations =
             exact.Steps
             |> List.map (fun step ->
-                { Index = step.Index
-                  Action = step.Action
-                  Source = step.Source
-                  Actual = step.Expected })
+                {
+                    Index = step.Index
+                    Action = step.Action
+                    Source = step.Source
+                    Actual = step.Expected
+                })
 
         Assert.Equal(Ok QuintReplayResult.Equivalent, QuintReplay.compare exact observations)
 
@@ -178,11 +225,13 @@ module QuintReplayBindingsTests =
                         if name = "hitPoints" then
                             name, QuintReplayValue.Integer "1"
                         else
-                            name, value) }
+                            name, value)
+            }
 
         let wrong =
             { wrongDraft with
-                Identity = QuintReplay.stateFingerprint wrongDraft |> expectOk }
+                Identity = QuintReplay.stateFingerprint wrongDraft |> expectOk
+            }
 
         match QuintReplay.compare exact [ observations[0]; { observations[1] with Actual = wrong } ] with
         | Ok(QuintReplayResult.Diverged divergence) ->
@@ -201,27 +250,39 @@ module QuintReplayBindingsTests =
             { valid with
                 Environment =
                     { valid.Environment with
-                        ToolFingerprint = "not-a-sha256" } }
+                        ToolFingerprint = "not-a-sha256"
+                    }
+            }
 
         let malformedTraceIdentity = { valid with TraceIdentity = digest }
 
         let malformedOrder =
             { valid with
-                Steps = [ { valid.Steps.Head with Index = 2 } ] }
+                Steps = [ { valid.Steps.Head with Index = 2 } ]
+            }
 
         let malformedState =
             { valid with
                 Steps =
-                    [ { valid.Steps.Head with
-                          Expected =
-                              { valid.Steps.Head.Expected with
-                                  Identity = digest } } ] }
+                    [
+                        { valid.Steps.Head with
+                            Expected =
+                                { valid.Steps.Head.Expected with
+                                    Identity = digest
+                                }
+                        }
+                    ]
+            }
 
         let malformedSource =
             { valid with
                 Steps =
-                    [ { valid.Steps.Head with
-                          Source = { replaySource with Line = 0 } } ] }
+                    [
+                        { valid.Steps.Head with
+                            Source = { replaySource with Line = 0 }
+                        }
+                    ]
+            }
 
         Assert.Contains(
             "QRP-ENV-FINGERPRINT",
@@ -254,11 +315,13 @@ module QuintReplayBindingsTests =
     let ``bindings refuse wrong compiled contract schema and profile`` () =
         let wrongSchema =
             { contract with
-                Schema = "fsgg.quint.compiled-contract/v2" }
+                Schema = "fsgg.quint.compiled-contract/v2"
+            }
 
         let wrongProfile =
             { contract with
-                Profile = "fsgg-quint-profile/2" }
+                Profile = "fsgg-quint-profile/2"
+            }
 
         let schemaCodes =
             match QuintBindings.generate "LoginContract" wrongSchema with
@@ -278,15 +341,21 @@ module QuintReplayBindingsTests =
         let duplicate =
             { contract with
                 Catalogue =
-                    [ entry "ADVANCE" QuintCatalogueKind.Action
-                      entry "ADVANCE" QuintCatalogueKind.Action ] }
+                    [
+                        entry "ADVANCE" QuintCatalogueKind.Action
+                        entry "ADVANCE" QuintCatalogueKind.Action
+                    ]
+            }
 
         let collision =
             { contract with
                 Catalogue =
-                    [ entry "USER-ID" QuintCatalogueKind.StateVariable
-                      entry "USER.ID" QuintCatalogueKind.Action ]
-                ActionEffects = [] }
+                    [
+                        entry "USER-ID" QuintCatalogueKind.StateVariable
+                        entry "USER.ID" QuintCatalogueKind.Action
+                    ]
+                ActionEffects = []
+            }
 
         let duplicateCodes =
             match QuintBindings.generate "LoginContract" duplicate with

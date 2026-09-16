@@ -443,21 +443,26 @@ module CommandEffectsTests =
         let utf8 (text: string) = System.Text.Encoding.UTF8.GetBytes text
 
         let bodies =
-            [ "empty", [||]
-              "ascii", utf8 "# Skill\n\nbody\n"
-              "multibyte", utf8 "héllo — naïve ✅ 🚀\n"
-              "crlf", utf8 "line one\r\nline two\r\n"
-              "lone cr", utf8 "line one\rline two\n"
-              "nul", [| 0x61uy; 0x00uy; 0x62uy |]
-              "utf-8 BOM", Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (utf8 "# Skill\n")
-              "utf-16 LE BOM", Array.append [| 0xFFuy; 0xFEuy |] (System.Text.Encoding.Unicode.GetBytes "hi\n")
-              "utf-16 BE BOM", Array.append [| 0xFEuy; 0xFFuy |] (System.Text.Encoding.BigEndianUnicode.GetBytes "hi\n")
-              "utf-32 LE BOM",
-              Array.append
-                  [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |]
-                  (System.Text.UTF32Encoding(false, false).GetBytes "hi\n")
-              "utf-32 BE BOM",
-              Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (System.Text.UTF32Encoding(true, false).GetBytes "hi\n") ]
+            [
+                "empty", [||]
+                "ascii", utf8 "# Skill\n\nbody\n"
+                "multibyte", utf8 "héllo — naïve ✅ 🚀\n"
+                "crlf", utf8 "line one\r\nline two\r\n"
+                "lone cr", utf8 "line one\rline two\n"
+                "nul", [| 0x61uy; 0x00uy; 0x62uy |]
+                "utf-8 BOM", Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (utf8 "# Skill\n")
+                "utf-16 LE BOM", Array.append [| 0xFFuy; 0xFEuy |] (System.Text.Encoding.Unicode.GetBytes "hi\n")
+                "utf-16 BE BOM",
+                Array.append [| 0xFEuy; 0xFFuy |] (System.Text.Encoding.BigEndianUnicode.GetBytes "hi\n")
+                "utf-32 LE BOM",
+                Array.append
+                    [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |]
+                    (System.Text.UTF32Encoding(false, false).GetBytes "hi\n")
+                "utf-32 BE BOM",
+                Array.append
+                    [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |]
+                    (System.Text.UTF32Encoding(true, false).GetBytes "hi\n")
+            ]
 
         for label, bytes in bodies do
             let root = TestSupport.tempDirectory ()

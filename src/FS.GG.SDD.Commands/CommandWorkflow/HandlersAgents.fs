@@ -307,12 +307,14 @@ module internal HandlersAgents =
                                 if List.isEmpty otherBlocking then
                                     []
                                 else
-                                    [ agentsBlockedWorkModel
-                                          workModelP
-                                          (otherBlocking
-                                           |> List.map (fun diagnostic -> diagnostic.Id)
-                                           |> List.distinct
-                                           |> List.sort) ]
+                                    [
+                                        agentsBlockedWorkModel
+                                            workModelP
+                                            (otherBlocking
+                                             |> List.map (fun diagnostic -> diagnostic.Id)
+                                             |> List.distinct
+                                             |> List.sort)
+                                    ]
 
                             let gateDiags = unknownRefs @ staleMarkers @ blockedDiag
 
@@ -410,18 +412,20 @@ module internal HandlersAgents =
                                         else
                                             GeneratedViewCurrency.Stale, [], recorded, Some behaviorMatches
 
-                            {| TargetId = target.Id
-                               Root = root
-                               GuidancePath = guidancePath
-                               BuildManifest = buildManifest
-                               CommandsPath = commandsPath
-                               CommandsMd = commandsMd
-                               SkillsPath = skillsPath
-                               SkillsMd = skillsMd
-                               Currency = currency
-                               Diagnostics = targetDiags
-                               RecordedBehaviorDigest = recordedBehaviorDigest
-                               BehaviorMatches = behaviorMatches |})
+                            {|
+                                TargetId = target.Id
+                                Root = root
+                                GuidancePath = guidancePath
+                                BuildManifest = buildManifest
+                                CommandsPath = commandsPath
+                                CommandsMd = commandsMd
+                                SkillsPath = skillsPath
+                                SkillsMd = skillsMd
+                                Currency = currency
+                                Diagnostics = targetDiags
+                                RecordedBehaviorDigest = recordedBehaviorDigest
+                                BehaviorMatches = behaviorMatches
+                            |})
                     | _ -> []
 
                 // Both targets are rendered from one `NormalizedGuidanceModel` and stamped with one
@@ -541,14 +545,16 @@ module internal HandlersAgents =
                                         |> Map.tryFind result.TargetId
                                         |> Option.defaultValue []
 
-                                    [ CreateDirectory result.Root
-                                      WriteFile(
-                                          result.GuidancePath,
-                                          result.BuildManifest targetDiagnostics,
-                                          GeneratedView
-                                      )
-                                      WriteFile(result.CommandsPath, result.CommandsMd, GeneratedView)
-                                      WriteFile(result.SkillsPath, result.SkillsMd, GeneratedView) ])
+                                    [
+                                        CreateDirectory result.Root
+                                        WriteFile(
+                                            result.GuidancePath,
+                                            result.BuildManifest targetDiagnostics,
+                                            GeneratedView
+                                        )
+                                        WriteFile(result.CommandsPath, result.CommandsMd, GeneratedView)
+                                        WriteFile(result.SkillsPath, result.SkillsMd, GeneratedView)
+                                    ])
 
                     let generatedViews =
                         targetResults
@@ -557,10 +563,14 @@ module internal HandlersAgents =
                                 result.GuidancePath
                                 "agent-commands"
                                 request.GeneratorVersion
-                                [ { Path = workModelP
-                                    Digest = Some sourceDigest
-                                    SchemaVersion = Some 1
-                                    SchemaStatus = Some "current" } ]
+                                [
+                                    {
+                                        Path = workModelP
+                                        Digest = Some sourceDigest
+                                        SchemaVersion = Some 1
+                                        SchemaStatus = Some "current"
+                                    }
+                                ]
                                 (if
                                      hasBlocking
                                      && (result.Currency = GeneratedViewCurrency.Missing
@@ -622,27 +632,29 @@ module internal HandlersAgents =
                             "current"
 
                     let summary: AgentGuidanceSummary =
-                        { WorkId = workId
-                          Stage = "agents"
-                          Status = disposition
-                          GeneratedRoots = generatedRoots
-                          GeneratedTargetIds = generatedTargetIds
-                          RefusedTargetIds = refusedTargetIds
-                          FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                          ReadyFindingCount =
-                            if disposition = "generated-current" then
-                                List.length generatedTargetIds
-                            else
-                                0
-                          AdvisoryCount = findingCount "advisory"
-                          WarningCount = findingCount "warning"
-                          BlockingCount = findingCount "blocking"
-                          Disposition = disposition
-                          EquivalenceRequired = equivalenceRequired
-                          DivergentTargetIds = divergentTargetIds
-                          GeneratedViewState = generatedViewStateLabel
-                          SourceSnapshotCount = (if Option.isSome workModelSnap then 1 else 0)
-                          Readiness = readiness }
+                        {
+                            WorkId = workId
+                            Stage = "agents"
+                            Status = disposition
+                            GeneratedRoots = generatedRoots
+                            GeneratedTargetIds = generatedTargetIds
+                            RefusedTargetIds = refusedTargetIds
+                            FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
+                            ReadyFindingCount =
+                                if disposition = "generated-current" then
+                                    List.length generatedTargetIds
+                                else
+                                    0
+                            AdvisoryCount = findingCount "advisory"
+                            WarningCount = findingCount "warning"
+                            BlockingCount = findingCount "blocking"
+                            Disposition = disposition
+                            EquivalenceRequired = equivalenceRequired
+                            DivergentTargetIds = divergentTargetIds
+                            GeneratedViewState = generatedViewStateLabel
+                            SourceSnapshotCount = (if Option.isSome workModelSnap then 1 else 0)
+                            Readiness = readiness
+                        }
 
                     Some summary, generatedViews, effects, []))
 

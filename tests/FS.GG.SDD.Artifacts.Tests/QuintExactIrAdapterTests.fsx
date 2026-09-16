@@ -13,33 +13,39 @@ let expectCode code (result: Result<QuintProfileCatalogue, QuintProfileDiagnosti
     | Ok _ -> fail $"Expected refusal {code}."
 
 let source path line =
-    { Path = path
-      Start = { Line = line; Column = 5 }
-      End = { Line = line; Column = 100 } }
+    {
+        Path = path
+        Start = { Line = line; Column = 5 }
+        End = { Line = line; Column = 100 }
+    }
 
 let binding sourcePath moduleName catalogue id kind line =
-    { ModuleName = moduleName
-      CatalogueName = catalogue
-      Id = id
-      Kind = kind
-      Source = source sourcePath line }
+    {
+        ModuleName = moduleName
+        CatalogueName = catalogue
+        Id = id
+        Kind = kind
+        Source = source sourcePath line
+    }
 
 let requirementsPath =
     "docs/experiments/quint-q1/slices/requirements-and-evidence.md"
 
 let requirementsBindings =
-    [ binding requirementsPath "RequirementsSlice" "requirements" "REQ-AUDIT-001" Requirement 19
-      binding requirementsPath "RequirementsSlice" "evidenceCatalogue" "EV-VERIFY-001" Evidence 23
-      binding requirementsPath "RequirementsSlice" "actionCatalogue" "ObserveEvidence" Action 26
-      binding requirementsPath "RequirementsSlice" "actionCatalogue" "AcceptRequirement" Action 27
-      binding requirementsPath "RequirementsSlice" "propertyCatalogue" "AcceptedOnlyWithEvidence" Invariant 30
-      binding
-          requirementsPath
-          "RequirementsSlice"
-          "propertyCatalogue"
-          "RequirementCanBeAccepted"
-          ReachabilityProperty
-          31 ]
+    [
+        binding requirementsPath "RequirementsSlice" "requirements" "REQ-AUDIT-001" Requirement 19
+        binding requirementsPath "RequirementsSlice" "evidenceCatalogue" "EV-VERIFY-001" Evidence 23
+        binding requirementsPath "RequirementsSlice" "actionCatalogue" "ObserveEvidence" Action 26
+        binding requirementsPath "RequirementsSlice" "actionCatalogue" "AcceptRequirement" Action 27
+        binding requirementsPath "RequirementsSlice" "propertyCatalogue" "AcceptedOnlyWithEvidence" Invariant 30
+        binding
+            requirementsPath
+            "RequirementsSlice"
+            "propertyCatalogue"
+            "RequirementCanBeAccepted"
+            ReachabilityProperty
+            31
+    ]
 
 let fixture =
     if fsi.CommandLineArgs.Length <> 2 && fsi.CommandLineArgs.Length <> 4 then
@@ -48,10 +54,12 @@ let fixture =
     File.ReadAllText fsi.CommandLineArgs[1]
 
 let observation sourceBindings text =
-    { Profile = QuintProfile.identity
-      QuintVersion = QuintProfile.quintVersion
-      TypedEffectJson = text
-      SourceBindings = sourceBindings }
+    {
+        Profile = QuintProfile.identity
+        QuintVersion = QuintProfile.quintVersion
+        TypedEffectJson = text
+        SourceBindings = sourceBindings
+    }
 
 match QuintProfile.adaptTypedEffectJson (observation requirementsBindings fixture) with
 | Error findings -> fail $"Exact capture was refused: {findings}"
@@ -73,25 +81,29 @@ expectCode
     "QUINT-PROFILE-VERSION"
     (QuintProfile.adaptTypedEffectJson
         { observation requirementsBindings fixture with
-            QuintVersion = "0.32.1" })
+            QuintVersion = "0.32.1"
+        })
 
 expectCode
     "QUINT-PROFILE-VERSION-MISSING"
     (QuintProfile.adaptTypedEffectJson
         { observation requirementsBindings fixture with
-            QuintVersion = "" })
+            QuintVersion = ""
+        })
 
 expectCode
     "QUINT-PROFILE-IDENTITY"
     (QuintProfile.adaptTypedEffectJson
         { observation requirementsBindings fixture with
-            Profile = "fsgg-quint-profile/2" })
+            Profile = "fsgg-quint-profile/2"
+        })
 
 expectCode
     "QUINT-IR-SOURCE-BINDING-REQUIRED"
     (QuintProfile.adaptTypedEffectJson
         { observation requirementsBindings fixture with
-            SourceBindings = requirementsBindings.Tail })
+            SourceBindings = requirementsBindings.Tail
+        })
 
 let mutate (edit: JsonObject -> unit) =
     let root = JsonNode.Parse(fixture).AsObject()
@@ -216,35 +228,43 @@ if fsi.CommandLineArgs.Length = 4 then
     let sirPath = "docs/experiments/quint-q1/slices/sir-damage-rule.md"
 
     let sirBindings =
-        [ binding sirPath "SirDamageSlice" "actions" "Initialize" Action 16
-          binding sirPath "SirDamageSlice" "actions" "ApplyDamage" Action 17
-          binding sirPath "SirDamageSlice" "propertyCatalogue" "NonNegativeHitPoints" Invariant 20
-          binding sirPath "SirDamageSlice" "propertyCatalogue" "KnownLastAction" Invariant 21
-          binding sirPath "SirDamageSlice" "propertyCatalogue" "DamageCanReachZero" ReachabilityProperty 22 ]
+        [
+            binding sirPath "SirDamageSlice" "actions" "Initialize" Action 16
+            binding sirPath "SirDamageSlice" "actions" "ApplyDamage" Action 17
+            binding sirPath "SirDamageSlice" "propertyCatalogue" "NonNegativeHitPoints" Invariant 20
+            binding sirPath "SirDamageSlice" "propertyCatalogue" "KnownLastAction" Invariant 21
+            binding sirPath "SirDamageSlice" "propertyCatalogue" "DamageCanReachZero" ReachabilityProperty 22
+        ]
 
     let coordinationPath = "docs/experiments/quint-q1/slices/coordination-process.md"
 
     let coordinationBindings =
-        [ for id, line in
-              [ "Prepare", 19
-                "Interfere", 20
-                "Apply", 21
-                "RefuseStale", 22
-                "LoseResponse", 23
-                "Retry", 24
-                "Refresh", 25
-                "Complete", 26 ] do
-              binding coordinationPath "CoordinationSlice" "actionCatalogue" id Action line
+        [
+            for id, line in
+                [
+                    "Prepare", 19
+                    "Interfere", 20
+                    "Apply", 21
+                    "RefuseStale", 22
+                    "LoseResponse", 23
+                    "Retry", 24
+                    "Refresh", 25
+                    "Complete", 26
+                ] do
+                binding coordinationPath "CoordinationSlice" "actionCatalogue" id Action line
 
-          for id, kind, line in
-              [ "AtMostOneApply", Invariant, 29
-                "ReceiptMatchesApply", Invariant, 30
-                "CompleteHasReceipt", Invariant, 31
-                "StaleNeverApplies", Invariant, 32
-                "StaleRefusalNeverApplies", Invariant, 33
-                "KnownPhase", Invariant, 34
-                "EventualCompletion", TemporalProperty, 35 ] do
-              binding coordinationPath "CoordinationSlice" "propertyCatalogue" id kind line ]
+            for id, kind, line in
+                [
+                    "AtMostOneApply", Invariant, 29
+                    "ReceiptMatchesApply", Invariant, 30
+                    "CompleteHasReceipt", Invariant, 31
+                    "StaleNeverApplies", Invariant, 32
+                    "StaleRefusalNeverApplies", Invariant, 33
+                    "KnownPhase", Invariant, 34
+                    "EventualCompletion", TemporalProperty, 35
+                ] do
+                binding coordinationPath "CoordinationSlice" "propertyCatalogue" id kind line
+        ]
 
     let assertCorpus name expectedRows sourceBindings path =
         let text = File.ReadAllText path

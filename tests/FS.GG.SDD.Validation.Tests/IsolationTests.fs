@@ -18,7 +18,9 @@ module IsolationTests =
                     { defaultPlan with
                         LifecycleCommands = [ Init ]
                         Projections = [ Json ]
-                        States = [ "fresh" ] } }
+                        States = [ "fresh" ]
+                    }
+        }
 
     [<Fact>]
     let ``run completes and emits a report with no Governance runtime present`` () =
@@ -33,12 +35,14 @@ module IsolationTests =
         let json = run tinyOptions |> serialize
 
         for forbidden in
-            [ "\"route\""
-              "\"profile\""
-              "\"freshness\""
-              "\"gate\""
-              "\"verdict\""
-              "\"effective\"" ] do
+            [
+                "\"route\""
+                "\"profile\""
+                "\"freshness\""
+                "\"gate\""
+                "\"verdict\""
+                "\"effective\""
+            ] do
             Assert.False(json.Contains forbidden, $"report leaked a Governance fact: {forbidden}")
 
     [<Fact>]

@@ -9,68 +9,86 @@ type QuintRelationshipKind =
     | Writes
 
 type QuintRelationship =
-    { FromId: string
-      Kind: QuintRelationshipKind
-      ToId: string }
+    {
+        FromId: string
+        Kind: QuintRelationshipKind
+        ToId: string
+    }
 
 /// One named, finite verification profile. Bounds are references to declared bound ids.
 type QuintVerificationProfile =
-    { Id: string
-      Kind: string
-      SubjectIds: string list
-      BoundIds: string list }
+    {
+        Id: string
+        Kind: string
+        SubjectIds: string list
+        BoundIds: string list
+    }
 
 type QuintFiniteBound =
-    { Id: string
-      Minimum: int64
-      Maximum: int64 }
+    {
+        Id: string
+        Minimum: int64
+        Maximum: int64
+    }
 
 /// Stable integration impact metadata; it cannot carry executable expressions.
 type QuintImpact =
-    { SubjectId: string
-      Category: string
-      Detail: string }
+    {
+        SubjectId: string
+        Category: string
+        Detail: string
+    }
 
 /// Stable compatibility metadata for one named integration surface.
 type QuintCompatibility =
-    { Surface: string
-      Requirement: string
-      Detail: string }
+    {
+        Surface: string
+        Requirement: string
+        Detail: string
+    }
 
 type QuintSemanticDigest = { Name: string; Sha256: string }
 
 /// Language-neutral compiled-contract v1. Raw Quint IR and arbitrary expressions are unrepresentable.
 type QuintCompiledContract =
-    { Schema: string
-      Profile: string
-      Specification: string
-      Catalogue: QuintCatalogueEntry list
-      ActionEffects: QuintActionEffect list
-      Relationships: QuintRelationship list
-      VerificationProfiles: QuintVerificationProfile list
-      Bounds: QuintFiniteBound list
-      Impacts: QuintImpact list
-      Compatibility: QuintCompatibility list
-      Digests: QuintSemanticDigest list }
+    {
+        Schema: string
+        Profile: string
+        Specification: string
+        Catalogue: QuintCatalogueEntry list
+        ActionEffects: QuintActionEffect list
+        Relationships: QuintRelationship list
+        VerificationProfiles: QuintVerificationProfile list
+        Bounds: QuintFiniteBound list
+        Impacts: QuintImpact list
+        Compatibility: QuintCompatibility list
+        Digests: QuintSemanticDigest list
+    }
 
 /// All compilation inputs whose meaning is bound by a semantic fingerprint.
 type QuintFingerprintInputs =
-    { SourceSha256: string
-      FenceManifestSha256: string
-      GeneratedModulesSha256: string
-      ToolchainSha256: string
-      Contract: QuintCompiledContract }
+    {
+        SourceSha256: string
+        FenceManifestSha256: string
+        GeneratedModulesSha256: string
+        ToolchainSha256: string
+        Contract: QuintCompiledContract
+    }
 
 type QuintContractDiagnostic =
-    { Code: string
-      Path: string
-      Message: string
-      Correction: string }
+    {
+        Code: string
+        Path: string
+        Message: string
+        Correction: string
+    }
 
 type QuintContractChange =
-    { Path: string
-      BeforeSha256: string
-      AfterSha256: string }
+    {
+        Path: string
+        BeforeSha256: string
+        AfterSha256: string
+    }
 
 type QuintContractDiff =
     | Equivalent
@@ -101,18 +119,20 @@ module QuintContract =
 
 /// Language-neutral compiled-contract v2 for consumer-defined Quint models.
 type QuintCompiledContractV2 =
-    { Schema: string
-      Profile: string
-      Specification: string
-      Exports: QuintGeneralExport list
-      Catalogue: QuintModelCatalogueEntry list
-      ActionEffects: QuintActionEffect list
-      Relationships: QuintRelationship list
-      VerificationProfiles: QuintVerificationProfile list
-      Bounds: QuintFiniteBound list
-      Impacts: QuintImpact list
-      Compatibility: QuintCompatibility list
-      Digests: QuintSemanticDigest list }
+    {
+        Schema: string
+        Profile: string
+        Specification: string
+        Exports: QuintGeneralExport list
+        Catalogue: QuintModelCatalogueEntry list
+        ActionEffects: QuintActionEffect list
+        Relationships: QuintRelationship list
+        VerificationProfiles: QuintVerificationProfile list
+        Bounds: QuintFiniteBound list
+        Impacts: QuintImpact list
+        Compatibility: QuintCompatibility list
+        Digests: QuintSemanticDigest list
+    }
 
 [<RequireQualifiedAccess>]
 module QuintContractV2 =

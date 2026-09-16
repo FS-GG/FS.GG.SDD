@@ -5,16 +5,20 @@ open System.Text.Json
 
 module GameSkillManifest =
     type GameSkillManifestEntry =
-        { Id: string
-          Scope: string
-          Sha256: string
-          Mirrored: bool option
-          SuppliedBy: string option
-          MaterializesWhen: string }
+        {
+            Id: string
+            Scope: string
+            Sha256: string
+            Mirrored: bool option
+            SuppliedBy: string option
+            MaterializesWhen: string
+        }
 
     type GameSkillManifest =
-        { SchemaVersion: int
-          Skills: GameSkillManifestEntry list }
+        {
+            SchemaVersion: int
+            Skills: GameSkillManifestEntry list
+        }
 
     let tryParse (text: string) : Result<GameSkillManifest, string> =
         try
@@ -38,26 +42,30 @@ module GameSkillManifest =
                             && not (String.IsNullOrWhiteSpace materializesWhen)
                             ->
                             Some
-                                { Id = id.Trim()
-                                  Scope = jsonString "scope" element |> Option.defaultValue "" |> (fun s -> s.Trim())
-                                  Sha256 = sha256.Trim()
-                                  // Three-state: a plain JSON `true`/`false` ⇒ `Some`; an absent
-                                  // key ⇒ `None` (unclassified — never coerced to `false`, which
-                                  // would silently promote an unclassified row into the delivered
-                                  // set). `jsonBool` returns `None` for absent/non-boolean alike;
-                                  // for delivery we only ever ACT on `Some false`, so a malformed
-                                  // value is treated as not-delivered, never as delivered.
-                                  Mirrored = jsonBool "mirrored" element
-                                  SuppliedBy =
-                                    jsonString "supplied-by" element
-                                    |> Option.map (fun s -> s.Trim())
-                                    |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                                  MaterializesWhen = materializesWhen.Trim() }
+                                {
+                                    Id = id.Trim()
+                                    Scope = jsonString "scope" element |> Option.defaultValue "" |> (fun s -> s.Trim())
+                                    Sha256 = sha256.Trim()
+                                    // Three-state: a plain JSON `true`/`false` ⇒ `Some`; an absent
+                                    // key ⇒ `None` (unclassified — never coerced to `false`, which
+                                    // would silently promote an unclassified row into the delivered
+                                    // set). `jsonBool` returns `None` for absent/non-boolean alike;
+                                    // for delivery we only ever ACT on `Some false`, so a malformed
+                                    // value is treated as not-delivered, never as delivered.
+                                    Mirrored = jsonBool "mirrored" element
+                                    SuppliedBy =
+                                        jsonString "supplied-by" element
+                                        |> Option.map (fun s -> s.Trim())
+                                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                    MaterializesWhen = materializesWhen.Trim()
+                                }
                         | _ -> None)
 
                 Ok
-                    { SchemaVersion = version
-                      Skills = skills }
+                    {
+                        SchemaVersion = version
+                        Skills = skills
+                    }
         with ex ->
             Error(sprintf "skill-manifest.json: %s" ex.Message)
 

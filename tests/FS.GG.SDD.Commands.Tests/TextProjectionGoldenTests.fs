@@ -36,7 +36,8 @@ module TextProjectionGoldenTests =
 
         let request =
             { TestSupport.request Init root with
-                DryRun = true }
+                DryRun = true
+            }
 
         TestSupport.runRequest request |> renderText
 

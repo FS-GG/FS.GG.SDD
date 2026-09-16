@@ -15,8 +15,10 @@ module ServeRuleTests =
     [<Fact>]
     let ``serve goes to the player who lost the prior rally`` () =
         let rally =
-            { Winner = PlayerOne
-              Loser = PlayerTwo }
+            {
+                Winner = PlayerOne
+                Loser = PlayerTwo
+            }
 
         Assert.Equal(PlayerTwo, ServeRule.nextServer rally)
 
@@ -24,8 +26,10 @@ module ServeRuleTests =
     [<Fact>]
     let ``serve follows the loser, whichever player that is`` () =
         let rally =
-            { Winner = PlayerTwo
-              Loser = PlayerOne }
+            {
+                Winner = PlayerTwo
+                Loser = PlayerOne
+            }
 
         Assert.Equal(PlayerOne, ServeRule.nextServer rally)
 
@@ -34,7 +38,9 @@ module ServeRuleTests =
     [<Fact>]
     let ``consecutive rallies won by one player serve to the same opponent`` () =
         let rally =
-            { Winner = PlayerOne
-              Loser = PlayerTwo }
+            {
+                Winner = PlayerOne
+                Loser = PlayerTwo
+            }
 
         Assert.Equal(ServeRule.nextServer rally, ServeRule.nextServer rally)

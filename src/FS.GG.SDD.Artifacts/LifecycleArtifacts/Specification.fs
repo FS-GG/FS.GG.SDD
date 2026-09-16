@@ -14,13 +14,15 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module Specification =
     type SpecificationFrontMatter =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          ChangeTier: string
-          Status: string
-          PublicOrToolFacingImpact: bool option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            ChangeTier: string
+            Status: string
+            PublicOrToolFacingImpact: bool option
+        }
 
     type SpecificationRequirementReference =
         {
@@ -34,34 +36,41 @@ module Specification =
         }
 
     type SpecificationFacts =
-        { FrontMatter: SpecificationFrontMatter
-          StandardSections: string list
-          MissingStandardSections: string list
-          UserStoryIds: UserStoryId list
-          RequirementIds: RequirementId list
-          AcceptanceScenarioIds: AcceptanceScenarioId list
-          ScopeBoundaryIds: ScopeBoundaryId list
-          AmbiguityIds: AmbiguityId list
-          RequirementReferences: SpecificationRequirementReference list
-          Diagnostics: Diagnostic list }
+        {
+            FrontMatter: SpecificationFrontMatter
+            StandardSections: string list
+            MissingStandardSections: string list
+            UserStoryIds: UserStoryId list
+            RequirementIds: RequirementId list
+            AcceptanceScenarioIds: AcceptanceScenarioId list
+            ScopeBoundaryIds: ScopeBoundaryId list
+            AmbiguityIds: AmbiguityId list
+            RequirementReferences: SpecificationRequirementReference list
+            Diagnostics: Diagnostic list
+        }
 
     let specificationStandardSections () =
-        [ "User Value"
-          "Scope"
-          "Non-Goals"
-          "User Stories"
-          "Acceptance Scenarios"
-          "Functional Requirements"
-          "Ambiguities"
-          "Public Or Tool-Facing Impact"
-          "Lifecycle Notes" ]
+        [
+            "User Value"
+            "Scope"
+            "Non-Goals"
+            "User Stories"
+            "Acceptance Scenarios"
+            "Functional Requirements"
+            "Ambiguities"
+            "Public Or Tool-Facing Impact"
+            "Lifecycle Notes"
+        ]
 
     let parseSpecificationFrontMatter (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
 
         match frontMatter snapshot with
         | None ->
-            Error [ Diagnostics.malformedSchemaVersion artifact "Specification is missing structured front matter." ]
+            Error
+                [
+                    Diagnostics.malformedSchemaVersion artifact "Specification is missing structured front matter."
+                ]
         | Some(yaml, body) ->
             match yamlRoot artifact "Specification front matter is empty." 1 yaml with
             | Error diagnostics -> Error diagnostics
@@ -79,26 +88,30 @@ module Specification =
                 match version, workId, stage, versionDiagnostics with
                 | Some schema, Some workId, Some stage, [] ->
                     Ok(
-                        { SchemaVersion = schema
-                          WorkId = workId
-                          Title =
-                            tryScalarAt [ "title" ] root
-                            |> Option.defaultValue (Identifiers.workIdValue workId)
-                          Stage = stage
-                          ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
-                          Status = tryScalarAt [ "status" ] root |> Option.defaultValue "draft"
-                          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
+                        {
+                            SchemaVersion = schema
+                            WorkId = workId
+                            Title =
+                                tryScalarAt [ "title" ] root
+                                |> Option.defaultValue (Identifiers.workIdValue workId)
+                            Stage = stage
+                            ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
+                            Status = tryScalarAt [ "status" ] root |> Option.defaultValue "draft"
+                            PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root
+                        },
                         body
                     )
                 | _ ->
                     Error(
                         versionDiagnostics
-                        @ [ Diagnostics.workModelInconsistent
+                        @ [
+                            Diagnostics.workModelInconsistent
                                 artifact
                                 "Specification front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage, changeTier, and status to spec front matter."
                                 []
-                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete
+                        ]
                     )
 
     let missingIdDiagnostics artifact (text: string) =
@@ -138,10 +151,12 @@ module Specification =
                 else
                     None)
 
-        [ missing "User Stories" @"\bUS-\d{3,}\b" "US-###" false false
-          missing "Acceptance Scenarios" @"\bAC-\d{3,}\b" "AC-###" false true
-          missing "Functional Requirements" @"\bFR-\d{3,}\b" "FR-###" false true
-          missing "Ambiguities" @"\bAMB-\d{3,}\b" "AMB-###" true false ]
+        [
+            missing "User Stories" @"\bUS-\d{3,}\b" "US-###" false false
+            missing "Acceptance Scenarios" @"\bAC-\d{3,}\b" "AC-###" false true
+            missing "Functional Requirements" @"\bFR-\d{3,}\b" "FR-###" false true
+            missing "Ambiguities" @"\bAMB-\d{3,}\b" "AMB-###" true false
+        ]
         |> List.concat
 
     let requirementReferences (text: string) : SpecificationRequirementReference list =
@@ -170,11 +185,13 @@ module Specification =
                         |> Seq.toList
 
                     Some
-                        { RequirementId = requirementId
-                          StoryIds = storyIds
-                          AcceptanceScenarioIds = acceptanceScenarioIds
-                          Classification = RequirementModel.requirementClassification line
-                          SourceLocation = sourceLocation lineNumber }
+                        {
+                            RequirementId = requirementId
+                            StoryIds = storyIds
+                            AcceptanceScenarioIds = acceptanceScenarioIds
+                            Classification = RequirementModel.requirementClassification line
+                            SourceLocation = sourceLocation lineNumber
+                        }
                 | Error _ -> None
             else
                 None)
@@ -193,28 +210,30 @@ module Specification =
 
         references
         |> List.collect (fun reference ->
-            [ reference.StoryIds
-              |> List.choose (fun id ->
-                  if Set.contains id.Value storyIds then
-                      None
-                  else
-                      Some(
-                          Diagnostics.unknownReference
-                              artifact
-                              id.Value
-                              "Declare the user story id in the specification or remove the requirement link."
-                      ))
-              reference.AcceptanceScenarioIds
-              |> List.choose (fun id ->
-                  if Set.contains id.Value acceptanceIds then
-                      None
-                  else
-                      Some(
-                          Diagnostics.unknownReference
-                              artifact
-                              id.Value
-                              "Declare the acceptance scenario id in the specification or remove the requirement link."
-                      )) ]
+            [
+                reference.StoryIds
+                |> List.choose (fun id ->
+                    if Set.contains id.Value storyIds then
+                        None
+                    else
+                        Some(
+                            Diagnostics.unknownReference
+                                artifact
+                                id.Value
+                                "Declare the user story id in the specification or remove the requirement link."
+                        ))
+                reference.AcceptanceScenarioIds
+                |> List.choose (fun id ->
+                    if Set.contains id.Value acceptanceIds then
+                        None
+                    else
+                        Some(
+                            Diagnostics.unknownReference
+                                artifact
+                                id.Value
+                                "Declare the acceptance scenario id in the specification or remove the requirement link."
+                        ))
+            ]
             |> List.concat)
 
     let parseSpecificationFacts (snapshot: FileSnapshot) =
@@ -265,32 +284,36 @@ module Specification =
             let references = requirementReferences text
 
             let diagnostics =
-                [ duplicateScopedDiagnostics artifact (fun (id: UserStoryId) -> id.Value) stories
-                  duplicateScopedDiagnostics artifact (fun (id: RequirementId) -> id.Value) requirements
-                  duplicateScopedDiagnostics artifact (fun (id: AcceptanceScenarioId) -> id.Value) acceptanceScenarios
-                  duplicateScopedDiagnostics artifact (fun (id: ScopeBoundaryId) -> id.Value) scopeBoundaries
-                  duplicateScopedDiagnostics artifact (fun (id: AmbiguityId) -> id.Value) ambiguities
-                  missingIdDiagnostics artifact text
-                  unknownSpecificationReferences artifact stories acceptanceScenarios references ]
+                [
+                    duplicateScopedDiagnostics artifact (fun (id: UserStoryId) -> id.Value) stories
+                    duplicateScopedDiagnostics artifact (fun (id: RequirementId) -> id.Value) requirements
+                    duplicateScopedDiagnostics artifact (fun (id: AcceptanceScenarioId) -> id.Value) acceptanceScenarios
+                    duplicateScopedDiagnostics artifact (fun (id: ScopeBoundaryId) -> id.Value) scopeBoundaries
+                    duplicateScopedDiagnostics artifact (fun (id: AmbiguityId) -> id.Value) ambiguities
+                    missingIdDiagnostics artifact text
+                    unknownSpecificationReferences artifact stories acceptanceScenarios references
+                ]
                 |> List.concat
                 |> Diagnostics.sort
 
             Ok
-                { FrontMatter = frontMatter
-                  StandardSections = standardSections
-                  MissingStandardSections = missingStandardSections
-                  UserStoryIds = stories |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
-                  RequirementIds = requirements |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
-                  AcceptanceScenarioIds =
-                    acceptanceScenarios
-                    |> List.map fst
-                    |> List.distinctBy _.Value
-                    |> List.sortBy _.Value
-                  ScopeBoundaryIds =
-                    scopeBoundaries
-                    |> List.map fst
-                    |> List.distinctBy _.Value
-                    |> List.sortBy _.Value
-                  AmbiguityIds = ambiguities |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
-                  RequirementReferences = references |> List.sortBy (fun reference -> reference.RequirementId.Value)
-                  Diagnostics = diagnostics }
+                {
+                    FrontMatter = frontMatter
+                    StandardSections = standardSections
+                    MissingStandardSections = missingStandardSections
+                    UserStoryIds = stories |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
+                    RequirementIds = requirements |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
+                    AcceptanceScenarioIds =
+                        acceptanceScenarios
+                        |> List.map fst
+                        |> List.distinctBy _.Value
+                        |> List.sortBy _.Value
+                    ScopeBoundaryIds =
+                        scopeBoundaries
+                        |> List.map fst
+                        |> List.distinctBy _.Value
+                        |> List.sortBy _.Value
+                    AmbiguityIds = ambiguities |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
+                    RequirementReferences = references |> List.sortBy (fun reference -> reference.RequirementId.Value)
+                    Diagnostics = diagnostics
+                }

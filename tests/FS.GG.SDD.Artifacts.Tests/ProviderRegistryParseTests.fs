@@ -10,9 +10,11 @@ open Xunit
 /// `nameParameter` — from `.fsgg/providers.yml`, with behavior-preserving defaults.
 module ProviderRegistryParseTests =
     let private snapshot text : FileSnapshot =
-        { Path = ".fsgg/providers.yml"
-          Text = text
-          RawBytes = None }
+        {
+            Path = ".fsgg/providers.yml"
+            Text = text
+            RawBytes = None
+        }
 
     let private one result =
         match result with
@@ -44,15 +46,19 @@ providers:
 
         Assert.Equal(
             Some
-                { Executable = "dotnet"
-                  Arguments = [ "build"; "-c"; "Release" ] },
+                {
+                    Executable = "dotnet"
+                    Arguments = [ "build"; "-c"; "Release" ]
+                },
             descriptor.Build
         )
 
         Assert.Equal(
             Some
-                { Executable = "dotnet"
-                  Arguments = [ "run"; "--no-build" ] },
+                {
+                    Executable = "dotnet"
+                    Arguments = [ "run"; "--no-build" ]
+                },
             descriptor.Run
         )
 

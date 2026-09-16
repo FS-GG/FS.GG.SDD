@@ -23,11 +23,15 @@ let sha256Bytes (bytes: byte array) =
     bytes |> SHA256.HashData |> Convert.ToHexString |> _.ToLowerInvariant()
 
 let range path startLine startColumn endLine endColumn : QuintSourceRange =
-    { Path = path
-      Start =
-        { Line = startLine
-          Column = startColumn }
-      End = { Line = endLine; Column = endColumn } }
+    {
+        Path = path
+        Start =
+            {
+                Line = startLine
+                Column = startColumn
+            }
+        End = { Line = endLine; Column = endColumn }
+    }
 
 let parseFences (source: QuintMarkdownSource) =
     let lines = source.Text.Split('\n')
@@ -69,18 +73,24 @@ let parseFences (source: QuintMarkdownSource) =
             let lastColumn = max 1 contentLines[contentLines.Length - 1].Length
 
             fences.Add
-                { Ordinal = ordinal
-                  Target = target
-                  ModuleName = moduleName
-                  SourceRange = range source.Path (cursor + 1) 1 (closing + 1) 3
-                  ContentSha256 = sha256 content }
+                {
+                    Ordinal = ordinal
+                    Target = target
+                    ModuleName = moduleName
+                    SourceRange = range source.Path (cursor + 1) 1 (closing + 1) 3
+                    ContentSha256 = sha256 content
+                }
 
             maps.Add
-                { Target = target
-                  GeneratedRange = range target firstGeneratedLine 1 lastGeneratedLine lastColumn
-                  Source =
-                    { FenceOrdinal = ordinal
-                      Range = range source.Path (cursor + 2) 1 closing lastColumn } }
+                {
+                    Target = target
+                    GeneratedRange = range target firstGeneratedLine 1 lastGeneratedLine lastColumn
+                    Source =
+                        {
+                            FenceOrdinal = ordinal
+                            Range = range source.Path (cursor + 2) 1 closing lastColumn
+                        }
+                }
 
             generatedLines <- Map.add target (lastGeneratedLine + 1) generatedLines
             ordinal <- ordinal + 1
@@ -96,16 +106,20 @@ let cacheObservation id =
         |> List.collect _.Objects
         |> List.find (fun item -> item.Id = id)
 
-    { Id = requirement.Id
-      Kind = requirement.Kind
-      State = Present(requirement.Sha256, requirement.Bytes, true) }
+    {
+        Id = requirement.Id
+        Kind = requirement.Kind
+        State = Present(requirement.Sha256, requirement.Bytes, true)
+    }
 
 let request step objectId arguments =
-    { StepId = step
-      ExecutableObjectId = objectId
-      Arguments = arguments
-      Environment = []
-      WorkingDirectory = "isolated-run" }
+    {
+        StepId = step
+        ExecutableObjectId = objectId
+        Arguments = arguments
+        Environment = []
+        WorkingDirectory = "isolated-run"
+    }
 
 match fsi.CommandLineArgs |> Array.skip 1 with
 | [| typedEffectPath; selectorPath; markdownPath; generatedPath; outputRoot |] ->
@@ -118,11 +132,13 @@ match fsi.CommandLineArgs |> Array.skip 1 with
 
     let catalogue =
         QuintGeneralProfile.adaptTypedEffectJson
-            { Profile = selectors.Profile
-              QuintVersion = QuintGeneralProfile.quintVersion
-              TypedEffectJson = typedEffect
-              ExportBindings = selectors.Exports
-              ActionBindings = selectors.Actions }
+            {
+                Profile = selectors.Profile
+                QuintVersion = QuintGeneralProfile.quintVersion
+                TypedEffectJson = typedEffect
+                ExportBindings = selectors.Exports
+                ActionBindings = selectors.Actions
+            }
         |> expect "typed/effect adaptation"
 
     let rules =
@@ -184,56 +200,84 @@ match fsi.CommandLineArgs |> Array.skip 1 with
     let generatedBytes = File.ReadAllBytes generatedPath
 
     let requests =
-        [ request "extract" "lmt-binary" [ logicalPath ]
-          request "typecheck" "quint-binary" [ "typecheck"; "sir-combat.qnt"; "--out=typed.json" ] ]
+        [
+            request "extract" "lmt-binary" [ logicalPath ]
+            request "typecheck" "quint-binary" [ "typecheck"; "sir-combat.qnt"; "--out=typed.json" ]
+        ]
 
     let compilationInput: QuintGeneralObservedCompilation =
-        { ModuleName = selectors.ModuleName
-          Toolchain = QuintToolchain.general
-          Cache = [ cacheObservation "lmt-binary"; cacheObservation "quint-binary" ]
-          ProcessRequests = requests
-          Endpoint = Available
-          ProcessObservations =
-            requests
-            |> List.map (fun item ->
-                { StepId = item.StepId
-                  Outcome = Succeeded })
-          Source = source
-          FenceManifest =
-            { Schema = QuintSource.fenceManifestSchema
-              SourcePath = source.Path
-              SourceSha256 = source.Sha256
-              Fences = fences }
-          Extraction =
-            { First =
-                [ { Target = "sir-combat.qnt"
-                    Sha256 = sha256Bytes generatedBytes
-                    Bytes = int64 generatedBytes.Length } ]
-              Second =
-                [ { Target = "sir-combat.qnt"
-                    Sha256 = sha256Bytes generatedBytes
-                    Bytes = int64 generatedBytes.Length } ]
-              Warnings = [] }
-          SourceMap =
-            { Schema = QuintSource.sourceMapSchema
-              SourceSha256 = source.Sha256
-              Entries = sourceMaps }
-          TypedEffect =
-            { Profile = selectors.Profile
-              QuintVersion = QuintGeneralProfile.quintVersion
-              TypedEffectJson = typedEffect
-              ExportBindings = selectors.Exports
-              ActionBindings = selectors.Actions }
-          Metadata =
-            { Specification = "SirCombat"
-              Relationships = []
-              VerificationProfiles = []
-              Bounds = []
-              Impacts = []
-              Compatibility = []
-              Digests =
-                [ { Name = "typed-effect"
-                    Sha256 = sha256 typedEffect } ] } }
+        {
+            ModuleName = selectors.ModuleName
+            Toolchain = QuintToolchain.general
+            Cache = [ cacheObservation "lmt-binary"; cacheObservation "quint-binary" ]
+            ProcessRequests = requests
+            Endpoint = Available
+            ProcessObservations =
+                requests
+                |> List.map (fun item ->
+                    {
+                        StepId = item.StepId
+                        Outcome = Succeeded
+                    })
+            Source = source
+            FenceManifest =
+                {
+                    Schema = QuintSource.fenceManifestSchema
+                    SourcePath = source.Path
+                    SourceSha256 = source.Sha256
+                    Fences = fences
+                }
+            Extraction =
+                {
+                    First =
+                        [
+                            {
+                                Target = "sir-combat.qnt"
+                                Sha256 = sha256Bytes generatedBytes
+                                Bytes = int64 generatedBytes.Length
+                            }
+                        ]
+                    Second =
+                        [
+                            {
+                                Target = "sir-combat.qnt"
+                                Sha256 = sha256Bytes generatedBytes
+                                Bytes = int64 generatedBytes.Length
+                            }
+                        ]
+                    Warnings = []
+                }
+            SourceMap =
+                {
+                    Schema = QuintSource.sourceMapSchema
+                    SourceSha256 = source.Sha256
+                    Entries = sourceMaps
+                }
+            TypedEffect =
+                {
+                    Profile = selectors.Profile
+                    QuintVersion = QuintGeneralProfile.quintVersion
+                    TypedEffectJson = typedEffect
+                    ExportBindings = selectors.Exports
+                    ActionBindings = selectors.Actions
+                }
+            Metadata =
+                {
+                    Specification = "SirCombat"
+                    Relationships = []
+                    VerificationProfiles = []
+                    Bounds = []
+                    Impacts = []
+                    Compatibility = []
+                    Digests =
+                        [
+                            {
+                                Name = "typed-effect"
+                                Sha256 = sha256 typedEffect
+                            }
+                        ]
+                }
+        }
 
     let compiled =
         QuintCompiler.compileGeneralObserved compilationInput
@@ -253,9 +297,15 @@ match fsi.CommandLineArgs |> Array.skip 1 with
             Metadata =
                 { compilationInput.Metadata with
                     Relationships =
-                        [ { FromId = "COMBAT-DAMAGE-001"
-                            Kind = Requires
-                            ToId = "COMBAT-TRACE-002" } ] } }
+                        [
+                            {
+                                FromId = "COMBAT-DAMAGE-001"
+                                Kind = Requires
+                                ToId = "COMBAT-TRACE-002"
+                            }
+                        ]
+                }
+        }
 
     match QuintCompiler.compileGeneralObserved semanticSidecar with
     | Error findings when
@@ -276,8 +326,12 @@ match fsi.CommandLineArgs |> Array.skip 1 with
                             Source =
                                 { first.Source with
                                     Start = { Line = 9999; Column = 1 }
-                                    End = { Line = 10000; Column = 1 } } }
-                        :: compilationInput.TypedEffect.ExportBindings.Tail } }
+                                    End = { Line = 10000; Column = 1 }
+                                }
+                        }
+                        :: compilationInput.TypedEffect.ExportBindings.Tail
+                }
+        }
 
     match QuintCompiler.compileGeneralObserved forgedSelectorRange with
     | Error findings when
@@ -295,8 +349,11 @@ match fsi.CommandLineArgs |> Array.skip 1 with
                 { compilationInput.TypedEffect with
                     ExportBindings =
                         { first with
-                            Source = compilationInput.SourceMap.Entries.Head.Source.Range }
-                        :: compilationInput.TypedEffect.ExportBindings.Tail } }
+                            Source = compilationInput.SourceMap.Entries.Head.Source.Range
+                        }
+                        :: compilationInput.TypedEffect.ExportBindings.Tail
+                }
+        }
 
     match QuintCompiler.compileGeneralObserved overbroadSelectorRange with
     | Error findings when
@@ -318,9 +375,11 @@ match fsi.CommandLineArgs |> Array.skip 1 with
         Path.Combine(outputRoot, "native.txt"),
         String.concat
             "\n"
-            [ bindings.ContractFingerprint
-              String.concat "," (rules |> List.map _.Id)
-              canonical ]
+            [
+                bindings.ContractFingerprint
+                String.concat "," (rules |> List.map _.Id)
+                canonical
+            ]
         + "\n"
     )
 

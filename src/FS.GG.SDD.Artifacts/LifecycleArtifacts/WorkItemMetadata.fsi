@@ -10,12 +10,14 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 [<AutoOpen>]
 module WorkItemMetadata =
     type WorkItemMetadata =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          ChangeTier: string
-          Status: string
-          ProseStatus: string option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            ChangeTier: string
+            Status: string
+            ProseStatus: string option
+        }
 
     val parseWorkItemMetadata: snapshot: FileSnapshot -> Result<WorkItemMetadata, Diagnostic list>

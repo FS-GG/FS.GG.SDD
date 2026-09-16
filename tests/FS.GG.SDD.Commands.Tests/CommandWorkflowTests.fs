@@ -68,13 +68,15 @@ module CommandWorkflowTests =
         let model, effects = init request
 
         let first =
-            { Effect = List.head effects
-              Succeeded = true
-              Read = Absent
-              Snapshot = None
-              Process = None
-              Confirmed = None
-              Diagnostic = None }
+            {
+                Effect = List.head effects
+                Succeeded = true
+                Read = Absent
+                Snapshot = None
+                Process = None
+                Confirmed = None
+                Diagnostic = None
+            }
 
         let updated = update (EffectInterpreted first) model |> fst
         let final = update BuildReport updated |> fst
@@ -88,7 +90,8 @@ module CommandWorkflowTests =
 
         let request =
             { TestSupport.request Charter root with
-                WorkId = Some "004-charter-command" }
+                WorkId = Some "004-charter-command"
+            }
 
         let model, effects = init request
 
@@ -128,7 +131,8 @@ status: chartered
 
         let request =
             { TestSupport.charterRequest root "004-charter-command" "Charter Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -149,7 +153,8 @@ status: chartered
 
         let request =
             { TestSupport.request Charter root with
-                WorkId = Some "004-charter-command" }
+                WorkId = Some "004-charter-command"
+            }
 
         let model, effects = init request
 
@@ -177,7 +182,8 @@ status: chartered
 
         let request =
             { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -204,7 +210,8 @@ status: chartered
 
         let request =
             { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -232,7 +239,8 @@ status: chartered
 
         let request =
             { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -259,7 +267,8 @@ status: chartered
 
         let request =
             { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -289,7 +298,8 @@ status: chartered
 
         let request =
             { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -317,7 +327,8 @@ status: chartered
 
         let request =
             { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -345,7 +356,8 @@ status: chartered
 
         let request =
             { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -373,7 +385,8 @@ status: chartered
 
         let request =
             { TestSupport.analyzeRequest root "010-analyze-command" "Analyze Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -401,7 +414,8 @@ status: chartered
 
         let request =
             { TestSupport.planRequest root "008-plan-command" "Plan Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -430,7 +444,8 @@ status: chartered
 
         let request =
             { TestSupport.planRequest root "008-plan-command" "Plan Command" with
-                DryRun = true }
+                DryRun = true
+            }
 
         let model, effects = init request
 
@@ -475,7 +490,8 @@ module BlockedEffectGateTests =
 
         let specifyRequest =
             { TestSupport.specifyRequest root workId title with
-                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+                InputText = Some TestSupport.specifyIntentWithAmbiguity
+            }
 
         TestSupport.runRequest specifyRequest |> ignore
         root
@@ -487,7 +503,8 @@ module BlockedEffectGateTests =
         let report =
             TestSupport.runRequest
                 { TestSupport.clarifyRequest root workId title with
-                    InputText = None }
+                    InputText = None
+                }
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Equal(1, report.ChangedArtifacts.Length)
@@ -501,7 +518,8 @@ module BlockedEffectGateTests =
         // Seed the skeleton, then let `checklist` block on its unresolved blocking ambiguity.
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         let report = TestSupport.runChecklist root workId title
@@ -515,8 +533,10 @@ module BlockedEffectGateTests =
         let root = blockedProject ()
 
         for report in
-            [ TestSupport.runPlan root workId title
-              TestSupport.runTasks root workId title ] do
+            [
+                TestSupport.runPlan root workId title
+                TestSupport.runTasks root workId title
+            ] do
             Assert.Equal(CommandOutcome.Blocked, report.Outcome)
             Assert.Empty(report.ChangedArtifacts)
 
@@ -533,7 +553,8 @@ module BlockedEffectGateTests =
         let report =
             TestSupport.runRequest
                 { TestSupport.specifyRequest root workId title with
-                    InputText = Some "" }
+                    InputText = Some ""
+                }
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Empty(report.ChangedArtifacts)

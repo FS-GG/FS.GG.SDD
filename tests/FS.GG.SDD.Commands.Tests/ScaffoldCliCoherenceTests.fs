@@ -29,7 +29,8 @@ module ScaffoldCliCoherenceTests =
     let private scaffoldRequest root =
         { TestSupport.request Scaffold root with
             Provider = Some "fixture"
-            Parameters = [ "productName", "Acme" ] }
+            Parameters = [ "productName", "Acme" ]
+        }
 
     let private runScaffoldModel request =
         let model, effects = init request
@@ -250,8 +251,11 @@ module ScaffoldCliCoherenceTests =
         let request =
             { scaffoldRequest root with
                 GeneratorVersion =
-                    { Id = "fsgg-sdd"
-                      Version = "not-a-version" } }
+                    {
+                        Id = "fsgg-sdd"
+                        Version = "not-a-version"
+                    }
+            }
 
         let report = runScaffold request
         // No advisory: compare(unparseable, minimum) = None ⇒ skip (D7).

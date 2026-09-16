@@ -122,14 +122,16 @@ module internal HandlersRefresh =
     // --- refresh orchestration (cross-cutting; reuses the per-view generators) ---
 
     let refreshCanonicalViews =
-        [ "work-model"
-          "analysis"
-          "verify"
-          "ship"
-          "ship-verdict"
-          "governance-handoff"
-          "agent-commands"
-          "summary" ]
+        [
+            "work-model"
+            "analysis"
+            "verify"
+            "ship"
+            "ship-verdict"
+            "governance-handoff"
+            "agent-commands"
+            "summary"
+        ]
 
     // 056 skill fan-out re-mirror (FR-009): refresh brings the multi-root union to
     // currency independent of the work-model views. The non-reserved provider skills under
@@ -286,46 +288,50 @@ module internal HandlersRefresh =
             let authoredSourcePaths = [ specPath workId; tasksPath workId; evidencePath workId ]
 
             let authoredPreserved =
-                [ charterPath workId
-                  specPath workId
-                  clarificationPath workId
-                  checklistPath workId
-                  planPath workId
-                  tasksPath workId
-                  evidencePath workId
-                  ".fsgg/project.yml"
-                  ".fsgg/sdd.yml"
-                  ".fsgg/agents.yml" ]
+                [
+                    charterPath workId
+                    specPath workId
+                    clarificationPath workId
+                    checklistPath workId
+                    planPath workId
+                    tasksPath workId
+                    evidencePath workId
+                    ".fsgg/project.yml"
+                    ".fsgg/sdd.yml"
+                    ".fsgg/agents.yml"
+                ]
                 |> List.filter (fun path -> Option.isSome (snapshot path model))
 
             if baseBlocking then
                 let perViewState = refreshCanonicalViews |> List.map (fun view -> view, "blocked")
 
                 let summary: RefreshSummary =
-                    { WorkId = workId
-                      Stage = "refresh"
-                      Status = "blocked"
-                      SummaryPath = summaryPath
-                      RefreshedViewIds = []
-                      AlreadyCurrentViewIds = []
-                      BlockedViewIds = refreshCanonicalViews
-                      NotApplicableViewIds = []
-                      PreservedAuthoredPaths = authoredPreserved
-                      FindingIds =
-                        baseDiags
-                        |> List.map (fun diagnostic -> diagnostic.Id)
-                        |> List.distinct
-                        |> List.sort
-                      AdvisoryCount = 0
-                      WarningCount = 0
-                      BlockingCount =
-                        baseDiags
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.length
-                      Disposition = refreshDispositionValue RefreshBlocked
-                      PerViewState = perViewState
-                      SourceSnapshotCount = 0
-                      Readiness = "needsRefreshCorrection" }
+                    {
+                        WorkId = workId
+                        Stage = "refresh"
+                        Status = "blocked"
+                        SummaryPath = summaryPath
+                        RefreshedViewIds = []
+                        AlreadyCurrentViewIds = []
+                        BlockedViewIds = refreshCanonicalViews
+                        NotApplicableViewIds = []
+                        PreservedAuthoredPaths = authoredPreserved
+                        FindingIds =
+                            baseDiags
+                            |> List.map (fun diagnostic -> diagnostic.Id)
+                            |> List.distinct
+                            |> List.sort
+                        AdvisoryCount = 0
+                        WarningCount = 0
+                        BlockingCount =
+                            baseDiags
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.length
+                        Disposition = refreshDispositionValue RefreshBlocked
+                        PerViewState = perViewState
+                        SourceSnapshotCount = 0
+                        Readiness = "needsRefreshCorrection"
+                    }
 
                 (baseDiags |> DiagnosticsModule.sort), Some summary, [], []
             elif
@@ -346,23 +352,25 @@ module internal HandlersRefresh =
                     |> List.map (fun view -> view, viewCurrencyDisplay ViewCurrencyClass.EarlyStage)
 
                 let summary: RefreshSummary =
-                    { WorkId = workId
-                      Stage = "refresh"
-                      Status = "early-stage"
-                      SummaryPath = summaryPath
-                      RefreshedViewIds = []
-                      AlreadyCurrentViewIds = []
-                      BlockedViewIds = []
-                      NotApplicableViewIds = refreshCanonicalViews
-                      PreservedAuthoredPaths = authoredPreserved
-                      FindingIds = [ earlyDiag.Id ]
-                      AdvisoryCount = 1
-                      WarningCount = 0
-                      BlockingCount = 0
-                      Disposition = refreshDispositionValue RefreshDisposition.EarlyStage
-                      PerViewState = perViewState
-                      SourceSnapshotCount = 0
-                      Readiness = "refreshEarlyStage" }
+                    {
+                        WorkId = workId
+                        Stage = "refresh"
+                        Status = "early-stage"
+                        SummaryPath = summaryPath
+                        RefreshedViewIds = []
+                        AlreadyCurrentViewIds = []
+                        BlockedViewIds = []
+                        NotApplicableViewIds = refreshCanonicalViews
+                        PreservedAuthoredPaths = authoredPreserved
+                        FindingIds = [ earlyDiag.Id ]
+                        AdvisoryCount = 1
+                        WarningCount = 0
+                        BlockingCount = 0
+                        Disposition = refreshDispositionValue RefreshDisposition.EarlyStage
+                        PerViewState = perViewState
+                        SourceSnapshotCount = 0
+                        Readiness = "refreshEarlyStage"
+                    }
 
                 ((baseDiags @ [ earlyDiag ]) |> DiagnosticsModule.sort), Some summary, [], []
             else
@@ -380,27 +388,34 @@ module internal HandlersRefresh =
                         // text this run is ABOUT to write, so the bytes are known. It must never be
                         // `Absent`/`Unreadable` — a fold that consults `Read` (#745) would then
                         // treat a view this run authored as unread.
-                        { Effect = ReadFile path
-                          Succeeded = true
-                          Read =
-                            Bytes
-                                { Path = path
-                                  Text = text
-                                  RawBytes = None }
-                          Snapshot =
-                            Some
-                                { Path = path
-                                  Text = text
-                                  RawBytes = None }
-                          Process = None
-                          Confirmed = None
-                          Diagnostic = None }
+                        {
+                            Effect = ReadFile path
+                            Succeeded = true
+                            Read =
+                                Bytes
+                                    {
+                                        Path = path
+                                        Text = text
+                                        RawBytes = None
+                                    }
+                            Snapshot =
+                                Some
+                                    {
+                                        Path = path
+                                        Text = text
+                                        RawBytes = None
+                                    }
+                            Process = None
+                            Confirmed = None
+                            Diagnostic = None
+                        }
 
                     { m with
                         InterpretedEffects =
                             (m.InterpretedEffects
                              |> List.filter (fun result -> effectKey result.Effect <> key))
-                            @ [ injected ] }
+                            @ [ injected ]
+                    }
 
                 let textOf path =
                     snapshot path model |> Option.map (fun snap -> snap.Text)
@@ -661,13 +676,15 @@ module internal HandlersRefresh =
                     | _, None -> None, [], ViewCurrencyClass.Missing
 
                 let structuredClasses =
-                    [ "work-model", wmClass
-                      "analysis", anClass
-                      "verify", veClass
-                      "ship", shClass
-                      // The verdict joins the structured set: it is committed, so a refresh that
-                      // cannot bring it to currency must not report "refreshed-current".
-                      "ship-verdict", verdictClass ]
+                    [
+                        "work-model", wmClass
+                        "analysis", anClass
+                        "verify", veClass
+                        "ship", shClass
+                        // The verdict joins the structured set: it is committed, so a refresh that
+                        // cannot bring it to currency must not report "refreshed-current".
+                        "ship-verdict", verdictClass
+                    ]
 
                 let isClean = viewCurrencyIsClean
 
@@ -692,26 +709,32 @@ module internal HandlersRefresh =
                                 GenerationManifestModule.parseWorkModelMetadata (workModelPath workId) existing.Text
                             with
                             | Error _ ->
-                                [ refreshMalformedGeneratedView
-                                      (workModelPath workId)
-                                      $"Generated view '{workModelPath workId}' was unreadable and was refreshed from current sources." ]
+                                [
+                                    refreshMalformedGeneratedView
+                                        (workModelPath workId)
+                                        $"Generated view '{workModelPath workId}' was unreadable and was refreshed from current sources."
+                                ]
                             | Ok _ -> []
                         | None -> []
                     else
                         []
 
                 let downstreamDiags =
-                    [ analysisPath workId, anClass
-                      verifyPath workId, veClass
-                      shipPath workId, shClass ]
+                    [
+                        analysisPath workId, anClass
+                        verifyPath workId, veClass
+                        shipPath workId, shClass
+                    ]
                     |> List.collect (fun (viewPath, state) ->
                         match state with
                         | ViewCurrencyClass.Blocked -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
                         | ViewCurrencyClass.Stale -> [ refreshStaleView viewPath [ workModelPath workId ] ]
                         | ViewCurrencyClass.Malformed ->
-                            [ refreshMalformedGeneratedView
-                                  viewPath
-                                  $"Generated view '{viewPath}' is malformed; re-run the responsible lifecycle command." ]
+                            [
+                                refreshMalformedGeneratedView
+                                    viewPath
+                                    $"Generated view '{viewPath}' is malformed; re-run the responsible lifecycle command."
+                            ]
                         | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
                         | ViewCurrencyClass.AwaitingLifecycle command -> [ refreshNotYetGenerated viewPath command ]
                         | _ -> [])
@@ -727,9 +750,11 @@ module internal HandlersRefresh =
                     // ship-view parsing now lands the verdict on `Blocked`, and `malformed` is reported
                     // against `ship.json` itself by `downstreamDiags` above. Retained for totality.
                     | ViewCurrencyClass.Malformed ->
-                        [ refreshMalformedGeneratedView
-                              verdictPath
-                              $"Source '{shipPath workId}' did not parse as a ship view, so '{verdictPath}' could not be re-projected; re-run `fsgg-sdd ship`." ]
+                        [
+                            refreshMalformedGeneratedView
+                                verdictPath
+                                $"Source '{shipPath workId}' did not parse as a ship view, so '{verdictPath}' could not be re-projected; re-run `fsgg-sdd ship`."
+                        ]
                     | ViewCurrencyClass.Blocked -> [ refreshBlockedUpstreamView verdictPath (shipPath workId) ]
                     | ViewCurrencyClass.Stale -> [ refreshStaleView verdictPath [ shipPath workId ] ]
                     // Feature 095 (FS.GG.SDD#188): an absent verdict is `Missing` whatever ails its
@@ -782,10 +807,12 @@ module internal HandlersRefresh =
 
                 // --- summary projection ---
                 let structuredSourcePaths =
-                    [ workModelPath workId
-                      analysisPath workId
-                      verifyPath workId
-                      shipPath workId ]
+                    [
+                        workModelPath workId
+                        analysisPath workId
+                        verifyPath workId
+                        shipPath workId
+                    ]
                     @ agentGuidancePaths
 
                 let summarySources =
@@ -798,10 +825,12 @@ module internal HandlersRefresh =
 
                         textOpt
                         |> Option.map (fun text ->
-                            { Path = path
-                              Digest = Some(SchemaVersionModule.sha256Text text)
-                              SchemaVersion = Some 1
-                              SchemaStatus = Some "current" }))
+                            {
+                                Path = path
+                                Digest = Some(SchemaVersionModule.sha256Text text)
+                                SchemaVersion = Some 1
+                                SchemaStatus = Some "current"
+                            }))
 
                 let stageText = "refresh"
 
@@ -833,14 +862,16 @@ module internal HandlersRefresh =
 
                 // currency word per view for the report and summary table
                 let perViewState =
-                    [ "work-model", viewCurrencyDisplay wmClass
-                      "analysis", viewCurrencyDisplay anClass
-                      "verify", viewCurrencyDisplay veClass
-                      "ship", viewCurrencyDisplay shClass
-                      "ship-verdict", viewCurrencyDisplay verdictClass
-                      "governance-handoff", viewCurrencyDisplay govClass
-                      "agent-commands", viewCurrencyDisplay agentClass
-                      "summary", (if summaryRenderable then "current" else "blocked") ]
+                    [
+                        "work-model", viewCurrencyDisplay wmClass
+                        "analysis", viewCurrencyDisplay anClass
+                        "verify", viewCurrencyDisplay veClass
+                        "ship", viewCurrencyDisplay shClass
+                        "ship-verdict", viewCurrencyDisplay verdictClass
+                        "governance-handoff", viewCurrencyDisplay govClass
+                        "agent-commands", viewCurrencyDisplay agentClass
+                        "summary", (if summaryRenderable then "current" else "blocked")
+                    ]
 
                 let summaryClass, summaryEffects, summaryViewState =
                     if not summaryRenderable then
@@ -872,17 +903,21 @@ module internal HandlersRefresh =
                             | _ -> ViewCurrencyClass.Refreshed
 
                         let effects =
-                            [ CreateDirectory(readinessDirectory workId)
-                              WriteFile(summaryPath, text, GeneratedView) ]
+                            [
+                                CreateDirectory(readinessDirectory workId)
+                                WriteFile(summaryPath, text, GeneratedView)
+                            ]
 
                         let view =
-                            { Path = summaryPath
-                              Kind = "summary"
-                              SchemaVersion = Some 1
-                              Generator = Some request.GeneratorVersion
-                              Sources = summarySources
-                              Currency = GeneratedViewCurrency.Current
-                              DiagnosticIds = [] }
+                            {
+                                Path = summaryPath
+                                Kind = "summary"
+                                SchemaVersion = Some 1
+                                Generator = Some request.GeneratorVersion
+                                Sources = summarySources
+                                Currency = GeneratedViewCurrency.Current
+                                DiagnosticIds = []
+                            }
 
                         cls, effects, Some view
 
@@ -897,14 +932,16 @@ module internal HandlersRefresh =
                     | _ -> refreshed, current, viewId :: blocked, na
 
                 let refreshedViewIds, alreadyCurrentViewIds, blockedViewIds, notApplicableViewIds =
-                    [ "work-model", wmClass
-                      "analysis", anClass
-                      "verify", veClass
-                      "ship", shClass
-                      "ship-verdict", verdictClass
-                      "governance-handoff", govClass
-                      "agent-commands", agentClass
-                      "summary", summaryClass ]
+                    [
+                        "work-model", wmClass
+                        "analysis", anClass
+                        "verify", veClass
+                        "ship", shClass
+                        "ship-verdict", verdictClass
+                        "governance-handoff", govClass
+                        "agent-commands", agentClass
+                        "summary", summaryClass
+                    ]
                     |> List.fold (fun acc (viewId, state) -> classifyToBucket viewId state acc) ([], [], [], [])
 
                 let findingSeverityCount severity =
@@ -913,53 +950,60 @@ module internal HandlersRefresh =
                     |> List.length
 
                 let sourceSnapshotCount =
-                    [ workModelPath workId
-                      analysisPath workId
-                      verifyPath workId
-                      shipPath workId ]
+                    [
+                        workModelPath workId
+                        analysisPath workId
+                        verifyPath workId
+                        shipPath workId
+                    ]
                     |> List.filter (fun path -> Option.isSome (snapshot path model))
                     |> List.length
 
                 let summaryRecord: RefreshSummary =
-                    { WorkId = workId
-                      Stage = stageText
-                      Status = dispositionValue
-                      SummaryPath = summaryPath
-                      RefreshedViewIds = refreshedViewIds |> List.sort
-                      AlreadyCurrentViewIds = alreadyCurrentViewIds |> List.sort
-                      BlockedViewIds = blockedViewIds |> List.sort
-                      NotApplicableViewIds = notApplicableViewIds |> List.sort
-                      PreservedAuthoredPaths = authoredPreserved |> List.sort
-                      FindingIds =
-                        refreshDiags
-                        |> List.map (fun diagnostic -> diagnostic.Id)
-                        |> List.distinct
-                        |> List.sort
-                      AdvisoryCount = findingSeverityCount DiagnosticSeverity.DiagnosticInfo
-                      WarningCount = findingSeverityCount DiagnosticSeverity.DiagnosticWarning
-                      BlockingCount = findingSeverityCount DiagnosticSeverity.DiagnosticError
-                      Disposition = dispositionValue
-                      PerViewState = perViewState
-                      SourceSnapshotCount = sourceSnapshotCount
-                      Readiness =
-                        if disposition = RefreshBlocked then
-                            "needsRefreshCorrection"
-                        else
-                            "refreshReady" }
+                    {
+                        WorkId = workId
+                        Stage = stageText
+                        Status = dispositionValue
+                        SummaryPath = summaryPath
+                        RefreshedViewIds = refreshedViewIds |> List.sort
+                        AlreadyCurrentViewIds = alreadyCurrentViewIds |> List.sort
+                        BlockedViewIds = blockedViewIds |> List.sort
+                        NotApplicableViewIds = notApplicableViewIds |> List.sort
+                        PreservedAuthoredPaths = authoredPreserved |> List.sort
+                        FindingIds =
+                            refreshDiags
+                            |> List.map (fun diagnostic -> diagnostic.Id)
+                            |> List.distinct
+                            |> List.sort
+                        AdvisoryCount = findingSeverityCount DiagnosticSeverity.DiagnosticInfo
+                        WarningCount = findingSeverityCount DiagnosticSeverity.DiagnosticWarning
+                        BlockingCount = findingSeverityCount DiagnosticSeverity.DiagnosticError
+                        Disposition = dispositionValue
+                        PerViewState = perViewState
+                        SourceSnapshotCount = sourceSnapshotCount
+                        Readiness =
+                            if disposition = RefreshBlocked then
+                                "needsRefreshCorrection"
+                            else
+                                "refreshReady"
+                    }
 
                 // --- canonical generated-view set ---
                 let downstreamView path kind state =
-                    { Path = path
-                      Kind = kind
-                      SchemaVersion = Some 1
-                      Generator = Some request.GeneratorVersion
-                      Sources = []
-                      Currency = viewCurrencyToGenerated state
-                      DiagnosticIds = [] }
+                    {
+                        Path = path
+                        Kind = kind
+                        SchemaVersion = Some 1
+                        Generator = Some request.GeneratorVersion
+                        Sources = []
+                        Currency = viewCurrencyToGenerated state
+                        DiagnosticIds = []
+                    }
 
                 let workModelViewState =
                     { wmView with
-                        Currency = viewCurrencyToGenerated wmClass }
+                        Currency = viewCurrencyToGenerated wmClass
+                    }
 
                 let agentViewStates =
                     agViews
@@ -974,29 +1018,34 @@ module internal HandlersRefresh =
                             | None -> ViewCurrencyClass.Blocked
 
                         { view with
-                            Currency = viewCurrencyToGenerated state })
+                            Currency = viewCurrencyToGenerated state
+                        })
 
                 let governanceHandoffViewState =
                     match govView with
                     | Some view ->
                         { view with
-                            Currency = viewCurrencyToGenerated govClass }
+                            Currency = viewCurrencyToGenerated govClass
+                        }
                     | None -> downstreamView (governanceHandoffPath workId) "governance-handoff" govClass
 
                 let shipVerdictViewState =
                     match verdictView with
                     | Some view ->
                         { view with
-                            Currency = viewCurrencyToGenerated verdictClass }
+                            Currency = viewCurrencyToGenerated verdictClass
+                        }
                     | None -> downstreamView (shipVerdictPath workId) "ship-verdict" verdictClass
 
                 let generatedViews =
-                    [ workModelViewState
-                      downstreamView (analysisPath workId) "analysis" anClass
-                      downstreamView (verifyPath workId) "verification" veClass
-                      downstreamView (shipPath workId) "ship" shClass
-                      shipVerdictViewState
-                      governanceHandoffViewState ]
+                    [
+                        workModelViewState
+                        downstreamView (analysisPath workId) "analysis" anClass
+                        downstreamView (verifyPath workId) "verification" veClass
+                        downstreamView (shipPath workId) "ship" shClass
+                        shipVerdictViewState
+                        governanceHandoffViewState
+                    ]
                     @ agentViewStates
                     @ (summaryViewState |> Option.toList)
 

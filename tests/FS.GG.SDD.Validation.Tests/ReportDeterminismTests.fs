@@ -18,7 +18,9 @@ module ReportDeterminismTests =
                     { defaultPlan with
                         LifecycleCommands = [ Init ]
                         Projections = [ Json ]
-                        States = [ "fresh" ] } }
+                        States = [ "fresh" ]
+                    }
+        }
 
     [<Fact>]
     let ``two runs serialize byte-identically`` () =

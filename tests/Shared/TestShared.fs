@@ -153,9 +153,11 @@ module TestShared =
 
         /// A child that ran to completion within its bound.
         type Completion =
-            { ExitCode: int
-              StandardOutput: string
-              StandardError: string }
+            {
+                ExitCode: int
+                StandardOutput: string
+                StandardError: string
+            }
 
         /// Why a bounded run gave up. These are different events, and a caller can need to tell
         /// them apart: a *run smoke* (launch an app, require it to survive a grace window) reads
@@ -258,9 +260,11 @@ module TestShared =
                     )
 
                 Ok
-                    { ExitCode = proc.ExitCode
-                      StandardOutput = stdout.Result
-                      StandardError = stderr.Result }
+                    {
+                        ExitCode = proc.ExitCode
+                        StandardOutput = stdout.Result
+                        StandardError = stderr.Result
+                    }
 
         /// Run a child under `timeoutMs`. `None` when it could not be started — the shape a caller
         /// that wants to *probe* for an executable needs.

@@ -18,13 +18,15 @@ module WorkBoardScaffoldAcceptanceTests =
     /// The current work-board body no longer owns workspace wiring; padd-item below owns and tests
     /// that boundary. Pin work-board's host-loop and immediate two-line reporting contract here.
     let private documentedWorkBoardTokens =
-        [ "check-board"
-          "backlog-triage"
-          "pnext-item"
-          "On every material transition"
-          "line 1 — the material transition(s)"
-          "line 2 — the complete active inventory"
-          "<item>: <previous> -> <new> (<reason>)" ]
+        [
+            "check-board"
+            "backlog-triage"
+            "pnext-item"
+            "On every material transition"
+            "line 1 — the material transition(s)"
+            "line 2 — the complete active inventory"
+            "<item>: <previous> -> <new> (<reason>)"
+        ]
 
     // ----- fixture: a real offline scaffold -----
 
@@ -51,7 +53,8 @@ module WorkBoardScaffoldAcceptanceTests =
         let report =
             { request Scaffold root with
                 Provider = Some "fixture"
-                Parameters = [ "productName", "Acme" ] }
+                Parameters = [ "productName", "Acme" ]
+            }
             |> runRequest
 
         let summary = scaffoldSummary report
@@ -135,15 +138,17 @@ module WorkBoardScaffoldAcceptanceTests =
         let body = shippedDriverBody "padd-item"
 
         for token in
-            [ "FSGG_COORD_OWNER_TYPE"
-              "FSGG_COORD_OWNER"
-              "FSGG_COORD_PROJECT"
-              "organization/named-user owner"
-              "authenticated viewer's board"
-              "Never silently fall back to the FS-GG organization board"
-              "stop non-zero without mutation"
-              "new-sdd-workspace retrofit"
-              "work-roadmap" ] do
+            [
+                "FSGG_COORD_OWNER_TYPE"
+                "FSGG_COORD_OWNER"
+                "FSGG_COORD_PROJECT"
+                "organization/named-user owner"
+                "authenticated viewer's board"
+                "Never silently fall back to the FS-GG organization board"
+                "stop non-zero without mutation"
+                "new-sdd-workspace retrofit"
+                "work-roadmap"
+            ] do
             Assert.True(
                 body.Contains token,
                 $"the package-delivered padd-item body no longer carries the configured-board or no-mutation contract token \"{token}\"."
