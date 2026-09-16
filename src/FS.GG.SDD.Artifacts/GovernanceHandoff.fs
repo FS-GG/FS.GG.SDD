@@ -18,34 +18,44 @@ module GovernanceHandoff =
         | Skipped
 
     type EvidenceNode =
-        { Id: string
-          State: DeclaredEvidenceState
-          Rationale: string option }
+        {
+            Id: string
+            State: DeclaredEvidenceState
+            Rationale: string option
+        }
 
     type EvidenceEdge =
-        { Dependent: string
-          Dependency: string }
+        {
+            Dependent: string
+            Dependency: string
+        }
 
     type EvidenceProjection =
-        { Nodes: EvidenceNode list
-          Dependencies: EvidenceEdge list }
+        {
+            Nodes: EvidenceNode list
+            Dependencies: EvidenceEdge list
+        }
 
     type PerformanceEvidenceProjection = Fsgg.Schemas.GovernanceHandoffPerformanceEvidence
 
     type GovernedReference =
-        { Path: string
-          Owner: string
-          Relationship: string
-          Kind: string option
-          Operation: string option }
+        {
+            Path: string
+            Owner: string
+            Relationship: string
+            Kind: string option
+            Operation: string option
+        }
 
     type GovernanceConfigPresence =
-        { PolicyPresent: bool
-          PolicyPointer: string option
-          CapabilitiesPresent: bool
-          CapabilitiesPointer: string option
-          ToolingPresent: bool
-          ToolingPointer: string option }
+        {
+            PolicyPresent: bool
+            PolicyPointer: string option
+            CapabilitiesPresent: bool
+            CapabilitiesPointer: string option
+            ToolingPresent: bool
+            ToolingPointer: string option
+        }
 
     type ReadinessFacts =
         {
@@ -63,17 +73,19 @@ module GovernanceHandoff =
         }
 
     type GovernanceHandoff =
-        { SchemaVersion: int
-          ContractVersion: string
-          GeneratorVersion: GeneratorVersion
-          WorkId: string
-          Sources: SourceIdentity list
-          Evidence: EvidenceProjection
-          PerformanceEvidence: PerformanceEvidenceProjection list
-          GovernedReferences: GovernedReference list
-          GovernanceConfig: GovernanceConfigPresence
-          Readiness: ReadinessFacts
-          Diagnostics: Diagnostic list }
+        {
+            SchemaVersion: int
+            ContractVersion: string
+            GeneratorVersion: GeneratorVersion
+            WorkId: string
+            Sources: SourceIdentity list
+            Evidence: EvidenceProjection
+            PerformanceEvidence: PerformanceEvidenceProjection list
+            GovernedReferences: GovernedReference list
+            GovernanceConfig: GovernanceConfigPresence
+            Readiness: ReadinessFacts
+            Diagnostics: Diagnostic list
+        }
 
     let declaredEvidenceStateValue state =
         match state with
@@ -110,12 +122,14 @@ module GovernanceHandoff =
             | _ -> Pending
 
     let emptyGovernanceConfig =
-        { PolicyPresent = false
-          PolicyPointer = None
-          CapabilitiesPresent = false
-          CapabilitiesPointer = None
-          ToolingPresent = false
-          ToolingPointer = None }
+        {
+            PolicyPresent = false
+            PolicyPointer = None
+            CapabilitiesPresent = false
+            CapabilitiesPointer = None
+            ToolingPresent = false
+            ToolingPointer = None
+        }
 
     let sourceIdentity (path: string) (text: string) : SourceIdentity =
         let artifact =
@@ -129,11 +143,13 @@ module GovernanceHandoff =
             | Ok value -> value
             | Error message -> invalidArg (nameof path) message
 
-        { Artifact = artifact
-          Digest = SchemaVersion.sha256Text text
-          SchemaVersion = Some(SchemaVersion.create 1)
-          SchemaStatus = SchemaCompatibilityStatus.Current
-          RawSchemaVersion = None }
+        {
+            Artifact = artifact
+            Digest = SchemaVersion.sha256Text text
+            SchemaVersion = Some(SchemaVersion.create 1)
+            SchemaStatus = SchemaCompatibilityStatus.Current
+            RawSchemaVersion = None
+        }
 
     let taskStateOf (status: string) =
         match normalize status with
@@ -156,18 +172,26 @@ module GovernanceHandoff =
 
         // Edge derivation (Kernel.Evidence.build shape: dependent rests on dependency).
         let edges =
-            [ for evidence in model.Evidence do
-                  for taskRef in evidence.TaskRefs ->
-                      { Dependent = evidencePrefix + evidence.Id
-                        Dependency = taskPrefix + taskRef }
-              for task in model.Tasks do
-                  for dependency in task.Dependencies ->
-                      { Dependent = taskPrefix + task.Id
-                        Dependency = taskPrefix + dependency }
+            [
+                for evidence in model.Evidence do
+                    for taskRef in evidence.TaskRefs ->
+                        {
+                            Dependent = evidencePrefix + evidence.Id
+                            Dependency = taskPrefix + taskRef
+                        }
+                for task in model.Tasks do
+                    for dependency in task.Dependencies ->
+                        {
+                            Dependent = taskPrefix + task.Id
+                            Dependency = taskPrefix + dependency
+                        }
 
-                  for required in task.RequiredEvidence ->
-                      { Dependent = taskPrefix + task.Id
-                        Dependency = evidencePrefix + required } ]
+                    for required in task.RequiredEvidence ->
+                        {
+                            Dependent = taskPrefix + task.Id
+                            Dependency = evidencePrefix + required
+                        }
+            ]
             |> List.distinct
             |> List.sortBy (fun edge -> edge.Dependent, edge.Dependency)
 
@@ -194,9 +218,11 @@ module GovernanceHandoff =
             |> List.map (fun evidence ->
                 let state = mapEvidenceState evidence.Result evidence.Synthetic
 
-                { Id = evidencePrefix + evidence.Id
-                  State = state
-                  Rationale = carriedRationale state evidence.Rationale })
+                {
+                    Id = evidencePrefix + evidence.Id
+                    State = state
+                    Rationale = carriedRationale state evidence.Rationale
+                })
 
         let evidenceNodeIds = evidenceNodes |> List.map (fun node -> node.Id) |> Set.ofList
 
@@ -214,9 +240,11 @@ module GovernanceHandoff =
                     |> Option.map (fun task -> taskStateOf task.Status)
                     |> Option.defaultValue Pending
 
-                { Id = id
-                  State = state
-                  Rationale = None })
+                {
+                    Id = id
+                    State = state
+                    Rationale = None
+                })
 
         // Evidence referenced by an edge but lacking a declared entry: present-but-pending,
         // so the consumer's build never returns UnknownNode for an SDD-produced handoff.
@@ -225,9 +253,11 @@ module GovernanceHandoff =
             |> Set.toList
             |> List.filter (fun id -> id.StartsWith evidencePrefix && not (evidenceNodeIds.Contains id))
             |> List.map (fun id ->
-                { Id = id
-                  State = Pending
-                  Rationale = None })
+                {
+                    Id = id
+                    State = Pending
+                    Rationale = None
+                })
 
         let nodes =
             evidenceNodes @ taskNodes @ danglingEvidenceNodes
@@ -237,11 +267,13 @@ module GovernanceHandoff =
         let governedReferences =
             model.GovernanceBoundaries
             |> List.map (fun boundary ->
-                { Path = boundary.Path.Replace('\\', '/')
-                  Owner = boundary.Owner
-                  Relationship = boundary.Relationship
-                  Kind = None
-                  Operation = None })
+                {
+                    Path = boundary.Path.Replace('\\', '/')
+                    Owner = boundary.Owner
+                    Relationship = boundary.Relationship
+                    Kind = None
+                    Operation = None
+                })
             |> List.sortBy (fun reference -> reference.Path)
 
         // Carry existing work-model diagnostics verbatim; append a staleEvidence diagnostic
@@ -256,14 +288,16 @@ module GovernanceHandoff =
             if List.isEmpty staleEvidenceIds then
                 []
             else
-                [ Diagnostics.create
-                      "staleEvidence"
-                      DiagnosticWarning
-                      None
-                      None
-                      "Declared evidence is stale; effective freshness is computed and enforced by Governance."
-                      "Re-run verification to refresh the stale evidence before relying on it."
-                      staleEvidenceIds ]
+                [
+                    Diagnostics.create
+                        "staleEvidence"
+                        DiagnosticWarning
+                        None
+                        None
+                        "Declared evidence is stale; effective freshness is computed and enforced by Governance."
+                        "Re-run verification to refresh the stale evidence before relying on it."
+                        staleEvidenceIds
+                ]
 
         // Active performance obligations remain typed in work-model.json and are also projected as
         // stable handoff diagnostics, so Governance consumers can discover the accepted target even
@@ -296,25 +330,29 @@ module GovernanceHandoff =
                 |> Option.bind (fun budget ->
                     evidence.PerformanceEvidenceArtifact
                     |> Option.map (fun artifact ->
-                        ({ EvidenceId = evidence.Id
-                           ArtifactPath = budget.ArtifactPath
-                           Intent = budget.Intent
-                           Artifact = artifact
-                           Measurements = evidence.PerformanceMeasurements }
+                        ({
+                            EvidenceId = evidence.Id
+                            ArtifactPath = budget.ArtifactPath
+                            Intent = budget.Intent
+                            Artifact = artifact
+                            Measurements = evidence.PerformanceMeasurements
+                        }
                         : PerformanceEvidenceProjection))))
             |> List.sortBy _.EvidenceId
 
-        { SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
-          ContractVersion = Fsgg.Schemas.governanceHandoffContractVersion
-          GeneratorVersion = generator
-          WorkId = model.WorkId
-          Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
-          Evidence = { Nodes = nodes; Dependencies = edges }
-          PerformanceEvidence = performanceEvidence
-          GovernedReferences = governedReferences
-          GovernanceConfig = config
-          Readiness = readiness
-          Diagnostics = diagnostics }
+        {
+            SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
+            ContractVersion = Fsgg.Schemas.governanceHandoffContractVersion
+            GeneratorVersion = generator
+            WorkId = model.WorkId
+            Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
+            Evidence = { Nodes = nodes; Dependencies = edges }
+            PerformanceEvidence = performanceEvidence
+            GovernedReferences = governedReferences
+            GovernanceConfig = config
+            Readiness = readiness
+            Diagnostics = diagnostics
+        }
 
     let writeNullableString (writer: Utf8JsonWriter) (name: string) (value: string option) =
         match value with

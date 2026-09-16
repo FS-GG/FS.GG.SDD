@@ -60,9 +60,11 @@ module ShipViewTests =
     let ``parseShipView reads schema version one ship identity and stage`` () =
         match
             parseShipView
-                { Path = "readiness/013-ship-command/ship.json"
-                  Text = validShipJson
-                  RawBytes = None }
+                {
+                    Path = "readiness/013-ship-command/ship.json"
+                    Text = validShipJson
+                    RawBytes = None
+                }
         with
         | Ok view ->
             Assert.Equal(1, view.SchemaVersion.Major)
@@ -76,9 +78,11 @@ module ShipViewTests =
     let ``parseShipView reads disposition lifecycle and verification readiness`` () =
         match
             parseShipView
-                { Path = "readiness/013-ship-command/ship.json"
-                  Text = validShipJson
-                  RawBytes = None }
+                {
+                    Path = "readiness/013-ship-command/ship.json"
+                    Text = validShipJson
+                    RawBytes = None
+                }
         with
         | Ok view ->
             Assert.Equal("shipReady", view.Disposition)
@@ -95,9 +99,11 @@ module ShipViewTests =
     let ``parseShipView rejects malformed ship json`` () =
         match
             parseShipView
-                { Path = "readiness/013-ship-command/ship.json"
-                  Text = "{ not valid ship json"
-                  RawBytes = None }
+                {
+                    Path = "readiness/013-ship-command/ship.json"
+                    Text = "{ not valid ship json"
+                    RawBytes = None
+                }
         with
         | Ok _ -> failwith "Expected malformed ship view to fail parsing."
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -114,9 +120,11 @@ module ShipViewTests =
 
         match
             parseShipView
-                { Path = "readiness/013-ship-command/ship.json"
-                  Text = withBlocking
-                  RawBytes = None }
+                {
+                    Path = "readiness/013-ship-command/ship.json"
+                    Text = withBlocking
+                    RawBytes = None
+                }
         with
         | Ok view -> Assert.Equal<string list>([ "SF001"; "SF002" ], view.DispositionBlockingFindingIds)
         | Error diagnostics -> failwith $"Expected a valid ship view, got {diagnostics}."
@@ -125,13 +133,15 @@ module ShipViewTests =
     let ``parseShipView yields an empty blocking list when disposition omits the field`` () =
         match
             parseShipView
-                { Path = "readiness/013-ship-command/ship.json"
-                  Text =
-                    validShipJson.Replace(
-                        "\"blockingFindingIds\": [],\n    \"warningFindingIds\"",
-                        "\"warningFindingIds\""
-                    )
-                  RawBytes = None }
+                {
+                    Path = "readiness/013-ship-command/ship.json"
+                    Text =
+                        validShipJson.Replace(
+                            "\"blockingFindingIds\": [],\n    \"warningFindingIds\"",
+                            "\"warningFindingIds\""
+                        )
+                    RawBytes = None
+                }
         with
         | Ok view -> Assert.Empty view.DispositionBlockingFindingIds
         | Error diagnostics -> failwith $"Expected a valid ship view, got {diagnostics}."
@@ -143,9 +153,11 @@ module ShipViewTests =
 
         match
             parseShipView
-                { Path = "readiness/013-ship-command/ship.json"
-                  Text = futureJson
-                  RawBytes = None }
+                {
+                    Path = "readiness/013-ship-command/ship.json"
+                    Text = futureJson
+                    RawBytes = None
+                }
         with
         | Ok _ -> failwith "Expected future schema version to fail parsing."
         | Error diagnostics -> Assert.NotEmpty diagnostics

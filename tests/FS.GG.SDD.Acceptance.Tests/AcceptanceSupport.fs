@@ -100,31 +100,33 @@ module AcceptanceSupport =
 
     /// A neutral command request (mirrors `FS.GG.SDD.Commands.Tests.TestSupport.request`).
     let request (command: SddCommand) (root: string) =
-        { Command = command
-          ProjectRoot = root
-          WorkId = None
-          Title = None
-          InputText = None
-          OutputFormat = Json
-          DryRun = false
-          GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
-          Provider = None
-          Parameters = []
-          Force = false
-          TemplateUpdate = true
-          AssumeYes = false
-          IsInteractive = false
-          Artifact = None
-          Explain = false
-          FromTests = None
-          FromTestReport = None
-          SyncObservedRun = None
-          SurfaceUpdate = false
-          AcceptUpstream = false
-          // Deliberate opt-out — see the note in Commands.Tests/TestSupport.fs. The acceptance
-          // drives scaffold/composition, not the ADR-0035 receipt gate; requiring an observed run
-          // here would only make composition fixtures fabricate one. Flipped default lives at the CLI.
-          RequireObserved = false }
+        {
+            Command = command
+            ProjectRoot = root
+            WorkId = None
+            Title = None
+            InputText = None
+            OutputFormat = Json
+            DryRun = false
+            GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
+            Provider = None
+            Parameters = []
+            Force = false
+            TemplateUpdate = true
+            AssumeYes = false
+            IsInteractive = false
+            Artifact = None
+            Explain = false
+            FromTests = None
+            FromTestReport = None
+            SyncObservedRun = None
+            SurfaceUpdate = false
+            AcceptUpstream = false
+            // Deliberate opt-out — see the note in Commands.Tests/TestSupport.fs. The acceptance
+            // drives scaffold/composition, not the ADR-0035 receipt gate; requiring an observed run
+            // here would only make composition fixtures fabricate one. Flipped default lives at the CLI.
+            RequireObserved = false
+        }
 
     /// The acceptance's fixed composition request: `--provider rendering --param
     /// lifecycle=sdd`. `rendering` is the author-supplied provider *name* (a generic
@@ -138,7 +140,8 @@ module AcceptanceSupport =
     let scaffoldRequest (root: string) =
         { request Scaffold root with
             Provider = Some "rendering"
-            Parameters = [ "lifecycle", "sdd" ] }
+            Parameters = [ "lifecycle", "sdd" ]
+        }
 
     /// AC-004 (feature 107, gated on `.github#1246`): the **override-free** composition request —
     /// `--provider rendering` with NO `--param` at all. The lifecycle default is the provider's to
@@ -150,7 +153,8 @@ module AcceptanceSupport =
     /// provider identity is reached only through the external registry (FR-009).
     let overrideFreeRequest (root: string) =
         { request Scaffold root with
-            Provider = Some "rendering" }
+            Provider = Some "rendering"
+        }
 
     /// Drive the `init`→…→Scaffold MVU loop to quiescence and return the `--json`
     /// `CommandReport` (mirrors `TestSupport.runRequest`).
@@ -207,9 +211,11 @@ module AcceptanceSupport =
 
         if existsRelative root registryPath then
             let snapshot: FileSnapshot =
-                { Path = registryPath
-                  Text = readRelative root registryPath
-                  RawBytes = None }
+                {
+                    Path = registryPath
+                    Text = readRelative root registryPath
+                    RawBytes = None
+                }
 
             Config.parseProviderRegistry snapshot
             |> Result.toOption
@@ -234,23 +240,28 @@ module AcceptanceSupport =
             |> Option.defaultValue defaultNameParameter
 
         { request with
-            Parameters = request.Parameters @ [ nameKey, name ] }
+            Parameters = request.Parameters @ [ nameKey, name ]
+        }
 
     // ---------- T005: process-shell probes at the test edge ----------
 
     /// The outcome of a `dotnet`/`git` probe at the test edge: the exit code, whether the
     /// process started at all, and a surfaced diagnostic for `failure.diagnostic`.
     type ProbeResult =
-        { Started: bool
-          ExitCode: int
-          Diagnostic: string }
+        {
+            Started: bool
+            ExitCode: int
+            Diagnostic: string
+        }
 
     /// The resolved command a probe actually invokes — the single value handed to the
     /// existing process-shell edge. Either the declared command or the `dotnet` default.
     type ProbeCommand =
-        { Executable: string
-          Arguments: string list
-          WorkingDirectory: string }
+        {
+            Executable: string
+            Arguments: string list
+            WorkingDirectory: string
+        }
 
     /// The `ProcessStartInfo` for one probe. Redirection and `UseShellExecute` are forced by
     /// `TestShared.ChildProcess` (a caller cannot opt out of the concurrent drain), so they are
@@ -264,9 +275,11 @@ module AcceptanceSupport =
     let private completedProbe (completion: TestShared.ChildProcess.Completion) =
         let surfaced = (completion.StandardError + completion.StandardOutput).Trim()
 
-        { Started = true
-          ExitCode = completion.ExitCode
-          Diagnostic = (if completion.ExitCode = 0 then "" else surfaced) }
+        {
+            Started = true
+            ExitCode = completion.ExitCode
+            Diagnostic = (if completion.ExitCode = 0 then "" else surfaced)
+        }
 
     /// Run a process to completion under `timeoutMs`; a hung process is killed and reported
     /// as a non-zero, timed-out probe (so it fails rather than hangs). This is the shared
@@ -285,25 +298,33 @@ module AcceptanceSupport =
         try
             match TestShared.ChildProcess.tryRunBounded timeoutMs (probeStartInfo fileName args workingDir) with
             | None ->
-                { Started = false
-                  ExitCode = -1
-                  Diagnostic = $"could not start `{fileName}`." }
+                {
+                    Started = false
+                    ExitCode = -1
+                    Diagnostic = $"could not start `{fileName}`."
+                }
             | Some completion -> completedProbe completion
         with :? TestShared.ChildProcess.ChildProcessTimeout as timeout ->
-            { Started = true
-              ExitCode = -1
-              Diagnostic = timeout.Message }
+            {
+                Started = true
+                ExitCode = -1
+                Diagnostic = timeout.Message
+            }
 
     let runToCompletionCapturingOutput fileName args workingDir timeoutMs =
         match TestShared.ChildProcess.tryRunBounded timeoutMs (probeStartInfo fileName args workingDir) with
         | Some completion ->
-            { Started = true
-              ExitCode = completion.ExitCode
-              Diagnostic = (completion.StandardError + completion.StandardOutput).Trim() }
+            {
+                Started = true
+                ExitCode = completion.ExitCode
+                Diagnostic = (completion.StandardError + completion.StandardOutput).Trim()
+            }
         | None ->
-            { Started = false
-              ExitCode = -1
-              Diagnostic = $"could not start `{fileName}`." }
+            {
+                Started = false
+                ExitCode = -1
+                Diagnostic = $"could not start `{fileName}`."
+            }
 
     // ---------- feature 035: declared-or-default probe-command resolution ----------
 
@@ -324,9 +345,11 @@ module AcceptanceSupport =
         match declared with
         | Some command when not (String.IsNullOrWhiteSpace command.Executable) ->
             Some
-                { Executable = command.Executable
-                  Arguments = command.Arguments
-                  WorkingDirectory = root }
+                {
+                    Executable = command.Executable
+                    Arguments = command.Arguments
+                    WorkingDirectory = root
+                }
         | _ -> None
 
     /// Resolve the build command (pure): a non-blank declared command wins; otherwise the
@@ -335,9 +358,11 @@ module AcceptanceSupport =
         match declaredCommandOrDefault declared root with
         | Some command -> command
         | None ->
-            { Executable = "dotnet"
-              Arguments = [ "build" ]
-              WorkingDirectory = root }
+            {
+                Executable = "dotnet"
+                Arguments = [ "build" ]
+                WorkingDirectory = root
+            }
 
     /// Resolve the run command (pure): a non-blank declared command wins; otherwise
     /// `dotnet run --project <discovered>` at the product root, or `None` when no runnable
@@ -349,9 +374,11 @@ module AcceptanceSupport =
         | None ->
             discoverRunnableProject root
             |> Option.map (fun project ->
-                { Executable = "dotnet"
-                  Arguments = [ "run"; "--project"; project ]
-                  WorkingDirectory = root })
+                {
+                    Executable = "dotnet"
+                    Arguments = [ "run"; "--project"; project ]
+                    WorkingDirectory = root
+                })
 
     /// The build probe: resolve the declared-or-default command and route it through the
     /// shared 300 s bounded edge (research D6). The default `dotnet build` disables persistent
@@ -398,22 +425,28 @@ module AcceptanceSupport =
         try
             match TestShared.ChildProcess.tryRunBounded graceMs startInfo with
             | None ->
-                { Started = false
-                  ExitCode = -1
-                  Diagnostic = $"could not start `{command.Executable}`." }
+                {
+                    Started = false
+                    ExitCode = -1
+                    Diagnostic = $"could not start `{command.Executable}`."
+                }
             // Exited within the grace window: pass iff it exited cleanly.
             | Some completion -> completedProbe completion
         with :? TestShared.ChildProcess.ChildProcessTimeout as timeout ->
             match timeout.Reason with
             // Survived the grace window without crashing: it started and is running.
             | TestShared.ChildProcess.ChildOutlivedBound ->
-                { Started = true
-                  ExitCode = 0
-                  Diagnostic = "" }
+                {
+                    Started = true
+                    ExitCode = 0
+                    Diagnostic = ""
+                }
             | TestShared.ChildProcess.PipesHeldAfterExit ->
-                { Started = true
-                  ExitCode = -1
-                  Diagnostic = timeout.Message }
+                {
+                    Started = true
+                    ExitCode = -1
+                    Diagnostic = timeout.Message
+                }
 
     /// The run probe: `declared = None` resolves to `dotnet run --project <discovered>`; no
     /// runnable project discoverable ⇒ a diagnosed not-started ProbeResult (FR-007). Declared
@@ -421,9 +454,11 @@ module AcceptanceSupport =
     let runProbe (declared: DeclaredCommand option) (root: string) =
         match resolveRunCommand declared root with
         | None ->
-            { Started = false
-              ExitCode = -1
-              Diagnostic = "no runnable project discovered." }
+            {
+                Started = false
+                ExitCode = -1
+                Diagnostic = "no runnable project discovered."
+            }
         | Some command -> runWithGrace command
 
     // ---------- refresh probe (in-process MVU over the public command surface) ----------
@@ -471,7 +506,8 @@ evidence: []
     /// Run `fsgg-sdd refresh` in-process for `workId` (mirrors `TestSupport.runRefresh`).
     let runRefresh root workId =
         { request Refresh root with
-            WorkId = Some workId }
+            WorkId = Some workId
+        }
         |> runRequest
 
     // ---------- byte-hash helper for refresh-exclusion comparison ----------

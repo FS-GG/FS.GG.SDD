@@ -136,9 +136,11 @@ module CommandEffects =
                 match Fsgg.SkillMirror.decodeBody bytes with
                 | Ok text ->
                     Body(
-                        { Path = path
-                          Text = text
-                          RawBytes = Some bytes }
+                        {
+                            Path = path
+                            Text = text
+                            RawBytes = Some bytes
+                        }
                         : FileSnapshot
                     )
                 | Error(Fsgg.SkillMirror.NotDecodable byteOffset) -> DecodeRefusal byteOffset
@@ -288,9 +290,11 @@ module CommandEffects =
                     |> Seq.toList
 
                 let snapshot =
-                    { Path = path
-                      Text = entries
-                      RawBytes = None }
+                    {
+                        Path = path
+                        Text = entries
+                        RawBytes = None
+                    }
                     : FileSnapshot
 
                 match skipped with
@@ -350,22 +354,26 @@ module CommandEffects =
         | Unreadable _ -> None
 
     let success (effect: CommandEffect) (read: ReadResult) =
-        { Effect = effect
-          Succeeded = true
-          Read = read
-          Snapshot = snapshotOf read
-          Process = None
-          Confirmed = None
-          Diagnostic = None }
+        {
+            Effect = effect
+            Succeeded = true
+            Read = read
+            Snapshot = snapshotOf read
+            Process = None
+            Confirmed = None
+            Diagnostic = None
+        }
 
     let failure (effect: CommandEffect) (read: ReadResult) diagnostic =
-        { Effect = effect
-          Succeeded = false
-          Read = read
-          Snapshot = snapshotOf read
-          Process = None
-          Confirmed = None
-          Diagnostic = Some diagnostic }
+        {
+            Effect = effect
+            Succeeded = false
+            Read = read
+            Snapshot = snapshotOf read
+            Process = None
+            Confirmed = None
+            Diagnostic = Some diagnostic
+        }
 
     // The per-stream retention bound for captured provider stdout/stderr (feature 054,
     // E4). Content beyond this many characters is drained (deadlock-safe) but neither
@@ -468,21 +476,25 @@ module CommandEffects =
 
             match proc with
             | null ->
-                { Effect = effect
-                  Succeeded = true
-                  Read = Absent
-                  Snapshot = None
-                  Process =
-                    Some
-                        { Started = false
-                          ExitCode = -1
-                          Command = commandLine
-                          StandardOutput = ""
-                          StandardOutputTruncated = false
-                          StandardError = ""
-                          StandardErrorTruncated = false }
-                  Confirmed = None
-                  Diagnostic = None }
+                {
+                    Effect = effect
+                    Succeeded = true
+                    Read = Absent
+                    Snapshot = None
+                    Process =
+                        Some
+                            {
+                                Started = false
+                                ExitCode = -1
+                                Command = commandLine
+                                StandardOutput = ""
+                                StandardOutputTruncated = false
+                                StandardError = ""
+                                StandardErrorTruncated = false
+                            }
+                    Confirmed = None
+                    Diagnostic = None
+                }
             | proc ->
                 // Read both pipes concurrently so neither can block the child (R1); retain at
                 // most the cap per stream (R2).
@@ -500,21 +512,25 @@ module CommandEffects =
                     // disagree if the directory's readability changed between the two walks.
                     let after = tryEnumerate projectRoot workingDir
 
-                    { Effect = effect
-                      Succeeded = true
-                      Read = after
-                      Snapshot = snapshotOf after
-                      Process =
-                        Some
-                            { Started = true
-                              ExitCode = proc.ExitCode
-                              Command = commandLine
-                              StandardOutput = stdout
-                              StandardOutputTruncated = stdoutTruncated
-                              StandardError = stderr
-                              StandardErrorTruncated = stderrTruncated }
-                      Confirmed = None
-                      Diagnostic = None }
+                    {
+                        Effect = effect
+                        Succeeded = true
+                        Read = after
+                        Snapshot = snapshotOf after
+                        Process =
+                            Some
+                                {
+                                    Started = true
+                                    ExitCode = proc.ExitCode
+                                    Command = commandLine
+                                    StandardOutput = stdout
+                                    StandardOutputTruncated = stdoutTruncated
+                                    StandardError = stderr
+                                    StandardErrorTruncated = stderrTruncated
+                                }
+                        Confirmed = None
+                        Diagnostic = None
+                    }
                 else
                     // Timed out: kill the whole tree, reap, and report a fail-closed nonzero
                     // exit so the handler classifies it as a provider/step failure (#68) — an
@@ -551,40 +567,48 @@ module CommandEffects =
                         else
                             capturedErr + "\n" + timeoutNote
 
-                    { Effect = effect
-                      Succeeded = true
-                      Read = after
-                      Snapshot = snapshotOf after
-                      Process =
-                        Some
-                            { Started = true
-                              ExitCode = processTimeoutExitCode
-                              Command = commandLine
-                              StandardOutput = stdout
-                              StandardOutputTruncated = stdoutTruncated
-                              StandardError = stderr
-                              StandardErrorTruncated = stderrTruncated }
-                      Confirmed = None
-                      Diagnostic = None }
+                    {
+                        Effect = effect
+                        Succeeded = true
+                        Read = after
+                        Snapshot = snapshotOf after
+                        Process =
+                            Some
+                                {
+                                    Started = true
+                                    ExitCode = processTimeoutExitCode
+                                    Command = commandLine
+                                    StandardOutput = stdout
+                                    StandardOutputTruncated = stdoutTruncated
+                                    StandardError = stderr
+                                    StandardErrorTruncated = stderrTruncated
+                                }
+                        Confirmed = None
+                        Diagnostic = None
+                    }
         with ex ->
             // The provider engine/command could not be launched: surfaced as
             // scaffold.providerUnavailable by the handler (Started = false). The launch
             // error is retained on StandardError so the report can explain the failure (R4).
-            { Effect = effect
-              Succeeded = true
-              Read = Absent
-              Snapshot = None
-              Process =
-                Some
-                    { Started = false
-                      ExitCode = -1
-                      Command = commandLine
-                      StandardOutput = ""
-                      StandardOutputTruncated = false
-                      StandardError = ex.Message
-                      StandardErrorTruncated = false }
-              Confirmed = None
-              Diagnostic = None }
+            {
+                Effect = effect
+                Succeeded = true
+                Read = Absent
+                Snapshot = None
+                Process =
+                    Some
+                        {
+                            Started = false
+                            ExitCode = -1
+                            Command = commandLine
+                            StandardOutput = ""
+                            StandardOutputTruncated = false
+                            StandardError = ex.Message
+                            StandardErrorTruncated = false
+                        }
+                Confirmed = None
+                Diagnostic = None
+            }
 
     // Edge interpreter for `ReadPackageSurface` (feature 105, Phase 2; ADR-0004 D2). Reads the
     // AUTHORITATIVE public surface of a restored framework package by loading its restored assembly
@@ -689,9 +713,11 @@ module CommandEffects =
                 success
                     effect
                     (Bytes(
-                        { Path = $"{packageId}@{version}"
-                          Text = String.concat "\n" symbols
-                          RawBytes = None }
+                        {
+                            Path = $"{packageId}@{version}"
+                            Text = String.concat "\n" symbols
+                            RawBytes = None
+                        }
                         : FileSnapshot
                     ))
         with _ ->
@@ -724,13 +750,15 @@ module CommandEffects =
                 | "yes" -> true
                 | _ -> false
 
-        { Effect = effect
-          Succeeded = true
-          Read = Absent
-          Snapshot = None
-          Process = None
-          Confirmed = Some decision
-          Diagnostic = None }
+        {
+            Effect = effect
+            Succeeded = true
+            Read = Absent
+            Snapshot = None
+            Process = None
+            Confirmed = Some decision
+            Diagnostic = None
+        }
 
     let interpret (projectRoot: string) (dryRun: bool) (effect: CommandEffect) =
         try
@@ -755,13 +783,15 @@ module CommandEffects =
                 | Body snapshot -> success effect (Bytes snapshot)
                 | Missing -> success effect Absent
                 | IoRefusal reason ->
-                    { Effect = effect
-                      Succeeded = true
-                      Read = Unreadable(path, reason)
-                      Snapshot = None
-                      Process = None
-                      Confirmed = None
-                      Diagnostic = Some(Diagnostics.unreadableFile path reason) }
+                    {
+                        Effect = effect
+                        Succeeded = true
+                        Read = Unreadable(path, reason)
+                        Snapshot = None
+                        Process = None
+                        Confirmed = None
+                        Diagnostic = Some(Diagnostics.unreadableFile path reason)
+                    }
                 | DecodeRefusal byteOffset ->
                     // #737 AC2, finally satisfiable: the library named the byte offset because that
                     // is all it can see, and NAMING THE FILE is the caller's half. `Succeeded` is
@@ -769,13 +799,15 @@ module CommandEffects =
                     // neither — a mis-encoded file in the workspace is an authoring accident, and
                     // the block is the verdict fold's to apply (`unreadableSubject`), not the
                     // edge's.
-                    { Effect = effect
-                      Succeeded = true
-                      Read = Unreadable(path, undecodableReason byteOffset)
-                      Snapshot = None
-                      Process = None
-                      Confirmed = None
-                      Diagnostic = Some(Diagnostics.undecodableFile path byteOffset) }
+                    {
+                        Effect = effect
+                        Succeeded = true
+                        Read = Unreadable(path, undecodableReason byteOffset)
+                        Snapshot = None
+                        Process = None
+                        Confirmed = None
+                        Diagnostic = Some(Diagnostics.undecodableFile path byteOffset)
+                    }
             | EnumerateDirectory path ->
                 match tryEnumerate projectRoot path with
                 | Bytes snapshot -> success effect (Bytes snapshot)
@@ -785,13 +817,15 @@ module CommandEffects =
                     // listing that comes back empty because the directory could not be opened
                     // yields an EMPTY candidate set, which every fold reads as "there is nothing
                     // here to check" — a pass over an unknown number of subjects.
-                    { Effect = effect
-                      Succeeded = true
-                      Read = Unreadable(unreadablePath, reason)
-                      Snapshot = None
-                      Process = None
-                      Confirmed = None
-                      Diagnostic = Some(Diagnostics.unreadableFile unreadablePath reason) }
+                    {
+                        Effect = effect
+                        Succeeded = true
+                        Read = Unreadable(unreadablePath, reason)
+                        Snapshot = None
+                        Process = None
+                        Confirmed = None
+                        Diagnostic = Some(Diagnostics.unreadableFile unreadablePath reason)
+                    }
                 | Truncated(snapshot, skipped) ->
                     // FS.GG.SDD#743. The listing SURVIVES — `success` derives `Snapshot` from
                     // `Read`, so every candidate set downstream gets the entries that were listable
@@ -800,16 +834,19 @@ module CommandEffects =
                     // one and why (AC2); it is not blocking on its own and never a tool defect
                     // (AC1/AC4), for the same reason `unreadableFile` is not.
                     { success effect (Truncated(snapshot, skipped)) with
-                        Diagnostic = Some(Diagnostics.unlistableDirectory path skipped) }
+                        Diagnostic = Some(Diagnostics.unlistableDirectory path skipped)
+                    }
             | CreateDirectory path ->
                 let absolute = fullPath projectRoot path
 
                 let existing =
                     if Directory.Exists absolute then
                         Bytes(
-                            { Path = path
-                              Text = "<directory>"
-                              RawBytes = None }
+                            {
+                                Path = path
+                                Text = "<directory>"
+                                RawBytes = None
+                            }
                             : FileSnapshot
                         )
                     else
@@ -921,13 +958,15 @@ module CommandEffects =
                         // Read-only FS, non-Unix host, or a missing file: reported as a
                         // skipped/partial make-executable (FR-005, US2-AC3), never a tool
                         // defect. Caught here so the outer handler never escalates it.
-                        { Effect = effect
-                          Succeeded = false
-                          Read = Absent
-                          Snapshot = None
-                          Process = None
-                          Confirmed = None
-                          Diagnostic = None }
+                        {
+                            Effect = effect
+                            Succeeded = false
+                            Read = Absent
+                            Snapshot = None
+                            Process = None
+                            Confirmed = None
+                            Diagnostic = None
+                        }
             | Confirm(_, prompt) -> confirm dryRun effect prompt
         with ex ->
             let path = CommandTypes.effectPath effect

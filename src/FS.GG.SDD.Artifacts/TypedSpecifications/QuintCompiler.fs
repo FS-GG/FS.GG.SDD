@@ -8,82 +8,96 @@ open System.Text
 open System.Text.Json
 
 type QuintContractMetadata =
-    { Specification: string
-      Relationships: QuintRelationship list
-      VerificationProfiles: QuintVerificationProfile list
-      Bounds: QuintFiniteBound list
-      Impacts: QuintImpact list
-      Compatibility: QuintCompatibility list
-      Digests: QuintSemanticDigest list }
+    {
+        Specification: string
+        Relationships: QuintRelationship list
+        VerificationProfiles: QuintVerificationProfile list
+        Bounds: QuintFiniteBound list
+        Impacts: QuintImpact list
+        Compatibility: QuintCompatibility list
+        Digests: QuintSemanticDigest list
+    }
 
 type QuintGeneralObservedCompilation =
-    { ModuleName: string
-      Toolchain: QuintToolchainManifest
-      Cache: QuintCacheObservation list
-      ProcessRequests: QuintProcessRequest list
-      Endpoint: QuintEndpointState
-      ProcessObservations: QuintProcessObservation list
-      Source: QuintMarkdownSource
-      FenceManifest: QuintFenceManifest
-      Extraction: QuintExtractionObservation
-      SourceMap: QuintSourceMap
-      TypedEffect: QuintGeneralTypedEffectObservation
-      Metadata: QuintContractMetadata }
+    {
+        ModuleName: string
+        Toolchain: QuintToolchainManifest
+        Cache: QuintCacheObservation list
+        ProcessRequests: QuintProcessRequest list
+        Endpoint: QuintEndpointState
+        ProcessObservations: QuintProcessObservation list
+        Source: QuintMarkdownSource
+        FenceManifest: QuintFenceManifest
+        Extraction: QuintExtractionObservation
+        SourceMap: QuintSourceMap
+        TypedEffect: QuintGeneralTypedEffectObservation
+        Metadata: QuintContractMetadata
+    }
 
 // Keep the original profile-1 record last among records sharing these labels. F# resolves an
 // otherwise-unannotated record expression to the most recently declared matching shape, so this
 // ordering preserves source compatibility for existing consumers while profile 2 remains explicit.
 type QuintObservedCompilation =
-    { ModuleName: string
-      Toolchain: QuintToolchainManifest
-      Cache: QuintCacheObservation list
-      ProcessRequests: QuintProcessRequest list
-      Endpoint: QuintEndpointState
-      ProcessObservations: QuintProcessObservation list
-      Source: QuintMarkdownSource
-      FenceManifest: QuintFenceManifest
-      Extraction: QuintExtractionObservation
-      SourceMap: QuintSourceMap
-      TypedEffect: QuintTypedEffectObservation
-      Metadata: QuintContractMetadata }
+    {
+        ModuleName: string
+        Toolchain: QuintToolchainManifest
+        Cache: QuintCacheObservation list
+        ProcessRequests: QuintProcessRequest list
+        Endpoint: QuintEndpointState
+        ProcessObservations: QuintProcessObservation list
+        Source: QuintMarkdownSource
+        FenceManifest: QuintFenceManifest
+        Extraction: QuintExtractionObservation
+        SourceMap: QuintSourceMap
+        TypedEffect: QuintTypedEffectObservation
+        Metadata: QuintContractMetadata
+    }
 
 type QuintCompilationReceipt =
-    { Schema: string
-      SourceSha256: string
-      FenceManifestSha256: string
-      GeneratedModulesSha256: string
-      ToolchainSha256: string
-      TypedEffectSha256: string
-      ContractSha256: string
-      CompilationFingerprint: string
-      ProcessSteps: string list }
+    {
+        Schema: string
+        SourceSha256: string
+        FenceManifestSha256: string
+        GeneratedModulesSha256: string
+        ToolchainSha256: string
+        TypedEffectSha256: string
+        ContractSha256: string
+        CompilationFingerprint: string
+        ProcessSteps: string list
+    }
 
 type QuintCompilationOutput =
-    { Plan: QuintCompilationPlan
-      Contract: QuintCompiledContract
-      CanonicalContract: string
-      CompilationFingerprint: string
-      Bindings: QuintGeneratedBindings
-      Receipt: QuintCompilationReceipt
-      CanonicalReceipt: string }
+    {
+        Plan: QuintCompilationPlan
+        Contract: QuintCompiledContract
+        CanonicalContract: string
+        CompilationFingerprint: string
+        Bindings: QuintGeneratedBindings
+        Receipt: QuintCompilationReceipt
+        CanonicalReceipt: string
+    }
 
 type QuintGeneralCompilationOutput =
-    { Plan: QuintCompilationPlan
-      Contract: QuintCompiledContractV2
-      CanonicalContract: string
-      CompilationFingerprint: string
-      BindingManifest: QuintGeneralBindingManifest
-      CanonicalBindingManifest: string
-      Bindings: QuintGeneratedBindings
-      Receipt: QuintCompilationReceipt
-      CanonicalReceipt: string }
+    {
+        Plan: QuintCompilationPlan
+        Contract: QuintCompiledContractV2
+        CanonicalContract: string
+        CompilationFingerprint: string
+        BindingManifest: QuintGeneralBindingManifest
+        CanonicalBindingManifest: string
+        Bindings: QuintGeneratedBindings
+        Receipt: QuintCompilationReceipt
+        CanonicalReceipt: string
+    }
 
 module private CompilerInternal =
     let diagnostic code path message location : SpecificationDiagnostic =
-        { Code = code
-          Path = path
-          Message = message
-          Location = location }
+        {
+            Code = code
+            Path = path
+            Message = message
+            Location = location
+        }
 
     let sorted (findings: SpecificationDiagnostic list) =
         findings
@@ -97,8 +111,10 @@ module private CompilerInternal =
             ($"%s{finding.Message} %s{finding.Correction}")
             (finding.Source
              |> Option.map (fun source ->
-                 { Line = source.Start.Line
-                   Column = source.Start.Column }))
+                 {
+                     Line = source.Start.Line
+                     Column = source.Start.Column
+                 }))
 
     let contractDiagnostic (finding: QuintContractDiagnostic) =
         diagnostic finding.Code finding.Path ($"%s{finding.Message} %s{finding.Correction}") None
@@ -119,8 +135,10 @@ module private CompilerInternal =
             let bytes = Encoding.UTF8.GetBytes value
 
             Array.concat
-                [ Encoding.ASCII.GetBytes(bytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
-                  bytes ]
+                [
+                    Encoding.ASCII.GetBytes(bytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
+                    bytes
+                ]
 
         modules
         |> List.sortBy _.Target
@@ -155,12 +173,14 @@ module private CompilerInternal =
             Encoding.ASCII.GetBytes(bytes.Length.ToString(CultureInfo.InvariantCulture) + ":")
             |> fun prefix -> Array.append prefix bytes
 
-        [ "fsgg.quint.compilation-fingerprint/v2"
-          sourceSha256
-          fenceManifestSha256
-          generatedModulesSha256
-          toolchainSha256
-          contract ]
+        [
+            "fsgg.quint.compilation-fingerprint/v2"
+            sourceSha256
+            fenceManifestSha256
+            generatedModulesSha256
+            toolchainSha256
+            contract
+        ]
         |> List.map frame
         |> Array.concat
         |> sha256Bytes
@@ -191,20 +211,22 @@ module private CompilerInternal =
                 && positionAtOrBefore candidate.End content.End)
 
         let declarationPrefixes =
-            [ "type "
-              "const "
-              "var "
-              "val "
-              "pure val "
-              "def "
-              "pure def "
-              "nondet "
-              "action "
-              "assume "
-              "run "
-              "import "
-              "export "
-              "instance " ]
+            [
+                "type "
+                "const "
+                "var "
+                "val "
+                "pure val "
+                "def "
+                "pure def "
+                "nondet "
+                "action "
+                "assume "
+                "run "
+                "import "
+                "export "
+                "instance "
+            ]
 
         let exactDeclarationRange moduleName prefixes declarationName =
             let moduleLine = $"module %s{moduleName} {{"
@@ -270,57 +292,69 @@ module private CompilerInternal =
 
                         nextDeclaration
                         |> Option.map (fun (nextIndex, _) ->
-                            { Path = source.Path
-                              Start = { Line = startIndex + 1; Column = 1 }
-                              End =
-                                { Line = nextIndex
-                                  Column = indentation + 2 } })
+                            {
+                                Path = source.Path
+                                Start = { Line = startIndex + 1; Column = 1 }
+                                End =
+                                    {
+                                        Line = nextIndex
+                                        Column = indentation + 2
+                                    }
+                            })
                     | _ -> None
                 | None -> None
             | _ -> None
 
         let finding path id moduleName declarationName prefixes (candidate: QuintSourceRange) =
-            [ if not (isContained candidate) then
-                  yield
-                      diagnostic
-                          "QUINT-COMPILER-SOURCE-BINDING"
-                          path
-                          $"Binding '%s{id}' does not lie inside the selected canonical Quint fence."
-                          (Some
-                              { Line = candidate.Start.Line
-                                Column = candidate.Start.Column })
-              elif exactDeclarationRange moduleName prefixes declarationName <> Some candidate then
-                  yield
-                      diagnostic
-                          "QUINT-COMPILER-SOURCE-BINDING"
-                          path
-                          $"Binding '%s{id}' is not the exact canonical source range of Quint declaration '%s{declarationName}'."
-                          (Some
-                              { Line = candidate.Start.Line
-                                Column = candidate.Start.Column }) ]
+            [
+                if not (isContained candidate) then
+                    yield
+                        diagnostic
+                            "QUINT-COMPILER-SOURCE-BINDING"
+                            path
+                            $"Binding '%s{id}' does not lie inside the selected canonical Quint fence."
+                            (Some
+                                {
+                                    Line = candidate.Start.Line
+                                    Column = candidate.Start.Column
+                                })
+                elif exactDeclarationRange moduleName prefixes declarationName <> Some candidate then
+                    yield
+                        diagnostic
+                            "QUINT-COMPILER-SOURCE-BINDING"
+                            path
+                            $"Binding '%s{id}' is not the exact canonical source range of Quint declaration '%s{declarationName}'."
+                            (Some
+                                {
+                                    Line = candidate.Start.Line
+                                    Column = candidate.Start.Column
+                                })
+            ]
 
-        [ yield!
-              exports
-              |> List.indexed
-              |> List.collect (fun (index, binding) ->
-                  finding
-                      $"/typedEffect/exportBindings/%d{index}/source"
-                      binding.Id
-                      binding.ModuleName
-                      binding.DeclarationName
-                      [ "pure val "; "val " ]
-                      binding.Source)
-          yield!
-              actions
-              |> List.indexed
-              |> List.collect (fun (index, binding) ->
-                  finding
-                      $"/typedEffect/actionBindings/%d{index}/source"
-                      binding.Id
-                      binding.ModuleName
-                      binding.CatalogueName
-                      [ "action " ]
-                      binding.Source) ]
+        [
+            yield!
+                exports
+                |> List.indexed
+                |> List.collect (fun (index, binding) ->
+                    finding
+                        $"/typedEffect/exportBindings/%d{index}/source"
+                        binding.Id
+                        binding.ModuleName
+                        binding.DeclarationName
+                        [ "pure val "; "val " ]
+                        binding.Source)
+            yield!
+                actions
+                |> List.indexed
+                |> List.collect (fun (index, binding) ->
+                    finding
+                        $"/typedEffect/actionBindings/%d{index}/source"
+                        binding.Id
+                        binding.ModuleName
+                        binding.CatalogueName
+                        [ "action " ]
+                        binding.Source)
+        ]
         |> sorted
 
     let private fields =
@@ -352,11 +386,13 @@ module private CompilerInternal =
         | _ -> None
 
     type GeneralContractFacts =
-        { Relationships: QuintRelationship list
-          VerificationProfiles: QuintVerificationProfile list
-          Bounds: QuintFiniteBound list
-          Impacts: QuintImpact list
-          Compatibility: QuintCompatibility list }
+        {
+            Relationships: QuintRelationship list
+            VerificationProfiles: QuintVerificationProfile list
+            Bounds: QuintFiniteBound list
+            Impacts: QuintImpact list
+            Compatibility: QuintCompatibility list
+        }
 
     let deriveGeneralContractFacts (catalogue: QuintModelCatalogueEntry list) =
         let mutable diagnostics = []
@@ -368,8 +404,10 @@ module private CompilerInternal =
                     ($"/catalogue/%s{row.Id}")
                     ($"Quint catalogue row '%s{row.Id}' with kind '%s{row.Kind}' is not a valid %s{expected} declaration.")
                     (Some
-                        { Line = row.Source.Start.Line
-                          Column = row.Source.Start.Column })
+                        {
+                            Line = row.Source.Start.Line
+                            Column = row.Source.Start.Column
+                        })
                 :: diagnostics
 
         let relationships =
@@ -389,9 +427,11 @@ module private CompilerInternal =
                     match stringField "fromId" values, stringField "toId" values with
                     | Some fromId, Some toId ->
                         Some
-                            { FromId = fromId
-                              Kind = kind
-                              ToId = toId }
+                            {
+                                FromId = fromId
+                                Kind = kind
+                                ToId = toId
+                            }
                     | _ ->
                         malformed row "relationship"
                         None
@@ -415,10 +455,12 @@ module private CompilerInternal =
                         with
                         | Some kind, Some subjectIds, Some boundIds ->
                             Some
-                                { Id = row.Id
-                                  Kind = kind
-                                  SubjectIds = subjectIds
-                                  BoundIds = boundIds }
+                                {
+                                    Id = row.Id
+                                    Kind = kind
+                                    SubjectIds = subjectIds
+                                    BoundIds = boundIds
+                                }
                         | _ ->
                             malformed row "verification"
                             None
@@ -437,9 +479,11 @@ module private CompilerInternal =
                         match intField "minimum" values, intField "maximum" values with
                         | Some minimum, Some maximum ->
                             Some
-                                { Id = row.Id
-                                  Minimum = minimum
-                                  Maximum = maximum }
+                                {
+                                    Id = row.Id
+                                    Minimum = minimum
+                                    Maximum = maximum
+                                }
                         | _ ->
                             malformed row "finite-bound"
                             None
@@ -460,9 +504,11 @@ module private CompilerInternal =
                         with
                         | Some subjectId, Some category, Some detail ->
                             Some
-                                { SubjectId = subjectId
-                                  Category = category
-                                  Detail = detail }
+                                {
+                                    SubjectId = subjectId
+                                    Category = category
+                                    Detail = detail
+                                }
                         | _ ->
                             malformed row "impact"
                             None
@@ -483,9 +529,11 @@ module private CompilerInternal =
                         with
                         | Some surface, Some requirement, Some detail ->
                             Some
-                                { Surface = surface
-                                  Requirement = requirement
-                                  Detail = detail }
+                                {
+                                    Surface = surface
+                                    Requirement = requirement
+                                    Detail = detail
+                                }
                         | _ ->
                             malformed row "compatibility"
                             None
@@ -493,11 +541,13 @@ module private CompilerInternal =
                         malformed row "compatibility"
                         None)
 
-        { Relationships = relationships
-          VerificationProfiles = verificationProfiles
-          Bounds = bounds
-          Impacts = impacts
-          Compatibility = compatibility },
+        {
+            Relationships = relationships
+            VerificationProfiles = verificationProfiles
+            Bounds = bounds
+            Impacts = impacts
+            Compatibility = compatibility
+        },
         diagnostics |> sorted
 
 [<RequireQualifiedAccess>]
@@ -515,12 +565,14 @@ module QuintCompiler =
             @ QuintSource.validateSourceMap input.Source input.FenceManifest input.SourceMap
 
         let profileBindingFindings =
-            [ if input.Toolchain.Profile <> input.TypedEffect.Profile then
-                  CompilerInternal.diagnostic
-                      "QUINT-COMPILER-PROFILE-BINDING"
-                      "/toolchain/profile"
-                      "Toolchain and typed/effect observations select different profiles."
-                      None ]
+            [
+                if input.Toolchain.Profile <> input.TypedEffect.Profile then
+                    CompilerInternal.diagnostic
+                        "QUINT-COMPILER-PROFILE-BINDING"
+                        "/toolchain/profile"
+                        "Toolchain and typed/effect observations select different profiles."
+                        None
+            ]
 
         let plan = QuintToolchain.plan input.Toolchain input.Cache input.ProcessRequests
 
@@ -542,17 +594,19 @@ module QuintCompiler =
         match initial, planValue, catalogue with
         | [], Some acceptedPlan, Some acceptedCatalogue ->
             let contract =
-                { Schema = QuintContract.schema
-                  Profile = acceptedCatalogue.Profile
-                  Specification = input.Metadata.Specification
-                  Catalogue = acceptedCatalogue.Entries
-                  ActionEffects = acceptedCatalogue.ActionEffects
-                  Relationships = input.Metadata.Relationships
-                  VerificationProfiles = input.Metadata.VerificationProfiles
-                  Bounds = input.Metadata.Bounds
-                  Impacts = input.Metadata.Impacts
-                  Compatibility = input.Metadata.Compatibility
-                  Digests = input.Metadata.Digests }
+                {
+                    Schema = QuintContract.schema
+                    Profile = acceptedCatalogue.Profile
+                    Specification = input.Metadata.Specification
+                    Catalogue = acceptedCatalogue.Entries
+                    ActionEffects = acceptedCatalogue.ActionEffects
+                    Relationships = input.Metadata.Relationships
+                    VerificationProfiles = input.Metadata.VerificationProfiles
+                    Bounds = input.Metadata.Bounds
+                    Impacts = input.Metadata.Impacts
+                    Compatibility = input.Metadata.Compatibility
+                    Digests = input.Metadata.Digests
+                }
 
             match QuintContract.serializeCanonical contract with
             | Error findings ->
@@ -567,35 +621,41 @@ module QuintCompiler =
 
                 let fingerprint =
                     QuintContract.fingerprint
-                        { SourceSha256 = input.Source.Sha256
-                          FenceManifestSha256 = fenceManifestSha256
-                          GeneratedModulesSha256 = generatedModulesSha256
-                          ToolchainSha256 = toolchainSha256
-                          Contract = contract }
+                        {
+                            SourceSha256 = input.Source.Sha256
+                            FenceManifestSha256 = fenceManifestSha256
+                            GeneratedModulesSha256 = generatedModulesSha256
+                            ToolchainSha256 = toolchainSha256
+                            Contract = contract
+                        }
 
                 let bindings = QuintBindings.generate input.ModuleName contract
 
                 match fingerprint, bindings with
                 | Ok compilationFingerprint, Ok generatedBindings ->
                     let receipt =
-                        { Schema = receiptSchema
-                          SourceSha256 = input.Source.Sha256
-                          FenceManifestSha256 = fenceManifestSha256
-                          GeneratedModulesSha256 = generatedModulesSha256
-                          ToolchainSha256 = toolchainSha256
-                          TypedEffectSha256 = CompilerInternal.sha256Text input.TypedEffect.TypedEffectJson
-                          ContractSha256 = CompilerInternal.sha256Text canonicalContract
-                          CompilationFingerprint = compilationFingerprint
-                          ProcessSteps = acceptedPlan.Requests |> List.map _.StepId |> List.sort }
+                        {
+                            Schema = receiptSchema
+                            SourceSha256 = input.Source.Sha256
+                            FenceManifestSha256 = fenceManifestSha256
+                            GeneratedModulesSha256 = generatedModulesSha256
+                            ToolchainSha256 = toolchainSha256
+                            TypedEffectSha256 = CompilerInternal.sha256Text input.TypedEffect.TypedEffectJson
+                            ContractSha256 = CompilerInternal.sha256Text canonicalContract
+                            CompilationFingerprint = compilationFingerprint
+                            ProcessSteps = acceptedPlan.Requests |> List.map _.StepId |> List.sort
+                        }
 
                     Ok
-                        { Plan = acceptedPlan
-                          Contract = contract
-                          CanonicalContract = canonicalContract
-                          CompilationFingerprint = compilationFingerprint
-                          Bindings = generatedBindings
-                          Receipt = receipt
-                          CanonicalReceipt = encodeReceipt receipt }
+                        {
+                            Plan = acceptedPlan
+                            Contract = contract
+                            CanonicalContract = canonicalContract
+                            CompilationFingerprint = compilationFingerprint
+                            Bindings = generatedBindings
+                            Receipt = receipt
+                            CanonicalReceipt = encodeReceipt receipt
+                        }
                 | Error findings, _ ->
                     findings
                     |> List.map CompilerInternal.contractDiagnostic
@@ -620,12 +680,14 @@ module QuintCompiler =
                 input.TypedEffect.ActionBindings
 
         let profileBindingFindings =
-            [ if input.Toolchain.Profile <> input.TypedEffect.Profile then
-                  CompilerInternal.diagnostic
-                      "QUINT-COMPILER-PROFILE-BINDING"
-                      "/toolchain/profile"
-                      "Toolchain and typed/effect observations select different profiles."
-                      None ]
+            [
+                if input.Toolchain.Profile <> input.TypedEffect.Profile then
+                    CompilerInternal.diagnostic
+                        "QUINT-COMPILER-PROFILE-BINDING"
+                        "/toolchain/profile"
+                        "Toolchain and typed/effect observations select different profiles."
+                        None
+            ]
 
         let plan = QuintToolchain.plan input.Toolchain input.Cache input.ProcessRequests
 
@@ -640,18 +702,20 @@ module QuintCompiler =
             | Error findings -> findings |> List.map CompilerInternal.profileDiagnostic, None
 
         let metadataFindings =
-            [ if
-                  not input.Metadata.Relationships.IsEmpty
-                  || not input.Metadata.VerificationProfiles.IsEmpty
-                  || not input.Metadata.Bounds.IsEmpty
-                  || not input.Metadata.Impacts.IsEmpty
-                  || not input.Metadata.Compatibility.IsEmpty
-              then
-                  CompilerInternal.diagnostic
-                      "QUINT-COMPILER-SEMANTIC-SIDECAR"
-                      "/metadata"
-                      "Profile-2 semantic contract facts must originate in promoted Quint catalogue rows."
-                      None ]
+            [
+                if
+                    not input.Metadata.Relationships.IsEmpty
+                    || not input.Metadata.VerificationProfiles.IsEmpty
+                    || not input.Metadata.Bounds.IsEmpty
+                    || not input.Metadata.Impacts.IsEmpty
+                    || not input.Metadata.Compatibility.IsEmpty
+                then
+                    CompilerInternal.diagnostic
+                        "QUINT-COMPILER-SEMANTIC-SIDECAR"
+                        "/metadata"
+                        "Profile-2 semantic contract facts must originate in promoted Quint catalogue rows."
+                        None
+            ]
 
         let initial =
             CompilerInternal.sorted (
@@ -668,18 +732,20 @@ module QuintCompiler =
                 CompilerInternal.deriveGeneralContractFacts acceptedCatalogue.Catalogue
 
             let contract: QuintCompiledContractV2 =
-                { Schema = QuintContractV2.schema
-                  Profile = acceptedCatalogue.Profile
-                  Specification = input.Metadata.Specification
-                  Exports = acceptedCatalogue.Exports
-                  Catalogue = acceptedCatalogue.Catalogue
-                  ActionEffects = acceptedCatalogue.ActionEffects
-                  Relationships = derivedFacts.Relationships
-                  VerificationProfiles = derivedFacts.VerificationProfiles
-                  Bounds = derivedFacts.Bounds
-                  Impacts = derivedFacts.Impacts
-                  Compatibility = derivedFacts.Compatibility
-                  Digests = input.Metadata.Digests }
+                {
+                    Schema = QuintContractV2.schema
+                    Profile = acceptedCatalogue.Profile
+                    Specification = input.Metadata.Specification
+                    Exports = acceptedCatalogue.Exports
+                    Catalogue = acceptedCatalogue.Catalogue
+                    ActionEffects = acceptedCatalogue.ActionEffects
+                    Relationships = derivedFacts.Relationships
+                    VerificationProfiles = derivedFacts.VerificationProfiles
+                    Bounds = derivedFacts.Bounds
+                    Impacts = derivedFacts.Impacts
+                    Compatibility = derivedFacts.Compatibility
+                    Digests = input.Metadata.Digests
+                }
 
             match factFindings, QuintContractV2.serializeCanonical contract with
             | findings, _ when not findings.IsEmpty -> Error findings
@@ -702,11 +768,13 @@ module QuintCompiler =
                         canonicalContract
 
                 let bindingManifest =
-                    { Schema = QuintGeneralBindingManifest.schema
-                      Profile = input.TypedEffect.Profile
-                      ModuleName = input.ModuleName
-                      Exports = input.TypedEffect.ExportBindings
-                      Actions = input.TypedEffect.ActionBindings }
+                    {
+                        Schema = QuintGeneralBindingManifest.schema
+                        Profile = input.TypedEffect.Profile
+                        ModuleName = input.ModuleName
+                        Exports = input.TypedEffect.ExportBindings
+                        Actions = input.TypedEffect.ActionBindings
+                    }
 
                 match
                     QuintGeneralBindingManifest.serializeCanonical bindingManifest,
@@ -724,24 +792,28 @@ module QuintCompiler =
                     |> Error
                 | Ok canonicalBindingManifest, Ok generatedBindings ->
                     let receipt: QuintCompilationReceipt =
-                        { Schema = generalReceiptSchema
-                          SourceSha256 = input.Source.Sha256
-                          FenceManifestSha256 = fenceManifestSha256
-                          GeneratedModulesSha256 = generatedModulesSha256
-                          ToolchainSha256 = toolchainSha256
-                          TypedEffectSha256 = CompilerInternal.sha256Text input.TypedEffect.TypedEffectJson
-                          ContractSha256 = CompilerInternal.sha256Text canonicalContract
-                          CompilationFingerprint = compilationFingerprint
-                          ProcessSteps = acceptedPlan.Requests |> List.map _.StepId |> List.sort }
+                        {
+                            Schema = generalReceiptSchema
+                            SourceSha256 = input.Source.Sha256
+                            FenceManifestSha256 = fenceManifestSha256
+                            GeneratedModulesSha256 = generatedModulesSha256
+                            ToolchainSha256 = toolchainSha256
+                            TypedEffectSha256 = CompilerInternal.sha256Text input.TypedEffect.TypedEffectJson
+                            ContractSha256 = CompilerInternal.sha256Text canonicalContract
+                            CompilationFingerprint = compilationFingerprint
+                            ProcessSteps = acceptedPlan.Requests |> List.map _.StepId |> List.sort
+                        }
 
                     Ok
-                        { Plan = acceptedPlan
-                          Contract = contract
-                          CanonicalContract = canonicalContract
-                          CompilationFingerprint = compilationFingerprint
-                          BindingManifest = bindingManifest
-                          CanonicalBindingManifest = canonicalBindingManifest
-                          Bindings = generatedBindings
-                          Receipt = receipt
-                          CanonicalReceipt = encodeReceipt receipt }
+                        {
+                            Plan = acceptedPlan
+                            Contract = contract
+                            CanonicalContract = canonicalContract
+                            CompilationFingerprint = compilationFingerprint
+                            BindingManifest = bindingManifest
+                            CanonicalBindingManifest = canonicalBindingManifest
+                            Bindings = generatedBindings
+                            Receipt = receipt
+                            CanonicalReceipt = encodeReceipt receipt
+                        }
         | findings, _, _ -> Error findings

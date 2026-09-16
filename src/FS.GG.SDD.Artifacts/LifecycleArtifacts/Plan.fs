@@ -14,65 +14,81 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module Plan =
     type PlanFrontMatter =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          ChangeTier: string
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          SourceChecklist: string
-          PublicOrToolFacingImpact: bool option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            ChangeTier: string
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            SourceChecklist: string
+            PublicOrToolFacingImpact: bool option
+        }
 
     type PlanSourceSnapshot =
-        { Label: string
-          Path: string
-          Digest: string option
-          SchemaVersion: int option
-          SourceLocation: SourceLocation option }
+        {
+            Label: string
+            Path: string
+            Digest: string option
+            SchemaVersion: int option
+            SourceLocation: SourceLocation option
+        }
 
     type PlanDecision =
-        { DecisionId: PlanDecisionId
-          Title: string
-          Status: string
-          Text: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            DecisionId: PlanDecisionId
+            Title: string
+            Status: string
+            Text: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type PlanContractReference =
-        { ContractId: PlanContractReferenceId
-          Kind: string
-          Target: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            ContractId: PlanContractReferenceId
+            Kind: string
+            Target: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type VerificationObligation =
-        { ObligationId: VerificationObligationId
-          Title: string
-          EvidenceKind: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            ObligationId: VerificationObligationId
+            Title: string
+            EvidenceKind: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type PlanMigrationNote =
-        { MigrationId: PlanMigrationNoteId
-          Posture: string
-          Text: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            MigrationId: PlanMigrationNoteId
+            Posture: string
+            Text: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type GeneratedViewImpact =
-        { ImpactId: GeneratedViewImpactId
-          Target: string
-          CurrencyBehavior: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            ImpactId: GeneratedViewImpactId
+            Target: string
+            CurrencyBehavior: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type AcceptedPlanDeferral =
-        { Id: string
-          Text: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            Id: string
+            Text: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     /// FS.GG.SDD#569 (feature 105). Whether a framework-API reference is a USE (the plan intends to
     /// build against it, cited on a Contract Impact line) or an ABSENCE claim (a deferral asserts it
@@ -87,56 +103,65 @@ module Plan =
     /// `None` when the token omits `@<version>`, in which case the pinned package version is the
     /// resolved version (ADR-0004 D1). This is authored data only — it is not resolved here.
     type FrameworkApiReference =
-        { PackageId: string
-          Version: string option
-          Symbol: string
-          Kind: FrameworkReferenceKind
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            PackageId: string
+            Version: string option
+            Symbol: string
+            Kind: FrameworkReferenceKind
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type PlanFacts =
-        { FrontMatter: PlanFrontMatter
-          StandardSections: string list
-          MissingStandardSections: string list
-          SourceSnapshots: PlanSourceSnapshot list
-          Decisions: PlanDecision list
-          ContractReferences: PlanContractReference list
-          VerificationObligations: VerificationObligation list
-          MigrationNotes: PlanMigrationNote list
-          GeneratedViewImpacts: GeneratedViewImpact list
-          AcceptedDeferrals: AcceptedPlanDeferral list
-          FrameworkApiReferences: FrameworkApiReference list
-          BlockingFindings: string list
-          AdvisoryNotes: string list
-          LifecycleNotes: string list
-          StaleDecisionCount: int
-          Diagnostics: Diagnostic list }
+        {
+            FrontMatter: PlanFrontMatter
+            StandardSections: string list
+            MissingStandardSections: string list
+            SourceSnapshots: PlanSourceSnapshot list
+            Decisions: PlanDecision list
+            ContractReferences: PlanContractReference list
+            VerificationObligations: VerificationObligation list
+            MigrationNotes: PlanMigrationNote list
+            GeneratedViewImpacts: GeneratedViewImpact list
+            AcceptedDeferrals: AcceptedPlanDeferral list
+            FrameworkApiReferences: FrameworkApiReference list
+            BlockingFindings: string list
+            AdvisoryNotes: string list
+            LifecycleNotes: string list
+            StaleDecisionCount: int
+            Diagnostics: Diagnostic list
+        }
 
     let planStandardSections () =
-        [ "Source Snapshot"
-          "Plan Scope"
-          "Plan Decisions"
-          "Contract Impact"
-          "Verification Obligations"
-          // FS.GG.SDD#824. Was omitted here even though `PlanAuthoring.fs` has always rendered it
-          // (the write path rewrote it via a hardcoded, undeclared call outside this list) — so a
-          // plan.md predating this entry, or hand-authored without the heading, parsed as though the
-          // section did not exist at all. It is `## Source Snapshot`'s sibling: also `rederived`
-          // (`MergePolicies.plan`), never author-owned.
-          "Performance Intent"
-          "Migration Posture"
-          "Generated View Impact"
-          "Accepted Deferrals"
-          "Planning Findings"
-          "Advisory Notes"
-          "Lifecycle Notes" ]
+        [
+            "Source Snapshot"
+            "Plan Scope"
+            "Plan Decisions"
+            "Contract Impact"
+            "Verification Obligations"
+            // FS.GG.SDD#824. Was omitted here even though `PlanAuthoring.fs` has always rendered it
+            // (the write path rewrote it via a hardcoded, undeclared call outside this list) — so a
+            // plan.md predating this entry, or hand-authored without the heading, parsed as though the
+            // section did not exist at all. It is `## Source Snapshot`'s sibling: also `rederived`
+            // (`MergePolicies.plan`), never author-owned.
+            "Performance Intent"
+            "Migration Posture"
+            "Generated View Impact"
+            "Accepted Deferrals"
+            "Planning Findings"
+            "Advisory Notes"
+            "Lifecycle Notes"
+        ]
 
     let parsePlanFrontMatter (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Plan
 
         match frontMatter snapshot with
         | None ->
-            Error [ Diagnostics.malformedSchemaVersion artifact "Plan artifact is missing structured front matter." ]
+            Error
+                [
+                    Diagnostics.malformedSchemaVersion artifact "Plan artifact is missing structured front matter."
+                ]
         | Some(yaml, body) ->
             match yamlRoot artifact "Plan front matter is empty." 1 yaml with
             | Error diagnostics -> Error diagnostics
@@ -164,29 +189,33 @@ module Plan =
                   Some sourceChecklist,
                   [] ->
                     Ok(
-                        { SchemaVersion = schema
-                          WorkId = workId
-                          Title =
-                            tryScalarAt [ "title" ] root
-                            |> Option.defaultValue (Identifiers.workIdValue workId)
-                          Stage = stage
-                          ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
-                          Status = tryScalarAt [ "status" ] root |> Option.defaultValue "planned"
-                          SourceSpec = sourceSpec
-                          SourceClarifications = sourceClarifications
-                          SourceChecklist = sourceChecklist
-                          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
+                        {
+                            SchemaVersion = schema
+                            WorkId = workId
+                            Title =
+                                tryScalarAt [ "title" ] root
+                                |> Option.defaultValue (Identifiers.workIdValue workId)
+                            Stage = stage
+                            ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
+                            Status = tryScalarAt [ "status" ] root |> Option.defaultValue "planned"
+                            SourceSpec = sourceSpec
+                            SourceClarifications = sourceClarifications
+                            SourceChecklist = sourceChecklist
+                            PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root
+                        },
                         body
                     )
                 | _ ->
                     Error(
                         versionDiagnostics
-                        @ [ Diagnostics.workModelInconsistent
+                        @ [
+                            Diagnostics.workModelInconsistent
                                 artifact
                                 "Plan front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage: plan, changeTier, status, sourceSpec, sourceClarifications, and sourceChecklist to plan.md."
                                 []
-                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete
+                        ]
                     )
 
     let planDecisionIdsInLine line =
@@ -268,15 +297,17 @@ module Plan =
                         None
 
                 Some
-                    { Label = m.Groups.[1].Value
-                      Path = normalizePath m.Groups.[2].Value
-                      Digest =
-                        if m.Groups.[3].Success then
-                            Some(m.Groups.[3].Value.ToLowerInvariant())
-                        else
-                            None
-                      SchemaVersion = schema
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        Label = m.Groups.[1].Value
+                        Path = normalizePath m.Groups.[2].Value
+                        Digest =
+                            if m.Groups.[3].Success then
+                                Some(m.Groups.[3].Value.ToLowerInvariant())
+                            else
+                                None
+                        SchemaVersion = schema
+                        SourceLocation = sourceLocation lineNumber
+                    }
             else
                 None)
 
@@ -328,12 +359,14 @@ module Plan =
             match planDecisionIdsInLine line |> List.tryHead with
             | Some decisionId ->
                 Some
-                    { DecisionId = decisionId
-                      Title = cleanAfterId decisionId.Value line
-                      Status = planDecisionStatus line
-                      Text = cleanAfterId decisionId.Value line
-                      SourceIds = planSourceIdsInLine line |> List.filter ((<>) decisionId.Value)
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        DecisionId = decisionId
+                        Title = cleanAfterId decisionId.Value line
+                        Status = planDecisionStatus line
+                        Text = cleanAfterId decisionId.Value line
+                        SourceIds = planSourceIdsInLine line |> List.filter ((<>) decisionId.Value)
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let parsePlanContractReferences text =
@@ -353,11 +386,13 @@ module Plan =
                     else "artifact"
 
                 Some
-                    { ContractId = contractId
-                      Kind = kind
-                      Target = text
-                      SourceIds = planSourceIdsInLine line |> List.filter ((<>) contractId.Value)
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        ContractId = contractId
+                        Kind = kind
+                        Target = text
+                        SourceIds = planSourceIdsInLine line |> List.filter ((<>) contractId.Value)
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let parseVerificationObligations text =
@@ -381,11 +416,13 @@ module Plan =
                         "test"
 
                 Some
-                    { ObligationId = obligationId
-                      Title = text
-                      EvidenceKind = evidenceKind
-                      SourceIds = planSourceIdsInLine line |> List.filter ((<>) obligationId.Value)
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        ObligationId = obligationId
+                        Title = text
+                        EvidenceKind = evidenceKind
+                        SourceIds = planSourceIdsInLine line |> List.filter ((<>) obligationId.Value)
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let parsePlanMigrationNotes text =
@@ -407,11 +444,13 @@ module Plan =
                         "none"
 
                 Some
-                    { MigrationId = migrationId
-                      Posture = posture
-                      Text = text
-                      SourceIds = planSourceIdsInLine line |> List.filter ((<>) migrationId.Value)
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        MigrationId = migrationId
+                        Posture = posture
+                        Text = text
+                        SourceIds = planSourceIdsInLine line |> List.filter ((<>) migrationId.Value)
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let parseGeneratedViewImpacts text =
@@ -428,11 +467,13 @@ module Plan =
                     else "diagnostic"
 
                 Some
-                    { ImpactId = impactId
-                      Target = text
-                      CurrencyBehavior = currency
-                      SourceIds = planSourceIdsInLine line |> List.filter ((<>) impactId.Value)
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        ImpactId = impactId
+                        Target = text
+                        CurrencyBehavior = currency
+                        SourceIds = planSourceIdsInLine line |> List.filter ((<>) impactId.Value)
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let parseAcceptedPlanDeferrals text =
@@ -450,10 +491,12 @@ module Plan =
                 let sourceIds = (declaredId :: planSourceIdsInLine line) |> List.distinct
 
                 Some
-                    { Id = declaredId
-                      Text = line.Trim().TrimStart('-', '*').Trim()
-                      SourceIds = sourceIds
-                      SourceLocation = sourceLocation lineNumber })
+                    {
+                        Id = declaredId
+                        Text = line.Trim().TrimStart('-', '*').Trim()
+                        SourceIds = sourceIds
+                        SourceLocation = sourceLocation lineNumber
+                    })
 
     // FS.GG.SDD#569 (feature 105). The framework-API reference grammar (ADR-0004 D1):
     //   framework: <PackageId>[@<version>]#<symbol>            on a Contract Impact line (a USE)
@@ -490,17 +533,21 @@ module Plan =
                 let m = frameworkTokenRegex.Match token
 
                 if m.Success then
-                    [ Ok
-                          { PackageId = m.Groups.["pkg"].Value
-                            Version =
-                              (if m.Groups.["ver"].Success then
-                                   Some m.Groups.["ver"].Value
-                               else
-                                   None)
-                            Symbol = m.Groups.["sym"].Value
-                            Kind = kind
-                            SourceIds = planSourceIdsInLine line
-                            SourceLocation = sourceLocation lineNumber } ]
+                    [
+                        Ok
+                            {
+                                PackageId = m.Groups.["pkg"].Value
+                                Version =
+                                    (if m.Groups.["ver"].Success then
+                                         Some m.Groups.["ver"].Value
+                                     else
+                                         None)
+                                Symbol = m.Groups.["sym"].Value
+                                Kind = kind
+                                SourceIds = planSourceIdsInLine line
+                                SourceLocation = sourceLocation lineNumber
+                            }
+                    ]
                 else
                     [ Error(Diagnostics.malformedFrameworkReference artifact token) ])
 
@@ -563,60 +610,65 @@ module Plan =
             let lifecycleNotes = parseNonEmptySectionLines "Lifecycle Notes" text
 
             let diagnostics =
-                [ duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: PlanDecisionId) -> id.Value)
-                      (decisions
-                       |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
-                  duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: PlanContractReferenceId) -> id.Value)
-                      (contracts
-                       |> List.map (fun contract -> contract.ContractId, contract.SourceLocation))
-                  duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: VerificationObligationId) -> id.Value)
-                      (obligations
-                       |> List.map (fun obligation -> obligation.ObligationId, obligation.SourceLocation))
-                  duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: PlanMigrationNoteId) -> id.Value)
-                      (migrations
-                       |> List.map (fun migration -> migration.MigrationId, migration.SourceLocation))
-                  duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: GeneratedViewImpactId) -> id.Value)
-                      (impacts |> List.map (fun impact -> impact.ImpactId, impact.SourceLocation))
-                  missingStandardSections
-                  |> List.map (fun heading ->
-                      Diagnostics.workModelInconsistent
-                          artifact
-                          $"Plan artifact is missing the '{heading}' section."
-                          $"Add a '## {heading}' section to plan.md before relying on parsed planning facts."
-                          [ heading ])
-                  frameworkReferenceDiagnostics ]
+                [
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: PlanDecisionId) -> id.Value)
+                        (decisions
+                         |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: PlanContractReferenceId) -> id.Value)
+                        (contracts
+                         |> List.map (fun contract -> contract.ContractId, contract.SourceLocation))
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: VerificationObligationId) -> id.Value)
+                        (obligations
+                         |> List.map (fun obligation -> obligation.ObligationId, obligation.SourceLocation))
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: PlanMigrationNoteId) -> id.Value)
+                        (migrations
+                         |> List.map (fun migration -> migration.MigrationId, migration.SourceLocation))
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: GeneratedViewImpactId) -> id.Value)
+                        (impacts |> List.map (fun impact -> impact.ImpactId, impact.SourceLocation))
+                    missingStandardSections
+                    |> List.map (fun heading ->
+                        Diagnostics.workModelInconsistent
+                            artifact
+                            $"Plan artifact is missing the '{heading}' section."
+                            $"Add a '## {heading}' section to plan.md before relying on parsed planning facts."
+                            [ heading ])
+                    frameworkReferenceDiagnostics
+                ]
                 |> List.concat
                 |> Diagnostics.sort
 
             Ok
-                { FrontMatter = frontMatter
-                  StandardSections = standardSections
-                  MissingStandardSections = missingStandardSections
-                  SourceSnapshots = snapshots |> List.sortBy (fun snapshot -> snapshot.Label, snapshot.Path)
-                  Decisions = decisions |> List.sortBy (fun decision -> decision.DecisionId.Value)
-                  ContractReferences = contracts |> List.sortBy (fun contract -> contract.ContractId.Value)
-                  VerificationObligations = obligations |> List.sortBy (fun obligation -> obligation.ObligationId.Value)
-                  MigrationNotes = migrations |> List.sortBy (fun migration -> migration.MigrationId.Value)
-                  GeneratedViewImpacts = impacts |> List.sortBy (fun impact -> impact.ImpactId.Value)
-                  AcceptedDeferrals = deferrals |> List.sortBy (fun deferral -> deferral.Id)
-                  FrameworkApiReferences =
-                    frameworkReferences
-                    |> List.sortBy (fun reference -> reference.PackageId, reference.Version, reference.Symbol)
-                  BlockingFindings = blockingFindings |> List.sort
-                  AdvisoryNotes = advisoryNotes |> List.sort
-                  LifecycleNotes = lifecycleNotes
-                  StaleDecisionCount =
-                    decisions
-                    |> List.filter (fun decision -> decision.Status = "stale")
-                    |> List.length
-                  Diagnostics = diagnostics }
+                {
+                    FrontMatter = frontMatter
+                    StandardSections = standardSections
+                    MissingStandardSections = missingStandardSections
+                    SourceSnapshots = snapshots |> List.sortBy (fun snapshot -> snapshot.Label, snapshot.Path)
+                    Decisions = decisions |> List.sortBy (fun decision -> decision.DecisionId.Value)
+                    ContractReferences = contracts |> List.sortBy (fun contract -> contract.ContractId.Value)
+                    VerificationObligations =
+                        obligations |> List.sortBy (fun obligation -> obligation.ObligationId.Value)
+                    MigrationNotes = migrations |> List.sortBy (fun migration -> migration.MigrationId.Value)
+                    GeneratedViewImpacts = impacts |> List.sortBy (fun impact -> impact.ImpactId.Value)
+                    AcceptedDeferrals = deferrals |> List.sortBy (fun deferral -> deferral.Id)
+                    FrameworkApiReferences =
+                        frameworkReferences
+                        |> List.sortBy (fun reference -> reference.PackageId, reference.Version, reference.Symbol)
+                    BlockingFindings = blockingFindings |> List.sort
+                    AdvisoryNotes = advisoryNotes |> List.sort
+                    LifecycleNotes = lifecycleNotes
+                    StaleDecisionCount =
+                        decisions
+                        |> List.filter (fun decision -> decision.Status = "stale")
+                        |> List.length
+                    Diagnostics = diagnostics
+                }

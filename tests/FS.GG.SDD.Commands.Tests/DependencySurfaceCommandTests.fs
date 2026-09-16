@@ -23,7 +23,8 @@ module DependencySurfaceCommandTests =
     let private depSurfaceRequest update root parameters =
         { request DependencySurface root with
             SurfaceUpdate = update
-            Parameters = parameters }
+            Parameters = parameters
+        }
         |> runRequest
 
     let private summaryOf (report: CommandReport) =
@@ -95,7 +96,8 @@ module DependencySurfaceCommandTests =
         // Simulate a stale capture: the recorded digest no longer matches the real surface.
         let stale =
             { create restoredPackage restoredVersion "nuget-cache" [ "Stale.only" ] with
-                Sha256 = String.replicate 64 "0" }
+                Sha256 = String.replicate 64 "0"
+            }
 
         writeRelative root capturePathRel (serialize stale)
 
@@ -114,7 +116,8 @@ module DependencySurfaceCommandTests =
 
         let stale =
             { create restoredPackage restoredVersion "nuget-cache" [ "Stale.only" ] with
-                Sha256 = String.replicate 64 "0" }
+                Sha256 = String.replicate 64 "0"
+            }
 
         writeRelative root capturePathRel (serialize stale)
 
@@ -156,9 +159,11 @@ module DependencySurfaceCommandTests =
             depSurfaceRequest
                 true
                 root
-                [ "baselineRoot", "/etc"
-                  "packageId", restoredPackage
-                  "version", restoredVersion ]
+                [
+                    "baselineRoot", "/etc"
+                    "packageId", restoredPackage
+                    "version", restoredVersion
+                ]
 
         Assert.Contains(report.Diagnostics, fun d -> d.Id = "dependencySurface.rootEscape")
         Assert.Equal(1, exitCodeForReport report)

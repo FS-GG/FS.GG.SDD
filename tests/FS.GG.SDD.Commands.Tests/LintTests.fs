@@ -23,7 +23,8 @@ module LintTests =
     let private driveLint (artifact: string option) =
         let request =
             { TestSupport.request Lint root with
-                Artifact = artifact }
+                Artifact = artifact
+            }
 
         let model, effects = init request
 
@@ -280,7 +281,8 @@ module LintTests =
             { TestSupport.request command projectRoot with
                 WorkId = Some workId
                 Explain = true
-                FromTests = None }
+                FromTests = None
+            }
 
         let model, effects = init request
 

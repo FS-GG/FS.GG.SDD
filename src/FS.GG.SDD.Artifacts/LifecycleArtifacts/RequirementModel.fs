@@ -14,29 +14,35 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module RequirementModel =
     type Requirement =
-        { Id: RequirementId
-          Title: string
-          Text: string
-          AcceptanceCriteria: string list
-          Priority: string option
-          Classification: string list
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: RequirementId
+            Title: string
+            Text: string
+            AcceptanceCriteria: string list
+            Priority: string option
+            Classification: string list
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     type Decision =
-        { Id: DecisionId
-          Title: string
-          Decision: string
-          RequirementRefs: RequirementId list
-          StoryRefs: UserStoryId list
-          AcceptanceRefs: AcceptanceScenarioId list
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: DecisionId
+            Title: string
+            Decision: string
+            RequirementRefs: RequirementId list
+            StoryRefs: UserStoryId list
+            AcceptanceRefs: AcceptanceScenarioId list
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     type MarkdownRequirementMention =
-        { Id: string
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: string
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     // The closed set of recognized FR classification facets (ADR-0048), lowercased. Initially just
     // `gameplay`. Single source of truth for the coverage-line `{…}` annotation vocabulary.
@@ -87,14 +93,16 @@ module RequirementModel =
                         |> Seq.toList
 
                     Some
-                        { Id = id
-                          Title = m.Groups.[2].Value.Trim()
-                          Text = m.Groups.[2].Value.Trim()
-                          AcceptanceCriteria = acceptanceCriteria
-                          Priority = None
-                          Classification = requirementClassification line
-                          Source = artifact
-                          SourceLocation = sourceLocation lineNumber }
+                        {
+                            Id = id
+                            Title = m.Groups.[2].Value.Trim()
+                            Text = m.Groups.[2].Value.Trim()
+                            AcceptanceCriteria = acceptanceCriteria
+                            Priority = None
+                            Classification = requirementClassification line
+                            Source = artifact
+                            SourceLocation = sourceLocation lineNumber
+                        }
                 | Error _ -> None
             else
                 None)
@@ -116,9 +124,11 @@ module RequirementModel =
             Regex.Matches(line, @"\b(?:FR|AC)-\d{3,}\b", RegexOptions.IgnoreCase)
             |> Seq.cast<Match>
             |> Seq.map (fun m ->
-                { Id = m.Value.ToUpperInvariant()
-                  Source = artifact
-                  SourceLocation = sourceLocation lineNumber })
+                {
+                    Id = m.Value.ToUpperInvariant()
+                    Source = artifact
+                    SourceLocation = sourceLocation lineNumber
+                })
             |> Seq.toArray)
         |> Array.toList
 
@@ -184,14 +194,16 @@ module RequirementModel =
                     // acceptance scenarios it touches (#164). Every ref on the line reaches the work
                     // model; before feature 093 none of them did.
                     Some
-                        { Id = id
-                          Title = m.Groups.[3].Value.Trim()
-                          Decision = m.Groups.[3].Value.Trim()
-                          RequirementRefs = requirementRefsInLine line
-                          StoryRefs = storyRefsInLine line
-                          AcceptanceRefs = acceptanceRefsInLine line
-                          Source = artifact
-                          SourceLocation = sourceLocation lineNumber }
+                        {
+                            Id = id
+                            Title = m.Groups.[3].Value.Trim()
+                            Decision = m.Groups.[3].Value.Trim()
+                            RequirementRefs = requirementRefsInLine line
+                            StoryRefs = storyRefsInLine line
+                            AcceptanceRefs = acceptanceRefsInLine line
+                            Source = artifact
+                            SourceLocation = sourceLocation lineNumber
+                        }
                 | Error _ -> None
             else
                 None)

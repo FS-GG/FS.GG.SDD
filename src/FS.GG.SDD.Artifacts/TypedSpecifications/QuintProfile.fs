@@ -10,9 +10,11 @@ open System.Text.RegularExpressions
 type QuintSourcePosition = { Line: int; Column: int }
 
 type QuintSourceRange =
-    { Path: string
-      Start: QuintSourcePosition
-      End: QuintSourcePosition }
+    {
+        Path: string
+        Start: QuintSourcePosition
+        End: QuintSourcePosition
+    }
 
 type QuintCatalogueKind =
     | Requirement
@@ -26,41 +28,53 @@ type QuintCatalogueKind =
     | ExternalSubject
 
 type QuintCatalogueEntry =
-    { Id: string
-      Kind: QuintCatalogueKind
-      Source: QuintSourceRange }
+    {
+        Id: string
+        Kind: QuintCatalogueKind
+        Source: QuintSourceRange
+    }
 
 type QuintActionEffect =
-    { ActionId: string
-      Reads: string list
-      Writes: string list
-      Subjects: string list }
+    {
+        ActionId: string
+        Reads: string list
+        Writes: string list
+        Subjects: string list
+    }
 
 type QuintProfileCatalogue =
-    { Profile: string
-      QuintVersion: string
-      Entries: QuintCatalogueEntry list
-      ActionEffects: QuintActionEffect list }
+    {
+        Profile: string
+        QuintVersion: string
+        Entries: QuintCatalogueEntry list
+        ActionEffects: QuintActionEffect list
+    }
 
 type QuintProfileDiagnostic =
-    { Code: string
-      Path: string
-      Message: string
-      Correction: string
-      Source: QuintSourceRange option }
+    {
+        Code: string
+        Path: string
+        Message: string
+        Correction: string
+        Source: QuintSourceRange option
+    }
 
 type QuintCatalogueSourceBinding =
-    { ModuleName: string
-      CatalogueName: string
-      Id: string
-      Kind: QuintCatalogueKind
-      Source: QuintSourceRange }
+    {
+        ModuleName: string
+        CatalogueName: string
+        Id: string
+        Kind: QuintCatalogueKind
+        Source: QuintSourceRange
+    }
 
 type QuintTypedEffectObservation =
-    { Profile: string
-      QuintVersion: string
-      TypedEffectJson: string
-      SourceBindings: QuintCatalogueSourceBinding list }
+    {
+        Profile: string
+        QuintVersion: string
+        TypedEffectJson: string
+        SourceBindings: QuintCatalogueSourceBinding list
+    }
 
 type QuintModelValue =
     | QuintBool of bool
@@ -74,46 +88,58 @@ type QuintModelValue =
     | QuintMap of (QuintModelValue * QuintModelValue) list
 
 type QuintGeneralExportBinding =
-    { Id: string
-      ModuleName: string
-      DeclarationName: string
-      PromoteCatalogueRows: bool
-      Source: QuintSourceRange }
+    {
+        Id: string
+        ModuleName: string
+        DeclarationName: string
+        PromoteCatalogueRows: bool
+        Source: QuintSourceRange
+    }
 
 type QuintModelCatalogueEntry =
-    { Id: string
-      Kind: string
-      ExportId: string
-      Value: QuintModelValue
-      Source: QuintSourceRange }
+    {
+        Id: string
+        Kind: string
+        ExportId: string
+        Value: QuintModelValue
+        Source: QuintSourceRange
+    }
 
 type QuintGeneralExport =
-    { Id: string
-      ModuleName: string
-      DeclarationName: string
-      Value: QuintModelValue
-      Source: QuintSourceRange }
+    {
+        Id: string
+        ModuleName: string
+        DeclarationName: string
+        Value: QuintModelValue
+        Source: QuintSourceRange
+    }
 
 type QuintGeneralProfileCatalogue =
-    { Profile: string
-      QuintVersion: string
-      Exports: QuintGeneralExport list
-      Catalogue: QuintModelCatalogueEntry list
-      ActionEffects: QuintActionEffect list }
+    {
+        Profile: string
+        QuintVersion: string
+        Exports: QuintGeneralExport list
+        Catalogue: QuintModelCatalogueEntry list
+        ActionEffects: QuintActionEffect list
+    }
 
 type QuintGeneralTypedEffectObservation =
-    { Profile: string
-      QuintVersion: string
-      TypedEffectJson: string
-      ExportBindings: QuintGeneralExportBinding list
-      ActionBindings: QuintCatalogueSourceBinding list }
+    {
+        Profile: string
+        QuintVersion: string
+        TypedEffectJson: string
+        ExportBindings: QuintGeneralExportBinding list
+        ActionBindings: QuintCatalogueSourceBinding list
+    }
 
 type QuintGeneralBindingManifest =
-    { Schema: string
-      Profile: string
-      ModuleName: string
-      Exports: QuintGeneralExportBinding list
-      Actions: QuintCatalogueSourceBinding list }
+    {
+        Schema: string
+        Profile: string
+        ModuleName: string
+        Exports: QuintGeneralExportBinding list
+        Actions: QuintCatalogueSourceBinding list
+    }
 
 module private ProfileCore =
     let profile = "fsgg-quint-profile/1"
@@ -126,9 +152,11 @@ module private ProfileCore =
     // shape-compatible types/effects table would make those relations decorative.
     let admittedTypedEffectDigests =
         Map.ofList
-            [ "RequirementsSlice", "6a7c4dd891a2b46753491b71cf3090ccf3449c97756e49055499463042e12af4"
-              "SirDamageSlice", "34fa4c442985cb4bd7d29e76e32c55ff0c909c12578623851989d4e64b0fd6de"
-              "CoordinationSlice", "d55b93de59a0b287e87cb9ae60f74d22a9548bb545fc2ba0829c62b75bc588df" ]
+            [
+                "RequirementsSlice", "6a7c4dd891a2b46753491b71cf3090ccf3449c97756e49055499463042e12af4"
+                "SirDamageSlice", "34fa4c442985cb4bd7d29e76e32c55ff0c909c12578623851989d4e64b0fd6de"
+                "CoordinationSlice", "d55b93de59a0b287e87cb9ae60f74d22a9548bb545fc2ba0829c62b75bc588df"
+            ]
 
     let sha256Text (text: string) =
         text
@@ -138,11 +166,13 @@ module private ProfileCore =
         |> _.ToLowerInvariant()
 
     let diagnostic code path message correction source : QuintProfileDiagnostic =
-        { Code = code
-          Path = path
-          Message = message
-          Correction = correction
-          Source = source }
+        {
+            Code = code
+            Path = path
+            Message = message
+            Correction = correction
+            Source = source
+        }
 
     let sorted findings =
         findings
@@ -175,112 +205,114 @@ module private ProfileCore =
         | ExternalSubject -> "externalSubject"
 
     let validate (catalogue: QuintProfileCatalogue) =
-        [ if catalogue.Profile <> profile then
-              yield
-                  diagnostic
-                      "QUINT-PROFILE-IDENTITY"
-                      "/profile"
-                      $"Expected '%s{profile}', got '%s{catalogue.Profile}'."
-                      "Bind profile 1."
-                      None
-          if catalogue.QuintVersion <> version then
-              yield
-                  diagnostic
-                      "QUINT-PROFILE-VERSION"
-                      "/quintVersion"
-                      $"Expected Quint %s{version}, got '%s{catalogue.QuintVersion}'."
-                      "Use the pinned compiler."
-                      None
-          for index, entry in List.indexed catalogue.Entries do
-              let path = $"/entries/%d{index}"
+        [
+            if catalogue.Profile <> profile then
+                yield
+                    diagnostic
+                        "QUINT-PROFILE-IDENTITY"
+                        "/profile"
+                        $"Expected '%s{profile}', got '%s{catalogue.Profile}'."
+                        "Bind profile 1."
+                        None
+            if catalogue.QuintVersion <> version then
+                yield
+                    diagnostic
+                        "QUINT-PROFILE-VERSION"
+                        "/quintVersion"
+                        $"Expected Quint %s{version}, got '%s{catalogue.QuintVersion}'."
+                        "Use the pinned compiler."
+                        None
+            for index, entry in List.indexed catalogue.Entries do
+                let path = $"/entries/%d{index}"
 
-              if not (validId.IsMatch entry.Id) then
-                  yield
-                      diagnostic
-                          "QUINT-PROFILE-ID"
-                          (path + "/id")
-                          $"'%s{entry.Id}' is not a stable identity."
-                          "Use an uppercase-leading identity."
-                          (Some entry.Source)
+                if not (validId.IsMatch entry.Id) then
+                    yield
+                        diagnostic
+                            "QUINT-PROFILE-ID"
+                            (path + "/id")
+                            $"'%s{entry.Id}' is not a stable identity."
+                            "Use an uppercase-leading identity."
+                            (Some entry.Source)
 
-              if not (safePath entry.Source.Path) then
-                  yield
-                      diagnostic
-                          "QUINT-PROFILE-SOURCE-PATH"
-                          (path + "/source/path")
-                          "Source path is not a safe relative Markdown path."
-                          "Use QuintSource's canonical path."
-                          (Some entry.Source)
+                if not (safePath entry.Source.Path) then
+                    yield
+                        diagnostic
+                            "QUINT-PROFILE-SOURCE-PATH"
+                            (path + "/source/path")
+                            "Source path is not a safe relative Markdown path."
+                            "Use QuintSource's canonical path."
+                            (Some entry.Source)
 
-              if
-                  entry.Source.Start.Line < 1
-                  || entry.Source.Start.Column < 1
-                  || entry.Source.End.Line < entry.Source.Start.Line
-                  || (entry.Source.End.Line = entry.Source.Start.Line
-                      && entry.Source.End.Column < entry.Source.Start.Column)
-              then
-                  yield
-                      diagnostic
-                          "QUINT-PROFILE-SOURCE-RANGE"
-                          (path + "/source")
-                          "Source range is not positive and ordered."
-                          "Use QuintSource's exact range."
-                          (Some entry.Source)
-          for (kind, id), rows in catalogue.Entries |> List.groupBy (fun row -> row.Kind, row.Id) do
-              if rows.Length > 1 then
-                  yield
-                      diagnostic
-                          "QUINT-PROFILE-ID-DUPLICATE"
-                          "/entries"
-                          $"'%s{kindText kind}:%s{id}' occurs more than once."
-                          "Declare each row once."
-                          (Some rows.Head.Source)
-          let actions =
-              catalogue.Entries
-              |> List.choose (fun row -> if row.Kind = Action then Some row.Id else None)
-              |> Set.ofList
+                if
+                    entry.Source.Start.Line < 1
+                    || entry.Source.Start.Column < 1
+                    || entry.Source.End.Line < entry.Source.Start.Line
+                    || (entry.Source.End.Line = entry.Source.Start.Line
+                        && entry.Source.End.Column < entry.Source.Start.Column)
+                then
+                    yield
+                        diagnostic
+                            "QUINT-PROFILE-SOURCE-RANGE"
+                            (path + "/source")
+                            "Source range is not positive and ordered."
+                            "Use QuintSource's exact range."
+                            (Some entry.Source)
+            for (kind, id), rows in catalogue.Entries |> List.groupBy (fun row -> row.Kind, row.Id) do
+                if rows.Length > 1 then
+                    yield
+                        diagnostic
+                            "QUINT-PROFILE-ID-DUPLICATE"
+                            "/entries"
+                            $"'%s{kindText kind}:%s{id}' occurs more than once."
+                            "Declare each row once."
+                            (Some rows.Head.Source)
+            let actions =
+                catalogue.Entries
+                |> List.choose (fun row -> if row.Kind = Action then Some row.Id else None)
+                |> Set.ofList
 
-          for index, effect in List.indexed catalogue.ActionEffects do
-              let path = $"/actionEffects/%d{index}"
+            for index, effect in List.indexed catalogue.ActionEffects do
+                let path = $"/actionEffects/%d{index}"
 
-              if not (actions.Contains effect.ActionId) then
-                  yield
-                      diagnostic
-                          "QUINT-PROFILE-ACTION-REFERENCE"
-                          (path + "/actionId")
-                          "Effect action is not declared."
-                          "Reference an action row."
-                          None
+                if not (actions.Contains effect.ActionId) then
+                    yield
+                        diagnostic
+                            "QUINT-PROFILE-ACTION-REFERENCE"
+                            (path + "/actionId")
+                            "Effect action is not declared."
+                            "Reference an action row."
+                            None
 
-              for field, values in [ "reads", effect.Reads; "writes", effect.Writes; "subjects", effect.Subjects ] do
-                  for value in values do
-                      if not (validId.IsMatch value) then
-                          yield
-                              diagnostic
-                                  "QUINT-PROFILE-REFERENCE"
-                                  (path + "/" + field)
-                                  $"'%s{value}' is not a stable identity."
-                                  "Use semantic identities, not node ids."
-                                  None
+                for field, values in [ "reads", effect.Reads; "writes", effect.Writes; "subjects", effect.Subjects ] do
+                    for value in values do
+                        if not (validId.IsMatch value) then
+                            yield
+                                diagnostic
+                                    "QUINT-PROFILE-REFERENCE"
+                                    (path + "/" + field)
+                                    $"'%s{value}' is not a stable identity."
+                                    "Use semantic identities, not node ids."
+                                    None
 
-                  if List.length (List.distinct values) <> values.Length then
-                      yield
-                          diagnostic
-                              "QUINT-PROFILE-REFERENCE-DUPLICATE"
-                              (path + "/" + field)
-                              "Effect set contains duplicates."
-                              "Remove duplicates."
-                              None
+                    if List.length (List.distinct values) <> values.Length then
+                        yield
+                            diagnostic
+                                "QUINT-PROFILE-REFERENCE-DUPLICATE"
+                                (path + "/" + field)
+                                "Effect set contains duplicates."
+                                "Remove duplicates."
+                                None
 
-          for actionId, rows in catalogue.ActionEffects |> List.groupBy _.ActionId do
-              if rows.Length > 1 then
-                  yield
-                      diagnostic
-                          "QUINT-PROFILE-EFFECT-DUPLICATE"
-                          "/actionEffects"
-                          $"'%s{actionId}' has multiple rows."
-                          "Emit one row."
-                          None ]
+            for actionId, rows in catalogue.ActionEffects |> List.groupBy _.ActionId do
+                if rows.Length > 1 then
+                    yield
+                        diagnostic
+                            "QUINT-PROFILE-EFFECT-DUPLICATE"
+                            "/actionEffects"
+                            $"'%s{actionId}' has multiple rows."
+                            "Emit one row."
+                            None
+        ]
         |> sorted
 
     let tryProperty (name: string) (element: JsonElement) =
@@ -293,37 +325,41 @@ module private ProfileCore =
 
     let fields path required allowed (element: JsonElement) =
         if element.ValueKind <> JsonValueKind.Object then
-            [ diagnostic "QUINT-IR-TYPE" path "Expected an object." "Use exact compiler output." None ]
+            [
+                diagnostic "QUINT-IR-TYPE" path "Expected an object." "Use exact compiler output." None
+            ]
         else
             let names = element.EnumerateObject() |> Seq.map _.Name |> Seq.toList
 
-            [ for name, count in List.countBy id names do
-                  if count > 1 then
-                      yield
-                          diagnostic
-                              "QUINT-IR-DUPLICATE-FIELD"
-                              (path + "/" + name)
-                              "Duplicate JSON field."
-                              "Use unmodified compiler output."
-                              None
-              for name in List.distinct names do
-                  if not (Set.contains name allowed) then
-                      yield
-                          diagnostic
-                              "QUINT-IR-UNSUPPORTED-FIELD"
-                              (path + "/" + name)
-                              $"Field '%s{name}' is not in the exact shape."
-                              "Use unmodified Quint 0.32.0 output."
-                              None
-              for name in required do
-                  if not (List.contains name names) then
-                      yield
-                          diagnostic
-                              "QUINT-IR-REQUIRED"
-                              (path + "/" + name)
-                              $"Field '%s{name}' is absent."
-                              "Use complete compiler output."
-                              None ]
+            [
+                for name, count in List.countBy id names do
+                    if count > 1 then
+                        yield
+                            diagnostic
+                                "QUINT-IR-DUPLICATE-FIELD"
+                                (path + "/" + name)
+                                "Duplicate JSON field."
+                                "Use unmodified compiler output."
+                                None
+                for name in List.distinct names do
+                    if not (Set.contains name allowed) then
+                        yield
+                            diagnostic
+                                "QUINT-IR-UNSUPPORTED-FIELD"
+                                (path + "/" + name)
+                                $"Field '%s{name}' is not in the exact shape."
+                                "Use unmodified Quint 0.32.0 output."
+                                None
+                for name in required do
+                    if not (List.contains name names) then
+                        yield
+                            diagnostic
+                                "QUINT-IR-REQUIRED"
+                                (path + "/" + name)
+                                $"Field '%s{name}' is absent."
+                                "Use complete compiler output."
+                                None
+            ]
 
     let stringAt path name element =
         match tryProperty name element with
@@ -331,29 +367,35 @@ module private ProfileCore =
             match value.GetString() with
             | null ->
                 Error
-                    [ diagnostic
-                          "QUINT-IR-TYPE"
-                          (path + "/" + name)
-                          "Expected a non-null string."
-                          "Use unmodified compiler output."
-                          None ]
+                    [
+                        diagnostic
+                            "QUINT-IR-TYPE"
+                            (path + "/" + name)
+                            "Expected a non-null string."
+                            "Use unmodified compiler output."
+                            None
+                    ]
             | text -> Ok text
         | Some _ ->
             Error
-                [ diagnostic
-                      "QUINT-IR-TYPE"
-                      (path + "/" + name)
-                      "Expected a string."
-                      "Use unmodified compiler output."
-                      None ]
+                [
+                    diagnostic
+                        "QUINT-IR-TYPE"
+                        (path + "/" + name)
+                        "Expected a string."
+                        "Use unmodified compiler output."
+                        None
+                ]
         | None ->
             Error
-                [ diagnostic
-                      "QUINT-IR-REQUIRED"
-                      (path + "/" + name)
-                      "Required string is absent."
-                      "Use complete compiler output."
-                      None ]
+                [
+                    diagnostic
+                        "QUINT-IR-REQUIRED"
+                        (path + "/" + name)
+                        "Required string is absent."
+                        "Use complete compiler output."
+                        None
+                ]
 
     let intAt path name element =
         match tryProperty name element with
@@ -362,20 +404,24 @@ module private ProfileCore =
             | true, number -> Ok number
             | _ ->
                 Error
-                    [ diagnostic
-                          "QUINT-IR-TYPE"
-                          (path + "/" + name)
-                          "Expected integer node id."
-                          "Use unmodified output."
-                          None ]
+                    [
+                        diagnostic
+                            "QUINT-IR-TYPE"
+                            (path + "/" + name)
+                            "Expected integer node id."
+                            "Use unmodified output."
+                            None
+                    ]
         | _ ->
             Error
-                [ diagnostic
-                      "QUINT-IR-TYPE"
-                      (path + "/" + name)
-                      "Expected integer node id."
-                      "Use unmodified output."
-                      None ]
+                [
+                    diagnostic
+                        "QUINT-IR-TYPE"
+                        (path + "/" + name)
+                        "Expected integer node id."
+                        "Use unmodified output."
+                        None
+                ]
 
     let literal path element =
         let findings =
@@ -385,12 +431,14 @@ module private ProfileCore =
         | Ok "str", Ok value, Ok _ when List.isEmpty findings -> Ok value
         | Ok kind, _, _ when kind <> "str" ->
             Error
-                [ diagnostic
-                      "QUINT-IR-EXPRESSION-KIND"
-                      (path + "/kind")
-                      $"Expected str, got '%s{kind}'."
-                      "Use string catalogue values."
-                      None ]
+                [
+                    diagnostic
+                        "QUINT-IR-EXPRESSION-KIND"
+                        (path + "/kind")
+                        $"Expected str, got '%s{kind}'."
+                        "Use string catalogue values."
+                        None
+                ]
         | _ -> Error findings
 
     let app path opcode element =
@@ -409,22 +457,29 @@ module private ProfileCore =
             Ok(args.EnumerateArray() |> Seq.toList)
         | Ok "app", Ok actual, _, _ when actual <> opcode ->
             Error
-                [ diagnostic
-                      "QUINT-IR-UNSUPPORTED-OPCODE"
-                      (path + "/opcode")
-                      $"Expected '%s{opcode}', got '%s{actual}'."
-                      "Use the explicit profile expression."
-                      None ]
+                [
+                    diagnostic
+                        "QUINT-IR-UNSUPPORTED-OPCODE"
+                        (path + "/opcode")
+                        $"Expected '%s{opcode}', got '%s{actual}'."
+                        "Use the explicit profile expression."
+                        None
+                ]
         | Ok kind, _, _, _ when kind <> "app" ->
             Error
-                [ diagnostic
-                      "QUINT-IR-EXPRESSION-KIND"
-                      (path + "/kind")
-                      $"Expression '%s{kind}' is not admitted."
-                      "Use an explicit profile expression."
-                      None ]
+                [
+                    diagnostic
+                        "QUINT-IR-EXPRESSION-KIND"
+                        (path + "/kind")
+                        $"Expression '%s{kind}' is not admitted."
+                        "Use an explicit profile expression."
+                        None
+                ]
         | _, _, Some args, _ when args.ValueKind <> JsonValueKind.Array ->
-            Error [ diagnostic "QUINT-IR-TYPE" (path + "/args") "Args must be an array." "Use unmodified output." None ]
+            Error
+                [
+                    diagnostic "QUINT-IR-TYPE" (path + "/args") "Args must be an array." "Use unmodified output." None
+                ]
         | _ -> Error findings
 
     let record path expected element =
@@ -432,12 +487,14 @@ module private ProfileCore =
         | Error errors -> Error errors
         | Ok args when args.Length % 2 <> 0 ->
             Error
-                [ diagnostic
-                      "QUINT-IR-RECORD-SHAPE"
-                      (path + "/args")
-                      "Record key/value arguments are unpaired."
-                      "Use a closed record."
-                      None ]
+                [
+                    diagnostic
+                        "QUINT-IR-RECORD-SHAPE"
+                        (path + "/args")
+                        "Record key/value arguments are unpaired."
+                        "Use a closed record."
+                        None
+                ]
         | Ok args ->
             let pairs =
                 args
@@ -462,33 +519,35 @@ module private ProfileCore =
             let names = List.map fst values
 
             let shape =
-                [ for name, count in List.countBy id names do
-                      if count > 1 then
-                          yield
-                              diagnostic
-                                  "QUINT-IR-RECORD-DUPLICATE"
-                                  path
-                                  $"Field '%s{name}' is duplicated."
-                                  "Use each field once."
-                                  None
-                  for name in names do
-                      if not (Set.contains name expected) then
-                          yield
-                              diagnostic
-                                  "QUINT-IR-RECORD-FIELD"
-                                  path
-                                  $"Field '%s{name}' is outside the profile row."
-                                  "Remove unsupported semantics."
-                                  None
-                  for name in expected do
-                      if not (List.contains name names) then
-                          yield
-                              diagnostic
-                                  "QUINT-IR-RECORD-REQUIRED"
-                                  path
-                                  $"Field '%s{name}' is absent."
-                                  "Emit the closed row."
-                                  None ]
+                [
+                    for name, count in List.countBy id names do
+                        if count > 1 then
+                            yield
+                                diagnostic
+                                    "QUINT-IR-RECORD-DUPLICATE"
+                                    path
+                                    $"Field '%s{name}' is duplicated."
+                                    "Use each field once."
+                                    None
+                    for name in names do
+                        if not (Set.contains name expected) then
+                            yield
+                                diagnostic
+                                    "QUINT-IR-RECORD-FIELD"
+                                    path
+                                    $"Field '%s{name}' is outside the profile row."
+                                    "Remove unsupported semantics."
+                                    None
+                    for name in expected do
+                        if not (List.contains name names) then
+                            yield
+                                diagnostic
+                                    "QUINT-IR-RECORD-REQUIRED"
+                                    path
+                                    $"Field '%s{name}' is absent."
+                                    "Emit the closed row."
+                                    None
+                ]
 
             if List.isEmpty (errors @ shape) then
                 Ok(Map.ofList values)
@@ -522,12 +581,14 @@ module private ProfileCore =
         literal (path + "/" + name) values[name]
 
     type RawRow =
-        { ModuleName: string
-          CatalogueName: string
-          Id: string
-          Kind: QuintCatalogueKind
-          Reads: string list
-          Writes: string list }
+        {
+            ModuleName: string
+            CatalogueName: string
+            Id: string
+            Kind: QuintCatalogueKind
+            Reads: string list
+            Writes: string list
+        }
 
     let simpleRow moduleName catalogueName kind expected path element =
         match record path expected element with
@@ -537,12 +598,14 @@ module private ProfileCore =
             | Error errors -> Error errors
             | Ok id ->
                 Ok
-                    { ModuleName = moduleName
-                      CatalogueName = catalogueName
-                      Id = id
-                      Kind = kind
-                      Reads = []
-                      Writes = [] }
+                    {
+                        ModuleName = moduleName
+                        CatalogueName = catalogueName
+                        Id = id
+                        Kind = kind
+                        Reads = []
+                        Writes = []
+                    }
 
     let propertyRow moduleName catalogueName path element =
         match record path (Set.ofList [ "id"; "kind" ]) element with
@@ -551,36 +614,44 @@ module private ProfileCore =
             match getString path "id" values, getString path "kind" values with
             | Ok id, Ok "invariant" ->
                 Ok
-                    { ModuleName = moduleName
-                      CatalogueName = catalogueName
-                      Id = id
-                      Kind = Invariant
-                      Reads = []
-                      Writes = [] }
+                    {
+                        ModuleName = moduleName
+                        CatalogueName = catalogueName
+                        Id = id
+                        Kind = Invariant
+                        Reads = []
+                        Writes = []
+                    }
             | Ok id, Ok "temporal" ->
                 Ok
-                    { ModuleName = moduleName
-                      CatalogueName = catalogueName
-                      Id = id
-                      Kind = TemporalProperty
-                      Reads = []
-                      Writes = [] }
+                    {
+                        ModuleName = moduleName
+                        CatalogueName = catalogueName
+                        Id = id
+                        Kind = TemporalProperty
+                        Reads = []
+                        Writes = []
+                    }
             | Ok id, Ok "reachability" ->
                 Ok
-                    { ModuleName = moduleName
-                      CatalogueName = catalogueName
-                      Id = id
-                      Kind = ReachabilityProperty
-                      Reads = []
-                      Writes = [] }
+                    {
+                        ModuleName = moduleName
+                        CatalogueName = catalogueName
+                        Id = id
+                        Kind = ReachabilityProperty
+                        Reads = []
+                        Writes = []
+                    }
             | Ok _, Ok kind ->
                 Error
-                    [ diagnostic
-                          "QUINT-IR-PROPERTY-KIND"
-                          (path + "/kind")
-                          $"Property kind '%s{kind}' is not admitted."
-                          "Use invariant, temporal, or reachability."
-                          None ]
+                    [
+                        diagnostic
+                            "QUINT-IR-PROPERTY-KIND"
+                            (path + "/kind")
+                            $"Property kind '%s{kind}' is not admitted."
+                            "Use invariant, temporal, or reachability."
+                            None
+                    ]
             | Error errors, _
             | _, Error errors -> Error errors
 
@@ -601,84 +672,94 @@ module private ProfileCore =
             with
             | Ok id, Ok reads, Ok writes ->
                 Ok
-                    { ModuleName = moduleName
-                      CatalogueName = catalogueName
-                      Id = id
-                      Kind = Action
-                      Reads = List.sort reads
-                      Writes = List.sort writes }
+                    {
+                        ModuleName = moduleName
+                        CatalogueName = catalogueName
+                        Id = id
+                        Kind = Action
+                        Reads = List.sort reads
+                        Writes = List.sort writes
+                    }
             | a, b, c ->
                 Error
-                    [ for result in [ Result.map ignore a; Result.map ignore b; Result.map ignore c ] do
-                          match result with
-                          | Error errors -> yield! errors
-                          | _ -> () ]
+                    [
+                        for result in [ Result.map ignore a; Result.map ignore b; Result.map ignore c ] do
+                            match result with
+                            | Error errors -> yield! errors
+                            | _ -> ()
+                    ]
 
     let numericTable (path: string) (element: JsonElement) =
         if element.ValueKind <> JsonValueKind.Object then
-            [ diagnostic "QUINT-IR-TYPE" path "Expected an id-indexed object." "Use unmodified output." None ]
+            [
+                diagnostic "QUINT-IR-TYPE" path "Expected an id-indexed object." "Use unmodified output." None
+            ]
         else
-            [ if not (element.EnumerateObject() |> Seq.isEmpty) then
-                  ()
-              else
-                  yield
-                      diagnostic
-                          "QUINT-IR-TABLE-EMPTY"
-                          path
-                          "Compiler-owned type/effect evidence is empty."
-                          "Use complete Quint 0.32.0 typecheck output."
-                          None
+            [
+                if not (element.EnumerateObject() |> Seq.isEmpty) then
+                    ()
+                else
+                    yield
+                        diagnostic
+                            "QUINT-IR-TABLE-EMPTY"
+                            path
+                            "Compiler-owned type/effect evidence is empty."
+                            "Use complete Quint 0.32.0 typecheck output."
+                            None
 
-              for item in element.EnumerateObject() do
-                  match Int64.TryParse(item.Name, NumberStyles.None, CultureInfo.InvariantCulture) with
-                  | true, _ when item.Value.ValueKind = JsonValueKind.Object -> ()
-                  | true, _ ->
-                      yield
-                          diagnostic
-                              "QUINT-IR-TYPE"
-                              (path + "/" + item.Name)
-                              "Table value must be an object."
-                              "Use unmodified output."
-                              None
-                  | _ ->
-                      yield
-                          diagnostic
-                              "QUINT-IR-TABLE-KEY"
-                              (path + "/" + item.Name)
-                              "Table key must be a decimal node id."
-                              "Use unmodified output."
-                              None ]
+                for item in element.EnumerateObject() do
+                    match Int64.TryParse(item.Name, NumberStyles.None, CultureInfo.InvariantCulture) with
+                    | true, _ when item.Value.ValueKind = JsonValueKind.Object -> ()
+                    | true, _ ->
+                        yield
+                            diagnostic
+                                "QUINT-IR-TYPE"
+                                (path + "/" + item.Name)
+                                "Table value must be an object."
+                                "Use unmodified output."
+                                None
+                    | _ ->
+                        yield
+                            diagnostic
+                                "QUINT-IR-TABLE-KEY"
+                                (path + "/" + item.Name)
+                                "Table key must be a decimal node id."
+                                "Use unmodified output."
+                                None
+            ]
 
     let private intrinsicOpcodes =
         Set.ofList
-            [ "Rec"
-              "Set"
-              "Tup"
-              "actionAll"
-              "actionAny"
-              "and"
-              "assign"
-              "contains"
-              "eq"
-              "eventually"
-              "exists"
-              "expect"
-              "field"
-              "iadd"
-              "igte"
-              "ilt"
-              "ilte"
-              "implies"
-              "isub"
-              "ite"
-              "neq"
-              "not"
-              "oneOf"
-              "then"
-              "to"
-              "union"
-              "variant"
-              "weakFair" ]
+            [
+                "Rec"
+                "Set"
+                "Tup"
+                "actionAll"
+                "actionAny"
+                "and"
+                "assign"
+                "contains"
+                "eq"
+                "eventually"
+                "exists"
+                "expect"
+                "field"
+                "iadd"
+                "igte"
+                "ilt"
+                "ilte"
+                "implies"
+                "isub"
+                "ite"
+                "neq"
+                "not"
+                "oneOf"
+                "then"
+                "to"
+                "union"
+                "variant"
+                "weakFair"
+            ]
 
     let private kindShape kind =
         match kind with
@@ -693,16 +774,18 @@ module private ProfileCore =
             Some(
                 Set.ofList [ "id"; "kind"; "name"; "qualifier"; "expr" ],
                 Set.ofList
-                    [ "id"
-                      "kind"
-                      "name"
-                      "qualifier"
-                      "expr"
-                      "depth"
-                      "hidden"
-                      "importedFrom"
-                      "shadowing"
-                      "typeAnnotation" ]
+                    [
+                        "id"
+                        "kind"
+                        "name"
+                        "qualifier"
+                        "expr"
+                        "depth"
+                        "hidden"
+                        "importedFrom"
+                        "shadowing"
+                        "typeAnnotation"
+                    ]
             )
         | "empty" -> Some(Set.ofList [ "kind" ], Set.ofList [ "kind" ])
         | "import" ->
@@ -744,13 +827,15 @@ module private ProfileCore =
 
     let private untaggedShapes =
         Set.ofList
-            [ Set.ofList [ "id"; "name"; "declarations" ]
-              Set.ofList [ "fieldName"; "fieldType" ]
-              Set.ofList [ "id"; "name" ]
-              Set.ofList [ "id"; "name"; "typeAnnotation" ]
-              Set.ofList [ "name"; "reference" ]
-              Set.ofList [ "rowVariables"; "type"; "typeVariables" ]
-              Set.ofList [ "effect"; "effectVariables"; "entityVariables" ] ]
+            [
+                Set.ofList [ "id"; "name"; "declarations" ]
+                Set.ofList [ "fieldName"; "fieldType" ]
+                Set.ofList [ "id"; "name" ]
+                Set.ofList [ "id"; "name"; "typeAnnotation" ]
+                Set.ofList [ "name"; "reference" ]
+                Set.ofList [ "rowVariables"; "type"; "typeVariables" ]
+                Set.ofList [ "effect"; "effectVariables"; "entityVariables" ]
+            ]
 
     let rec validateClosedNode definitions path (element: JsonElement) =
         match element.ValueKind with
@@ -771,28 +856,34 @@ module private ProfileCore =
                     match kindShape kind with
                     | Some(required, allowed) -> fields path required allowed element
                     | None ->
-                        [ diagnostic
-                              "QUINT-IR-UNSUPPORTED-KIND"
-                              (path + "/kind")
-                              $"IR kind '%s{kind}' is outside fsgg-quint-profile/1."
-                              "Use only the Q1-qualified Quint 0.32.0 subset."
-                              None ]
+                        [
+                            diagnostic
+                                "QUINT-IR-UNSUPPORTED-KIND"
+                                (path + "/kind")
+                                $"IR kind '%s{kind}' is outside fsgg-quint-profile/1."
+                                "Use only the Q1-qualified Quint 0.32.0 subset."
+                                None
+                        ]
                 | Some _ ->
-                    [ diagnostic
-                          "QUINT-IR-TYPE"
-                          (path + "/kind")
-                          "IR kind must be a string."
-                          "Use unmodified compiler output."
-                          None ]
+                    [
+                        diagnostic
+                            "QUINT-IR-TYPE"
+                            (path + "/kind")
+                            "IR kind must be a string."
+                            "Use unmodified compiler output."
+                            None
+                    ]
                 | None when properties |> List.forall (fun item -> Int64.TryParse(item.Name) |> fst) -> []
                 | None when Set.contains names untaggedShapes -> []
                 | None ->
-                    [ diagnostic
-                          "QUINT-IR-UNSUPPORTED-SHAPE"
-                          path
-                          "Object shape is outside the exact Quint 0.32.0 profile boundary."
-                          "Use only the Q1-qualified IR shape."
-                          None ]
+                    [
+                        diagnostic
+                            "QUINT-IR-UNSUPPORTED-SHAPE"
+                            path
+                            "Object shape is outside the exact Quint 0.32.0 profile boundary."
+                            "Use only the Q1-qualified IR shape."
+                            None
+                    ]
 
             let opcodeFindings =
                 match tryProperty "kind" element, tryProperty "opcode" element with
@@ -806,12 +897,14 @@ module private ProfileCore =
                     if Set.contains value intrinsicOpcodes || Set.contains value definitions then
                         []
                     else
-                        [ diagnostic
-                              "QUINT-IR-UNSUPPORTED-OPCODE"
-                              (path + "/opcode")
-                              $"Opcode '%s{value}' is neither a qualified intrinsic nor a resolved local definition."
-                              "Use only the Q1-qualified Quint subset."
-                              None ]
+                        [
+                            diagnostic
+                                "QUINT-IR-UNSUPPORTED-OPCODE"
+                                (path + "/opcode")
+                                $"Opcode '%s{value}' is neither a qualified intrinsic nor a resolved local definition."
+                                "Use only the Q1-qualified Quint subset."
+                                None
+                        ]
                 | _ -> []
 
             let nested =
@@ -841,38 +934,40 @@ module QuintProfile =
 
     let adaptTypedEffectJson (observation: QuintTypedEffectObservation) =
         let identityFindings =
-            [ if String.IsNullOrWhiteSpace observation.Profile then
-                  yield
-                      ProfileCore.diagnostic
-                          "QUINT-PROFILE-IDENTITY-MISSING"
-                          "/profile"
-                          "Profile binding is absent."
-                          "Bind profile 1 out of band."
-                          None
-              elif observation.Profile <> ProfileCore.profile then
-                  yield
-                      ProfileCore.diagnostic
-                          "QUINT-PROFILE-IDENTITY"
-                          "/profile"
-                          "Profile binding is wrong."
-                          "Bind profile 1."
-                          None
-              if String.IsNullOrWhiteSpace observation.QuintVersion then
-                  yield
-                      ProfileCore.diagnostic
-                          "QUINT-PROFILE-VERSION-MISSING"
-                          "/quintVersion"
-                          "Compiler version binding is absent."
-                          "Record the pinned binary's --version."
-                          None
-              elif observation.QuintVersion <> ProfileCore.version then
-                  yield
-                      ProfileCore.diagnostic
-                          "QUINT-PROFILE-VERSION"
-                          "/quintVersion"
-                          "Compiler version binding is wrong."
-                          "Use Quint 0.32.0."
-                          None ]
+            [
+                if String.IsNullOrWhiteSpace observation.Profile then
+                    yield
+                        ProfileCore.diagnostic
+                            "QUINT-PROFILE-IDENTITY-MISSING"
+                            "/profile"
+                            "Profile binding is absent."
+                            "Bind profile 1 out of band."
+                            None
+                elif observation.Profile <> ProfileCore.profile then
+                    yield
+                        ProfileCore.diagnostic
+                            "QUINT-PROFILE-IDENTITY"
+                            "/profile"
+                            "Profile binding is wrong."
+                            "Bind profile 1."
+                            None
+                if String.IsNullOrWhiteSpace observation.QuintVersion then
+                    yield
+                        ProfileCore.diagnostic
+                            "QUINT-PROFILE-VERSION-MISSING"
+                            "/quintVersion"
+                            "Compiler version binding is absent."
+                            "Record the pinned binary's --version."
+                            None
+                elif observation.QuintVersion <> ProfileCore.version then
+                    yield
+                        ProfileCore.diagnostic
+                            "QUINT-PROFILE-VERSION"
+                            "/quintVersion"
+                            "Compiler version binding is wrong."
+                            "Use Quint 0.32.0."
+                            None
+            ]
 
         if not (List.isEmpty identityFindings) then
             Error(ProfileCore.sorted identityFindings)
@@ -883,12 +978,14 @@ module QuintProfile =
 
                 if root.ValueKind <> JsonValueKind.Object then
                     Error
-                        [ ProfileCore.diagnostic
-                              "QUINT-IR-ROOT"
-                              "/"
-                              "Typecheck output must be an object."
-                              "Use exact typecheck --out JSON."
-                              None ]
+                        [
+                            ProfileCore.diagnostic
+                                "QUINT-IR-ROOT"
+                                "/"
+                                "Typecheck output must be an object."
+                                "Use exact typecheck --out JSON."
+                                None
+                        ]
                 else
                     let rootFields =
                         Set.ofList [ "stage"; "modules"; "table"; "types"; "effects"; "warnings"; "errors" ]
@@ -1094,12 +1191,14 @@ module QuintProfile =
                                                                     resolved
                                                             | None ->
                                                                 Error
-                                                                    [ ProfileCore.diagnostic
-                                                                          "QUINT-IR-NAME-REFERENCE"
-                                                                          path
-                                                                          "Requirement record reference does not resolve."
-                                                                          "Use a local pure val record."
-                                                                          None ]
+                                                                    [
+                                                                        ProfileCore.diagnostic
+                                                                            "QUINT-IR-NAME-REFERENCE"
+                                                                            path
+                                                                            "Requirement record reference does not resolve."
+                                                                            "Use a local pure val record."
+                                                                            None
+                                                                    ]
                                                         | _ ->
                                                             ProfileCore.simpleRow
                                                                 moduleName
@@ -1143,12 +1242,14 @@ module QuintProfile =
                                             | other when other.EndsWith("Catalogue", StringComparison.Ordinal) ->
                                                 Some(
                                                     Error
-                                                        [ ProfileCore.diagnostic
-                                                              "QUINT-IR-UNKNOWN-CATALOGUE"
-                                                              (path + "/name")
-                                                              $"Catalogue '%s{other}' is outside profile 1."
-                                                              "Use the closed profile catalogue names."
-                                                              None ]
+                                                        [
+                                                            ProfileCore.diagnostic
+                                                                "QUINT-IR-UNKNOWN-CATALOGUE"
+                                                                (path + "/name")
+                                                                $"Catalogue '%s{other}' is outside profile 1."
+                                                                "Use the closed profile catalogue names."
+                                                                None
+                                                        ]
                                                 )
                                             | _ -> None
 
@@ -1211,9 +1312,11 @@ module QuintProfile =
                             match Map.tryFind (ProfileCore.rowKey row) groups with
                             | Some [ binding ] ->
                                 Some
-                                    { Id = row.Id
-                                      Kind = row.Kind
-                                      Source = binding.Source }
+                                    {
+                                        Id = row.Id
+                                        Kind = row.Kind
+                                        Source = binding.Source
+                                    }
                             | _ ->
                                 findings <-
                                     ProfileCore.diagnostic
@@ -1232,19 +1335,23 @@ module QuintProfile =
                         |> List.choose (fun row ->
                             if row.Kind = Action then
                                 Some
-                                    { ActionId = row.Id
-                                      Reads = row.Reads
-                                      Writes = row.Writes
-                                      Subjects = [] }
+                                    {
+                                        ActionId = row.Id
+                                        Reads = row.Reads
+                                        Writes = row.Writes
+                                        Subjects = []
+                                    }
                             else
                                 None)
                         |> List.sortBy _.ActionId
 
                     let catalogue =
-                        { Profile = observation.Profile
-                          QuintVersion = observation.QuintVersion
-                          Entries = entries
-                          ActionEffects = effects }
+                        {
+                            Profile = observation.Profile
+                            QuintVersion = observation.QuintVersion
+                            Entries = entries
+                            ActionEffects = effects
+                        }
 
                     let bindingModules =
                         observation.SourceBindings |> List.map _.ModuleName |> List.distinct
@@ -1279,12 +1386,14 @@ module QuintProfile =
                     if List.isEmpty all then Ok catalogue else Error all
             with :? JsonException as ex ->
                 Error
-                    [ ProfileCore.diagnostic
-                          "QUINT-IR-MALFORMED"
-                          "/"
-                          ex.Message
-                          "Use valid exact typecheck --out JSON."
-                          None ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-IR-MALFORMED"
+                            "/"
+                            ex.Message
+                            "Use valid exact typecheck --out JSON."
+                            None
+                    ]
 
 module private GeneralProfileCore =
     let profile = "fsgg-quint-profile/2"
@@ -1304,89 +1413,97 @@ module private GeneralProfileCore =
         Regex("^[A-Za-z][A-Za-z0-9]*(?:[-.][A-Za-z0-9]+)*$", RegexOptions.CultureInvariant)
 
     let sourceFindings path (id: string) (source: QuintSourceRange) =
-        [ if not (validBindingId.IsMatch id) then
-              yield
-                  ProfileCore.diagnostic
-                      "QUINT-GENERAL-BINDING-ID"
-                      (path + "/id")
-                      $"'%s{id}' is not a stable binding identity."
-                      "Use a letter-leading identity containing letters, digits, dots, or hyphens."
-                      (Some source)
+        [
+            if not (validBindingId.IsMatch id) then
+                yield
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-BINDING-ID"
+                        (path + "/id")
+                        $"'%s{id}' is not a stable binding identity."
+                        "Use a letter-leading identity containing letters, digits, dots, or hyphens."
+                        (Some source)
 
-          if not (ProfileCore.safePath source.Path) then
-              yield
-                  ProfileCore.diagnostic
-                      "QUINT-GENERAL-SOURCE-PATH"
-                      (path + "/source/path")
-                      "Source path is not a safe relative Markdown path."
-                      "Use QuintSource's canonical Markdown path."
-                      (Some source)
+            if not (ProfileCore.safePath source.Path) then
+                yield
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-SOURCE-PATH"
+                        (path + "/source/path")
+                        "Source path is not a safe relative Markdown path."
+                        "Use QuintSource's canonical Markdown path."
+                        (Some source)
 
-          if
-              source.Start.Line < 1
-              || source.Start.Column < 1
-              || source.End.Line < source.Start.Line
-              || (source.End.Line = source.Start.Line && source.End.Column < source.Start.Column)
-          then
-              yield
-                  ProfileCore.diagnostic
-                      "QUINT-GENERAL-SOURCE-RANGE"
-                      (path + "/source")
-                      "Source range is not positive and ordered."
-                      "Use QuintSource's exact range."
-                      (Some source) ]
+            if
+                source.Start.Line < 1
+                || source.Start.Column < 1
+                || source.End.Line < source.Start.Line
+                || (source.End.Line = source.Start.Line && source.End.Column < source.Start.Column)
+            then
+                yield
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-SOURCE-RANGE"
+                        (path + "/source")
+                        "Source range is not positive and ordered."
+                        "Use QuintSource's exact range."
+                        (Some source)
+        ]
 
     let private kindFields =
         Map.ofList
-            [ "app", Set.ofList [ "args"; "id"; "kind"; "opcode" ]
-              "arrow", Set.ofList [ "kind"; "params"; "result" ]
-              "bool", Set.ofList [ "id"; "kind"; "value" ]
-              "concrete", Set.ofList [ "components"; "kind"; "stateVariables" ]
-              "const", Set.ofList [ "id"; "kind"; "name" ]
-              "def",
-              Set.ofList
-                  [ "depth"
-                    "expr"
-                    "hidden"
-                    "id"
-                    "importedFrom"
-                    "kind"
-                    "name"
-                    "qualifier"
-                    "shadowing"
-                    "typeAnnotation" ]
-              "empty", Set.ofList [ "kind" ]
-              "import", Set.ofList [ "defName"; "id"; "kind"; "protoName" ]
-              "int", Set.ofList [ "id"; "kind"; "value" ]
-              "lambda", Set.ofList [ "expr"; "id"; "kind"; "params"; "qualifier" ]
-              "let", Set.ofList [ "expr"; "id"; "kind"; "opdef" ]
-              "list", Set.ofList [ "elem"; "id"; "kind" ]
-              "name", Set.ofList [ "id"; "kind"; "name" ]
-              "oper", Set.ofList [ "args"; "kind"; "res" ]
-              "param", Set.ofList [ "depth"; "id"; "kind"; "name"; "shadowing"; "typeAnnotation" ]
-              "read", Set.ofList [ "entity"; "kind" ]
-              "rec", Set.ofList [ "fields"; "id"; "kind" ]
-              "row", Set.ofList [ "fields"; "kind"; "other" ]
-              "set", Set.ofList [ "elem"; "id"; "kind" ]
-              "str", Set.ofList [ "id"; "kind"; "value" ]
-              "sum", Set.ofList [ "fields"; "id"; "kind" ]
-              "temporal", Set.ofList [ "entity"; "kind" ]
-              "tup", Set.ofList [ "fields"; "id"; "kind" ]
-              "typedef", Set.ofList [ "depth"; "id"; "kind"; "name"; "type" ]
-              "union", Set.ofList [ "entities"; "kind" ]
-              "update", Set.ofList [ "entity"; "kind" ]
-              "var", Set.ofList [ "depth"; "hidden"; "id"; "importedFrom"; "kind"; "name"; "typeAnnotation" ]
-              "variable", Set.ofList [ "kind"; "name" ] ]
+            [
+                "app", Set.ofList [ "args"; "id"; "kind"; "opcode" ]
+                "arrow", Set.ofList [ "kind"; "params"; "result" ]
+                "bool", Set.ofList [ "id"; "kind"; "value" ]
+                "concrete", Set.ofList [ "components"; "kind"; "stateVariables" ]
+                "const", Set.ofList [ "id"; "kind"; "name" ]
+                "def",
+                Set.ofList
+                    [
+                        "depth"
+                        "expr"
+                        "hidden"
+                        "id"
+                        "importedFrom"
+                        "kind"
+                        "name"
+                        "qualifier"
+                        "shadowing"
+                        "typeAnnotation"
+                    ]
+                "empty", Set.ofList [ "kind" ]
+                "import", Set.ofList [ "defName"; "id"; "kind"; "protoName" ]
+                "int", Set.ofList [ "id"; "kind"; "value" ]
+                "lambda", Set.ofList [ "expr"; "id"; "kind"; "params"; "qualifier" ]
+                "let", Set.ofList [ "expr"; "id"; "kind"; "opdef" ]
+                "list", Set.ofList [ "elem"; "id"; "kind" ]
+                "name", Set.ofList [ "id"; "kind"; "name" ]
+                "oper", Set.ofList [ "args"; "kind"; "res" ]
+                "param", Set.ofList [ "depth"; "id"; "kind"; "name"; "shadowing"; "typeAnnotation" ]
+                "read", Set.ofList [ "entity"; "kind" ]
+                "rec", Set.ofList [ "fields"; "id"; "kind" ]
+                "row", Set.ofList [ "fields"; "kind"; "other" ]
+                "set", Set.ofList [ "elem"; "id"; "kind" ]
+                "str", Set.ofList [ "id"; "kind"; "value" ]
+                "sum", Set.ofList [ "fields"; "id"; "kind" ]
+                "temporal", Set.ofList [ "entity"; "kind" ]
+                "tup", Set.ofList [ "fields"; "id"; "kind" ]
+                "typedef", Set.ofList [ "depth"; "id"; "kind"; "name"; "type" ]
+                "union", Set.ofList [ "entities"; "kind" ]
+                "update", Set.ofList [ "entity"; "kind" ]
+                "var", Set.ofList [ "depth"; "hidden"; "id"; "importedFrom"; "kind"; "name"; "typeAnnotation" ]
+                "variable", Set.ofList [ "kind"; "name" ]
+            ]
 
     let private untaggedFields =
         Set.ofList
-            [ Set.ofList [ "id"; "name"; "declarations" ]
-              Set.ofList [ "fieldName"; "fieldType" ]
-              Set.ofList [ "id"; "name" ]
-              Set.ofList [ "id"; "name"; "typeAnnotation" ]
-              Set.ofList [ "name"; "reference" ]
-              Set.ofList [ "rowVariables"; "type"; "typeVariables" ]
-              Set.ofList [ "effect"; "effectVariables"; "entityVariables" ] ]
+            [
+                Set.ofList [ "id"; "name"; "declarations" ]
+                Set.ofList [ "fieldName"; "fieldType" ]
+                Set.ofList [ "id"; "name" ]
+                Set.ofList [ "id"; "name"; "typeAnnotation" ]
+                Set.ofList [ "name"; "reference" ]
+                Set.ofList [ "rowVariables"; "type"; "typeVariables" ]
+                Set.ofList [ "effect"; "effectVariables"; "entityVariables" ]
+            ]
 
     let rec closedShape path (element: JsonElement) =
         match element.ValueKind with
@@ -1416,28 +1533,34 @@ module private GeneralProfileCore =
                                 "Use unmodified exact compiler output."
                                 None)
                     | None ->
-                        [ ProfileCore.diagnostic
-                              "QUINT-GENERAL-UNSUPPORTED-KIND"
-                              (path + "/kind")
-                              $"Compiler kind '%s{value}' is outside the profile-2 boundary."
-                              "Use a supported Quint 0.32.0 construct."
-                              None ]
+                        [
+                            ProfileCore.diagnostic
+                                "QUINT-GENERAL-UNSUPPORTED-KIND"
+                                (path + "/kind")
+                                $"Compiler kind '%s{value}' is outside the profile-2 boundary."
+                                "Use a supported Quint 0.32.0 construct."
+                                None
+                        ]
                 | Some _ ->
-                    [ ProfileCore.diagnostic
-                          "QUINT-GENERAL-IR-TYPE"
-                          (path + "/kind")
-                          "Compiler kind must be a string."
-                          "Use unmodified exact compiler output."
-                          None ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-IR-TYPE"
+                            (path + "/kind")
+                            "Compiler kind must be a string."
+                            "Use unmodified exact compiler output."
+                            None
+                    ]
                 | None when properties |> List.forall (fun item -> Int64.TryParse(item.Name) |> fst) -> []
                 | None when Set.contains names untaggedFields -> []
                 | None ->
-                    [ ProfileCore.diagnostic
-                          "QUINT-GENERAL-UNSUPPORTED-SHAPE"
-                          path
-                          "Object shape is outside the exact Quint 0.32.0 profile boundary."
-                          "Use unmodified exact compiler output."
-                          None ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-UNSUPPORTED-SHAPE"
+                            path
+                            "Object shape is outside the exact Quint 0.32.0 profile boundary."
+                            "Use unmodified exact compiler output."
+                            None
+                    ]
 
             own
             @ (properties
@@ -1492,29 +1615,35 @@ module private GeneralProfileCore =
             match element.GetString() |> Option.ofObj with
             | Some value when Encoding.UTF8.GetByteCount value > maxStringBytes ->
                 Error
-                    [ ProfileCore.diagnostic
-                          "QUINT-GENERAL-RESOURCE-STRING"
-                          path
-                          "Exported string exceeds 64 KiB."
-                          "Reduce the exported string."
-                          None ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-RESOURCE-STRING"
+                            path
+                            "Exported string exceeds 64 KiB."
+                            "Reduce the exported string."
+                            None
+                    ]
             | Some value -> Ok value
             | None ->
                 Error
-                    [ ProfileCore.diagnostic
-                          "QUINT-GENERAL-EXPORT-EXPRESSION"
-                          path
-                          "Expected a non-null string literal."
-                          "Export only closed profile-2 values."
-                          None ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-EXPORT-EXPRESSION"
+                            path
+                            "Expected a non-null string literal."
+                            "Export only closed profile-2 values."
+                            None
+                    ]
         | _ ->
             Error
-                [ ProfileCore.diagnostic
-                      "QUINT-GENERAL-EXPORT-EXPRESSION"
-                      path
-                      "Expected a non-null string literal."
-                      "Export only closed profile-2 values."
-                      None ]
+                [
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-EXPORT-EXPRESSION"
+                        path
+                        "Expected a non-null string literal."
+                        "Export only closed profile-2 values."
+                        None
+                ]
 
     let value path (root: JsonElement) =
         let mutable nodes = 0
@@ -1524,20 +1653,24 @@ module private GeneralProfileCore =
 
             if nodes > maxValueNodes then
                 Error
-                    [ ProfileCore.diagnostic
-                          "QUINT-GENERAL-RESOURCE-NODES"
-                          path
-                          "Exported values exceed 100,000 nodes."
-                          "Reduce the exported value graph."
-                          None ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-RESOURCE-NODES"
+                            path
+                            "Exported values exceed 100,000 nodes."
+                            "Reduce the exported value graph."
+                            None
+                    ]
             elif depth > maxValueDepth then
                 Error
-                    [ ProfileCore.diagnostic
-                          "QUINT-GENERAL-RESOURCE-DEPTH"
-                          path
-                          "Exported value nesting exceeds depth 32."
-                          "Flatten the exported value."
-                          None ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-RESOURCE-DEPTH"
+                            path
+                            "Exported value nesting exceeds depth 32."
+                            "Flatten the exported value."
+                            None
+                    ]
             else
                 match ProfileCore.tryProperty "kind" element with
                 | Some kindElement ->
@@ -1549,12 +1682,14 @@ module private GeneralProfileCore =
                         | Some value when value.ValueKind = JsonValueKind.False -> Ok(QuintBool false)
                         | _ ->
                             Error
-                                [ ProfileCore.diagnostic
-                                      "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                      (path + "/value")
-                                      "Boolean literal is absent."
-                                      "Export only closed literals."
-                                      None ]
+                                [
+                                    ProfileCore.diagnostic
+                                        "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                        (path + "/value")
+                                        "Boolean literal is absent."
+                                        "Export only closed literals."
+                                        None
+                                ]
                     | Ok "int" ->
                         match ProfileCore.tryProperty "value" element with
                         | Some value ->
@@ -1562,31 +1697,37 @@ module private GeneralProfileCore =
                             | true, number -> Ok(QuintInt number)
                             | _ ->
                                 Error
-                                    [ ProfileCore.diagnostic
-                                          "QUINT-GENERAL-EXPORT-INTEGER"
-                                          (path + "/value")
-                                          "Integer is outside signed 64-bit bounds."
-                                          "Use a bounded int64 export."
-                                          None ]
+                                    [
+                                        ProfileCore.diagnostic
+                                            "QUINT-GENERAL-EXPORT-INTEGER"
+                                            (path + "/value")
+                                            "Integer is outside signed 64-bit bounds."
+                                            "Use a bounded int64 export."
+                                            None
+                                    ]
                         | None ->
                             Error
-                                [ ProfileCore.diagnostic
-                                      "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                      (path + "/value")
-                                      "Integer literal is absent."
-                                      "Export only closed literals."
-                                      None ]
+                                [
+                                    ProfileCore.diagnostic
+                                        "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                        (path + "/value")
+                                        "Integer literal is absent."
+                                        "Export only closed literals."
+                                        None
+                                ]
                     | Ok "str" ->
                         match ProfileCore.tryProperty "value" element with
                         | Some value -> stringValue (path + "/value") value |> Result.map QuintString
                         | None ->
                             Error
-                                [ ProfileCore.diagnostic
-                                      "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                      (path + "/value")
-                                      "String literal is absent."
-                                      "Export only closed literals."
-                                      None ]
+                                [
+                                    ProfileCore.diagnostic
+                                        "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                        (path + "/value")
+                                        "String literal is absent."
+                                        "Export only closed literals."
+                                        None
+                                ]
                     | Ok "app" ->
                         match ProfileCore.tryProperty "opcode" element, ProfileCore.tryProperty "args" element with
                         | Some opcodeElement, Some argsElement when argsElement.ValueKind = JsonValueKind.Array ->
@@ -1627,12 +1768,14 @@ module private GeneralProfileCore =
                                             | Error errors -> Error errors
                                         | None ->
                                             Error
-                                                [ ProfileCore.diagnostic
-                                                      "QUINT-GENERAL-EXPORT-RECORD"
-                                                      ($"%s{path}/args/%d{index * 2}")
-                                                      "Record key is not a string literal."
-                                                      "Use closed record field names."
-                                                      None ])
+                                                [
+                                                    ProfileCore.diagnostic
+                                                        "QUINT-GENERAL-EXPORT-RECORD"
+                                                        ($"%s{path}/args/%d{index * 2}")
+                                                        "Record key is not a string literal."
+                                                        "Use closed record field names."
+                                                        None
+                                                ])
                                     |> List.fold
                                         (fun state item ->
                                             match state, item with
@@ -1647,12 +1790,14 @@ module private GeneralProfileCore =
 
                                         if names.Length <> (names |> List.distinct |> List.length) then
                                             Error
-                                                [ ProfileCore.diagnostic
-                                                      "QUINT-GENERAL-EXPORT-RECORD-DUPLICATE"
-                                                      path
-                                                      "Record field is duplicated."
-                                                      "Declare each record field once."
-                                                      None ]
+                                                [
+                                                    ProfileCore.diagnostic
+                                                        "QUINT-GENERAL-EXPORT-RECORD-DUPLICATE"
+                                                        path
+                                                        "Record field is duplicated."
+                                                        "Declare each record field once."
+                                                        None
+                                                ]
                                         else
                                             fields |> List.sortBy fst |> QuintRecord |> Ok)
                                 | "variant" when args.Length = 2 ->
@@ -1668,12 +1813,14 @@ module private GeneralProfileCore =
                                                 | value -> QuintVariant(tag, Some value))
                                     | None ->
                                         Error
-                                            [ ProfileCore.diagnostic
-                                                  "QUINT-GENERAL-EXPORT-VARIANT"
-                                                  (path + "/args/0")
-                                                  "Variant tag is not a string literal."
-                                                  "Use a closed variant tag."
-                                                  None ]
+                                            [
+                                                ProfileCore.diagnostic
+                                                    "QUINT-GENERAL-EXPORT-VARIANT"
+                                                    (path + "/args/0")
+                                                    "Variant tag is not a string literal."
+                                                    "Use a closed variant tag."
+                                                    None
+                                            ]
                                 | "Map" when args.Length % 2 = 0 ->
                                     parseAll 0 args
                                     |> Result.bind (fun values ->
@@ -1689,46 +1836,56 @@ module private GeneralProfileCore =
 
                                             if duplicateKeys then
                                                 Error
-                                                    [ ProfileCore.diagnostic
-                                                          "QUINT-GENERAL-EXPORT-MAP-DUPLICATE"
-                                                          path
-                                                          "Map contains a duplicate canonical key."
-                                                          "Declare each map key once."
-                                                          None ]
+                                                    [
+                                                        ProfileCore.diagnostic
+                                                            "QUINT-GENERAL-EXPORT-MAP-DUPLICATE"
+                                                            path
+                                                            "Map contains a duplicate canonical key."
+                                                            "Declare each map key once."
+                                                            None
+                                                    ]
                                             else
                                                 Ok(QuintMap entries))
                                 | _ ->
                                     Error
-                                        [ ProfileCore.diagnostic
-                                              "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                              (path + "/opcode")
-                                              $"Opcode '%s{opcode}' is not an exportable constant."
-                                              "Export only closed profile-2 values."
-                                              None ]
+                                        [
+                                            ProfileCore.diagnostic
+                                                "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                                (path + "/opcode")
+                                                $"Opcode '%s{opcode}' is not an exportable constant."
+                                                "Export only closed profile-2 values."
+                                                None
+                                        ]
                         | _ ->
                             Error
-                                [ ProfileCore.diagnostic
-                                      "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                      path
-                                      "Application opcode or args are malformed."
-                                      "Use exact Quint 0.32.0 output."
-                                      None ]
+                                [
+                                    ProfileCore.diagnostic
+                                        "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                        path
+                                        "Application opcode or args are malformed."
+                                        "Use exact Quint 0.32.0 output."
+                                        None
+                                ]
                     | Ok kind ->
                         Error
-                            [ ProfileCore.diagnostic
-                                  "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                  (path + "/kind")
-                                  $"Expression kind '%s{kind}' is not exportable."
-                                  "Export only closed profile-2 values."
-                                  None ]
+                            [
+                                ProfileCore.diagnostic
+                                    "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                    (path + "/kind")
+                                    $"Expression kind '%s{kind}' is not exportable."
+                                    "Export only closed profile-2 values."
+                                    None
+                            ]
                 | None ->
                     Error
-                        [ ProfileCore.diagnostic
-                              "QUINT-GENERAL-EXPORT-EXPRESSION"
-                              (path + "/kind")
-                              "Expression kind is absent."
-                              "Use exact Quint 0.32.0 output."
-                              None ]
+                        [
+                            ProfileCore.diagnostic
+                                "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                (path + "/kind")
+                                "Expression kind is absent."
+                                "Use exact Quint 0.32.0 output."
+                                None
+                        ]
 
         parse 0 path root
 
@@ -1744,12 +1901,14 @@ module private GeneralProfileCore =
             | QuintSet rows -> Ok rows
             | _ ->
                 Error
-                    [ ProfileCore.diagnostic
-                          "QUINT-GENERAL-CATALOGUE-SHAPE"
-                          "/exportBindings"
-                          $"Export '%s{binding.Id}' must be a list or set to promote catalogue rows."
-                          "Export records carrying string id and kind fields."
-                          (sourceOfExport binding) ]
+                    [
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-CATALOGUE-SHAPE"
+                            "/exportBindings"
+                            $"Export '%s{binding.Id}' must be a list or set to promote catalogue rows."
+                            "Export records carrying string id and kind fields."
+                            (sourceOfExport binding)
+                    ]
 
         rows
         |> Result.bind (fun rows ->
@@ -1758,19 +1917,23 @@ module private GeneralProfileCore =
                 match recordField "id" row, recordField "kind" row with
                 | Some(QuintString id), Some(QuintString kind) when ProfileCore.validId.IsMatch id ->
                     Ok
-                        { Id = id
-                          Kind = kind
-                          ExportId = binding.Id
-                          Value = row
-                          Source = binding.Source }
+                        {
+                            Id = id
+                            Kind = kind
+                            ExportId = binding.Id
+                            Value = row
+                            Source = binding.Source
+                        }
                 | _ ->
                     Error
-                        [ ProfileCore.diagnostic
-                              "QUINT-GENERAL-CATALOGUE-ROW"
-                              ($"/exports/%s{binding.Id}/%d{index}")
-                              "Promoted row requires a stable string id and non-null string kind."
-                              "Add id and kind fields to the exported record."
-                              (sourceOfExport binding) ])
+                        [
+                            ProfileCore.diagnostic
+                                "QUINT-GENERAL-CATALOGUE-ROW"
+                                ($"/exports/%s{binding.Id}/%d{index}")
+                                "Promoted row requires a stable string id and non-null string kind."
+                                "Add id and kind fields to the exported record."
+                                (sourceOfExport binding)
+                        ])
             |> List.fold
                 (fun state item ->
                     match state, item with
@@ -1782,23 +1945,25 @@ module private GeneralProfileCore =
             |> Result.map (List.sortBy _.Id))
 
     let rec stateVariables (element: JsonElement) =
-        [ if element.ValueKind = JsonValueKind.Object then
-              match ProfileCore.tryProperty "stateVariables" element with
-              | Some values when values.ValueKind = JsonValueKind.Array ->
-                  for value in values.EnumerateArray() do
-                      match ProfileCore.tryProperty "name" value with
-                      | Some name ->
-                          match stringValue "/effects/stateVariables/name" name with
-                          | Ok text -> yield text
-                          | _ -> ()
-                      | None -> ()
-              | _ -> ()
+        [
+            if element.ValueKind = JsonValueKind.Object then
+                match ProfileCore.tryProperty "stateVariables" element with
+                | Some values when values.ValueKind = JsonValueKind.Array ->
+                    for value in values.EnumerateArray() do
+                        match ProfileCore.tryProperty "name" value with
+                        | Some name ->
+                            match stringValue "/effects/stateVariables/name" name with
+                            | Ok text -> yield text
+                            | _ -> ()
+                        | None -> ()
+                | _ -> ()
 
-              for property in element.EnumerateObject() do
-                  yield! stateVariables property.Value
-          elif element.ValueKind = JsonValueKind.Array then
-              for item in element.EnumerateArray() do
-                  yield! stateVariables item ]
+                for property in element.EnumerateObject() do
+                    yield! stateVariables property.Value
+            elif element.ValueKind = JsonValueKind.Array then
+                for item in element.EnumerateArray() do
+                    yield! stateVariables item
+        ]
         |> List.distinct
         |> List.sort
 
@@ -1806,64 +1971,76 @@ module private GeneralProfileCore =
         match ProfileCore.tryProperty (string declarationId) effects with
         | None ->
             Error
-                [ ProfileCore.diagnostic
-                      "QUINT-GENERAL-ACTION-EFFECT"
-                      "/effects"
-                      $"Action '%s{binding.Id}' has no exact effect row."
-                      "Use typecheck output from the same source."
-                      (sourceOfAction binding) ]
+                [
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-ACTION-EFFECT"
+                        "/effects"
+                        $"Action '%s{binding.Id}' has no exact effect row."
+                        "Use typecheck output from the same source."
+                        (sourceOfAction binding)
+                ]
         | Some row ->
             let reads =
-                [ match ProfileCore.tryProperty "effect" row with
-                  | Some effect ->
-                      let rec components (element: JsonElement) =
-                          [ if element.ValueKind = JsonValueKind.Object then
-                                match ProfileCore.tryProperty "kind" element with
-                                | Some kind ->
-                                    match stringValue "/effects/kind" kind with
-                                    | Ok "read" -> yield! stateVariables element
-                                    | _ -> ()
-                                | None -> ()
+                [
+                    match ProfileCore.tryProperty "effect" row with
+                    | Some effect ->
+                        let rec components (element: JsonElement) =
+                            [
+                                if element.ValueKind = JsonValueKind.Object then
+                                    match ProfileCore.tryProperty "kind" element with
+                                    | Some kind ->
+                                        match stringValue "/effects/kind" kind with
+                                        | Ok "read" -> yield! stateVariables element
+                                        | _ -> ()
+                                    | None -> ()
 
-                                for property in element.EnumerateObject() do
-                                    yield! components property.Value
-                            elif element.ValueKind = JsonValueKind.Array then
-                                for item in element.EnumerateArray() do
-                                    yield! components item ]
+                                    for property in element.EnumerateObject() do
+                                        yield! components property.Value
+                                elif element.ValueKind = JsonValueKind.Array then
+                                    for item in element.EnumerateArray() do
+                                        yield! components item
+                            ]
 
-                      yield! components effect
-                  | None -> () ]
+                        yield! components effect
+                    | None -> ()
+                ]
                 |> List.distinct
                 |> List.sort
 
             let writes =
-                [ match ProfileCore.tryProperty "effect" row with
-                  | Some effect ->
-                      let rec components (element: JsonElement) =
-                          [ if element.ValueKind = JsonValueKind.Object then
-                                match ProfileCore.tryProperty "kind" element with
-                                | Some kind ->
-                                    match stringValue "/effects/kind" kind with
-                                    | Ok "update" -> yield! stateVariables element
-                                    | _ -> ()
-                                | None -> ()
+                [
+                    match ProfileCore.tryProperty "effect" row with
+                    | Some effect ->
+                        let rec components (element: JsonElement) =
+                            [
+                                if element.ValueKind = JsonValueKind.Object then
+                                    match ProfileCore.tryProperty "kind" element with
+                                    | Some kind ->
+                                        match stringValue "/effects/kind" kind with
+                                        | Ok "update" -> yield! stateVariables element
+                                        | _ -> ()
+                                    | None -> ()
 
-                                for property in element.EnumerateObject() do
-                                    yield! components property.Value
-                            elif element.ValueKind = JsonValueKind.Array then
-                                for item in element.EnumerateArray() do
-                                    yield! components item ]
+                                    for property in element.EnumerateObject() do
+                                        yield! components property.Value
+                                elif element.ValueKind = JsonValueKind.Array then
+                                    for item in element.EnumerateArray() do
+                                        yield! components item
+                            ]
 
-                      yield! components effect
-                  | None -> () ]
+                        yield! components effect
+                    | None -> ()
+                ]
                 |> List.distinct
                 |> List.sort
 
             Ok
-                { ActionId = binding.Id
-                  Reads = reads
-                  Writes = writes
-                  Subjects = Set.union (Set.ofList reads) (Set.ofList writes) |> Set.toList }
+                {
+                    ActionId = binding.Id
+                    Reads = reads
+                    Writes = writes
+                    Subjects = Set.union (Set.ofList reads) (Set.ofList writes) |> Set.toList
+                }
 
 [<RequireQualifiedAccess>]
 module QuintGeneralProfile =
@@ -2017,18 +2194,20 @@ module QuintGeneralProfile =
             let declarations =
                 match ProfileCore.tryProperty "modules" root with
                 | Some modules when modules.ValueKind = JsonValueKind.Array ->
-                    [ for moduleElement in modules.EnumerateArray() do
-                          match
-                              ProfileCore.tryProperty "name" moduleElement,
-                              ProfileCore.tryProperty "declarations" moduleElement
-                          with
-                          | Some name, Some values when values.ValueKind = JsonValueKind.Array ->
-                              match GeneralProfileCore.stringValue "/modules/name" name with
-                              | Ok moduleName ->
-                                  for declaration in values.EnumerateArray() do
-                                      yield moduleName, declaration.Clone()
-                              | Error errors -> findings <- errors @ findings
-                          | _ -> () ]
+                    [
+                        for moduleElement in modules.EnumerateArray() do
+                            match
+                                ProfileCore.tryProperty "name" moduleElement,
+                                ProfileCore.tryProperty "declarations" moduleElement
+                            with
+                            | Some name, Some values when values.ValueKind = JsonValueKind.Array ->
+                                match GeneralProfileCore.stringValue "/modules/name" name with
+                                | Ok moduleName ->
+                                    for declaration in values.EnumerateArray() do
+                                        yield moduleName, declaration.Clone()
+                                | Error errors -> findings <- errors @ findings
+                            | _ -> ()
+                    ]
                 | _ -> []
 
             if declarations.Length > GeneralProfileCore.maxDeclarations then
@@ -2058,20 +2237,24 @@ module QuintGeneralProfile =
                 | Some [ _, declaration ] -> Ok declaration
                 | Some _ ->
                     Error
-                        [ ProfileCore.diagnostic
-                              "QUINT-GENERAL-DECLARATION-DUPLICATE"
-                              "/modules"
-                              $"Declaration '%s{fst key}.%s{snd key}' is duplicated."
-                              "Declare the selected name once."
-                              source ]
+                        [
+                            ProfileCore.diagnostic
+                                "QUINT-GENERAL-DECLARATION-DUPLICATE"
+                                "/modules"
+                                $"Declaration '%s{fst key}.%s{snd key}' is duplicated."
+                                "Declare the selected name once."
+                                source
+                        ]
                 | None ->
                     Error
-                        [ ProfileCore.diagnostic
-                              "QUINT-GENERAL-DECLARATION-MISSING"
-                              "/modules"
-                              $"Declaration '%s{fst key}.%s{snd key}' is absent."
-                              "Bind an exported declaration from the same source."
-                              source ]
+                        [
+                            ProfileCore.diagnostic
+                                "QUINT-GENERAL-DECLARATION-MISSING"
+                                "/modules"
+                                $"Declaration '%s{fst key}.%s{snd key}' is absent."
+                                "Bind an exported declaration from the same source."
+                                source
+                        ]
 
             let exports =
                 observation.ExportBindings
@@ -2087,27 +2270,33 @@ module QuintGeneralProfile =
                             | Ok("pureval" | "val") ->
                                 GeneralProfileCore.value "/modules/declarations/expr" expression
                                 |> Result.map (fun value ->
-                                    { Id = binding.Id
-                                      ModuleName = binding.ModuleName
-                                      DeclarationName = binding.DeclarationName
-                                      Value = value
-                                      Source = binding.Source })
+                                    {
+                                        Id = binding.Id
+                                        ModuleName = binding.ModuleName
+                                        DeclarationName = binding.DeclarationName
+                                        Value = value
+                                        Source = binding.Source
+                                    })
                             | _ ->
                                 Error
-                                    [ ProfileCore.diagnostic
-                                          "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                          "/modules/declarations/qualifier"
-                                          $"Export '%s{binding.Id}' is not a value declaration."
-                                          "Export only val or pure val declarations."
-                                          (GeneralProfileCore.sourceOfExport binding) ]
+                                    [
+                                        ProfileCore.diagnostic
+                                            "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                            "/modules/declarations/qualifier"
+                                            $"Export '%s{binding.Id}' is not a value declaration."
+                                            "Export only val or pure val declarations."
+                                            (GeneralProfileCore.sourceOfExport binding)
+                                    ]
                         | _ ->
                             Error
-                                [ ProfileCore.diagnostic
-                                      "QUINT-GENERAL-EXPORT-EXPRESSION"
-                                      "/modules/declarations"
-                                      $"Export '%s{binding.Id}' has no closed value expression."
-                                      "Export only value declarations."
-                                      (GeneralProfileCore.sourceOfExport binding) ]))
+                                [
+                                    ProfileCore.diagnostic
+                                        "QUINT-GENERAL-EXPORT-EXPRESSION"
+                                        "/modules/declarations"
+                                        $"Export '%s{binding.Id}' has no closed value expression."
+                                        "Export only value declarations."
+                                        (GeneralProfileCore.sourceOfExport binding)
+                                ]))
 
             let acceptedExports: QuintGeneralExport list =
                 exports
@@ -2124,7 +2313,8 @@ module QuintGeneralProfile =
                 |> (@) findings
 
             if
-                (acceptedExports |> List.sumBy (_.Value >> GeneralProfileCore.valueNodeCount)) > GeneralProfileCore.maxValueNodes
+                (acceptedExports |> List.sumBy (_.Value >> GeneralProfileCore.valueNodeCount)) >
+                    GeneralProfileCore.maxValueNodes
             then
                 findings <-
                     ProfileCore.diagnostic
@@ -2166,12 +2356,14 @@ module QuintGeneralProfile =
                 |> List.map (fun binding ->
                     if binding.Kind <> Action then
                         Error
-                            [ ProfileCore.diagnostic
-                                  "QUINT-GENERAL-ACTION-BINDING"
-                                  "/actionBindings"
-                                  $"Binding '%s{binding.Id}' is not an action."
-                                  "Use Action kind for action bindings."
-                                  (GeneralProfileCore.sourceOfAction binding) ]
+                            [
+                                ProfileCore.diagnostic
+                                    "QUINT-GENERAL-ACTION-BINDING"
+                                    "/actionBindings"
+                                    $"Binding '%s{binding.Id}' is not an action."
+                                    "Use Action kind for action bindings."
+                                    (GeneralProfileCore.sourceOfAction binding)
+                            ]
                     else
                         resolve (GeneralProfileCore.sourceOfAction binding) (binding.ModuleName, binding.CatalogueName)
                         |> Result.bind (fun declaration ->
@@ -2189,28 +2381,34 @@ module QuintGeneralProfile =
                                     GeneralProfileCore.actionEffect effects binding declarationId
                                 | Ok _, _ ->
                                     Error
-                                        [ ProfileCore.diagnostic
-                                              "QUINT-GENERAL-ACTION-BINDING"
-                                              "/modules/declarations/qualifier"
-                                              $"Binding '%s{binding.Id}' does not select an action declaration."
-                                              "Bind a declaration with the action qualifier."
-                                              (GeneralProfileCore.sourceOfAction binding) ]
+                                        [
+                                            ProfileCore.diagnostic
+                                                "QUINT-GENERAL-ACTION-BINDING"
+                                                "/modules/declarations/qualifier"
+                                                $"Binding '%s{binding.Id}' does not select an action declaration."
+                                                "Bind a declaration with the action qualifier."
+                                                (GeneralProfileCore.sourceOfAction binding)
+                                        ]
                                 | _ ->
                                     Error
-                                        [ ProfileCore.diagnostic
-                                              "QUINT-GENERAL-ACTION-EFFECT"
-                                              "/modules/declarations/id"
-                                              "Action declaration id is malformed."
-                                              "Use exact compiler output."
-                                              (GeneralProfileCore.sourceOfAction binding) ]
+                                        [
+                                            ProfileCore.diagnostic
+                                                "QUINT-GENERAL-ACTION-EFFECT"
+                                                "/modules/declarations/id"
+                                                "Action declaration id is malformed."
+                                                "Use exact compiler output."
+                                                (GeneralProfileCore.sourceOfAction binding)
+                                        ]
                             | _ ->
                                 Error
-                                    [ ProfileCore.diagnostic
-                                          "QUINT-GENERAL-ACTION-EFFECT"
-                                          "/effects"
-                                          "Action effect table is absent."
-                                          "Use complete typecheck output."
-                                          (GeneralProfileCore.sourceOfAction binding) ]))
+                                    [
+                                        ProfileCore.diagnostic
+                                            "QUINT-GENERAL-ACTION-EFFECT"
+                                            "/effects"
+                                            "Action effect table is absent."
+                                            "Use complete typecheck output."
+                                            (GeneralProfileCore.sourceOfAction binding)
+                                    ]))
 
             let acceptedEffects =
                 actionEffects
@@ -2260,88 +2458,94 @@ module QuintGeneralProfile =
 
             if List.isEmpty all then
                 Ok
-                    { Profile = observation.Profile
-                      QuintVersion = observation.QuintVersion
-                      Exports = acceptedExports
-                      Catalogue = acceptedCatalogue
-                      ActionEffects = acceptedEffects }
+                    {
+                        Profile = observation.Profile
+                        QuintVersion = observation.QuintVersion
+                        Exports = acceptedExports
+                        Catalogue = acceptedCatalogue
+                        ActionEffects = acceptedEffects
+                    }
             else
                 Error all
         with :? JsonException as ex ->
             Error
-                [ ProfileCore.diagnostic
-                      "QUINT-IR-MALFORMED"
-                      "/"
-                      ex.Message
-                      "Use valid exact typecheck --out JSON."
-                      None ]
+                [
+                    ProfileCore.diagnostic
+                        "QUINT-IR-MALFORMED"
+                        "/"
+                        ex.Message
+                        "Use valid exact typecheck --out JSON."
+                        None
+                ]
 
 [<RequireQualifiedAccess>]
 module QuintGeneralBindingManifest =
     let schema = "fsgg.quint.general-bindings/v1"
 
     let private findings (manifest: QuintGeneralBindingManifest) =
-        [ if manifest.Schema <> schema then
-              yield
-                  ProfileCore.diagnostic
-                      "QUINT-GENERAL-BINDINGS-SCHEMA"
-                      "/schema"
-                      $"Expected '%s{schema}', got '%s{manifest.Schema}'."
-                      "Use the profile-2 binding manifest schema."
-                      None
-          if manifest.Profile <> QuintGeneralProfile.identity then
-              yield
-                  ProfileCore.diagnostic
-                      "QUINT-PROFILE-IDENTITY"
-                      "/profile"
-                      $"Expected '%s{QuintGeneralProfile.identity}', got '%s{manifest.Profile}'."
-                      "Select the explicit general profile."
-                      None
-          if String.IsNullOrWhiteSpace manifest.ModuleName then
-              yield
-                  ProfileCore.diagnostic
-                      "QUINT-GENERAL-BINDINGS-MODULE"
-                      "/moduleName"
-                      "Generated binding module name is absent."
-                      "Retain the exact generated module name."
-                      None
-          yield!
-              manifest.Exports
-              |> List.indexed
-              |> List.collect (fun (index, binding) ->
-                  GeneralProfileCore.sourceFindings $"/exports/%d{index}" binding.Id binding.Source)
-          yield!
-              manifest.Actions
-              |> List.indexed
-              |> List.collect (fun (index, binding) ->
-                  GeneralProfileCore.sourceFindings $"/actions/%d{index}" binding.Id binding.Source)
-          for id, rows in manifest.Exports |> List.groupBy _.Id do
-              if rows.Length > 1 then
-                  yield
-                      ProfileCore.diagnostic
-                          "QUINT-GENERAL-EXPORT-DUPLICATE"
-                          "/exports"
-                          $"Export '%s{id}' is duplicated."
-                          "Declare each export once."
-                          None
-          for id, rows in manifest.Actions |> List.groupBy _.Id do
-              if rows.Length > 1 then
-                  yield
-                      ProfileCore.diagnostic
-                          "QUINT-GENERAL-ACTION-DUPLICATE"
-                          "/actions"
-                          $"Action '%s{id}' is duplicated."
-                          "Declare each action once."
-                          None
-          for binding in manifest.Actions do
-              if binding.Kind <> Action then
-                  yield
-                      ProfileCore.diagnostic
-                          "QUINT-GENERAL-ACTION-BINDING"
-                          "/actions"
-                          $"Binding '%s{binding.Id}' is not an action."
-                          "Use Action kind for action bindings."
-                          (Some binding.Source) ]
+        [
+            if manifest.Schema <> schema then
+                yield
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-BINDINGS-SCHEMA"
+                        "/schema"
+                        $"Expected '%s{schema}', got '%s{manifest.Schema}'."
+                        "Use the profile-2 binding manifest schema."
+                        None
+            if manifest.Profile <> QuintGeneralProfile.identity then
+                yield
+                    ProfileCore.diagnostic
+                        "QUINT-PROFILE-IDENTITY"
+                        "/profile"
+                        $"Expected '%s{QuintGeneralProfile.identity}', got '%s{manifest.Profile}'."
+                        "Select the explicit general profile."
+                        None
+            if String.IsNullOrWhiteSpace manifest.ModuleName then
+                yield
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-BINDINGS-MODULE"
+                        "/moduleName"
+                        "Generated binding module name is absent."
+                        "Retain the exact generated module name."
+                        None
+            yield!
+                manifest.Exports
+                |> List.indexed
+                |> List.collect (fun (index, binding) ->
+                    GeneralProfileCore.sourceFindings $"/exports/%d{index}" binding.Id binding.Source)
+            yield!
+                manifest.Actions
+                |> List.indexed
+                |> List.collect (fun (index, binding) ->
+                    GeneralProfileCore.sourceFindings $"/actions/%d{index}" binding.Id binding.Source)
+            for id, rows in manifest.Exports |> List.groupBy _.Id do
+                if rows.Length > 1 then
+                    yield
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-EXPORT-DUPLICATE"
+                            "/exports"
+                            $"Export '%s{id}' is duplicated."
+                            "Declare each export once."
+                            None
+            for id, rows in manifest.Actions |> List.groupBy _.Id do
+                if rows.Length > 1 then
+                    yield
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-ACTION-DUPLICATE"
+                            "/actions"
+                            $"Action '%s{id}' is duplicated."
+                            "Declare each action once."
+                            None
+            for binding in manifest.Actions do
+                if binding.Kind <> Action then
+                    yield
+                        ProfileCore.diagnostic
+                            "QUINT-GENERAL-ACTION-BINDING"
+                            "/actions"
+                            $"Binding '%s{binding.Id}' is not an action."
+                            "Use Action kind for action bindings."
+                            (Some binding.Source)
+        ]
         |> ProfileCore.sorted
 
     let private writePosition (writer: Utf8JsonWriter) (name: string) (position: QuintSourcePosition) =
@@ -2401,12 +2605,14 @@ module QuintGeneralBindingManifest =
     let deserialize (text: string) =
         let malformed message =
             Error
-                [ ProfileCore.diagnostic
-                      "QUINT-GENERAL-BINDINGS-MALFORMED"
-                      "/"
-                      message
-                      "Use canonical profile-2 binding manifest JSON."
-                      None ]
+                [
+                    ProfileCore.diagnostic
+                        "QUINT-GENERAL-BINDINGS-MALFORMED"
+                        "/"
+                        message
+                        "Use canonical profile-2 binding manifest JSON."
+                        None
+                ]
 
         try
             use document = JsonDocument.Parse text
@@ -2434,15 +2640,19 @@ module QuintGeneralBindingManifest =
             let position path (element: JsonElement) =
                 exact path (Set.ofList [ "line"; "column" ]) element
 
-                { Line = element.GetProperty("line").GetInt32()
-                  Column = element.GetProperty("column").GetInt32() }
+                {
+                    Line = element.GetProperty("line").GetInt32()
+                    Column = element.GetProperty("column").GetInt32()
+                }
 
             let source path (element: JsonElement) =
                 exact path (Set.ofList [ "path"; "start"; "end" ]) element
 
-                { Path = string "path" element
-                  Start = position (path + "/start") (element.GetProperty("start"))
-                  End = position (path + "/end") (element.GetProperty("end")) }
+                {
+                    Path = string "path" element
+                    Start = position (path + "/start") (element.GetProperty("start"))
+                    End = position (path + "/end") (element.GetProperty("end"))
+                }
 
             let array (name: string) (element: JsonElement) =
                 let value = element.GetProperty(name)
@@ -2467,11 +2677,13 @@ module QuintGeneralBindingManifest =
                     then
                         raise (JsonException(path + "/promoteCatalogueRows: expected boolean."))
 
-                    { Id = string "id" element
-                      ModuleName = string "module" element
-                      DeclarationName = string "declaration" element
-                      PromoteCatalogueRows = promote.GetBoolean()
-                      Source = source (path + "/source") (element.GetProperty("source")) })
+                    {
+                        Id = string "id" element
+                        ModuleName = string "module" element
+                        DeclarationName = string "declaration" element
+                        PromoteCatalogueRows = promote.GetBoolean()
+                        Source = source (path + "/source") (element.GetProperty("source"))
+                    })
 
             let actions =
                 array "actions" root
@@ -2479,18 +2691,22 @@ module QuintGeneralBindingManifest =
                     let path = $"/actions/%d{index}"
                     exact path (Set.ofList [ "id"; "module"; "declaration"; "source" ]) element
 
-                    { ModuleName = string "module" element
-                      CatalogueName = string "declaration" element
-                      Id = string "id" element
-                      Kind = Action
-                      Source = source (path + "/source") (element.GetProperty("source")) })
+                    {
+                        ModuleName = string "module" element
+                        CatalogueName = string "declaration" element
+                        Id = string "id" element
+                        Kind = Action
+                        Source = source (path + "/source") (element.GetProperty("source"))
+                    })
 
             let manifest =
-                { Schema = string "schema" root
-                  Profile = string "profile" root
-                  ModuleName = string "moduleName" root
-                  Exports = exports
-                  Actions = actions }
+                {
+                    Schema = string "schema" root
+                    Profile = string "profile" root
+                    ModuleName = string "moduleName" root
+                    Exports = exports
+                    Actions = actions
+                }
 
             match findings manifest with
             | [] -> Ok manifest

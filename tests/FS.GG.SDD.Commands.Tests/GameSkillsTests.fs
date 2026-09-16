@@ -57,21 +57,23 @@ module GameSkillsTests =
         let outcome = GameSkills.plan gameProfile
 
         for id in
-            [ "fs-gg-ai"
-              "fs-gg-audio"
-              "fs-gg-ballistics"
-              "fs-gg-collision"
-              "fs-gg-effects"
-              "fs-gg-game-core"
-              "fs-gg-game-fable"
-              "fs-gg-grids"
-              "fs-gg-line-drawing"
-              "fs-gg-mapcraft"
-              "fs-gg-model-swap"
-              "fs-gg-persistence"
-              "fs-gg-physics"
-              "fs-gg-playtest"
-              "fs-gg-visibility" ] do
+            [
+                "fs-gg-ai"
+                "fs-gg-audio"
+                "fs-gg-ballistics"
+                "fs-gg-collision"
+                "fs-gg-effects"
+                "fs-gg-game-core"
+                "fs-gg-game-fable"
+                "fs-gg-grids"
+                "fs-gg-line-drawing"
+                "fs-gg-mapcraft"
+                "fs-gg-model-swap"
+                "fs-gg-persistence"
+                "fs-gg-physics"
+                "fs-gg-playtest"
+                "fs-gg-visibility"
+            ] do
             Assert.Contains(id, outcome.MaterializedIds)
 
         Assert.Empty outcome.VerifyFailedIds

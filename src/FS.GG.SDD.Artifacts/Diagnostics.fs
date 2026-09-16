@@ -12,21 +12,23 @@ module Diagnostics =
         { Line: int option; Column: int option }
 
     type Diagnostic =
-        { Id: string
-          Severity: DiagnosticSeverity
-          Artifact: ArtifactRef option
-          Location: SourceLocation option
-          Message: string
-          Correction: string
-          RelatedIds: string list
-          IsToolDefect: bool
-          // A stable, machine-readable defect sub-classifier owned by the producing parser,
-          // used to disambiguate a generic diagnostic id (e.g. `workModelInconsistent`, which
-          // covers several distinct grammar defects) without cross-assembly prose-matching on
-          // the human `Message`. Set at construction via `withDefectTag`; keyed on by
-          // `LintEngine.classify`. Like `IsToolDefect`, NOT serialized (round-tripped
-          // diagnostics carry `None`) — every consumer classifies freshly-built diagnostics.
-          DefectTag: string option }
+        {
+            Id: string
+            Severity: DiagnosticSeverity
+            Artifact: ArtifactRef option
+            Location: SourceLocation option
+            Message: string
+            Correction: string
+            RelatedIds: string list
+            IsToolDefect: bool
+            // A stable, machine-readable defect sub-classifier owned by the producing parser,
+            // used to disambiguate a generic diagnostic id (e.g. `workModelInconsistent`, which
+            // covers several distinct grammar defects) without cross-assembly prose-matching on
+            // the human `Message`. Set at construction via `withDefectTag`; keyed on by
+            // `LintEngine.classify`. Like `IsToolDefect`, NOT serialized (round-tripped
+            // diagnostics carry `None`) — every consumer classifies freshly-built diagnostics.
+            DefectTag: string option
+        }
 
     // Stable defect sub-classifier tags (see `Diagnostic.DefectTag`). These are the contract
     // between the lifecycle parsers that stamp them and `LintEngine.classify` that keys on them;
@@ -55,15 +57,17 @@ module Diagnostics =
         | DiagnosticInfo -> 2
 
     let create id severity artifact location message correction relatedIds =
-        { Id = id
-          Severity = severity
-          Artifact = artifact
-          Location = location
-          Message = message
-          Correction = correction
-          RelatedIds = relatedIds
-          IsToolDefect = false
-          DefectTag = None }
+        {
+            Id = id
+            Severity = severity
+            Artifact = artifact
+            Location = location
+            Message = message
+            Correction = correction
+            RelatedIds = relatedIds
+            IsToolDefect = false
+            DefectTag = None
+        }
 
     let markToolDefect (diagnostic: Diagnostic) = { diagnostic with IsToolDefect = true }
 
@@ -109,8 +113,10 @@ module Diagnostics =
             (Some artifact)
             (if located then
                  Some
-                     { Line = Some line
-                       Column = Some column }
+                     {
+                         Line = Some line
+                         Column = Some column
+                     }
              else
                  None)
             $"Artifact '{artifact.Path}' has a YAML syntax error{position}: {message}"

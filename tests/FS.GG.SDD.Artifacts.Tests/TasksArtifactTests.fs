@@ -60,9 +60,11 @@ lifecycleNotes:
 """
 
     let snapshot text =
-        ({ Path = "work/009-tasks-command/tasks.yml"
-           Text = text
-           RawBytes = None }
+        ({
+            Path = "work/009-tasks-command/tasks.yml"
+            Text = text
+            RawBytes = None
+        }
         : FileSnapshot)
 
     [<Fact>]

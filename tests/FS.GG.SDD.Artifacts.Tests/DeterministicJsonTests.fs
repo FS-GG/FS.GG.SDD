@@ -40,19 +40,21 @@ module DeterministicJsonTests =
             TestSupport.generationResult "valid-work-item" |> fun result -> result.Json
 
         let expectedOrder =
-            [ "\"schemaVersion\":"
-              "\"modelVersion\":"
-              "\"workId\":"
-              "\"project\":"
-              "\"sources\":"
-              "\"workItem\":"
-              "\"requirements\":"
-              "\"decisions\":"
-              "\"tasks\":"
-              "\"evidence\":"
-              "\"generatedViews\":"
-              "\"diagnostics\":"
-              "\"governanceBoundaries\":" ]
+            [
+                "\"schemaVersion\":"
+                "\"modelVersion\":"
+                "\"workId\":"
+                "\"project\":"
+                "\"sources\":"
+                "\"workItem\":"
+                "\"requirements\":"
+                "\"decisions\":"
+                "\"tasks\":"
+                "\"evidence\":"
+                "\"generatedViews\":"
+                "\"diagnostics\":"
+                "\"governanceBoundaries\":"
+            ]
 
         let indexes = expectedOrder |> List.map json.IndexOf
         Assert.All(indexes, fun index -> Assert.True(index >= 0))

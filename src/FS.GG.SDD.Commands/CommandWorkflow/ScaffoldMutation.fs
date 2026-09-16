@@ -70,8 +70,10 @@ module internal ScaffoldMutation =
         writer.WriteEndObject()
 
     let private expectedToolEntries sddVersion =
-        [ "fs.gg.coord.cli", coordinationToolVersion, "fsgg-coord-engine"
-          "fs.gg.sdd.cli", sddVersion, "fsgg-sdd" ]
+        [
+            "fs.gg.coord.cli", coordinationToolVersion, "fsgg-coord-engine"
+            "fs.gg.sdd.cli", sddVersion, "fsgg-sdd"
+        ]
 
     let private ownedEntryConflict (tools: JsonElement) ((packageId: string), (version: string), (command: string)) =
         match tools.TryGetProperty packageId with
@@ -161,23 +163,25 @@ module internal ScaffoldMutation =
 
         String.Join(
             "\n",
-            [ "{"
-              "  \"version\": 1,"
-              "  \"isRoot\": true,"
-              "  \"tools\": {"
-              "    \"fs.gg.coord.cli\": {"
-              $"      \"version\": {quotedCoordVersion},"
-              "      \"commands\": ["
-              "        \"fsgg-coord-engine\""
-              "      ]"
-              "    },"
-              "    \"fs.gg.sdd.cli\": {"
-              $"      \"version\": {quotedVersion},"
-              "      \"commands\": ["
-              "        \"fsgg-sdd\""
-              "      ]"
-              "    }"
-              "  }"
-              "}"
-              "" ]
+            [
+                "{"
+                "  \"version\": 1,"
+                "  \"isRoot\": true,"
+                "  \"tools\": {"
+                "    \"fs.gg.coord.cli\": {"
+                $"      \"version\": {quotedCoordVersion},"
+                "      \"commands\": ["
+                "        \"fsgg-coord-engine\""
+                "      ]"
+                "    },"
+                "    \"fs.gg.sdd.cli\": {"
+                $"      \"version\": {quotedVersion},"
+                "      \"commands\": ["
+                "        \"fsgg-sdd\""
+                "      ]"
+                "    }"
+                "  }"
+                "}"
+                ""
+            ]
         )

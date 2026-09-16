@@ -100,11 +100,13 @@ module CommandTypes =
     module MergePolicies =
         /// The charter has no `LifecycleArtifacts` parser module, so its sections live here.
         let charterSections =
-            [ "Identity"
-              "Principles"
-              "Scope Boundaries"
-              "Policy Pointers"
-              "Lifecycle Notes" ]
+            [
+                "Identity"
+                "Principles"
+                "Scope Boundaries"
+                "Policy Pointers"
+                "Lifecycle Notes"
+            ]
 
         let charter = SectionMerge(charterSections, [], [])
 
@@ -114,21 +116,25 @@ module CommandTypes =
             SectionMerge(
                 clarificationStandardSections (),
                 [],
-                [ "Clarification Questions"
-                  "Answers"
-                  "Decisions"
-                  "Accepted Deferrals"
-                  "Remaining Ambiguity" ]
+                [
+                    "Clarification Questions"
+                    "Answers"
+                    "Decisions"
+                    "Accepted Deferrals"
+                    "Remaining Ambiguity"
+                ]
             )
 
         let checklist =
             SectionMerge(
                 checklistStandardSections (),
-                [ "Source Snapshot"
-                  "Checklist Items"
-                  "Review Results"
-                  "Accepted Deferrals"
-                  "Blocking Findings" ],
+                [
+                    "Source Snapshot"
+                    "Checklist Items"
+                    "Review Results"
+                    "Accepted Deferrals"
+                    "Blocking Findings"
+                ],
                 []
             )
 
@@ -141,14 +147,16 @@ module CommandTypes =
                 // `PlanAuthoring.replaceSectionBody` enforces this policy at the executable rewrite
                 // boundary, independently of whether its caller uses pipeline or direct application.
                 [ "Source Snapshot"; "Performance Intent" ],
-                [ "Plan Decisions"
-                  "Contract Impact"
-                  "Verification Obligations"
-                  "Migration Posture"
-                  "Generated View Impact"
-                  "Accepted Deferrals"
-                  "Planning Findings"
-                  "Advisory Notes" ]
+                [
+                    "Plan Decisions"
+                    "Contract Impact"
+                    "Verification Obligations"
+                    "Migration Posture"
+                    "Generated View Impact"
+                    "Accepted Deferrals"
+                    "Planning Findings"
+                    "Advisory Notes"
+                ]
             )
 
         let tasks = StructuredMerge
@@ -164,13 +172,15 @@ module CommandTypes =
         /// "authored" — a claim the tag contradicts and a re-run disproves. Drift guards now hold
         /// them to this list (#309), so the docs cannot describe an ownership the code does not have.
         let byStage: (SddCommand * string * MergePolicy) list =
-            [ Charter, "charter.md", charter
-              Specify, "spec.md", specification
-              Clarify, "clarifications.md", clarifications
-              Checklist, "checklist.md", checklist
-              Plan, "plan.md", plan
-              Tasks, "tasks.yml", tasks
-              Evidence, "evidence.yml", evidence ]
+            [
+                Charter, "charter.md", charter
+                Specify, "spec.md", specification
+                Clarify, "clarifications.md", clarifications
+                Checklist, "checklist.md", checklist
+                Plan, "plan.md", plan
+                Tasks, "tasks.yml", tasks
+                Evidence, "evidence.yml", evidence
+            ]
 
     type ArtifactOperation =
         | Create
@@ -193,176 +203,196 @@ module CommandTypes =
         | NoChange
 
     type CommandRequest =
-        { Command: SddCommand
-          ProjectRoot: string
-          WorkId: string option
-          Title: string option
-          InputText: string option
-          OutputFormat: OutputFormat
-          DryRun: bool
-          GeneratorVersion: GeneratorVersion
-          Provider: string option
-          Parameters: (string * string) list
-          Force: bool
-          TemplateUpdate: bool
-          AssumeYes: bool
-          IsInteractive: bool
-          Artifact: string option
-          Explain: bool
-          // Evidence input (`fsgg-sdd evidence --from-tests <path>`); ignored by other commands
-          // (feature 077). Pre-maps each newly scaffolded obligation to a verification-kind source.
-          FromTests: string option
-          // Evidence input (`fsgg-sdd evidence --from-test-report <path>`); ignored by other commands
-          // (FS.GG.SDD#350, ADR-0035). Records an `observedRun` receipt from a runner-produced TRX /
-          // JUnit report that SDD reads, parses, and hashes.
-          //
-          // DELIBERATELY NOT `--from-tests`. That flag names where the tests LIVE (a project path,
-          // seeded onto scaffolded obligations); this one names a REPORT OF A RUN. ADR-0035 proposed
-          // reusing `--from-tests`, having read it as "already takes a report path" — it does not, and
-          // three committed tests pass it a project directory. Overloading one flag with both meanings
-          // would make an unparseable *directory* a blocking error on the feature-077 path.
-          FromTestReport: string option
-          // Evidence input (`fsgg-sdd evidence --sync-observed-run <trx>`); ignored by other commands
-          // (FS.GG.SDD#550). Re-stamps every obligation that ALREADY carries an `observedRun` receipt
-          // sourced from this report, recomputing the digest and the passed/failed/skipped counts from
-          // the report's current bytes. The maintenance complement to `--from-test-report`: when a TRX is
-          // regenerated (e.g. a test is added late), the authored receipts pinned to it go stale, and this
-          // reconciles them in place without re-typing. Receipts sourced from a DIFFERENT report are left
-          // untouched. `None` ⇒ inert. Mutually exclusive with `--from-test-report`.
-          SyncObservedRun: string option
-          // Feature 086: `fsgg-sdd surface --update` refreshes the `docs/api-surface/**` baselines
-          // from the authored `.fsi` signatures; default false (read-only `--check`).
-          SurfaceUpdate: bool
-          // Feature 090: `fsgg-sdd plan --accept-upstream` re-baselines the plan's
-          // `## Source Snapshot` against the current sources; default false (a moved digest blocks
-          // with `stalePlanSnapshot` and writes nothing). Read only by `plan`.
-          AcceptUpstream: bool
-          // FS.GG.SDD#350 / ADR-0035 stage 3: `--require-observed` makes an obligation fail CLOSED —
-          // a `result: pass` carrying no `observedRun` receipt stops satisfying. Default false, which
-          // is byte-for-byte the pre-#350 behavior.
-          //
-          // Read by BOTH `verify` and `ship`, and that is not redundancy. `ship` does NOT simply
-          // inherit the gate by refusing a non-`verificationReady` record: a blocked `verify` writes
-          // nothing, so it leaves the PREVIOUS green verify.json standing and still digest-current,
-          // and a `ship` that trusted `verificationReady` alone certified a lifecycle `verify` had
-          // just refused. Deleting the `ship` arm as redundant re-opens exactly that fail-open.
-          RequireObserved: bool }
+        {
+            Command: SddCommand
+            ProjectRoot: string
+            WorkId: string option
+            Title: string option
+            InputText: string option
+            OutputFormat: OutputFormat
+            DryRun: bool
+            GeneratorVersion: GeneratorVersion
+            Provider: string option
+            Parameters: (string * string) list
+            Force: bool
+            TemplateUpdate: bool
+            AssumeYes: bool
+            IsInteractive: bool
+            Artifact: string option
+            Explain: bool
+            // Evidence input (`fsgg-sdd evidence --from-tests <path>`); ignored by other commands
+            // (feature 077). Pre-maps each newly scaffolded obligation to a verification-kind source.
+            FromTests: string option
+            // Evidence input (`fsgg-sdd evidence --from-test-report <path>`); ignored by other commands
+            // (FS.GG.SDD#350, ADR-0035). Records an `observedRun` receipt from a runner-produced TRX /
+            // JUnit report that SDD reads, parses, and hashes.
+            //
+            // DELIBERATELY NOT `--from-tests`. That flag names where the tests LIVE (a project path,
+            // seeded onto scaffolded obligations); this one names a REPORT OF A RUN. ADR-0035 proposed
+            // reusing `--from-tests`, having read it as "already takes a report path" — it does not, and
+            // three committed tests pass it a project directory. Overloading one flag with both meanings
+            // would make an unparseable *directory* a blocking error on the feature-077 path.
+            FromTestReport: string option
+            // Evidence input (`fsgg-sdd evidence --sync-observed-run <trx>`); ignored by other commands
+            // (FS.GG.SDD#550). Re-stamps every obligation that ALREADY carries an `observedRun` receipt
+            // sourced from this report, recomputing the digest and the passed/failed/skipped counts from
+            // the report's current bytes. The maintenance complement to `--from-test-report`: when a TRX is
+            // regenerated (e.g. a test is added late), the authored receipts pinned to it go stale, and this
+            // reconciles them in place without re-typing. Receipts sourced from a DIFFERENT report are left
+            // untouched. `None` ⇒ inert. Mutually exclusive with `--from-test-report`.
+            SyncObservedRun: string option
+            // Feature 086: `fsgg-sdd surface --update` refreshes the `docs/api-surface/**` baselines
+            // from the authored `.fsi` signatures; default false (read-only `--check`).
+            SurfaceUpdate: bool
+            // Feature 090: `fsgg-sdd plan --accept-upstream` re-baselines the plan's
+            // `## Source Snapshot` against the current sources; default false (a moved digest blocks
+            // with `stalePlanSnapshot` and writes nothing). Read only by `plan`.
+            AcceptUpstream: bool
+            // FS.GG.SDD#350 / ADR-0035 stage 3: `--require-observed` makes an obligation fail CLOSED —
+            // a `result: pass` carrying no `observedRun` receipt stops satisfying. Default false, which
+            // is byte-for-byte the pre-#350 behavior.
+            //
+            // Read by BOTH `verify` and `ship`, and that is not redundancy. `ship` does NOT simply
+            // inherit the gate by refusing a non-`verificationReady` record: a blocked `verify` writes
+            // nothing, so it leaves the PREVIOUS green verify.json standing and still digest-current,
+            // and a `ship` that trusted `verificationReady` alone certified a lifecycle `verify` had
+            // just refused. Deleting the `ship` arm as redundant re-opens exactly that fail-open.
+            RequireObserved: bool
+        }
 
     type GeneratedViewSource =
-        { Path: string
-          Digest: SourceDigest option
-          SchemaVersion: int option
-          SchemaStatus: string option }
+        {
+            Path: string
+            Digest: SourceDigest option
+            SchemaVersion: int option
+            SchemaStatus: string option
+        }
 
     type ArtifactChange =
-        { Path: string
-          Kind: string
-          Ownership: string
-          Operation: ArtifactOperation
-          BeforeDigest: SourceDigest option
-          AfterDigest: SourceDigest option
-          SafeWriteDecision: string
-          DiagnosticIds: string list }
+        {
+            Path: string
+            Kind: string
+            Ownership: string
+            Operation: ArtifactOperation
+            BeforeDigest: SourceDigest option
+            AfterDigest: SourceDigest option
+            SafeWriteDecision: string
+            DiagnosticIds: string list
+        }
 
     type GeneratedViewState =
-        { Path: string
-          Kind: string
-          SchemaVersion: int option
-          Generator: GeneratorVersion option
-          Sources: GeneratedViewSource list
-          Currency: GeneratedViewCurrency
-          DiagnosticIds: string list }
+        {
+            Path: string
+            Kind: string
+            SchemaVersion: int option
+            Generator: GeneratorVersion option
+            Sources: GeneratedViewSource list
+            Currency: GeneratedViewCurrency
+            DiagnosticIds: string list
+        }
 
     type SpecificationSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          StoryIds: string list
-          RequirementIds: string list
-          AcceptanceScenarioIds: string list
-          AmbiguityIds: string list }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            StoryIds: string list
+            RequirementIds: string list
+            AcceptanceScenarioIds: string list
+            AmbiguityIds: string list
+        }
 
     type ClarificationSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          SourceSpec: string
-          QuestionIds: string list
-          AnsweredQuestionIds: string list
-          DecisionIds: string list
-          AcceptedDeferralIds: string list
-          RemainingAmbiguityCount: int
-          BlockingAmbiguityCount: int }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            SourceSpec: string
+            QuestionIds: string list
+            AnsweredQuestionIds: string list
+            DecisionIds: string list
+            AcceptedDeferralIds: string list
+            RemainingAmbiguityCount: int
+            BlockingAmbiguityCount: int
+        }
 
     type ChecklistSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          ItemIds: string list
-          ResultIds: string list
-          PassedCount: int
-          FailedBlockingCount: int
-          AcceptedDeferralCount: int
-          StaleResultCount: int
-          AdvisoryCount: int }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            ItemIds: string list
+            ResultIds: string list
+            PassedCount: int
+            FailedBlockingCount: int
+            AcceptedDeferralCount: int
+            StaleResultCount: int
+            AdvisoryCount: int
+        }
 
     type PlanSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          SourceChecklist: string
-          DecisionIds: string list
-          ContractReferenceIds: string list
-          VerificationObligationIds: string list
-          MigrationNoteIds: string list
-          GeneratedViewImpactIds: string list
-          AcceptedDeferralCount: int
-          StaleDecisionCount: int
-          BlockingFindingCount: int
-          AdvisoryCount: int }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            SourceChecklist: string
+            DecisionIds: string list
+            ContractReferenceIds: string list
+            VerificationObligationIds: string list
+            MigrationNoteIds: string list
+            GeneratedViewImpactIds: string list
+            AcceptedDeferralCount: int
+            StaleDecisionCount: int
+            BlockingFindingCount: int
+            AdvisoryCount: int
+        }
 
     type TasksSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          SourceChecklist: string
-          SourcePlan: string
-          TaskIds: string list
-          DependencyCount: int
-          RequiredSkillCount: int
-          RequiredEvidenceCount: int
-          PendingCount: int
-          InProgressCount: int
-          DoneCount: int
-          SkippedCount: int
-          StaleCount: int
-          AcceptedDeferralCount: int
-          BlockingFindingCount: int
-          AdvisoryCount: int }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            SourceChecklist: string
+            SourcePlan: string
+            TaskIds: string list
+            DependencyCount: int
+            RequiredSkillCount: int
+            RequiredEvidenceCount: int
+            PendingCount: int
+            InProgressCount: int
+            DoneCount: int
+            SkippedCount: int
+            StaleCount: int
+            AcceptedDeferralCount: int
+            BlockingFindingCount: int
+            AdvisoryCount: int
+        }
 
     type AnalysisSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          AnalysisPath: string
-          SourceCount: int
-          SourceRelationshipCount: int
-          ReadyFindingCount: int
-          AdvisoryCount: int
-          WarningCount: int
-          BlockingCount: int
-          StaleSourceCount: int
-          MissingDispositionCount: int
-          MalformedSourceCount: int
-          GeneratedViewFindingCount: int
-          AcceptedDeferralCount: int
-          Readiness: string }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            AnalysisPath: string
+            SourceCount: int
+            SourceRelationshipCount: int
+            ReadyFindingCount: int
+            AdvisoryCount: int
+            WarningCount: int
+            BlockingCount: int
+            StaleSourceCount: int
+            MissingDispositionCount: int
+            MalformedSourceCount: int
+            GeneratedViewFindingCount: int
+            AcceptedDeferralCount: int
+            Readiness: string
+        }
 
     type EvidenceSummary =
         {
@@ -480,32 +510,36 @@ module CommandTypes =
         | GuidanceAdvisory
 
     type AgentGuidanceFinding =
-        { Id: string
-          Severity: string
-          Category: string
-          Path: string
-          RelatedIds: string list
-          Message: string
-          Correction: string }
+        {
+            Id: string
+            Severity: string
+            Category: string
+            Path: string
+            RelatedIds: string list
+            Message: string
+            Correction: string
+        }
 
     type AgentGuidanceSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          GeneratedRoots: string list
-          GeneratedTargetIds: string list
-          RefusedTargetIds: string list
-          FindingIds: string list
-          ReadyFindingCount: int
-          AdvisoryCount: int
-          WarningCount: int
-          BlockingCount: int
-          Disposition: string
-          EquivalenceRequired: bool
-          DivergentTargetIds: string list
-          GeneratedViewState: string
-          SourceSnapshotCount: int
-          Readiness: string }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            GeneratedRoots: string list
+            GeneratedTargetIds: string list
+            RefusedTargetIds: string list
+            FindingIds: string list
+            ReadyFindingCount: int
+            AdvisoryCount: int
+            WarningCount: int
+            BlockingCount: int
+            Disposition: string
+            EquivalenceRequired: bool
+            DivergentTargetIds: string list
+            GeneratedViewState: string
+            SourceSnapshotCount: int
+            Readiness: string
+        }
 
     type RefreshDisposition =
         | RefreshedCurrent
@@ -517,53 +551,59 @@ module CommandTypes =
         | EarlyStage
 
     type RefreshSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          SummaryPath: string
-          RefreshedViewIds: string list
-          AlreadyCurrentViewIds: string list
-          BlockedViewIds: string list
-          NotApplicableViewIds: string list
-          PreservedAuthoredPaths: string list
-          FindingIds: string list
-          AdvisoryCount: int
-          WarningCount: int
-          BlockingCount: int
-          Disposition: string
-          PerViewState: (string * string) list
-          SourceSnapshotCount: int
-          Readiness: string }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            SummaryPath: string
+            RefreshedViewIds: string list
+            AlreadyCurrentViewIds: string list
+            BlockedViewIds: string list
+            NotApplicableViewIds: string list
+            PreservedAuthoredPaths: string list
+            FindingIds: string list
+            AdvisoryCount: int
+            WarningCount: int
+            BlockingCount: int
+            Disposition: string
+            PerViewState: (string * string) list
+            SourceSnapshotCount: int
+            Readiness: string
+        }
 
     type ProviderInvocationResult =
-        { CommandLine: string
-          ProcessStarted: bool
-          ExitCode: int option
-          StandardOutput: string
-          StandardOutputTruncated: bool
-          StandardError: string
-          StandardErrorTruncated: bool }
+        {
+            CommandLine: string
+            ProcessStarted: bool
+            ExitCode: int option
+            StandardOutput: string
+            StandardOutputTruncated: bool
+            StandardError: string
+            StandardErrorTruncated: bool
+        }
 
     type ScaffoldSummary =
-        { ProviderName: string option
-          ProviderContractVersion: string option
-          RequiredMinimumCliVersion: string option
-          Outcome: string
-          SkeletonCreated: bool
-          ProviderInvoked: bool
-          ProducedPathCount: int
-          ProducedPaths: string list
-          MirroredPaths: string list
-          MaterializedDriverPaths: string list
-          MaterializedGameSkillPaths: string list
-          MaterializedRenderingSkillPaths: string list
-          EffectiveParameters: (string * string) list
-          RepoInitOutcome: string
-          ToolManifestOutcome: string
-          ExecutableScriptCount: int
-          ExecutableScriptsSkipped: int
-          NextActionHint: string
-          ProviderInvocation: ProviderInvocationResult option }
+        {
+            ProviderName: string option
+            ProviderContractVersion: string option
+            RequiredMinimumCliVersion: string option
+            Outcome: string
+            SkeletonCreated: bool
+            ProviderInvoked: bool
+            ProducedPathCount: int
+            ProducedPaths: string list
+            MirroredPaths: string list
+            MaterializedDriverPaths: string list
+            MaterializedGameSkillPaths: string list
+            MaterializedRenderingSkillPaths: string list
+            EffectiveParameters: (string * string) list
+            RepoInitOutcome: string
+            ToolManifestOutcome: string
+            ExecutableScriptCount: int
+            ExecutableScriptsSkipped: int
+            NextActionHint: string
+            ProviderInvocation: ProviderInvocationResult option
+        }
 
     // Feature 068 / US2: the closed remediation-step vocabularies, formerly raw strings on
     // `ReconciliationStep` (a typo compiled). The `…Value` mappings below reproduce the exact
@@ -583,101 +623,121 @@ module CommandTypes =
         | NoTarget
 
     type ReconciliationStep =
-        { StepId: ReconciliationStepId
-          Kind: ReconciliationStepId
-          DiffPreview: string
-          Outcome: ReconciliationOutcome
-          TargetPaths: string list }
+        {
+            StepId: ReconciliationStepId
+            Kind: ReconciliationStepId
+            DiffPreview: string
+            Outcome: ReconciliationOutcome
+            TargetPaths: string list
+        }
 
     type DoctorSummary =
-        { HasProvenance: bool
-          ProviderName: string option
-          InstalledCliVersion: string
-          RequiredMinimumCliVersion: string option
-          RequiredMinimumCliVersionSource: string option
-          CliAxis: string
-          CliBehindBy: string option
-          ExpectedArtifactCount: int
-          MissingArtifactPaths: string list
-          SkillDriftPaths: string list
-          PreviewSteps: ReconciliationStep list
-          IsCoherent: bool }
+        {
+            HasProvenance: bool
+            ProviderName: string option
+            InstalledCliVersion: string
+            RequiredMinimumCliVersion: string option
+            RequiredMinimumCliVersionSource: string option
+            CliAxis: string
+            CliBehindBy: string option
+            ExpectedArtifactCount: int
+            MissingArtifactPaths: string list
+            SkillDriftPaths: string list
+            PreviewSteps: ReconciliationStep list
+            IsCoherent: bool
+        }
 
     type UpgradeSummary =
-        { HasProvenance: bool
-          Mode: string
-          AlreadyCoherent: bool
-          Steps: ReconciliationStep list
-          AppliedStepIds: ReconciliationStepId list
-          SkippedStepIds: ReconciliationStepId list
-          FailedStepIds: ReconciliationStepId list
-          SkillDriftPaths: string list
-          ResidualDrift: bool
-          NextActionHint: string }
+        {
+            HasProvenance: bool
+            Mode: string
+            AlreadyCoherent: bool
+            Steps: ReconciliationStep list
+            AppliedStepIds: ReconciliationStepId list
+            SkippedStepIds: ReconciliationStepId list
+            FailedStepIds: ReconciliationStepId list
+            SkillDriftPaths: string list
+            ResidualDrift: bool
+            NextActionHint: string
+        }
 
     // Feature 087: one classified drifted `.fsi`. See CommandTypes.fsi for docs.
     type ClassifiedEntry =
-        { Path: string
-          Classification: string
-          RecommendedBump: string
-          AddedMembers: string list
-          RemovedOrChangedMembers: string list
-          UnparseableFallback: bool }
+        {
+            Path: string
+            Classification: string
+            RecommendedBump: string
+            AddedMembers: string list
+            RemovedOrChangedMembers: string list
+            UnparseableFallback: bool
+        }
 
     // Feature 087: the run-level additive-vs-breaking classification. See CommandTypes.fsi for docs.
     type SurfaceClassification =
-        { Verdict: string
-          RecommendedBump: string
-          Entries: ClassifiedEntry list }
+        {
+            Verdict: string
+            RecommendedBump: string
+            Entries: ClassifiedEntry list
+        }
 
     // Feature 094: the coherent-set version obligation a classified mutation implies. See
     // CommandTypes.fsi for docs.
     type VersionBumpPrompt =
-        { AxisFile: string
-          AxisProperty: string
-          AxisState: string
-          CurrentVersion: string option
-          RequiredBump: string
-          SuggestedVersion: string option }
+        {
+            AxisFile: string
+            AxisProperty: string
+            AxisState: string
+            CurrentVersion: string option
+            RequiredBump: string
+            SuggestedVersion: string option
+        }
 
     // Feature 086: the API-surface drift picture `surface` emits. See CommandTypes.fsi for docs.
     type SurfaceSummary =
-        { SourceRoot: string
-          BaselineRoot: string
-          Mode: string
-          CheckedCount: int
-          MissingBaselinePaths: string list
-          DriftedSourcePaths: string list
-          OrphanBaselinePaths: string list
-          UpdatedBaselinePaths: string list
-          IsCoherent: bool
-          Classification: SurfaceClassification
-          VersionBump: VersionBumpPrompt }
+        {
+            SourceRoot: string
+            BaselineRoot: string
+            Mode: string
+            CheckedCount: int
+            MissingBaselinePaths: string list
+            DriftedSourcePaths: string list
+            OrphanBaselinePaths: string list
+            UpdatedBaselinePaths: string list
+            IsCoherent: bool
+            Classification: SurfaceClassification
+            VersionBump: VersionBumpPrompt
+        }
 
     type DependencySurfaceEntry =
-        { PackageId: string
-          Version: string
-          Status: string
-          CommittedSha256: string option
-          ObservedSha256: string option
-          ObservedSymbolCount: int }
+        {
+            PackageId: string
+            Version: string
+            Status: string
+            CommittedSha256: string option
+            ObservedSha256: string option
+            ObservedSymbolCount: int
+        }
 
     type DependencySurfaceSummary =
-        { BaselineRoot: string
-          Mode: string
-          CheckedCount: int
-          Entries: DependencySurfaceEntry list
-          DriftedPackages: string list
-          UnavailablePackages: string list
-          UpdatedPackages: string list
-          IsCoherent: bool }
+        {
+            BaselineRoot: string
+            Mode: string
+            CheckedCount: int
+            Entries: DependencySurfaceEntry list
+            DriftedPackages: string list
+            UnavailablePackages: string list
+            UpdatedPackages: string list
+            IsCoherent: bool
+        }
 
     type GovernanceCompatibilityFact =
-        { Path: string
-          Relationship: string
-          RequiredBySdd: bool
-          State: string
-          DiagnosticIds: string list }
+        {
+            Path: string
+            Relationship: string
+            RequiredBySdd: bool
+            State: string
+            DiagnosticIds: string list
+        }
 
     [<RequireQualifiedAccess>]
     type LintArtifactKind =
@@ -704,33 +764,43 @@ module CommandTypes =
         | UnusableInput
 
     type GrammarPointer =
-        { Skill: string
-          Section: string option
-          ExampleTag: string option }
+        {
+            Skill: string
+            Section: string option
+            ExampleTag: string option
+        }
 
     type LintDefect =
-        { Class: LintDefectClass
-          Diagnostic: Diagnostic
-          GrammarPointer: GrammarPointer option }
+        {
+            Class: LintDefectClass
+            Diagnostic: Diagnostic
+            GrammarPointer: GrammarPointer option
+        }
 
     type LintSummary =
-        { ArtifactPath: string
-          Kind: LintArtifactKind
-          Defects: LintDefect list
-          Outcome: LintOutcome }
+        {
+            ArtifactPath: string
+            Kind: LintArtifactKind
+            Defects: LintDefect list
+            Outcome: LintOutcome
+        }
 
     type NextAction =
-        { ActionId: string
-          Command: SddCommand option
-          WorkId: string option
-          Reason: string
-          RequiredArtifacts: string list
-          BlockingDiagnosticIds: string list }
+        {
+            ActionId: string
+            Command: SddCommand option
+            WorkId: string option
+            Reason: string
+            RequiredArtifacts: string list
+            BlockingDiagnosticIds: string list
+        }
 
     type HelpFlag =
-        { Name: string
-          Argument: string option
-          Description: string }
+        {
+            Name: string
+            Argument: string option
+            Description: string
+        }
 
     type HelpCommandEntry = { Name: string; Description: string }
 
@@ -739,11 +809,13 @@ module CommandTypes =
         | Command of string
 
     type HelpSummary =
-        { Scope: HelpScope
-          Usage: string
-          Commands: HelpCommandEntry list
-          GlobalFlags: HelpFlag list
-          CommandFlags: HelpFlag list }
+        {
+            Scope: HelpScope
+            Usage: string
+            Commands: HelpCommandEntry list
+            GlobalFlags: HelpFlag list
+            CommandFlags: HelpFlag list
+        }
 
     // Feature 084: lifecycle-status footer types (see CommandTypes.fsi for docs).
     [<RequireQualifiedAccess>]
@@ -755,64 +827,70 @@ module CommandTypes =
         | Blocked
 
     type StageEntry =
-        { Command: SddCommand
-          Ordinal: int
-          State: StageState }
+        {
+            Command: SddCommand
+            Ordinal: int
+            State: StageState
+        }
 
     type LifecycleStatus =
-        { WorkId: string option
-          Stages: StageEntry list
-          CurrentOrdinal: int option
-          TotalStages: int
-          Outcome: CommandOutcome
-          NextCommand: SddCommand option
-          IsLifecycleStage: bool }
+        {
+            WorkId: string option
+            Stages: StageEntry list
+            CurrentOrdinal: int option
+            TotalStages: int
+            Outcome: CommandOutcome
+            NextCommand: SddCommand option
+            IsLifecycleStage: bool
+        }
 
     type CommandReport =
-        { SchemaVersion: int
-          ReportVersion: string
-          // The fsgg-sdd version that produced this report (FS-GG/FS.GG.SDD#305). A stale toolchain is
-          // otherwise invisible in the artifacts it emits, so a feedback report cannot be told apart
-          // from a stale one without re-verifying every finding against main. Sourced from the request's
-          // injected GeneratorVersion — never read from the assembly here, which would put reflection in
-          // pure code.
-          ToolVersion: string
-          Command: SddCommand
-          ProjectRoot: string
-          OutputFormat: OutputFormat
-          DryRun: bool
-          Outcome: CommandOutcome
-          // A positive "clean, advance" signal that disambiguates `Outcome = NoChange`: `true` when the
-          // stage ran, every artifact it evaluated was already present and current (all recorded changes
-          // NoChange/Preserve), and nothing blocked — so the work item is coherent for this stage and it
-          // is safe to advance. `false` for a bare no-op (nothing recorded) and for every non-NoChange
-          // outcome. Orthogonal to `Outcome`; leaves the outcome vocabulary stable (FS-GG/FS.GG.SDD#183).
-          Coherent: bool
-          WorkId: string option
-          ChangedArtifacts: ArtifactChange list
-          Specification: SpecificationSummary option
-          Clarification: ClarificationSummary option
-          Checklist: ChecklistSummary option
-          Plan: PlanSummary option
-          Tasks: TasksSummary option
-          Analysis: AnalysisSummary option
-          Evidence: EvidenceSummary option
-          Verification: VerificationSummary option
-          Ship: ShipSummary option
-          AgentGuidance: AgentGuidanceSummary option
-          Refresh: RefreshSummary option
-          Scaffold: ScaffoldSummary option
-          Doctor: DoctorSummary option
-          Upgrade: UpgradeSummary option
-          Lint: LintSummary option
-          Surface: SurfaceSummary option
-          DependencySurface: DependencySurfaceSummary option
-          GeneratedViews: GeneratedViewState list
-          Diagnostics: Diagnostic list
-          GovernanceCompatibility: GovernanceCompatibilityFact list
-          NextAction: NextAction option
-          Help: HelpSummary option
-          LifecycleStatus: LifecycleStatus }
+        {
+            SchemaVersion: int
+            ReportVersion: string
+            // The fsgg-sdd version that produced this report (FS-GG/FS.GG.SDD#305). A stale toolchain is
+            // otherwise invisible in the artifacts it emits, so a feedback report cannot be told apart
+            // from a stale one without re-verifying every finding against main. Sourced from the request's
+            // injected GeneratorVersion — never read from the assembly here, which would put reflection in
+            // pure code.
+            ToolVersion: string
+            Command: SddCommand
+            ProjectRoot: string
+            OutputFormat: OutputFormat
+            DryRun: bool
+            Outcome: CommandOutcome
+            // A positive "clean, advance" signal that disambiguates `Outcome = NoChange`: `true` when the
+            // stage ran, every artifact it evaluated was already present and current (all recorded changes
+            // NoChange/Preserve), and nothing blocked — so the work item is coherent for this stage and it
+            // is safe to advance. `false` for a bare no-op (nothing recorded) and for every non-NoChange
+            // outcome. Orthogonal to `Outcome`; leaves the outcome vocabulary stable (FS-GG/FS.GG.SDD#183).
+            Coherent: bool
+            WorkId: string option
+            ChangedArtifacts: ArtifactChange list
+            Specification: SpecificationSummary option
+            Clarification: ClarificationSummary option
+            Checklist: ChecklistSummary option
+            Plan: PlanSummary option
+            Tasks: TasksSummary option
+            Analysis: AnalysisSummary option
+            Evidence: EvidenceSummary option
+            Verification: VerificationSummary option
+            Ship: ShipSummary option
+            AgentGuidance: AgentGuidanceSummary option
+            Refresh: RefreshSummary option
+            Scaffold: ScaffoldSummary option
+            Doctor: DoctorSummary option
+            Upgrade: UpgradeSummary option
+            Lint: LintSummary option
+            Surface: SurfaceSummary option
+            DependencySurface: DependencySurfaceSummary option
+            GeneratedViews: GeneratedViewState list
+            Diagnostics: Diagnostic list
+            GovernanceCompatibility: GovernanceCompatibilityFact list
+            NextAction: NextAction option
+            Help: HelpSummary option
+            LifecycleStatus: LifecycleStatus
+        }
 
     type CommandEffect =
         | ReadFile of path: string
@@ -825,13 +903,15 @@ module CommandTypes =
         | Confirm of stepId: string * prompt: string
 
     type ProcessRunResult =
-        { Started: bool
-          ExitCode: int
-          Command: string
-          StandardOutput: string
-          StandardOutputTruncated: bool
-          StandardError: string
-          StandardErrorTruncated: bool }
+        {
+            Started: bool
+            ExitCode: int
+            Command: string
+            StandardOutput: string
+            StandardOutputTruncated: bool
+            StandardError: string
+            StandardErrorTruncated: bool
+        }
 
     // FS.GG.SDD#745, decision FS.GG.SDD#754. The read edge's three states. Before this the core
     // had two — bytes, or nothing — and `None` meant ABSENT, so a file that exists and cannot be
@@ -898,29 +978,31 @@ module CommandTypes =
         }
 
     type CommandModel =
-        { Request: CommandRequest
-          PendingEffects: CommandEffect list
-          InterpretedEffects: CommandEffectResult list
-          Diagnostics: Diagnostic list
-          Specification: SpecificationSummary option
-          Clarification: ClarificationSummary option
-          Checklist: ChecklistSummary option
-          Plan: PlanSummary option
-          Tasks: TasksSummary option
-          Analysis: AnalysisSummary option
-          Evidence: EvidenceSummary option
-          Verification: VerificationSummary option
-          Ship: ShipSummary option
-          AgentGuidance: AgentGuidanceSummary option
-          Refresh: RefreshSummary option
-          Scaffold: ScaffoldSummary option
-          Doctor: DoctorSummary option
-          Upgrade: UpgradeSummary option
-          Lint: LintSummary option
-          Surface: SurfaceSummary option
-          DependencySurface: DependencySurfaceSummary option
-          GeneratedViews: GeneratedViewState list
-          Report: CommandReport option }
+        {
+            Request: CommandRequest
+            PendingEffects: CommandEffect list
+            InterpretedEffects: CommandEffectResult list
+            Diagnostics: Diagnostic list
+            Specification: SpecificationSummary option
+            Clarification: ClarificationSummary option
+            Checklist: ChecklistSummary option
+            Plan: PlanSummary option
+            Tasks: TasksSummary option
+            Analysis: AnalysisSummary option
+            Evidence: EvidenceSummary option
+            Verification: VerificationSummary option
+            Ship: ShipSummary option
+            AgentGuidance: AgentGuidanceSummary option
+            Refresh: RefreshSummary option
+            Scaffold: ScaffoldSummary option
+            Doctor: DoctorSummary option
+            Upgrade: UpgradeSummary option
+            Lint: LintSummary option
+            Surface: SurfaceSummary option
+            DependencySurface: DependencySurfaceSummary option
+            GeneratedViews: GeneratedViewState list
+            Report: CommandReport option
+        }
 
     type CommandMsg =
         | EffectInterpreted of CommandEffectResult

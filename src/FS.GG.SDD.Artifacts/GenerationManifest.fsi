@@ -25,29 +25,35 @@ module GenerationManifest =
         | CurrencyMalformed
 
     type SourceIdentity =
-        { Artifact: ArtifactRef
-          Digest: SourceDigest
-          SchemaVersion: SchemaVersion option
-          SchemaStatus: SchemaCompatibilityStatus
-          RawSchemaVersion: string option }
+        {
+            Artifact: ArtifactRef
+            Digest: SourceDigest
+            SchemaVersion: SchemaVersion option
+            SchemaStatus: SchemaCompatibilityStatus
+            RawSchemaVersion: string option
+        }
 
     type GenerationManifest =
-        { View: ArtifactRef
-          Kind: GeneratedViewKind
-          SchemaVersion: SchemaVersion
-          Generator: GeneratorVersion
-          Sources: SourceIdentity list
-          OutputDigest: OutputDigest option
-          Currency: GeneratedViewCurrencyStatus
-          Diagnostics: Diagnostic list }
+        {
+            View: ArtifactRef
+            Kind: GeneratedViewKind
+            SchemaVersion: SchemaVersion
+            Generator: GeneratorVersion
+            Sources: SourceIdentity list
+            OutputDigest: OutputDigest option
+            Currency: GeneratedViewCurrencyStatus
+            Diagnostics: Diagnostic list
+        }
 
     type GeneratedWorkModelMetadata =
-        { Path: string
-          SchemaVersion: SchemaVersion option
-          ModelVersion: string option
-          Generator: GeneratorVersion option
-          Sources: SourceIdentity list
-          OutputDigest: OutputDigest option }
+        {
+            Path: string
+            SchemaVersion: SchemaVersion option
+            ModelVersion: string option
+            Generator: GeneratorVersion option
+            Sources: SourceIdentity list
+            OutputDigest: OutputDigest option
+        }
 
     val viewKindValue: kind: GeneratedViewKind -> string
     val currencyStatusValue: status: GeneratedViewCurrencyStatus -> string

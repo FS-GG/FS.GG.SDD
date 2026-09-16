@@ -35,8 +35,10 @@ module GameSkillManifest =
         }
 
     type GameSkillManifest =
-        { SchemaVersion: int
-          Skills: GameSkillManifestEntry list }
+        {
+            SchemaVersion: int
+            Skills: GameSkillManifestEntry list
+        }
 
     /// Parse an owner-skill `skill-manifest.json` document. `Error` on malformed JSON or a
     /// missing integer `schemaVersion`; a row lacking `id`/`sha256`/`materializes-when` is dropped

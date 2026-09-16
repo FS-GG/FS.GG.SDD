@@ -11,10 +11,12 @@ module BugGuardCheck =
         | Guards
 
     type BugGuardMarker =
-        { Kind: MarkerKind
-          Issue: int
-          Path: string
-          Line: int }
+        {
+            Kind: MarkerKind
+            Issue: int
+            Path: string
+            Line: int
+        }
 
     type IssueState =
         | Open
@@ -45,10 +47,12 @@ module BugGuardCheck =
             markerPattern.Matches(line)
             |> Seq.cast<Match>
             |> Seq.map (fun m ->
-                { Kind = kindOfToken m.Groups.[1].Value
-                  Issue = int m.Groups.[2].Value
-                  Path = path
-                  Line = idx + 1 })
+                {
+                    Kind = kindOfToken m.Groups.[1].Value
+                    Issue = int m.Groups.[2].Value
+                    Path = path
+                    Line = idx + 1
+                })
             |> Seq.toList)
         |> Array.toList
         |> List.concat
@@ -67,8 +71,10 @@ module BugGuardCheck =
 
         let location =
             Some
-                { Line = Some marker.Line
-                  Column = None }
+                {
+                    Line = Some marker.Line
+                    Column = None
+                }
 
         let artifact = artifactFor marker.Path
 

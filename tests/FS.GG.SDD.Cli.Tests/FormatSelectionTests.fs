@@ -10,10 +10,12 @@ module FormatSelectionTests =
     let sample = RichRenderingTests.sampleReport
 
     let caps =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 100
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 100
+            IsInputInteractive = true
+        }
 
     [<Fact>]
     let ``T020 no flag selects Json`` () =

@@ -100,13 +100,15 @@ module internal NextActionRouting =
                 // generic action, since the input error genuinely is correctable.
                 if blockingDiagnostics |> List.forall (fun diagnostic -> diagnostic.IsToolDefect) then
                     Some
-                        { ActionId = "reportToolDefect"
-                          Command = None
-                          WorkId = request.WorkId
-                          Reason =
-                            "The command is blocked by an internal tool defect, not a problem with your input. Follow each diagnostic's correction for any manual remedy, then report the defect to FS.GG.SDD if it recurs."
-                          RequiredArtifacts = []
-                          BlockingDiagnosticIds = blocking }
+                        {
+                            ActionId = "reportToolDefect"
+                            Command = None
+                            WorkId = request.WorkId
+                            Reason =
+                                "The command is blocked by an internal tool defect, not a problem with your input. Follow each diagnostic's correction for any manual remedy, then report the defect to FS.GG.SDD if it recurs."
+                            RequiredArtifacts = []
+                            BlockingDiagnosticIds = blocking
+                        }
                 elif ids |> Set.contains "stalePlanSnapshot" then
                     // Feature 090 (#163), FR-010. A stale plan snapshot has one recovery, and it is
                     // the same one from `plan`, `tasks`, and `analyze` — so this is deliberately not
@@ -131,23 +133,25 @@ module internal NextActionRouting =
                         |> Option.defaultValue ""
 
                     Some
-                        { ActionId = "plan.acceptUpstream"
-                          Command = Some Plan
-                          WorkId = request.WorkId
-                          Reason =
-                            "The plan's recorded source snapshot is stale. Review the recorded plan decisions against the changed sources, then re-run fsgg-sdd plan --accept-upstream."
-                            + rerunClause
-                          RequiredArtifacts =
-                            (plan
-                             |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
-                             |> Option.defaultValue [])
-                            @ changedSources
-                          // `blocking`, not `[ "stalePlanSnapshot" ]`: this branch fires whenever the
-                          // snapshot is stale, which may be *alongside* an unrelated blocker. Naming
-                          // only the snapshot would drop the co-occurring ids from the JSON contract
-                          // that agents drive off, sending them round the loop once per hidden
-                          // blocker. The generic fallback below reports the full set; so do we.
-                          BlockingDiagnosticIds = blocking }
+                        {
+                            ActionId = "plan.acceptUpstream"
+                            Command = Some Plan
+                            WorkId = request.WorkId
+                            Reason =
+                                "The plan's recorded source snapshot is stale. Review the recorded plan decisions against the changed sources, then re-run fsgg-sdd plan --accept-upstream."
+                                + rerunClause
+                            RequiredArtifacts =
+                                (plan
+                                 |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
+                                 |> Option.defaultValue [])
+                                @ changedSources
+                            // `blocking`, not `[ "stalePlanSnapshot" ]`: this branch fires whenever the
+                            // snapshot is stale, which may be *alongside* an unrelated blocker. Naming
+                            // only the snapshot would drop the co-occurring ids from the JSON contract
+                            // that agents drive off, sending them round the loop once per hidden
+                            // blocker. The generic fallback below reports the full set; so do we.
+                            BlockingDiagnosticIds = blocking
+                        }
                 else
 
                     let correctionCommand =
@@ -195,12 +199,14 @@ module internal NextActionRouting =
                         | _ -> None
 
                     Some
-                        { ActionId = "correctBlockingDiagnostics"
-                          Command = correctionCommand
-                          WorkId = request.WorkId
-                          Reason = "The command is blocked by diagnostics."
-                          RequiredArtifacts = []
-                          BlockingDiagnosticIds = blocking }
+                        {
+                            ActionId = "correctBlockingDiagnostics"
+                            Command = correctionCommand
+                            WorkId = request.WorkId
+                            Reason = "The command is blocked by diagnostics."
+                            RequiredArtifacts = []
+                            BlockingDiagnosticIds = blocking
+                        }
             elif
                 diagnostics
                 |> List.exists (fun diagnostic -> diagnostic.Id = "scaffold.cliBehindMinimum")
@@ -210,17 +216,19 @@ module internal NextActionRouting =
                 // `fsgg-sdd init` (idempotent, no-clobber) — NOT `refresh`, which does not
                 // re-seed. Names the seeded skill subtrees + early-stage guidance, sorted.
                 Some
-                    { ActionId = "reseedSeededSkills"
-                      Command = Some Init
-                      WorkId = request.WorkId
-                      Reason =
-                        "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
-                      RequiredArtifacts =
-                        // Every declared seeded-skill root + early-stage guidance.
-                        (Fsgg.Schemas.agentSkillRoots |> List.map (fun root -> root + "/skills"))
-                        @ [ ".fsgg/early-stage-guidance.md" ]
-                        |> List.sort
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "reseedSeededSkills"
+                        Command = Some Init
+                        WorkId = request.WorkId
+                        Reason =
+                            "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
+                        RequiredArtifacts =
+                            // Every declared seeded-skill root + early-stage guidance.
+                            (Fsgg.Schemas.agentSkillRoots |> List.map (fun root -> root + "/skills"))
+                            @ [ ".fsgg/early-stage-guidance.md" ]
+                            |> List.sort
+                        BlockingDiagnosticIds = []
+                    }
             elif
                 diagnostics
                 |> List.exists (fun diagnostic ->
@@ -243,28 +251,32 @@ module internal NextActionRouting =
                     |> Option.defaultValue []
 
                 Some
-                    { ActionId = "earlyStageGuidance"
-                      Command = Some(earlyStageNextCommand presentStages)
-                      WorkId = request.WorkId
-                      Reason =
-                        "No work model exists yet; follow .fsgg/early-stage-guidance.md for the pre-work-model stages (charter, specify, clarify, checklist)."
-                      RequiredArtifacts = [ ".fsgg/early-stage-guidance.md" ]
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "earlyStageGuidance"
+                        Command = Some(earlyStageNextCommand presentStages)
+                        WorkId = request.WorkId
+                        Reason =
+                            "No work model exists yet; follow .fsgg/early-stage-guidance.md for the pre-work-model stages (charter, specify, clarify, checklist)."
+                        RequiredArtifacts = [ ".fsgg/early-stage-guidance.md" ]
+                        BlockingDiagnosticIds = []
+                    }
             elif
                 request.Command = Plan
                 && diagnostics
                    |> List.exists (fun diagnostic -> diagnostic.Id = "stalePlanDecision")
             then
                 Some
-                    { ActionId = "plan.correctStaleDecisions"
-                      Command = Some Plan
-                      WorkId = request.WorkId
-                      Reason = "Plan decisions need review before task generation."
-                      RequiredArtifacts =
-                        plan
-                        |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [ "stalePlanDecision" ] }
+                    {
+                        ActionId = "plan.correctStaleDecisions"
+                        Command = Some Plan
+                        WorkId = request.WorkId
+                        Reason = "Plan decisions need review before task generation."
+                        RequiredArtifacts =
+                            plan
+                            |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = [ "stalePlanDecision" ]
+                    }
             elif
                 request.Command = Tasks
                 && diagnostics |> List.exists (fun diagnostic -> diagnostic.Id = "staleTask")
@@ -277,15 +289,17 @@ module internal NextActionRouting =
                     |> Option.defaultValue ""
 
                 Some
-                    { ActionId = "tasks.correctStaleTasks"
-                      Command = Some Tasks
-                      WorkId = request.WorkId
-                      Reason = "Task source links need review before analysis." + rerunClause
-                      RequiredArtifacts =
-                        tasks
-                        |> Option.map (fun summary -> [ $"work/{summary.WorkId}/tasks.yml" ])
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [ "staleTask" ] }
+                    {
+                        ActionId = "tasks.correctStaleTasks"
+                        Command = Some Tasks
+                        WorkId = request.WorkId
+                        Reason = "Task source links need review before analysis." + rerunClause
+                        RequiredArtifacts =
+                            tasks
+                            |> Option.map (fun summary -> [ $"work/{summary.WorkId}/tasks.yml" ])
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = [ "staleTask" ]
+                    }
             elif
                 checklist
                 |> Option.exists (fun summary -> summary.FailedBlockingCount > 0 || summary.StaleResultCount > 0)
@@ -306,74 +320,88 @@ module internal NextActionRouting =
                     |> List.sort
 
                 Some
-                    { ActionId = "correctBlockingDiagnostics"
-                      Command = None
-                      WorkId = request.WorkId
-                      Reason = "Checklist has requirements-quality findings or stale review results."
-                      RequiredArtifacts =
-                        [ summary.SourceSpec
-                          summary.SourceClarifications
-                          $"work/{summary.WorkId}/checklist.md" ]
-                        |> List.sort
-                      BlockingDiagnosticIds = ids }
+                    {
+                        ActionId = "correctBlockingDiagnostics"
+                        Command = None
+                        WorkId = request.WorkId
+                        Reason = "Checklist has requirements-quality findings or stale review results."
+                        RequiredArtifacts =
+                            [
+                                summary.SourceSpec
+                                summary.SourceClarifications
+                                $"work/{summary.WorkId}/checklist.md"
+                            ]
+                            |> List.sort
+                        BlockingDiagnosticIds = ids
+                    }
             elif request.Command = Analyze then
                 Some
-                    { ActionId = "analysis.next.implement"
-                      Command = None
-                      WorkId = request.WorkId
-                      Reason = "Lifecycle sources are current and ready for implementation."
-                      RequiredArtifacts =
-                        analysis
-                        |> Option.map (fun summary -> [ summary.AnalysisPath ])
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "analysis.next.implement"
+                        Command = None
+                        WorkId = request.WorkId
+                        Reason = "Lifecycle sources are current and ready for implementation."
+                        RequiredArtifacts =
+                            analysis
+                            |> Option.map (fun summary -> [ summary.AnalysisPath ])
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = []
+                    }
             elif request.Command = Evidence then
                 Some
-                    { ActionId = "evidence.next.verify"
-                      Command = None
-                      WorkId = request.WorkId
-                      Reason = "Evidence declarations are current and ready for verification."
-                      RequiredArtifacts =
-                        evidence
-                        |> Option.map (fun summary ->
-                            [ summary.EvidencePath; $"readiness/{summary.WorkId}/work-model.json" ])
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "evidence.next.verify"
+                        Command = None
+                        WorkId = request.WorkId
+                        Reason = "Evidence declarations are current and ready for verification."
+                        RequiredArtifacts =
+                            evidence
+                            |> Option.map (fun summary ->
+                                [ summary.EvidencePath; $"readiness/{summary.WorkId}/work-model.json" ])
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = []
+                    }
             elif request.Command = Verify then
                 Some
-                    { ActionId = "verify.next.ship"
-                      Command = None
-                      WorkId = request.WorkId
-                      Reason = "Verification readiness is current and ready for ship."
-                      RequiredArtifacts =
-                        verification
-                        |> Option.map (fun summary ->
-                            [ summary.VerifyPath; $"readiness/{summary.WorkId}/work-model.json" ])
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "verify.next.ship"
+                        Command = None
+                        WorkId = request.WorkId
+                        Reason = "Verification readiness is current and ready for ship."
+                        RequiredArtifacts =
+                            verification
+                            |> Option.map (fun summary ->
+                                [ summary.VerifyPath; $"readiness/{summary.WorkId}/work-model.json" ])
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = []
+                    }
             elif request.Command = Ship then
                 Some
-                    { ActionId = "ship.next.protectedBoundary"
-                      Command = None
-                      WorkId = request.WorkId
-                      Reason = "Ship readiness is current and ready for the protected-boundary handoff."
-                      RequiredArtifacts =
-                        ship
-                        |> Option.map (fun summary ->
-                            [ summary.ShipPath; $"readiness/{summary.WorkId}/work-model.json" ])
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "ship.next.protectedBoundary"
+                        Command = None
+                        WorkId = request.WorkId
+                        Reason = "Ship readiness is current and ready for the protected-boundary handoff."
+                        RequiredArtifacts =
+                            ship
+                            |> Option.map (fun summary ->
+                                [ summary.ShipPath; $"readiness/{summary.WorkId}/work-model.json" ])
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = []
+                    }
             elif request.Command = Agents then
                 Some
-                    { ActionId = "agentsGenerated"
-                      Command = None
-                      WorkId = request.WorkId
-                      Reason = "Generated agent guidance is current; regenerate when the work model changes."
-                      RequiredArtifacts =
-                        agentGuidance
-                        |> Option.map (fun summary -> summary.GeneratedRoots)
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "agentsGenerated"
+                        Command = None
+                        WorkId = request.WorkId
+                        Reason = "Generated agent guidance is current; regenerate when the work model changes."
+                        RequiredArtifacts =
+                            agentGuidance
+                            |> Option.map (fun summary -> summary.GeneratedRoots)
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = []
+                    }
             elif request.Command = Refresh then
                 let pendingLifecycleViews =
                     refresh
@@ -399,50 +427,58 @@ module internal NextActionRouting =
                 match pendingAction with
                 | Some(command, view, actionId) ->
                     Some
-                        { ActionId = actionId
-                          Command = Some command
-                          WorkId = request.WorkId
-                          Reason =
-                            $"The {view} view has not been generated yet; run its lifecycle command. Refresh will not generate it out of order."
-                          RequiredArtifacts = [ view ]
-                          BlockingDiagnosticIds = [] }
+                        {
+                            ActionId = actionId
+                            Command = Some command
+                            WorkId = request.WorkId
+                            Reason =
+                                $"The {view} view has not been generated yet; run its lifecycle command. Refresh will not generate it out of order."
+                            RequiredArtifacts = [ view ]
+                            BlockingDiagnosticIds = []
+                        }
                 | None when not (List.isEmpty warningBlocked) ->
                     Some
-                        { ActionId = "refresh.correctBlockedViews"
-                          Command = None
-                          WorkId = request.WorkId
-                          Reason =
-                            "Some generated views could not be refreshed; correct the named source or upstream view."
-                          RequiredArtifacts = warningBlocked |> List.sort
-                          BlockingDiagnosticIds = [] }
+                        {
+                            ActionId = "refresh.correctBlockedViews"
+                            Command = None
+                            WorkId = request.WorkId
+                            Reason =
+                                "Some generated views could not be refreshed; correct the named source or upstream view."
+                            RequiredArtifacts = warningBlocked |> List.sort
+                            BlockingDiagnosticIds = []
+                        }
                 | None ->
                     Some
-                        { ActionId = "refreshGenerated"
-                          Command = None
-                          WorkId = request.WorkId
-                          Reason =
-                            "Generated views are current; rely on the refreshed readiness for the selected work item."
-                          RequiredArtifacts =
-                            refresh
-                            |> Option.map (fun summary -> [ summary.SummaryPath ])
-                            |> Option.defaultValue []
-                          BlockingDiagnosticIds = [] }
+                        {
+                            ActionId = "refreshGenerated"
+                            Command = None
+                            WorkId = request.WorkId
+                            Reason =
+                                "Generated views are current; rely on the refreshed readiness for the selected work item."
+                            RequiredArtifacts =
+                                refresh
+                                |> Option.map (fun summary -> [ summary.SummaryPath ])
+                                |> Option.defaultValue []
+                            BlockingDiagnosticIds = []
+                        }
             elif request.Command = Specify && reportOutcome = CommandOutcome.NoChange then
                 // §3.2 (FR-002, SC-002): an edited-but-section-complete spec re-run makes no
                 // authored write. Rather than a bare, ambiguous NoChange, state the authoritative
                 // rule — specify promotes only the first draft; spec.md is now authoritative and
                 // is read live by downstream stages — so the author knows the edit is consumed.
                 Some
-                    { ActionId = "specify.next.clarify"
-                      Command = Some Clarify
-                      WorkId = request.WorkId
-                      Reason =
-                        "specify promotes only the first-draft specification; spec.md is now authoritative and is read live by downstream stages (clarify, checklist, …). Edit spec.md directly — re-running specify does not re-promote it."
-                      RequiredArtifacts =
-                        request.WorkId
-                        |> Option.map (fun workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ])
-                        |> Option.defaultValue []
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId = "specify.next.clarify"
+                        Command = Some Clarify
+                        WorkId = request.WorkId
+                        Reason =
+                            "specify promotes only the first-draft specification; spec.md is now authoritative and is read live by downstream stages (clarify, checklist, …). Edit spec.md directly — re-running specify does not re-promote it."
+                        RequiredArtifacts =
+                            request.WorkId
+                            |> Option.map (fun workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ])
+                            |> Option.defaultValue []
+                        BlockingDiagnosticIds = []
+                    }
             elif request.Command = Doctor then
                 // Read-only report: point drift at `upgrade`, or state coherence (FR-002/FR-005).
                 //
@@ -458,20 +494,22 @@ module internal NextActionRouting =
                     |> Option.defaultValue (reportOutcome = CommandOutcome.NoChange)
 
                 Some
-                    { ActionId =
-                        if coherent then
-                            "doctor.coherent"
-                        else
-                            "doctor.next.upgrade"
-                      Command = if coherent then None else Some Upgrade
-                      WorkId = None
-                      Reason =
-                        if coherent then
-                            "Scaffold is coherent — nothing to reconcile."
-                        else
-                            "Drift detected; run `fsgg-sdd upgrade` to reconcile each step interactively (or `fsgg-sdd upgrade --yes` non-interactively)."
-                      RequiredArtifacts = []
-                      BlockingDiagnosticIds = [] }
+                    {
+                        ActionId =
+                            if coherent then
+                                "doctor.coherent"
+                            else
+                                "doctor.next.upgrade"
+                        Command = if coherent then None else Some Upgrade
+                        WorkId = None
+                        Reason =
+                            if coherent then
+                                "Scaffold is coherent — nothing to reconcile."
+                            else
+                                "Drift detected; run `fsgg-sdd upgrade` to reconcile each step interactively (or `fsgg-sdd upgrade --yes` non-interactively)."
+                        RequiredArtifacts = []
+                        BlockingDiagnosticIds = []
+                    }
             elif request.Command = Upgrade then
                 // Non-blocking upgrade outcomes (blocked ones are handled above): residual drift
                 // → re-run upgrade; applied → confirm with doctor; no-op → already coherent.
@@ -486,35 +524,41 @@ module internal NextActionRouting =
                 // **skipped** step asks to be re-confirmed; a failed one is a blocking error above.
                 let residualDriftAction =
                     Some
-                        { ActionId = "upgrade.residualDrift"
-                          Command = Some Upgrade
-                          WorkId = None
-                          Reason =
-                            "Some reconciliation steps were skipped; residual drift remains. Re-run `fsgg-sdd upgrade` and confirm them to finish."
-                          RequiredArtifacts = []
-                          BlockingDiagnosticIds = [] }
+                        {
+                            ActionId = "upgrade.residualDrift"
+                            Command = Some Upgrade
+                            WorkId = None
+                            Reason =
+                                "Some reconciliation steps were skipped; residual drift remains. Re-run `fsgg-sdd upgrade` and confirm them to finish."
+                            RequiredArtifacts = []
+                            BlockingDiagnosticIds = []
+                        }
 
                 let alreadyCoherentAction =
                     Some
-                        { ActionId = "upgrade.alreadyCoherent"
-                          Command = None
-                          WorkId = None
-                          Reason = "Already coherent — nothing to reconcile."
-                          RequiredArtifacts = []
-                          BlockingDiagnosticIds = [] }
+                        {
+                            ActionId = "upgrade.alreadyCoherent"
+                            Command = None
+                            WorkId = None
+                            Reason = "Already coherent — nothing to reconcile."
+                            RequiredArtifacts = []
+                            BlockingDiagnosticIds = []
+                        }
 
                 match upgradeSummary with
                 | Some summary when summary.AlreadyCoherent -> alreadyCoherentAction
                 | Some summary when not (List.isEmpty summary.SkippedStepIds) -> residualDriftAction
                 | Some _ ->
                     Some
-                        { ActionId = "upgrade.next.doctor"
-                          Command = Some Doctor
-                          WorkId = None
-                          Reason =
-                            "Reconciliation applied; run `fsgg-sdd doctor` to confirm coherence (a CLI self-update takes effect on the next invocation)."
-                          RequiredArtifacts = []
-                          BlockingDiagnosticIds = [] }
+                        {
+                            ActionId = "upgrade.next.doctor"
+                            Command = Some Doctor
+                            WorkId = None
+                            Reason =
+                                "Reconciliation applied; run `fsgg-sdd doctor` to confirm coherence (a CLI self-update takes effect on the next invocation)."
+                            RequiredArtifacts = []
+                            BlockingDiagnosticIds = []
+                        }
                 // No summary at all (an upgrade that never computed one): keep the pre-#313
                 // outcome-derived answer rather than inventing coherence.
                 | None when reportOutcome = CommandOutcome.SucceededWithWarnings -> residualDriftAction
@@ -528,18 +572,22 @@ module internal NextActionRouting =
                         | Specify, Some workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ]
                         | Clarify, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md" ]
                         | Checklist, Some workId ->
-                            [ $"work/{workId}/spec.md"
-                              $"work/{workId}/clarifications.md"
-                              $"work/{workId}/checklist.md" ]
+                            [
+                                $"work/{workId}/spec.md"
+                                $"work/{workId}/clarifications.md"
+                                $"work/{workId}/checklist.md"
+                            ]
                         | Plan, Some workId -> [ $"work/{workId}/plan.md" ]
                         | Tasks, Some workId -> [ $"work/{workId}/tasks.yml" ]
                         | _ -> []
 
                     Some
-                        { ActionId = "nextLifecycleCommand"
-                          Command = Some command
-                          WorkId = request.WorkId
-                          Reason = $"Command '{commandName request.Command}' completed."
-                          RequiredArtifacts = requiredArtifacts
-                          BlockingDiagnosticIds = [] }
+                        {
+                            ActionId = "nextLifecycleCommand"
+                            Command = Some command
+                            WorkId = request.WorkId
+                            Reason = $"Command '{commandName request.Command}' completed."
+                            RequiredArtifacts = requiredArtifacts
+                            BlockingDiagnosticIds = []
+                        }
                 | None -> None

@@ -37,20 +37,26 @@ module ReleaseContract =
         | MarkdownSection
 
     type InventoryItem =
-        { Name: string
-          Kind: InventoryKind
-          Stability: StabilityClass }
+        {
+            Name: string
+            Kind: InventoryKind
+            Stability: StabilityClass
+        }
 
     type PackageVersionIdentity =
-        { Version: string
-          Channel: ReleaseChannel
-          PackageIds: string list
-          CliCommandName: string }
+        {
+            Version: string
+            Channel: ReleaseChannel
+            PackageIds: string list
+            CliCommandName: string
+        }
 
     type CompatibilityMatrixEntry =
-        { SddVersionLine: string
-          SpecKitRange: string
-          GovernanceContractVersionRange: string option }
+        {
+            SddVersionLine: string
+            SpecKitRange: string
+            GovernanceContractVersionRange: string option
+        }
 
     type SchemaReferenceEntry =
         {
@@ -68,22 +74,28 @@ module ReleaseContract =
         }
 
     type MigrationNoteRef =
-        { Version: string
-          Path: string
-          BreakingChanges: string list }
+        {
+            Version: string
+            Path: string
+            BreakingChanges: string list
+        }
 
     type ReleaseReadiness =
-        { SchemaVersion: int
-          GeneratorVersion: GeneratorVersion
-          Identity: PackageVersionIdentity
-          Compatibility: CompatibilityMatrixEntry list
-          Catalog: SchemaReferenceEntry list
-          Migrations: MigrationNoteRef list }
+        {
+            SchemaVersion: int
+            GeneratorVersion: GeneratorVersion
+            Identity: PackageVersionIdentity
+            Compatibility: CompatibilityMatrixEntry list
+            Catalog: SchemaReferenceEntry list
+            Migrations: MigrationNoteRef list
+        }
 
     type ProducedArtifact =
-        { Contract: string
-          Source: ArtifactRef
-          Inventory: string list }
+        {
+            Contract: string
+            Source: ArtifactRef
+            Inventory: string list
+        }
 
     // ---- value labels ----
 
@@ -205,54 +217,66 @@ module ReleaseContract =
     let inventory kind (stableNames: string list) (names: string list) =
         names
         |> List.map (fun name ->
-            { Name = name
-              Kind = kind
-              Stability =
-                (if List.contains name stableNames then
-                     Stable
-                 else
-                     AdditiveOptional) })
+            {
+                Name = name
+                Kind = kind
+                Stability =
+                    (if List.contains name stableNames then
+                         Stable
+                     else
+                         AdditiveOptional)
+            })
 
     let jsonInventory stableNames names = inventory JsonField stableNames names
     let markdownInventory names = inventory MarkdownSection [] names
 
     let jsonViewEntry contract viewKind stability stableNames names =
-        { Contract = contract
-          Kind = GeneratedViewContract(viewKind, Json)
-          SchemaVersion = 1
-          ContractVersion = None
-          Stability = stability
-          Determinism = determinism
-          Inventory = jsonInventory stableNames names
-          SourceArtifact = generatedViewSource ("readiness/<id>/" + contract)
-          BaselinePresent = true
-          DurableGenerated = false }
+        {
+            Contract = contract
+            Kind = GeneratedViewContract(viewKind, Json)
+            SchemaVersion = 1
+            ContractVersion = None
+            Stability = stability
+            Determinism = determinism
+            Inventory = jsonInventory stableNames names
+            SourceArtifact = generatedViewSource ("readiness/<id>/" + contract)
+            BaselinePresent = true
+            DurableGenerated = false
+        }
 
     let markdownViewEntry contract viewKind sections =
-        { Contract = contract
-          Kind = GeneratedViewContract(viewKind, Markdown)
-          SchemaVersion = 1
-          ContractVersion = None
-          Stability = AdditiveOptional
-          Determinism = determinism
-          Inventory = markdownInventory sections
-          SourceArtifact = generatedViewSource ("readiness/<id>/" + contract)
-          BaselinePresent = true
-          DurableGenerated = false }
+        {
+            Contract = contract
+            Kind = GeneratedViewContract(viewKind, Markdown)
+            SchemaVersion = 1
+            ContractVersion = None
+            Stability = AdditiveOptional
+            Determinism = determinism
+            Inventory = markdownInventory sections
+            SourceArtifact = generatedViewSource ("readiness/<id>/" + contract)
+            BaselinePresent = true
+            DurableGenerated = false
+        }
 
     let currentRelease () : ReleaseReadiness =
         let version = (currentGeneratorVersion ()).Version
 
         let identity =
-            { Version = version
-              Channel = channelOfVersion version
-              PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
-              CliCommandName = "fsgg-sdd" }
+            {
+                Version = version
+                Channel = channelOfVersion version
+                PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
+                CliCommandName = "fsgg-sdd"
+            }
 
         let compatibility =
-            [ { SddVersionLine = "2.0.x"
-                SpecKitRange = ">=0.8.5"
-                GovernanceContractVersionRange = Some "2.x" } ]
+            [
+                {
+                    SddVersionLine = "2.0.x"
+                    SpecKitRange = ">=0.8.5"
+                    GovernanceContractVersionRange = Some "2.x"
+                }
+            ]
 
         let workModel =
             jsonViewEntry
@@ -260,168 +284,170 @@ module ReleaseContract =
                 WorkModel
                 AdditiveOptional
                 [ "schemaVersion" ]
-                [ "decisions"
-                  "diagnostics"
-                  "evidence"
-                  "evidence[].artifactRefs"
-                  "evidence[].id"
-                  "evidence[].kind"
-                  "evidence[].performanceBudget"
-                  "evidence[].performanceBudget.artifactPath"
-                  "evidence[].performanceBudget.intent"
-                  "evidence[].performanceBudget.intent.deferralIssue"
-                  "evidence[].performanceBudget.intent.disposition"
-                  "evidence[].performanceBudget.intent.evidenceRefs"
-                  "evidence[].performanceBudget.intent.id"
-                  "evidence[].performanceBudget.intent.liveCompositorRequired"
-                  "evidence[].performanceBudget.intent.maxCatchUpFrames"
-                  "evidence[].performanceBudget.intent.maxP95Ms"
-                  "evidence[].performanceBudget.intent.maxP99Ms"
-                  "evidence[].performanceBudget.intent.maximumExpectedScale"
-                  "evidence[].performanceBudget.intent.rationale"
-                  "evidence[].performanceBudget.intent.requiredCapability"
-                  "evidence[].performanceBudget.intent.structuralCostBudgets"
-                  "evidence[].performanceBudget.intent.targetFps"
-                  "evidence[].performanceBudget.intent.workloadDefinitionDigests"
-                  "evidence[].performanceBudget.intent.workloadIds"
-                  "evidence[].performanceBudget.capturedAfterUtc"
-                  "evidence[].performanceBudget.currencyToken"
-                  "evidence[].performanceBudget.deferralIssue"
-                  "evidence[].performanceBudget.liveCompositorRequired"
-                  "evidence[].performanceBudget.maxCatchUpFrames"
-                  "evidence[].performanceBudget.maxP95Ms"
-                  "evidence[].performanceBudget.maxP99Ms"
-                  "evidence[].performanceBudget.measurementScope"
-                  "evidence[].performanceBudget.requiredCapability"
-                  "evidence[].performanceBudget.stressWorkloadIds"
-                  "evidence[].performanceBudget.targetFps"
-                  "evidence[].performanceBudget.workloadIds"
-                  "evidence[].performanceBudget.workloadDefinitionDigests"
-                  "evidence[].performanceEvidenceArtifact"
-                  "evidence[].performanceEvidenceArtifact.claimedBudgetPassed"
-                  "evidence[].performanceEvidenceArtifact.contractVersion"
-                  "evidence[].performanceEvidenceArtifact.sampleSets"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].capabilities"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].capturedAtUtc"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].catchUpFrames"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].currencyToken"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].durationSamplesMs"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].hostProfile"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].maxCatchUpFrames"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].maxP95Ms"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].maxP99Ms"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].measurementMode"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].measurementScope"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].packageVersions"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].probeReadbackContaminated"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].requiredCapability"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].samplePolicy"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].targetFps"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].warmupPolicy"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].workloadClass"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].workloadDefinitionDigest"
-                  "evidence[].performanceEvidenceArtifact.sampleSets[].workloadId"
-                  "evidence[].performanceMeasurements"
-                  "evidence[].performanceMeasurements[].maxCatchUpFrames"
-                  "evidence[].performanceMeasurements[].p95Ms"
-                  "evidence[].performanceMeasurements[].p99Ms"
-                  "evidence[].performanceMeasurements[].workloadId"
-                  "evidence[].rationale"
-                  "evidence[].requirementRefs"
-                  "evidence[].result"
-                  "evidence[].source"
-                  "evidence[].sourceLocation"
-                  "evidence[].sourceLocation.column"
-                  "evidence[].sourceLocation.line"
-                  "evidence[].subjectId"
-                  "evidence[].subjectType"
-                  "evidence[].synthetic"
-                  "evidence[].taskRefs"
-                  "performanceIntent"
-                  "performanceIntent.deferralIssue"
-                  "performanceIntent.disposition"
-                  "performanceIntent.evidenceRefs"
-                  "performanceIntent.id"
-                  "performanceIntent.liveCompositorRequired"
-                  "performanceIntent.maxCatchUpFrames"
-                  "performanceIntent.maxP95Ms"
-                  "performanceIntent.maxP99Ms"
-                  "performanceIntent.maximumExpectedScale"
-                  "performanceIntent.rationale"
-                  "performanceIntent.requiredCapability"
-                  "performanceIntent.structuralCostBudgets"
-                  "performanceIntent.targetFps"
-                  "performanceIntent.workloadDefinitionDigests"
-                  "performanceIntent.workloadIds"
-                  "project.profile"
-                  "generatedViews"
-                  "generatedViews[].currency"
-                  "generatedViews[].generator"
-                  "generatedViews[].generator.id"
-                  "generatedViews[].generator.version"
-                  "generatedViews[].kind"
-                  "generatedViews[].outputDigest"
-                  "generatedViews[].outputDigest.algorithm"
-                  "generatedViews[].outputDigest.value"
-                  "generatedViews[].path"
-                  "generatedViews[].schemaVersion"
-                  "generatedViews[].sources"
-                  "generatedViews[].sources[].digest"
-                  "generatedViews[].sources[].digest.algorithm"
-                  "generatedViews[].sources[].digest.value"
-                  "generatedViews[].sources[].path"
-                  "generatedViews[].sources[].schemaVersion"
-                  "governanceBoundaries"
-                  "modelVersion"
-                  "project"
-                  "project.defaultWorkRoot"
-                  "project.id"
-                  "requirements"
-                  "requirements[].acceptanceCriteria"
-                  "requirements[].classification"
-                  "requirements[].id"
-                  "requirements[].linkedEvidenceIds"
-                  "requirements[].linkedTaskIds"
-                  "requirements[].priority"
-                  "requirements[].source"
-                  "requirements[].sourceLocation"
-                  "requirements[].sourceLocation.column"
-                  "requirements[].sourceLocation.line"
-                  "requirements[].text"
-                  "requirements[].title"
-                  "schemaVersion"
-                  "sources"
-                  "sources[].kind"
-                  "sources[].owner"
-                  "sources[].path"
-                  "sources[].rawSchemaVersion"
-                  "sources[].schemaStatus"
-                  "sources[].schemaVersion"
-                  "sources[].sourceDigest"
-                  "sources[].sourceDigest.algorithm"
-                  "sources[].sourceDigest.value"
-                  "tasks"
-                  "tasks[].decisions"
-                  "tasks[].dependencies"
-                  "tasks[].id"
-                  "tasks[].owner"
-                  "tasks[].requiredEvidence"
-                  "tasks[].requiredSkills"
-                  "tasks[].requirements"
-                  "tasks[].source"
-                  "tasks[].sourceIds"
-                  "tasks[].sourceLocation"
-                  "tasks[].sourceLocation.column"
-                  "tasks[].sourceLocation.line"
-                  "tasks[].status"
-                  "tasks[].title"
-                  "workId"
-                  "workItem"
-                  "workItem.changeTier"
-                  "workItem.id"
-                  "workItem.stage"
-                  "workItem.status"
-                  "workItem.title" ]
+                [
+                    "decisions"
+                    "diagnostics"
+                    "evidence"
+                    "evidence[].artifactRefs"
+                    "evidence[].id"
+                    "evidence[].kind"
+                    "evidence[].performanceBudget"
+                    "evidence[].performanceBudget.artifactPath"
+                    "evidence[].performanceBudget.intent"
+                    "evidence[].performanceBudget.intent.deferralIssue"
+                    "evidence[].performanceBudget.intent.disposition"
+                    "evidence[].performanceBudget.intent.evidenceRefs"
+                    "evidence[].performanceBudget.intent.id"
+                    "evidence[].performanceBudget.intent.liveCompositorRequired"
+                    "evidence[].performanceBudget.intent.maxCatchUpFrames"
+                    "evidence[].performanceBudget.intent.maxP95Ms"
+                    "evidence[].performanceBudget.intent.maxP99Ms"
+                    "evidence[].performanceBudget.intent.maximumExpectedScale"
+                    "evidence[].performanceBudget.intent.rationale"
+                    "evidence[].performanceBudget.intent.requiredCapability"
+                    "evidence[].performanceBudget.intent.structuralCostBudgets"
+                    "evidence[].performanceBudget.intent.targetFps"
+                    "evidence[].performanceBudget.intent.workloadDefinitionDigests"
+                    "evidence[].performanceBudget.intent.workloadIds"
+                    "evidence[].performanceBudget.capturedAfterUtc"
+                    "evidence[].performanceBudget.currencyToken"
+                    "evidence[].performanceBudget.deferralIssue"
+                    "evidence[].performanceBudget.liveCompositorRequired"
+                    "evidence[].performanceBudget.maxCatchUpFrames"
+                    "evidence[].performanceBudget.maxP95Ms"
+                    "evidence[].performanceBudget.maxP99Ms"
+                    "evidence[].performanceBudget.measurementScope"
+                    "evidence[].performanceBudget.requiredCapability"
+                    "evidence[].performanceBudget.stressWorkloadIds"
+                    "evidence[].performanceBudget.targetFps"
+                    "evidence[].performanceBudget.workloadIds"
+                    "evidence[].performanceBudget.workloadDefinitionDigests"
+                    "evidence[].performanceEvidenceArtifact"
+                    "evidence[].performanceEvidenceArtifact.claimedBudgetPassed"
+                    "evidence[].performanceEvidenceArtifact.contractVersion"
+                    "evidence[].performanceEvidenceArtifact.sampleSets"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].capabilities"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].capturedAtUtc"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].catchUpFrames"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].currencyToken"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].durationSamplesMs"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].hostProfile"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].maxCatchUpFrames"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].maxP95Ms"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].maxP99Ms"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].measurementMode"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].measurementScope"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].packageVersions"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].probeReadbackContaminated"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].requiredCapability"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].samplePolicy"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].targetFps"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].warmupPolicy"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].workloadClass"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].workloadDefinitionDigest"
+                    "evidence[].performanceEvidenceArtifact.sampleSets[].workloadId"
+                    "evidence[].performanceMeasurements"
+                    "evidence[].performanceMeasurements[].maxCatchUpFrames"
+                    "evidence[].performanceMeasurements[].p95Ms"
+                    "evidence[].performanceMeasurements[].p99Ms"
+                    "evidence[].performanceMeasurements[].workloadId"
+                    "evidence[].rationale"
+                    "evidence[].requirementRefs"
+                    "evidence[].result"
+                    "evidence[].source"
+                    "evidence[].sourceLocation"
+                    "evidence[].sourceLocation.column"
+                    "evidence[].sourceLocation.line"
+                    "evidence[].subjectId"
+                    "evidence[].subjectType"
+                    "evidence[].synthetic"
+                    "evidence[].taskRefs"
+                    "performanceIntent"
+                    "performanceIntent.deferralIssue"
+                    "performanceIntent.disposition"
+                    "performanceIntent.evidenceRefs"
+                    "performanceIntent.id"
+                    "performanceIntent.liveCompositorRequired"
+                    "performanceIntent.maxCatchUpFrames"
+                    "performanceIntent.maxP95Ms"
+                    "performanceIntent.maxP99Ms"
+                    "performanceIntent.maximumExpectedScale"
+                    "performanceIntent.rationale"
+                    "performanceIntent.requiredCapability"
+                    "performanceIntent.structuralCostBudgets"
+                    "performanceIntent.targetFps"
+                    "performanceIntent.workloadDefinitionDigests"
+                    "performanceIntent.workloadIds"
+                    "project.profile"
+                    "generatedViews"
+                    "generatedViews[].currency"
+                    "generatedViews[].generator"
+                    "generatedViews[].generator.id"
+                    "generatedViews[].generator.version"
+                    "generatedViews[].kind"
+                    "generatedViews[].outputDigest"
+                    "generatedViews[].outputDigest.algorithm"
+                    "generatedViews[].outputDigest.value"
+                    "generatedViews[].path"
+                    "generatedViews[].schemaVersion"
+                    "generatedViews[].sources"
+                    "generatedViews[].sources[].digest"
+                    "generatedViews[].sources[].digest.algorithm"
+                    "generatedViews[].sources[].digest.value"
+                    "generatedViews[].sources[].path"
+                    "generatedViews[].sources[].schemaVersion"
+                    "governanceBoundaries"
+                    "modelVersion"
+                    "project"
+                    "project.defaultWorkRoot"
+                    "project.id"
+                    "requirements"
+                    "requirements[].acceptanceCriteria"
+                    "requirements[].classification"
+                    "requirements[].id"
+                    "requirements[].linkedEvidenceIds"
+                    "requirements[].linkedTaskIds"
+                    "requirements[].priority"
+                    "requirements[].source"
+                    "requirements[].sourceLocation"
+                    "requirements[].sourceLocation.column"
+                    "requirements[].sourceLocation.line"
+                    "requirements[].text"
+                    "requirements[].title"
+                    "schemaVersion"
+                    "sources"
+                    "sources[].kind"
+                    "sources[].owner"
+                    "sources[].path"
+                    "sources[].rawSchemaVersion"
+                    "sources[].schemaStatus"
+                    "sources[].schemaVersion"
+                    "sources[].sourceDigest"
+                    "sources[].sourceDigest.algorithm"
+                    "sources[].sourceDigest.value"
+                    "tasks"
+                    "tasks[].decisions"
+                    "tasks[].dependencies"
+                    "tasks[].id"
+                    "tasks[].owner"
+                    "tasks[].requiredEvidence"
+                    "tasks[].requiredSkills"
+                    "tasks[].requirements"
+                    "tasks[].source"
+                    "tasks[].sourceIds"
+                    "tasks[].sourceLocation"
+                    "tasks[].sourceLocation.column"
+                    "tasks[].sourceLocation.line"
+                    "tasks[].status"
+                    "tasks[].title"
+                    "workId"
+                    "workItem"
+                    "workItem.changeTier"
+                    "workItem.id"
+                    "workItem.stage"
+                    "workItem.status"
+                    "workItem.title"
+                ]
 
         let analysis =
             // #660: the clean release-conformance fixture leaves diagnostics/findings empty, while
@@ -433,71 +459,73 @@ module ReleaseContract =
                 Analysis
                 AdditiveOptional
                 [ "schemaVersion" ]
-                [ "diagnostics"
-                  "diagnostics[].artifact"
-                  "diagnostics[].correction"
-                  "diagnostics[].id"
-                  "diagnostics[].message"
-                  "diagnostics[].relatedIds"
-                  "diagnostics[].severity"
-                  "findings"
-                  "findings[].category"
-                  "findings[].correction"
-                  "findings[].id"
-                  "findings[].message"
-                  "findings[].path"
-                  "findings[].relatedIds"
-                  "findings[].severity"
-                  "findings[].state"
-                  "generatedViews"
-                  "generatedViews[].currency"
-                  "generatedViews[].diagnosticIds"
-                  "generatedViews[].kind"
-                  "generatedViews[].path"
-                  "generator"
-                  "nextAction"
-                  "nextAction.actionId"
-                  "nextAction.command"
-                  "nextAction.reason"
-                  "optionalBoundaryFacts"
-                  "optionalBoundaryFacts[].diagnosticIds"
-                  "optionalBoundaryFacts[].path"
-                  "optionalBoundaryFacts[].relationship"
-                  "optionalBoundaryFacts[].requiredBySdd"
-                  "optionalBoundaryFacts[].state"
-                  "readiness"
-                  "readiness.acceptedDeferralCount"
-                  "readiness.advisoryCount"
-                  "readiness.blockingCount"
-                  "readiness.generatedViewFindingCount"
-                  "readiness.malformedSourceCount"
-                  "readiness.missingDispositionCount"
-                  "readiness.readyCount"
-                  "readiness.staleSourceCount"
-                  "readiness.status"
-                  "readiness.warningCount"
-                  "schemaVersion"
-                  "sourceRelationships"
-                  "sourceRelationships[].diagnosticIds"
-                  "sourceRelationships[].id"
-                  "sourceRelationships[].relationship"
-                  "sourceRelationships[].sourceId"
-                  "sourceRelationships[].sourcePath"
-                  "sourceRelationships[].state"
-                  "sourceRelationships[].targetId"
-                  "sourceRelationships[].targetPath"
-                  "sources"
-                  "sources[].digest"
-                  "sources[].digest.algorithm"
-                  "sources[].digest.value"
-                  "sources[].kind"
-                  "sources[].path"
-                  "sources[].schemaStatus"
-                  "sources[].schemaVersion"
-                  "stage"
-                  "status"
-                  "viewVersion"
-                  "workId" ]
+                [
+                    "diagnostics"
+                    "diagnostics[].artifact"
+                    "diagnostics[].correction"
+                    "diagnostics[].id"
+                    "diagnostics[].message"
+                    "diagnostics[].relatedIds"
+                    "diagnostics[].severity"
+                    "findings"
+                    "findings[].category"
+                    "findings[].correction"
+                    "findings[].id"
+                    "findings[].message"
+                    "findings[].path"
+                    "findings[].relatedIds"
+                    "findings[].severity"
+                    "findings[].state"
+                    "generatedViews"
+                    "generatedViews[].currency"
+                    "generatedViews[].diagnosticIds"
+                    "generatedViews[].kind"
+                    "generatedViews[].path"
+                    "generator"
+                    "nextAction"
+                    "nextAction.actionId"
+                    "nextAction.command"
+                    "nextAction.reason"
+                    "optionalBoundaryFacts"
+                    "optionalBoundaryFacts[].diagnosticIds"
+                    "optionalBoundaryFacts[].path"
+                    "optionalBoundaryFacts[].relationship"
+                    "optionalBoundaryFacts[].requiredBySdd"
+                    "optionalBoundaryFacts[].state"
+                    "readiness"
+                    "readiness.acceptedDeferralCount"
+                    "readiness.advisoryCount"
+                    "readiness.blockingCount"
+                    "readiness.generatedViewFindingCount"
+                    "readiness.malformedSourceCount"
+                    "readiness.missingDispositionCount"
+                    "readiness.readyCount"
+                    "readiness.staleSourceCount"
+                    "readiness.status"
+                    "readiness.warningCount"
+                    "schemaVersion"
+                    "sourceRelationships"
+                    "sourceRelationships[].diagnosticIds"
+                    "sourceRelationships[].id"
+                    "sourceRelationships[].relationship"
+                    "sourceRelationships[].sourceId"
+                    "sourceRelationships[].sourcePath"
+                    "sourceRelationships[].state"
+                    "sourceRelationships[].targetId"
+                    "sourceRelationships[].targetPath"
+                    "sources"
+                    "sources[].digest"
+                    "sources[].digest.algorithm"
+                    "sources[].digest.value"
+                    "sources[].kind"
+                    "sources[].path"
+                    "sources[].schemaStatus"
+                    "sources[].schemaVersion"
+                    "stage"
+                    "status"
+                    "viewVersion"
+                    "workId"
+                ]
 
         let verify =
             jsonViewEntry
@@ -505,98 +533,100 @@ module ReleaseContract =
                 Verify
                 AdditiveOptional
                 [ "schemaVersion" ]
-                [ "diagnostics"
-                  "diagnostics[].artifact"
-                  "diagnostics[].correction"
-                  "diagnostics[].id"
-                  "diagnostics[].message"
-                  "diagnostics[].relatedIds"
-                  "diagnostics[].severity"
-                  "evidenceDispositions"
-                  "evidenceDispositions[].affectedSourceIds"
-                  "evidenceDispositions[].affectedTaskIds"
-                  "evidenceDispositions[].classifiedRequirement"
-                  "evidenceDispositions[].journeyRequirement"
-                  "evidenceDispositions[].correction"
-                  "evidenceDispositions[].diagnosticIds"
-                  "evidenceDispositions[].evidenceIds"
-                  "evidenceDispositions[].id"
-                  "evidenceDispositions[].obligationId"
-                  "evidenceDispositions[].observed"
-                  // FS.GG.SDD#865: additiveOptional, exactly like `classifiedRequirement` above —
-                  // absent in a view written before the record channel, where it reads `false`.
-                  "evidenceDispositions[].recordRequirement"
-                  "evidenceDispositions[].severity"
-                  "evidenceDispositions[].state"
-                  "findings"
-                  "findings[].category"
-                  "findings[].correction"
-                  "findings[].id"
-                  "findings[].message"
-                  "findings[].path"
-                  "findings[].relatedIds"
-                  "findings[].severity"
-                  "generatedViews"
-                  "generatedViews[].currency"
-                  "generatedViews[].diagnosticIds"
-                  "generatedViews[].kind"
-                  "generatedViews[].path"
-                  "generator"
-                  "governanceCompatibility"
-                  "governanceCompatibility[].diagnosticIds"
-                  "governanceCompatibility[].path"
-                  "governanceCompatibility[].relationship"
-                  "governanceCompatibility[].requiredBySdd"
-                  "governanceCompatibility[].state"
-                  "lifecycleReadiness"
-                  "lifecycleReadiness.stages"
-                  "lifecycleReadiness.stages[].stage"
-                  "lifecycleReadiness.stages[].status"
-                  "lifecycleReadiness.status"
-                  "nextAction"
-                  "nextAction.actionId"
-                  "nextAction.command"
-                  "nextAction.reason"
-                  "readiness"
-                  "schemaVersion"
-                  "skillVisibility"
-                  "skillVisibility[].correction"
-                  "skillVisibility[].diagnosticIds"
-                  "skillVisibility[].requiringTaskIds"
-                  "skillVisibility[].severity"
-                  "skillVisibility[].skill"
-                  "skillVisibility[].sourceArtifactPath"
-                  "skillVisibility[].visibility"
-                  "sources"
-                  "sources[].digest"
-                  "sources[].digest.algorithm"
-                  "sources[].digest.value"
-                  "sources[].kind"
-                  "sources[].path"
-                  "sources[].schemaStatus"
-                  "sources[].schemaVersion"
-                  "stage"
-                  "status"
-                  "taskGraph"
-                  "taskGraph.dependenciesValid"
-                  "taskGraph.dependencyCount"
-                  "taskGraph.findingIds"
-                  "taskGraph.statusesValid"
-                  "taskGraph.taskCount"
-                  "testDispositions"
-                  "testDispositions[].affectedRequirementIds"
-                  "testDispositions[].affectedTaskIds"
-                  "testDispositions[].correction"
-                  "testDispositions[].diagnosticIds"
-                  "testDispositions[].evidenceIds"
-                  "testDispositions[].id"
-                  "testDispositions[].obligationId"
-                  "testDispositions[].observed"
-                  "testDispositions[].recordRequirement"
-                  "testDispositions[].severity"
-                  "testDispositions[].state"
-                  "viewVersion"
-                  "workId" ]
+                [
+                    "diagnostics"
+                    "diagnostics[].artifact"
+                    "diagnostics[].correction"
+                    "diagnostics[].id"
+                    "diagnostics[].message"
+                    "diagnostics[].relatedIds"
+                    "diagnostics[].severity"
+                    "evidenceDispositions"
+                    "evidenceDispositions[].affectedSourceIds"
+                    "evidenceDispositions[].affectedTaskIds"
+                    "evidenceDispositions[].classifiedRequirement"
+                    "evidenceDispositions[].journeyRequirement"
+                    "evidenceDispositions[].correction"
+                    "evidenceDispositions[].diagnosticIds"
+                    "evidenceDispositions[].evidenceIds"
+                    "evidenceDispositions[].id"
+                    "evidenceDispositions[].obligationId"
+                    "evidenceDispositions[].observed"
+                    // FS.GG.SDD#865: additiveOptional, exactly like `classifiedRequirement` above —
+                    // absent in a view written before the record channel, where it reads `false`.
+                    "evidenceDispositions[].recordRequirement"
+                    "evidenceDispositions[].severity"
+                    "evidenceDispositions[].state"
+                    "findings"
+                    "findings[].category"
+                    "findings[].correction"
+                    "findings[].id"
+                    "findings[].message"
+                    "findings[].path"
+                    "findings[].relatedIds"
+                    "findings[].severity"
+                    "generatedViews"
+                    "generatedViews[].currency"
+                    "generatedViews[].diagnosticIds"
+                    "generatedViews[].kind"
+                    "generatedViews[].path"
+                    "generator"
+                    "governanceCompatibility"
+                    "governanceCompatibility[].diagnosticIds"
+                    "governanceCompatibility[].path"
+                    "governanceCompatibility[].relationship"
+                    "governanceCompatibility[].requiredBySdd"
+                    "governanceCompatibility[].state"
+                    "lifecycleReadiness"
+                    "lifecycleReadiness.stages"
+                    "lifecycleReadiness.stages[].stage"
+                    "lifecycleReadiness.stages[].status"
+                    "lifecycleReadiness.status"
+                    "nextAction"
+                    "nextAction.actionId"
+                    "nextAction.command"
+                    "nextAction.reason"
+                    "readiness"
+                    "schemaVersion"
+                    "skillVisibility"
+                    "skillVisibility[].correction"
+                    "skillVisibility[].diagnosticIds"
+                    "skillVisibility[].requiringTaskIds"
+                    "skillVisibility[].severity"
+                    "skillVisibility[].skill"
+                    "skillVisibility[].sourceArtifactPath"
+                    "skillVisibility[].visibility"
+                    "sources"
+                    "sources[].digest"
+                    "sources[].digest.algorithm"
+                    "sources[].digest.value"
+                    "sources[].kind"
+                    "sources[].path"
+                    "sources[].schemaStatus"
+                    "sources[].schemaVersion"
+                    "stage"
+                    "status"
+                    "taskGraph"
+                    "taskGraph.dependenciesValid"
+                    "taskGraph.dependencyCount"
+                    "taskGraph.findingIds"
+                    "taskGraph.statusesValid"
+                    "taskGraph.taskCount"
+                    "testDispositions"
+                    "testDispositions[].affectedRequirementIds"
+                    "testDispositions[].affectedTaskIds"
+                    "testDispositions[].correction"
+                    "testDispositions[].diagnosticIds"
+                    "testDispositions[].evidenceIds"
+                    "testDispositions[].id"
+                    "testDispositions[].obligationId"
+                    "testDispositions[].observed"
+                    "testDispositions[].recordRequirement"
+                    "testDispositions[].severity"
+                    "testDispositions[].state"
+                    "viewVersion"
+                    "workId"
+                ]
 
         let ship =
             jsonViewEntry
@@ -604,70 +634,72 @@ module ReleaseContract =
                 Ship
                 AdditiveOptional
                 [ "schemaVersion" ]
-                [ "diagnostics"
-                  "disposition"
-                  "disposition.advisoryFindingIds"
-                  "disposition.blockingFindingIds"
-                  "disposition.classifiedObligationsUnmetCount"
-                  "disposition.journeyObligationsUnmetCount"
-                  "disposition.contributingStages"
-                  "disposition.correction"
-                  "disposition.state"
-                  "disposition.warningFindingIds"
-                  "evidenceDispositions"
-                  "evidenceDispositions[].diagnosticIds"
-                  "evidenceDispositions[].id"
-                  "evidenceDispositions[].obligationId"
-                  "evidenceDispositions[].observed"
-                  "evidenceDispositions[].severity"
-                  "evidenceDispositions[].state"
-                  "findings"
-                  "generatedViews"
-                  "generatedViews[].currency"
-                  "generatedViews[].diagnosticIds"
-                  "generatedViews[].kind"
-                  "generatedViews[].path"
-                  "generator"
-                  "governanceCompatibility"
-                  "governanceCompatibility[].diagnosticIds"
-                  "governanceCompatibility[].path"
-                  "governanceCompatibility[].relationship"
-                  "governanceCompatibility[].requiredBySdd"
-                  "governanceCompatibility[].state"
-                  "lifecycleReadiness"
-                  "lifecycleReadiness.stages"
-                  "lifecycleReadiness.stages[].stage"
-                  "lifecycleReadiness.stages[].status"
-                  "lifecycleReadiness.status"
-                  "nextAction"
-                  "nextAction.actionId"
-                  "nextAction.command"
-                  "nextAction.reason"
-                  "readiness"
-                  "schemaVersion"
-                  "sources"
-                  "sources[].digest"
-                  "sources[].digest.algorithm"
-                  "sources[].digest.value"
-                  "sources[].kind"
-                  "sources[].path"
-                  "sources[].schemaStatus"
-                  "sources[].schemaVersion"
-                  "stage"
-                  "status"
-                  "verificationReadiness"
-                  "verificationReadiness.blockingFindingIds"
-                  "verificationReadiness.evidenceDeferredCount"
-                  "verificationReadiness.evidenceInvalidCount"
-                  "verificationReadiness.evidenceMissingCount"
-                  "verificationReadiness.evidenceObservedCount"
-                  "verificationReadiness.evidenceSelfAttestedCount"
-                  "verificationReadiness.evidenceStaleCount"
-                  "verificationReadiness.evidenceSupportedCount"
-                  "verificationReadiness.evidenceSyntheticCount"
-                  "verificationReadiness.status"
-                  "viewVersion"
-                  "workId" ]
+                [
+                    "diagnostics"
+                    "disposition"
+                    "disposition.advisoryFindingIds"
+                    "disposition.blockingFindingIds"
+                    "disposition.classifiedObligationsUnmetCount"
+                    "disposition.journeyObligationsUnmetCount"
+                    "disposition.contributingStages"
+                    "disposition.correction"
+                    "disposition.state"
+                    "disposition.warningFindingIds"
+                    "evidenceDispositions"
+                    "evidenceDispositions[].diagnosticIds"
+                    "evidenceDispositions[].id"
+                    "evidenceDispositions[].obligationId"
+                    "evidenceDispositions[].observed"
+                    "evidenceDispositions[].severity"
+                    "evidenceDispositions[].state"
+                    "findings"
+                    "generatedViews"
+                    "generatedViews[].currency"
+                    "generatedViews[].diagnosticIds"
+                    "generatedViews[].kind"
+                    "generatedViews[].path"
+                    "generator"
+                    "governanceCompatibility"
+                    "governanceCompatibility[].diagnosticIds"
+                    "governanceCompatibility[].path"
+                    "governanceCompatibility[].relationship"
+                    "governanceCompatibility[].requiredBySdd"
+                    "governanceCompatibility[].state"
+                    "lifecycleReadiness"
+                    "lifecycleReadiness.stages"
+                    "lifecycleReadiness.stages[].stage"
+                    "lifecycleReadiness.stages[].status"
+                    "lifecycleReadiness.status"
+                    "nextAction"
+                    "nextAction.actionId"
+                    "nextAction.command"
+                    "nextAction.reason"
+                    "readiness"
+                    "schemaVersion"
+                    "sources"
+                    "sources[].digest"
+                    "sources[].digest.algorithm"
+                    "sources[].digest.value"
+                    "sources[].kind"
+                    "sources[].path"
+                    "sources[].schemaStatus"
+                    "sources[].schemaVersion"
+                    "stage"
+                    "status"
+                    "verificationReadiness"
+                    "verificationReadiness.blockingFindingIds"
+                    "verificationReadiness.evidenceDeferredCount"
+                    "verificationReadiness.evidenceInvalidCount"
+                    "verificationReadiness.evidenceMissingCount"
+                    "verificationReadiness.evidenceObservedCount"
+                    "verificationReadiness.evidenceSelfAttestedCount"
+                    "verificationReadiness.evidenceStaleCount"
+                    "verificationReadiness.evidenceSupportedCount"
+                    "verificationReadiness.evidenceSyntheticCount"
+                    "verificationReadiness.status"
+                    "viewVersion"
+                    "workId"
+                ]
 
         // The one *durable generated* lifecycle view (feature 092 / ADR-0026): a compact
         // projection of ship.json, committed because its verdict is commit-bound and
@@ -680,134 +712,141 @@ module ReleaseContract =
                   ShipVerdict
                   AdditiveOptional
                   [ "schemaVersion" ]
-                  [ "disposition"
-                    "disposition.blockingFindingIds"
-                    "disposition.state"
-                    "generator"
-                    "readiness"
-                    "schemaVersion"
-                    "sourcesDigest"
-                    "sourcesDigest.algorithm"
-                    "sourcesDigest.value"
-                    "stage"
-                    "status"
-                    "verificationReadiness"
-                    "verificationReadiness.evidenceObservedCount"
-                    "verificationReadiness.evidenceSelfAttestedCount"
-                    "verificationReadiness.evidenceSupportedCount"
-                    "verificationReadiness.status"
-                    "viewVersion"
-                    "workId" ] with
-                DurableGenerated = true }
+                  [
+                      "disposition"
+                      "disposition.blockingFindingIds"
+                      "disposition.state"
+                      "generator"
+                      "readiness"
+                      "schemaVersion"
+                      "sourcesDigest"
+                      "sourcesDigest.algorithm"
+                      "sourcesDigest.value"
+                      "stage"
+                      "status"
+                      "verificationReadiness"
+                      "verificationReadiness.evidenceObservedCount"
+                      "verificationReadiness.evidenceSelfAttestedCount"
+                      "verificationReadiness.evidenceSupportedCount"
+                      "verificationReadiness.status"
+                      "viewVersion"
+                      "workId"
+                  ] with
+                DurableGenerated = true
+            }
 
         // The governance handoff is the one cross-repo contract: it carries a
         // contractVersion and its envelope shape is Stable (FR-002 declared
         // integration fact only; no Governance gate logic — FR-014).
         let governanceHandoff =
-            { Contract = "governance-handoff.json"
-              Kind = GeneratedViewContract(GovernanceHandoff, Json)
-              // Both from the declared constants, NOT re-typed here. This declaration is what the
-              // release contract SAYS ship emits; GovernanceHandoff.fs is what it ACTUALLY emits.
-              // Nothing compares the two, so a literal here is a mirror that drifts silently — and
-              // it did: it still read "1.0.0" after the contract went to 1.1.0 (#427).
-              SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
-              ContractVersion = Some Fsgg.Schemas.governanceHandoffContractVersion
-              Stability = Stable
-              Determinism = determinism
-              Inventory =
-                jsonInventory
-                    [ "schemaVersion"; "contractVersion" ]
-                    [ "contractVersion"
-                      "diagnostics"
-                      "diagnostics[].correction"
-                      "diagnostics[].id"
-                      "diagnostics[].message"
-                      "diagnostics[].relatedIds"
-                      "diagnostics[].severity"
-                      "evidence"
-                      "evidence.dependencies"
-                      "evidence.dependencies[].dependency"
-                      "evidence.dependencies[].dependent"
-                      "evidence.nodes"
-                      "evidence.nodes[].id"
-                      "evidence.nodes[].rationale"
-                      "evidence.nodes[].state"
-                      "generatorVersion"
-                      "governanceConfig"
-                      "governanceConfig.capabilitiesPresent"
-                      "governanceConfig.policyPresent"
-                      "governanceConfig.toolingPresent"
-                      "governedReferences"
-                      "performanceEvidence"
-                      "performanceEvidence[].artifact"
-                      "performanceEvidence[].artifact.claimedBudgetPassed"
-                      "performanceEvidence[].artifact.contractVersion"
-                      "performanceEvidence[].artifact.sampleSets"
-                      "performanceEvidence[].artifact.sampleSets[].capabilities"
-                      "performanceEvidence[].artifact.sampleSets[].capturedAtUtc"
-                      "performanceEvidence[].artifact.sampleSets[].catchUpFrames"
-                      "performanceEvidence[].artifact.sampleSets[].currencyToken"
-                      "performanceEvidence[].artifact.sampleSets[].durationSamplesMs"
-                      "performanceEvidence[].artifact.sampleSets[].hostProfile"
-                      "performanceEvidence[].artifact.sampleSets[].maxCatchUpFrames"
-                      "performanceEvidence[].artifact.sampleSets[].maxP95Ms"
-                      "performanceEvidence[].artifact.sampleSets[].maxP99Ms"
-                      "performanceEvidence[].artifact.sampleSets[].measurementMode"
-                      "performanceEvidence[].artifact.sampleSets[].measurementScope"
-                      "performanceEvidence[].artifact.sampleSets[].packageVersions"
-                      "performanceEvidence[].artifact.sampleSets[].probeReadbackContaminated"
-                      "performanceEvidence[].artifact.sampleSets[].requiredCapability"
-                      "performanceEvidence[].artifact.sampleSets[].samplePolicy"
-                      "performanceEvidence[].artifact.sampleSets[].targetFps"
-                      "performanceEvidence[].artifact.sampleSets[].warmupPolicy"
-                      "performanceEvidence[].artifact.sampleSets[].workloadClass"
-                      "performanceEvidence[].artifact.sampleSets[].workloadDefinitionDigest"
-                      "performanceEvidence[].artifact.sampleSets[].workloadId"
-                      "performanceEvidence[].artifactPath"
-                      "performanceEvidence[].evidenceId"
-                      "performanceEvidence[].intent"
-                      "performanceEvidence[].intent.deferralIssue"
-                      "performanceEvidence[].intent.disposition"
-                      "performanceEvidence[].intent.evidenceRefs"
-                      "performanceEvidence[].intent.id"
-                      "performanceEvidence[].intent.liveCompositorRequired"
-                      "performanceEvidence[].intent.maxCatchUpFrames"
-                      "performanceEvidence[].intent.maxP95Ms"
-                      "performanceEvidence[].intent.maxP99Ms"
-                      "performanceEvidence[].intent.maximumExpectedScale"
-                      "performanceEvidence[].intent.rationale"
-                      "performanceEvidence[].intent.requiredCapability"
-                      "performanceEvidence[].intent.structuralCostBudgets"
-                      "performanceEvidence[].intent.targetFps"
-                      "performanceEvidence[].intent.workloadDefinitionDigests"
-                      "performanceEvidence[].intent.workloadIds"
-                      "performanceEvidence[].measurements"
-                      "performanceEvidence[].measurements[].maxCatchUpFrames"
-                      "performanceEvidence[].measurements[].p95Ms"
-                      "performanceEvidence[].measurements[].p99Ms"
-                      "performanceEvidence[].measurements[].workloadId"
-                      "readiness"
-                      "readiness.blockingDiagnosticIds"
-                      "readiness.counts"
-                      "readiness.counts.advisory"
-                      "readiness.counts.blocking"
-                      "readiness.counts.classifiedObligationsUnmet"
-                      "readiness.counts.journeyObligationsUnmet"
-                      "readiness.counts.warning"
-                      "readiness.perViewState"
-                      "readiness.perViewState[].state"
-                      "readiness.perViewState[].view"
-                      "readiness.shipDisposition"
-                      "readiness.verificationReadiness"
-                      "schemaVersion"
-                      "sources"
-                      "sources[].digest"
-                      "sources[].path"
-                      "sources[].schemaVersion"
-                      "workId" ]
-              SourceArtifact = generatedViewSource "readiness/<id>/governance-handoff.json"
-              BaselinePresent = true
-              DurableGenerated = false }
+            {
+                Contract = "governance-handoff.json"
+                Kind = GeneratedViewContract(GovernanceHandoff, Json)
+                // Both from the declared constants, NOT re-typed here. This declaration is what the
+                // release contract SAYS ship emits; GovernanceHandoff.fs is what it ACTUALLY emits.
+                // Nothing compares the two, so a literal here is a mirror that drifts silently — and
+                // it did: it still read "1.0.0" after the contract went to 1.1.0 (#427).
+                SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
+                ContractVersion = Some Fsgg.Schemas.governanceHandoffContractVersion
+                Stability = Stable
+                Determinism = determinism
+                Inventory =
+                    jsonInventory
+                        [ "schemaVersion"; "contractVersion" ]
+                        [
+                            "contractVersion"
+                            "diagnostics"
+                            "diagnostics[].correction"
+                            "diagnostics[].id"
+                            "diagnostics[].message"
+                            "diagnostics[].relatedIds"
+                            "diagnostics[].severity"
+                            "evidence"
+                            "evidence.dependencies"
+                            "evidence.dependencies[].dependency"
+                            "evidence.dependencies[].dependent"
+                            "evidence.nodes"
+                            "evidence.nodes[].id"
+                            "evidence.nodes[].rationale"
+                            "evidence.nodes[].state"
+                            "generatorVersion"
+                            "governanceConfig"
+                            "governanceConfig.capabilitiesPresent"
+                            "governanceConfig.policyPresent"
+                            "governanceConfig.toolingPresent"
+                            "governedReferences"
+                            "performanceEvidence"
+                            "performanceEvidence[].artifact"
+                            "performanceEvidence[].artifact.claimedBudgetPassed"
+                            "performanceEvidence[].artifact.contractVersion"
+                            "performanceEvidence[].artifact.sampleSets"
+                            "performanceEvidence[].artifact.sampleSets[].capabilities"
+                            "performanceEvidence[].artifact.sampleSets[].capturedAtUtc"
+                            "performanceEvidence[].artifact.sampleSets[].catchUpFrames"
+                            "performanceEvidence[].artifact.sampleSets[].currencyToken"
+                            "performanceEvidence[].artifact.sampleSets[].durationSamplesMs"
+                            "performanceEvidence[].artifact.sampleSets[].hostProfile"
+                            "performanceEvidence[].artifact.sampleSets[].maxCatchUpFrames"
+                            "performanceEvidence[].artifact.sampleSets[].maxP95Ms"
+                            "performanceEvidence[].artifact.sampleSets[].maxP99Ms"
+                            "performanceEvidence[].artifact.sampleSets[].measurementMode"
+                            "performanceEvidence[].artifact.sampleSets[].measurementScope"
+                            "performanceEvidence[].artifact.sampleSets[].packageVersions"
+                            "performanceEvidence[].artifact.sampleSets[].probeReadbackContaminated"
+                            "performanceEvidence[].artifact.sampleSets[].requiredCapability"
+                            "performanceEvidence[].artifact.sampleSets[].samplePolicy"
+                            "performanceEvidence[].artifact.sampleSets[].targetFps"
+                            "performanceEvidence[].artifact.sampleSets[].warmupPolicy"
+                            "performanceEvidence[].artifact.sampleSets[].workloadClass"
+                            "performanceEvidence[].artifact.sampleSets[].workloadDefinitionDigest"
+                            "performanceEvidence[].artifact.sampleSets[].workloadId"
+                            "performanceEvidence[].artifactPath"
+                            "performanceEvidence[].evidenceId"
+                            "performanceEvidence[].intent"
+                            "performanceEvidence[].intent.deferralIssue"
+                            "performanceEvidence[].intent.disposition"
+                            "performanceEvidence[].intent.evidenceRefs"
+                            "performanceEvidence[].intent.id"
+                            "performanceEvidence[].intent.liveCompositorRequired"
+                            "performanceEvidence[].intent.maxCatchUpFrames"
+                            "performanceEvidence[].intent.maxP95Ms"
+                            "performanceEvidence[].intent.maxP99Ms"
+                            "performanceEvidence[].intent.maximumExpectedScale"
+                            "performanceEvidence[].intent.rationale"
+                            "performanceEvidence[].intent.requiredCapability"
+                            "performanceEvidence[].intent.structuralCostBudgets"
+                            "performanceEvidence[].intent.targetFps"
+                            "performanceEvidence[].intent.workloadDefinitionDigests"
+                            "performanceEvidence[].intent.workloadIds"
+                            "performanceEvidence[].measurements"
+                            "performanceEvidence[].measurements[].maxCatchUpFrames"
+                            "performanceEvidence[].measurements[].p95Ms"
+                            "performanceEvidence[].measurements[].p99Ms"
+                            "performanceEvidence[].measurements[].workloadId"
+                            "readiness"
+                            "readiness.blockingDiagnosticIds"
+                            "readiness.counts"
+                            "readiness.counts.advisory"
+                            "readiness.counts.blocking"
+                            "readiness.counts.classifiedObligationsUnmet"
+                            "readiness.counts.journeyObligationsUnmet"
+                            "readiness.counts.warning"
+                            "readiness.perViewState"
+                            "readiness.perViewState[].state"
+                            "readiness.perViewState[].view"
+                            "readiness.shipDisposition"
+                            "readiness.verificationReadiness"
+                            "schemaVersion"
+                            "sources"
+                            "sources[].digest"
+                            "sources[].path"
+                            "sources[].schemaVersion"
+                            "workId"
+                        ]
+                SourceArtifact = generatedViewSource "readiness/<id>/governance-handoff.json"
+                BaselinePresent = true
+                DurableGenerated = false
+            }
 
         let summary =
             markdownViewEntry "summary.md" Summary [ "Generated-view currency"; "Diagnostics"; "Next action" ]
@@ -818,39 +857,42 @@ module ReleaseContract =
                   AgentCommands
                   AdditiveOptional
                   [ "schemaVersion" ]
-                  [ "behaviorModelDigest"
-                    "behaviorModelDigest.algorithm"
-                    "behaviorModelDigest.value"
-                    "commands"
-                    "commands[].id"
-                    "commands[].purpose"
-                    "commands[].relatedIds"
-                    "commands[].stage"
-                    "commands[].title"
-                    "diagnostics"
-                    "generated"
-                    "generator"
-                    "renderedFiles"
-                    "renderedFiles[].kind"
-                    "renderedFiles[].path"
-                    "schemaVersion"
-                    "skills"
-                    "skills[].capability"
-                    "skills[].id"
-                    "skills[].relatedIds"
-                    "skills[].title"
-                    "sources"
-                    "sources[].digest"
-                    "sources[].digest.algorithm"
-                    "sources[].digest.value"
-                    "sources[].kind"
-                    "sources[].path"
-                    "sources[].schemaStatus"
-                    "sources[].schemaVersion"
-                    "targetId"
-                    "viewVersion"
-                    "workId" ] with
-                SourceArtifact = generatedViewSource "readiness/<id>/agent-commands/<target>/guidance.json" }
+                  [
+                      "behaviorModelDigest"
+                      "behaviorModelDigest.algorithm"
+                      "behaviorModelDigest.value"
+                      "commands"
+                      "commands[].id"
+                      "commands[].purpose"
+                      "commands[].relatedIds"
+                      "commands[].stage"
+                      "commands[].title"
+                      "diagnostics"
+                      "generated"
+                      "generator"
+                      "renderedFiles"
+                      "renderedFiles[].kind"
+                      "renderedFiles[].path"
+                      "schemaVersion"
+                      "skills"
+                      "skills[].capability"
+                      "skills[].id"
+                      "skills[].relatedIds"
+                      "skills[].title"
+                      "sources"
+                      "sources[].digest"
+                      "sources[].digest.algorithm"
+                      "sources[].digest.value"
+                      "sources[].kind"
+                      "sources[].path"
+                      "sources[].schemaStatus"
+                      "sources[].schemaVersion"
+                      "targetId"
+                      "viewVersion"
+                      "workId"
+                  ] with
+                SourceArtifact = generatedViewSource "readiness/<id>/agent-commands/<target>/guidance.json"
+            }
 
         let commandsMd =
             markdownViewEntry "agent-commands/<target>/commands.md" AgentCommands [ "Agent commands" ]
@@ -859,290 +901,304 @@ module ReleaseContract =
             markdownViewEntry "agent-commands/<target>/skills.md" AgentCommands [ "Agent skills" ]
 
         let commandReport =
-            { Contract = "command-report (--json)"
-              Kind = CommandOutputContract
-              SchemaVersion = 1
-              ContractVersion = None
-              Stability = AdditiveOptional
-              Determinism = determinism
-              Inventory =
-                jsonInventory
-                    [ "schemaVersion" ]
-                    [ "agentGuidance"
-                      "analysis"
-                      "analysis.acceptedDeferralCount"
-                      "analysis.advisoryCount"
-                      "analysis.analysisPath"
-                      "analysis.blockingCount"
-                      "analysis.generatedViewFindingCount"
-                      "analysis.malformedSourceCount"
-                      "analysis.missingDispositionCount"
-                      "analysis.readiness"
-                      "analysis.readyFindingCount"
-                      "analysis.sourceCount"
-                      "analysis.sourceRelationshipCount"
-                      "analysis.stage"
-                      "analysis.staleSourceCount"
-                      "analysis.status"
-                      "analysis.warningCount"
-                      "analysis.workId"
-                      "changedArtifacts"
-                      "changedArtifacts[].afterDigest"
-                      "changedArtifacts[].afterDigest.algorithm"
-                      "changedArtifacts[].afterDigest.value"
-                      "changedArtifacts[].beforeDigest"
-                      "changedArtifacts[].beforeDigest.algorithm"
-                      "changedArtifacts[].beforeDigest.value"
-                      "changedArtifacts[].diagnosticIds"
-                      "changedArtifacts[].kind"
-                      "changedArtifacts[].operation"
-                      "changedArtifacts[].ownership"
-                      "changedArtifacts[].path"
-                      "changedArtifacts[].safeWriteDecision"
-                      "checklist"
-                      "checklist.acceptedDeferralCount"
-                      "checklist.advisoryCount"
-                      "checklist.failedBlockingCount"
-                      "checklist.itemIds"
-                      "checklist.passedCount"
-                      "checklist.resultIds"
-                      "checklist.sourceClarifications"
-                      "checklist.sourceSpec"
-                      "checklist.stage"
-                      "checklist.staleResultCount"
-                      "checklist.status"
-                      "checklist.workId"
-                      "clarification"
-                      "clarification.acceptedDeferralIds"
-                      "clarification.answeredQuestionIds"
-                      "clarification.blockingAmbiguityCount"
-                      "clarification.decisionIds"
-                      "clarification.questionIds"
-                      "clarification.remainingAmbiguityCount"
-                      "clarification.sourceSpec"
-                      "clarification.stage"
-                      "clarification.status"
-                      "clarification.workId"
-                      "coherent"
-                      "command"
-                      "command.name"
-                      "command.stage"
-                      "context"
-                      "context.projectRoot"
-                      "context.workId"
-                      "dependencySurface"
-                      "diagnostics"
-                      "doctor"
-                      "evidence"
-                      "generatedViews"
-                      "generatedViews[].currency"
-                      "generatedViews[].diagnosticIds"
-                      "generatedViews[].generator"
-                      "generatedViews[].generator.id"
-                      "generatedViews[].generator.version"
-                      "generatedViews[].kind"
-                      "generatedViews[].path"
-                      "generatedViews[].schemaVersion"
-                      "generatedViews[].sources"
-                      "generatedViews[].sources[].digest"
-                      "generatedViews[].sources[].digest.algorithm"
-                      "generatedViews[].sources[].digest.value"
-                      "generatedViews[].sources[].path"
-                      "generatedViews[].sources[].schemaStatus"
-                      "generatedViews[].sources[].schemaVersion"
-                      "governanceCompatibility"
-                      "governanceCompatibility[].diagnosticIds"
-                      "governanceCompatibility[].path"
-                      "governanceCompatibility[].relationship"
-                      "governanceCompatibility[].requiredBySdd"
-                      "governanceCompatibility[].state"
-                      "help"
-                      "invocation"
-                      "invocation.dryRun"
-                      "invocation.outputFormat"
-                      "lifecycleStatus"
-                      "lifecycleStatus.currentOrdinal"
-                      "lifecycleStatus.isLifecycleStage"
-                      "lifecycleStatus.nextCommand"
-                      "lifecycleStatus.outcome"
-                      "lifecycleStatus.stages"
-                      "lifecycleStatus.stages[].command"
-                      "lifecycleStatus.stages[].ordinal"
-                      "lifecycleStatus.stages[].state"
-                      "lifecycleStatus.totalStages"
-                      "lifecycleStatus.workId"
-                      "lint"
-                      "nextAction"
-                      "nextAction.actionId"
-                      "nextAction.blockingDiagnosticIds"
-                      "nextAction.command"
-                      "nextAction.reason"
-                      "nextAction.requiredArtifacts"
-                      "nextAction.workId"
-                      "outcome"
-                      "plan"
-                      "plan.acceptedDeferralCount"
-                      "plan.advisoryCount"
-                      "plan.blockingFindingCount"
-                      "plan.contractReferenceIds"
-                      "plan.decisionIds"
-                      "plan.generatedViewImpactIds"
-                      "plan.migrationNoteIds"
-                      "plan.sourceChecklist"
-                      "plan.sourceClarifications"
-                      "plan.sourceSpec"
-                      "plan.stage"
-                      "plan.staleDecisionCount"
-                      "plan.status"
-                      "plan.verificationObligationIds"
-                      "plan.workId"
-                      "refresh"
-                      "reportVersion"
-                      "scaffold"
-                      "schemaVersion"
-                      "ship"
-                      "ship.advisoryCount"
-                      "ship.blockingCount"
-                      "ship.classifiedObligationsUnmetCount"
-                      "ship.journeyObligationsUnmetCount"
-                      "ship.disposition"
-                      "ship.evidenceDeferredCount"
-                      "ship.evidenceInvalidCount"
-                      "ship.evidenceMissingCount"
-                      "ship.evidenceObservedCount"
-                      "ship.evidenceSelfAttestedCount"
-                      "ship.evidenceStaleCount"
-                      "ship.evidenceSupportedCount"
-                      "ship.evidenceSyntheticCount"
-                      "ship.findingIds"
-                      "ship.generatedViewState"
-                      "ship.lifecycleStageReadiness"
-                      "ship.lifecycleStageReadiness.analyze"
-                      "ship.lifecycleStageReadiness.checklist"
-                      "ship.lifecycleStageReadiness.clarify"
-                      "ship.lifecycleStageReadiness.evidence"
-                      "ship.lifecycleStageReadiness.plan"
-                      "ship.lifecycleStageReadiness.specify"
-                      "ship.lifecycleStageReadiness.tasks"
-                      "ship.lifecycleStageReadiness.verify"
-                      "ship.readiness"
-                      "ship.readyFindingCount"
-                      "ship.shipPath"
-                      "ship.sourceSnapshotCount"
-                      "ship.stage"
-                      "ship.status"
-                      "ship.verificationReadiness"
-                      "ship.warningCount"
-                      "ship.workId"
-                      "specification"
-                      "specification.acceptanceScenarioIds"
-                      "specification.ambiguityIds"
-                      "specification.requirementIds"
-                      "specification.stage"
-                      "specification.status"
-                      "specification.storyIds"
-                      "specification.workId"
-                      "surface"
-                      "tasks"
-                      "tasks.acceptedDeferralCount"
-                      "tasks.advisoryCount"
-                      "tasks.blockingFindingCount"
-                      "tasks.dependencyCount"
-                      "tasks.doneCount"
-                      "tasks.inProgressCount"
-                      "tasks.pendingCount"
-                      "tasks.requiredEvidenceCount"
-                      "tasks.requiredSkillCount"
-                      "tasks.skippedCount"
-                      "tasks.sourceChecklist"
-                      "tasks.sourceClarifications"
-                      "tasks.sourcePlan"
-                      "tasks.sourceSpec"
-                      "tasks.stage"
-                      "tasks.staleCount"
-                      "tasks.status"
-                      "tasks.taskIds"
-                      "tasks.workId"
-                      "toolVersion"
-                      "upgrade"
-                      "verification" ]
-              SourceArtifact =
-                (match
-                    ArtifactRef.create
-                        "src/FS.GG.SDD.Commands/CommandSerialization.fs"
-                        (ArtifactRef.Other "commandOutput")
-                        Sdd
-                        false
-                 with
-                 | Ok artifact -> artifact
-                 | Error message ->
-                     failwithf
-                         "release contract source artifact path %s rejected: %s"
-                         "src/FS.GG.SDD.Commands/CommandSerialization.fs"
-                         message)
-              BaselinePresent = true
-              DurableGenerated = false }
+            {
+                Contract = "command-report (--json)"
+                Kind = CommandOutputContract
+                SchemaVersion = 1
+                ContractVersion = None
+                Stability = AdditiveOptional
+                Determinism = determinism
+                Inventory =
+                    jsonInventory
+                        [ "schemaVersion" ]
+                        [
+                            "agentGuidance"
+                            "analysis"
+                            "analysis.acceptedDeferralCount"
+                            "analysis.advisoryCount"
+                            "analysis.analysisPath"
+                            "analysis.blockingCount"
+                            "analysis.generatedViewFindingCount"
+                            "analysis.malformedSourceCount"
+                            "analysis.missingDispositionCount"
+                            "analysis.readiness"
+                            "analysis.readyFindingCount"
+                            "analysis.sourceCount"
+                            "analysis.sourceRelationshipCount"
+                            "analysis.stage"
+                            "analysis.staleSourceCount"
+                            "analysis.status"
+                            "analysis.warningCount"
+                            "analysis.workId"
+                            "changedArtifacts"
+                            "changedArtifacts[].afterDigest"
+                            "changedArtifacts[].afterDigest.algorithm"
+                            "changedArtifacts[].afterDigest.value"
+                            "changedArtifacts[].beforeDigest"
+                            "changedArtifacts[].beforeDigest.algorithm"
+                            "changedArtifacts[].beforeDigest.value"
+                            "changedArtifacts[].diagnosticIds"
+                            "changedArtifacts[].kind"
+                            "changedArtifacts[].operation"
+                            "changedArtifacts[].ownership"
+                            "changedArtifacts[].path"
+                            "changedArtifacts[].safeWriteDecision"
+                            "checklist"
+                            "checklist.acceptedDeferralCount"
+                            "checklist.advisoryCount"
+                            "checklist.failedBlockingCount"
+                            "checklist.itemIds"
+                            "checklist.passedCount"
+                            "checklist.resultIds"
+                            "checklist.sourceClarifications"
+                            "checklist.sourceSpec"
+                            "checklist.stage"
+                            "checklist.staleResultCount"
+                            "checklist.status"
+                            "checklist.workId"
+                            "clarification"
+                            "clarification.acceptedDeferralIds"
+                            "clarification.answeredQuestionIds"
+                            "clarification.blockingAmbiguityCount"
+                            "clarification.decisionIds"
+                            "clarification.questionIds"
+                            "clarification.remainingAmbiguityCount"
+                            "clarification.sourceSpec"
+                            "clarification.stage"
+                            "clarification.status"
+                            "clarification.workId"
+                            "coherent"
+                            "command"
+                            "command.name"
+                            "command.stage"
+                            "context"
+                            "context.projectRoot"
+                            "context.workId"
+                            "dependencySurface"
+                            "diagnostics"
+                            "doctor"
+                            "evidence"
+                            "generatedViews"
+                            "generatedViews[].currency"
+                            "generatedViews[].diagnosticIds"
+                            "generatedViews[].generator"
+                            "generatedViews[].generator.id"
+                            "generatedViews[].generator.version"
+                            "generatedViews[].kind"
+                            "generatedViews[].path"
+                            "generatedViews[].schemaVersion"
+                            "generatedViews[].sources"
+                            "generatedViews[].sources[].digest"
+                            "generatedViews[].sources[].digest.algorithm"
+                            "generatedViews[].sources[].digest.value"
+                            "generatedViews[].sources[].path"
+                            "generatedViews[].sources[].schemaStatus"
+                            "generatedViews[].sources[].schemaVersion"
+                            "governanceCompatibility"
+                            "governanceCompatibility[].diagnosticIds"
+                            "governanceCompatibility[].path"
+                            "governanceCompatibility[].relationship"
+                            "governanceCompatibility[].requiredBySdd"
+                            "governanceCompatibility[].state"
+                            "help"
+                            "invocation"
+                            "invocation.dryRun"
+                            "invocation.outputFormat"
+                            "lifecycleStatus"
+                            "lifecycleStatus.currentOrdinal"
+                            "lifecycleStatus.isLifecycleStage"
+                            "lifecycleStatus.nextCommand"
+                            "lifecycleStatus.outcome"
+                            "lifecycleStatus.stages"
+                            "lifecycleStatus.stages[].command"
+                            "lifecycleStatus.stages[].ordinal"
+                            "lifecycleStatus.stages[].state"
+                            "lifecycleStatus.totalStages"
+                            "lifecycleStatus.workId"
+                            "lint"
+                            "nextAction"
+                            "nextAction.actionId"
+                            "nextAction.blockingDiagnosticIds"
+                            "nextAction.command"
+                            "nextAction.reason"
+                            "nextAction.requiredArtifacts"
+                            "nextAction.workId"
+                            "outcome"
+                            "plan"
+                            "plan.acceptedDeferralCount"
+                            "plan.advisoryCount"
+                            "plan.blockingFindingCount"
+                            "plan.contractReferenceIds"
+                            "plan.decisionIds"
+                            "plan.generatedViewImpactIds"
+                            "plan.migrationNoteIds"
+                            "plan.sourceChecklist"
+                            "plan.sourceClarifications"
+                            "plan.sourceSpec"
+                            "plan.stage"
+                            "plan.staleDecisionCount"
+                            "plan.status"
+                            "plan.verificationObligationIds"
+                            "plan.workId"
+                            "refresh"
+                            "reportVersion"
+                            "scaffold"
+                            "schemaVersion"
+                            "ship"
+                            "ship.advisoryCount"
+                            "ship.blockingCount"
+                            "ship.classifiedObligationsUnmetCount"
+                            "ship.journeyObligationsUnmetCount"
+                            "ship.disposition"
+                            "ship.evidenceDeferredCount"
+                            "ship.evidenceInvalidCount"
+                            "ship.evidenceMissingCount"
+                            "ship.evidenceObservedCount"
+                            "ship.evidenceSelfAttestedCount"
+                            "ship.evidenceStaleCount"
+                            "ship.evidenceSupportedCount"
+                            "ship.evidenceSyntheticCount"
+                            "ship.findingIds"
+                            "ship.generatedViewState"
+                            "ship.lifecycleStageReadiness"
+                            "ship.lifecycleStageReadiness.analyze"
+                            "ship.lifecycleStageReadiness.checklist"
+                            "ship.lifecycleStageReadiness.clarify"
+                            "ship.lifecycleStageReadiness.evidence"
+                            "ship.lifecycleStageReadiness.plan"
+                            "ship.lifecycleStageReadiness.specify"
+                            "ship.lifecycleStageReadiness.tasks"
+                            "ship.lifecycleStageReadiness.verify"
+                            "ship.readiness"
+                            "ship.readyFindingCount"
+                            "ship.shipPath"
+                            "ship.sourceSnapshotCount"
+                            "ship.stage"
+                            "ship.status"
+                            "ship.verificationReadiness"
+                            "ship.warningCount"
+                            "ship.workId"
+                            "specification"
+                            "specification.acceptanceScenarioIds"
+                            "specification.ambiguityIds"
+                            "specification.requirementIds"
+                            "specification.stage"
+                            "specification.status"
+                            "specification.storyIds"
+                            "specification.workId"
+                            "surface"
+                            "tasks"
+                            "tasks.acceptedDeferralCount"
+                            "tasks.advisoryCount"
+                            "tasks.blockingFindingCount"
+                            "tasks.dependencyCount"
+                            "tasks.doneCount"
+                            "tasks.inProgressCount"
+                            "tasks.pendingCount"
+                            "tasks.requiredEvidenceCount"
+                            "tasks.requiredSkillCount"
+                            "tasks.skippedCount"
+                            "tasks.sourceChecklist"
+                            "tasks.sourceClarifications"
+                            "tasks.sourcePlan"
+                            "tasks.sourceSpec"
+                            "tasks.stage"
+                            "tasks.staleCount"
+                            "tasks.status"
+                            "tasks.taskIds"
+                            "tasks.workId"
+                            "toolVersion"
+                            "upgrade"
+                            "verification"
+                        ]
+                SourceArtifact =
+                    (match
+                        ArtifactRef.create
+                            "src/FS.GG.SDD.Commands/CommandSerialization.fs"
+                            (ArtifactRef.Other "commandOutput")
+                            Sdd
+                            false
+                     with
+                     | Ok artifact -> artifact
+                     | Error message ->
+                         failwithf
+                             "release contract source artifact path %s rejected: %s"
+                             "src/FS.GG.SDD.Commands/CommandSerialization.fs"
+                             message)
+                BaselinePresent = true
+                DurableGenerated = false
+            }
 
-        { SchemaVersion = 1
-          GeneratorVersion = currentGeneratorVersion ()
-          Identity = identity
-          Compatibility = compatibility
-          Catalog =
-            [ workModel
-              analysis
-              verify
-              ship
-              shipVerdict
-              governanceHandoff
-              summary
-              guidance
-              commandsMd
-              skillsMd
-              commandReport ]
-          // 0.14.0 is BREAKING and therefore MUST carry a migration note — `migrationNoteRequired
-          // Breaking = true` (FR-009 / FR-010). ADR-0035 stage 3b (FS.GG.SDD#497) flipped the
-          // default of requiring an observed run to ON: an unobserved `result: pass` test
-          // obligation, which reached `satisfied` on every prior release, no longer does, and
-          // `verify`/`ship` block it. That changes the EXIT-CODE contract of both commands for an
-          // existing invocation over existing evidence — the policy's Breaking row ("change an
-          // exit-code contract"). Under the pre-1.0 `0.x` carve-out it lands on a MINOR bump; the
-          // carve-out relaxes the bump, never the note.
-          //
-          // The additive half rides along: `--no-require-observed` is a NEW opt-out flag that
-          // restores the prior behavior byte-for-byte, and the legacy `--require-observed` stays a
-          // recognized (now-redundant) accept. Adding flags is additive; the DEFAULT flip is the
-          // break, and it is what this note enumerates.
-          //
-          // The F# public surface diff v0.13.0..HEAD is EMPTY (the `--no-require-observed` opt-out
-          // is a value inside the internal-bodied `Options.commandOptions`, not a new signature
-          // member — `PublicSurface.baseline` is unchanged), and the `--json` output shapes are
-          // unchanged. The break is purely BEHAVIORAL, invisible to a surface/shape diff, which is
-          // exactly why ADR-0035 left it to a human rather than to the release classifier. Nothing
-          // detects it; the human encodes it, here.
-          //
-          // `Migrations` is the note for THE RELEASE BEING CUT (T023 pins `Path` to
-          // `Identity.Version`), not a running history — the 0.10.0/0.9.0 notes live on disk under
-          // `docs/release/migrations/` and are not carried here.
-          //
-          // The `BreakingChanges` text has two constraints, and the first is enforced by NOTHING
-          // ELSE:
-          //  1. BACKTICK-FREE. The default JavaScriptEncoder escapes U+0060 (as it already
-          //     escapes '>' in specKitRange), so a backticked note lands in a committed machine
-          //     artifact as ``` noise. NO TEST CATCHES THIS — this comment is the whole guard.
-          //  2. No Governance gate-logic vocabulary — "gate"/"route"/"profile"/"freshness"/
-          //     "publish"/"provenance"/"verdict"/"enforce". ReleaseBoundaryTests T024 scans the
-          //     SERIALIZED contract, so it does cover note text, and it will fail you. SDD
-          //     reports blocking readiness; it never gates. Say "blocks"/"blocking".
-          //
-          // And enumerate EVERY breaking change: a note that under-reports is the exact failure
-          // the note exists to prevent.
-          // 2.0.0 changes the omitted typed-sdd author backend from F# to Quint. Explicit F#
-          // selection remains available throughout the compatibility window.
-          Migrations =
-            [ { Version = "2.0.0"
-                Path = "docs/release/migrations/2.0.0.md"
-                BreakingChanges =
-                  [ "typed-sdd author now selects quint-specification-v1 when --backend is omitted; pass --backend fsharp-specification-v1 to preserve the prior authority format during the 2.x compatibility window." ] } ] }
+        {
+            SchemaVersion = 1
+            GeneratorVersion = currentGeneratorVersion ()
+            Identity = identity
+            Compatibility = compatibility
+            Catalog =
+                [
+                    workModel
+                    analysis
+                    verify
+                    ship
+                    shipVerdict
+                    governanceHandoff
+                    summary
+                    guidance
+                    commandsMd
+                    skillsMd
+                    commandReport
+                ]
+            // 0.14.0 is BREAKING and therefore MUST carry a migration note — `migrationNoteRequired
+            // Breaking = true` (FR-009 / FR-010). ADR-0035 stage 3b (FS.GG.SDD#497) flipped the
+            // default of requiring an observed run to ON: an unobserved `result: pass` test
+            // obligation, which reached `satisfied` on every prior release, no longer does, and
+            // `verify`/`ship` block it. That changes the EXIT-CODE contract of both commands for an
+            // existing invocation over existing evidence — the policy's Breaking row ("change an
+            // exit-code contract"). Under the pre-1.0 `0.x` carve-out it lands on a MINOR bump; the
+            // carve-out relaxes the bump, never the note.
+            //
+            // The additive half rides along: `--no-require-observed` is a NEW opt-out flag that
+            // restores the prior behavior byte-for-byte, and the legacy `--require-observed` stays a
+            // recognized (now-redundant) accept. Adding flags is additive; the DEFAULT flip is the
+            // break, and it is what this note enumerates.
+            //
+            // The F# public surface diff v0.13.0..HEAD is EMPTY (the `--no-require-observed` opt-out
+            // is a value inside the internal-bodied `Options.commandOptions`, not a new signature
+            // member — `PublicSurface.baseline` is unchanged), and the `--json` output shapes are
+            // unchanged. The break is purely BEHAVIORAL, invisible to a surface/shape diff, which is
+            // exactly why ADR-0035 left it to a human rather than to the release classifier. Nothing
+            // detects it; the human encodes it, here.
+            //
+            // `Migrations` is the note for THE RELEASE BEING CUT (T023 pins `Path` to
+            // `Identity.Version`), not a running history — the 0.10.0/0.9.0 notes live on disk under
+            // `docs/release/migrations/` and are not carried here.
+            //
+            // The `BreakingChanges` text has two constraints, and the first is enforced by NOTHING
+            // ELSE:
+            //  1. BACKTICK-FREE. The default JavaScriptEncoder escapes U+0060 (as it already
+            //     escapes '>' in specKitRange), so a backticked note lands in a committed machine
+            //     artifact as ``` noise. NO TEST CATCHES THIS — this comment is the whole guard.
+            //  2. No Governance gate-logic vocabulary — "gate"/"route"/"profile"/"freshness"/
+            //     "publish"/"provenance"/"verdict"/"enforce". ReleaseBoundaryTests T024 scans the
+            //     SERIALIZED contract, so it does cover note text, and it will fail you. SDD
+            //     reports blocking readiness; it never gates. Say "blocks"/"blocking".
+            //
+            // And enumerate EVERY breaking change: a note that under-reports is the exact failure
+            // the note exists to prevent.
+            // 2.0.0 changes the omitted typed-sdd author backend from F# to Quint. Explicit F#
+            // selection remains available throughout the compatibility window.
+            Migrations =
+                [
+                    {
+                        Version = "2.0.0"
+                        Path = "docs/release/migrations/2.0.0.md"
+                        BreakingChanges =
+                            [
+                                "typed-sdd author now selects quint-specification-v1 when --backend is omitted; pass --backend fsharp-specification-v1 to preserve the prior authority format during the 2.x compatibility window."
+                            ]
+                    }
+                ]
+        }
 
     // ---- canonical serialization ----
 
@@ -1339,26 +1395,32 @@ module ReleaseContract =
             let generatorElement = prop "generatorVersion" root
 
             let generator: GeneratorVersion =
-                { Id = str "id" generatorElement
-                  Version = str "version" generatorElement }
+                {
+                    Id = str "id" generatorElement
+                    Version = str "version" generatorElement
+                }
 
             let identityElement = prop "identity" root
 
             let identity =
-                { Version = str "version" identityElement
-                  Channel = parseChannel (str "channel" identityElement)
-                  PackageIds =
-                    (prop "packageIds" identityElement).EnumerateArray()
-                    |> Seq.map (fun item -> item.GetString() |> Option.ofObj |> Option.defaultValue "")
-                    |> Seq.toList
-                  CliCommandName = str "cliCommandName" identityElement }
+                {
+                    Version = str "version" identityElement
+                    Channel = parseChannel (str "channel" identityElement)
+                    PackageIds =
+                        (prop "packageIds" identityElement).EnumerateArray()
+                        |> Seq.map (fun item -> item.GetString() |> Option.ofObj |> Option.defaultValue "")
+                        |> Seq.toList
+                    CliCommandName = str "cliCommandName" identityElement
+                }
 
             let compatibility =
                 (prop "compatibility" root).EnumerateArray()
                 |> Seq.map (fun entry ->
-                    { SddVersionLine = str "sddVersionLine" entry
-                      SpecKitRange = str "specKitRange" entry
-                      GovernanceContractVersionRange = optString entry "governanceContractVersionRange" })
+                    {
+                        SddVersionLine = str "sddVersionLine" entry
+                        SpecKitRange = str "specKitRange" entry
+                        GovernanceContractVersionRange = optString entry "governanceContractVersionRange"
+                    })
                 |> Seq.toList
 
             let catalog =
@@ -1378,45 +1440,53 @@ module ReleaseContract =
                     let inventory =
                         (prop "inventory" entry).EnumerateArray()
                         |> Seq.map (fun item ->
-                            { Name = str "name" item
-                              Kind = parseInventoryKind (str "kind" item)
-                              Stability = parseStability (str "stability" item) })
+                            {
+                                Name = str "name" item
+                                Kind = parseInventoryKind (str "kind" item)
+                                Stability = parseStability (str "stability" item)
+                            })
                         |> Seq.toList
 
-                    { Contract = str "contract" entry
-                      Kind = kind
-                      SchemaVersion = intp "schemaVersion" entry
-                      ContractVersion = optString entry "contractVersion"
-                      Stability = parseStability (str "stability" entry)
-                      Determinism = str "determinism" entry
-                      Inventory = inventory
-                      SourceArtifact = artifactOf (prop "sourceArtifact" entry)
-                      BaselinePresent = (prop "baselinePresent" entry).GetBoolean()
-                      // Absent ⇒ regenerable, which is what every pre-092 entry meant.
-                      DurableGenerated =
-                        match entry.TryGetProperty "durableGenerated" with
-                        | true, value -> value.GetBoolean()
-                        | _ -> false })
+                    {
+                        Contract = str "contract" entry
+                        Kind = kind
+                        SchemaVersion = intp "schemaVersion" entry
+                        ContractVersion = optString entry "contractVersion"
+                        Stability = parseStability (str "stability" entry)
+                        Determinism = str "determinism" entry
+                        Inventory = inventory
+                        SourceArtifact = artifactOf (prop "sourceArtifact" entry)
+                        BaselinePresent = (prop "baselinePresent" entry).GetBoolean()
+                        // Absent ⇒ regenerable, which is what every pre-092 entry meant.
+                        DurableGenerated =
+                            match entry.TryGetProperty "durableGenerated" with
+                            | true, value -> value.GetBoolean()
+                            | _ -> false
+                    })
                 |> Seq.toList
 
             let migrations =
                 (prop "migrations" root).EnumerateArray()
                 |> Seq.map (fun note ->
-                    { Version = str "version" note
-                      Path = str "path" note
-                      BreakingChanges =
-                        (prop "breakingChanges" note).EnumerateArray()
-                        |> Seq.map (fun change -> change.GetString() |> Option.ofObj |> Option.defaultValue "")
-                        |> Seq.toList })
+                    {
+                        Version = str "version" note
+                        Path = str "path" note
+                        BreakingChanges =
+                            (prop "breakingChanges" note).EnumerateArray()
+                            |> Seq.map (fun change -> change.GetString() |> Option.ofObj |> Option.defaultValue "")
+                            |> Seq.toList
+                    })
                 |> Seq.toList
 
             Ok
-                { SchemaVersion = intp "schemaVersion" root
-                  GeneratorVersion = generator
-                  Identity = identity
-                  Compatibility = compatibility
-                  Catalog = catalog
-                  Migrations = migrations }
+                {
+                    SchemaVersion = intp "schemaVersion" root
+                    GeneratorVersion = generator
+                    Identity = identity
+                    Compatibility = compatibility
+                    Catalog = catalog
+                    Migrations = migrations
+                }
         with ex ->
             Error ex.Message
 
@@ -1442,18 +1512,20 @@ module ReleaseContract =
         let entryGaps =
             release.Catalog
             |> List.collect (fun entry ->
-                [ if not entry.BaselinePresent then
-                      gap
-                          "releaseBaselineMissing"
-                          (Some entry.SourceArtifact)
-                          $"Public contract '{entry.Contract}' has no locking baseline."
-                          "Capture a golden baseline for this contract under tests/**/baselines/."
-                  if String.IsNullOrWhiteSpace entry.SourceArtifact.Path then
-                      gap
-                          "releaseSourceMissing"
-                          None
-                          $"Public contract '{entry.Contract}' has no source artifact back-reference."
-                          "Set the SchemaReferenceEntry.SourceArtifact for this contract." ])
+                [
+                    if not entry.BaselinePresent then
+                        gap
+                            "releaseBaselineMissing"
+                            (Some entry.SourceArtifact)
+                            $"Public contract '{entry.Contract}' has no locking baseline."
+                            "Capture a golden baseline for this contract under tests/**/baselines/."
+                    if String.IsNullOrWhiteSpace entry.SourceArtifact.Path then
+                        gap
+                            "releaseSourceMissing"
+                            None
+                            $"Public contract '{entry.Contract}' has no source artifact back-reference."
+                            "Set the SchemaReferenceEntry.SourceArtifact for this contract."
+                ])
 
         let drift =
             produced
@@ -1464,17 +1536,19 @@ module ReleaseContract =
                     let documented = entry.Inventory |> List.map (fun field -> field.Name) |> Set.ofList
                     let observed = Set.ofList item.Inventory
 
-                    [ for name in Set.toList (Set.difference observed documented) ->
-                          gap
-                              "releaseFieldUndocumented"
-                              (Some item.Source)
-                              $"Produced '{item.Contract}' has undocumented field '{name}'."
-                              "Add the field to the catalog inventory (the produced artifact is authoritative)."
-                      for name in Set.toList (Set.difference documented observed) ->
-                          gap
-                              "releaseFieldAbsent"
-                              (Some entry.SourceArtifact)
-                              $"Documented field '{name}' is absent from produced '{item.Contract}'."
-                              "Remove the stale field from the catalog or restore it in the producer." ])
+                    [
+                        for name in Set.toList (Set.difference observed documented) ->
+                            gap
+                                "releaseFieldUndocumented"
+                                (Some item.Source)
+                                $"Produced '{item.Contract}' has undocumented field '{name}'."
+                                "Add the field to the catalog inventory (the produced artifact is authoritative)."
+                        for name in Set.toList (Set.difference documented observed) ->
+                            gap
+                                "releaseFieldAbsent"
+                                (Some entry.SourceArtifact)
+                                $"Documented field '{name}' is absent from produced '{item.Contract}'."
+                                "Remove the stale field from the catalog or restore it in the producer."
+                    ])
 
         undocumented @ entryGaps @ drift |> Diagnostics.sort

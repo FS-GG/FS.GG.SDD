@@ -64,9 +64,11 @@ No blocking planning findings recorded.
 """
 
     let snapshot text =
-        ({ Path = "work/008-plan-command/plan.md"
-           Text = text
-           RawBytes = None }
+        ({
+            Path = "work/008-plan-command/plan.md"
+            Text = text
+            RawBytes = None
+        }
         : FileSnapshot)
 
     [<Fact>]

@@ -11,14 +11,18 @@ open FS.GG.SDD.Validation.ValidationContracts
 
 module Rendering =
     type TerminalCapabilities =
-        { IsInteractive: bool
-          ColorEnabled: bool
-          Width: int option
-          IsInputInteractive: bool }
+        {
+            IsInteractive: bool
+            ColorEnabled: bool
+            Width: int option
+            IsInputInteractive: bool
+        }
 
     type RichRenderResult =
-        { Text: string
-          UsedRichRendering: bool }
+        {
+            Text: string
+            UsedRichRendering: bool
+        }
 
     let selectFormat (args: string list) : OutputFormat =
         let has flag = List.contains flag args
@@ -85,10 +89,12 @@ module Rendering =
             with _ ->
                 None
 
-        { IsInteractive = isInteractive
-          ColorEnabled = colorEnabled
-          Width = width
-          IsInputInteractive = not Console.IsInputRedirected }
+        {
+            IsInteractive = isInteractive
+            ColorEnabled = colorEnabled
+            Width = width
+            IsInputInteractive = not Console.IsInputRedirected
+        }
 
     // ----- Presentation styling (color names; stripped on color-off consoles). -----
 
@@ -422,15 +428,17 @@ module Rendering =
 
         // Sensed triage facts are surfaced only when populated (C-6); never required.
         let sensedLines =
-            [ match report.Sensed.StartedAtUtc with
-              | Some value -> $"startedAtUtc={value}"
-              | None -> ()
-              match report.Sensed.DurationMs with
-              | Some value -> $"durationMs={value}"
-              | None -> ()
-              match report.Sensed.Host with
-              | Some value -> $"host={value}"
-              | None -> () ]
+            [
+                match report.Sensed.StartedAtUtc with
+                | Some value -> $"startedAtUtc={value}"
+                | None -> ()
+                match report.Sensed.DurationMs with
+                | Some value -> $"durationMs={value}"
+                | None -> ()
+                match report.Sensed.Host with
+                | Some value -> $"host={value}"
+                | None -> ()
+            ]
 
         if not sensedLines.IsEmpty then
             let sensedText = String.concat ", " sensedLines
@@ -439,24 +447,32 @@ module Rendering =
     let resolve (format: OutputFormat) (capabilities: TerminalCapabilities) (report: CommandReport) : RichRenderResult =
         match format with
         | Json ->
-            { Text = serializeReport report
-              UsedRichRendering = false }
+            {
+                Text = serializeReport report
+                UsedRichRendering = false
+            }
         | Text ->
-            { Text = FS.GG.SDD.Commands.CommandRendering.renderText report
-              UsedRichRendering = false }
+            {
+                Text = FS.GG.SDD.Commands.CommandRendering.renderText report
+                UsedRichRendering = false
+            }
         | Rich ->
             if capabilities.IsInteractive && capabilities.ColorEnabled then
                 let console, writer = createCappedConsole capabilities
 
                 renderRichTo console report
 
-                { Text = writer.ToString()
-                  UsedRichRendering = true }
+                {
+                    Text = writer.ToString()
+                    UsedRichRendering = true
+                }
             else
                 // Degrade to the existing plain-text projection: zero ANSI, byte-identical
                 // to `--text` for the same report (C-1, INV-2).
-                { Text = FS.GG.SDD.Commands.CommandRendering.renderText report
-                  UsedRichRendering = false }
+                {
+                    Text = FS.GG.SDD.Commands.CommandRendering.renderText report
+                    UsedRichRendering = false
+                }
 
     let resolveValidation
         (format: OutputFormat)
@@ -467,21 +483,29 @@ module Rendering =
         // `serialize` is the canonical automation contract; `renderText` is the
         // portable plain-text projection. Both are returned byte-for-byte (INV-1).
         | Json ->
-            { Text = FS.GG.SDD.Validation.ValidationContracts.serialize report
-              UsedRichRendering = false }
+            {
+                Text = FS.GG.SDD.Validation.ValidationContracts.serialize report
+                UsedRichRendering = false
+            }
         | Text ->
-            { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report
-              UsedRichRendering = false }
+            {
+                Text = FS.GG.SDD.Validation.ValidationContracts.renderText report
+                UsedRichRendering = false
+            }
         | Rich ->
             if capabilities.IsInteractive && capabilities.ColorEnabled then
                 let console, writer = createCappedConsole capabilities
 
                 renderValidationRichTo console report
 
-                { Text = writer.ToString()
-                  UsedRichRendering = true }
+                {
+                    Text = writer.ToString()
+                    UsedRichRendering = true
+                }
             else
                 // Degrade to the exact plain-text projection: zero ANSI, byte-identical
                 // to `--text` for the same report (C-4, INV-2).
-                { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report
-                  UsedRichRendering = false }
+                {
+                    Text = FS.GG.SDD.Validation.ValidationContracts.renderText report
+                    UsedRichRendering = false
+                }

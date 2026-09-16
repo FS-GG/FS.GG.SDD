@@ -47,10 +47,14 @@ module SkillMirror =
     type MirrorWrite = { Path: string; Body: string }
 
     let mirror (roots: string list) (skills: (string * string) list) : MirrorWrite list =
-        [ for (id, body) in skills |> List.sortBy fst do
-              for root in roots ->
-                  { Path = skillPath root id
-                    Body = body } ]
+        [
+            for (id, body) in skills |> List.sortBy fst do
+                for root in roots ->
+                    {
+                        Path = skillPath root id
+                        Body = body
+                    }
+        ]
 
     // -----------------------------------------------------------------------------------------
     // MULTI-FILE skills (FS.GG.SDD#717).
@@ -77,12 +81,16 @@ module SkillMirror =
         | DuplicateRelativePath of relativePath: string
 
     type MirrorRefusal =
-        { Id: string
-          Reasons: MirrorRefusalReason list }
+        {
+            Id: string
+            Reasons: MirrorRefusalReason list
+        }
 
     type MirrorPlan =
-        { Writes: MirrorWrite list
-          Refused: MirrorRefusal list }
+        {
+            Writes: MirrorWrite list
+            Refused: MirrorRefusal list
+        }
 
     let private normalizeRelative (path: string) =
         if isNull (box path) then "" else path.Replace('\\', '/')
@@ -160,17 +168,19 @@ module SkillMirror =
                 |> List.distinct
                 |> List.map UnsafeRelativePath
 
-            [ if not (isSafeSkillId skill.Id) then
-                  UnsafeSkillId
-              if Set.contains skill.Id duplicatedIds then
-                  DuplicateSkillId
-              // `<root>/skills/<id>/SKILL.md` is what MAKES a directory a skill — it is what
-              // `skillPath` names and what `skillIdOfPath` recognises. Materializing only the
-              // auxiliaries would place a directory no discovery pass can see.
-              if not (normalized |> List.contains "SKILL.md") then
-                  MissingSkillFile
-              yield! unsafe
-              yield! duplicated ]
+            [
+                if not (isSafeSkillId skill.Id) then
+                    UnsafeSkillId
+                if Set.contains skill.Id duplicatedIds then
+                    DuplicateSkillId
+                // `<root>/skills/<id>/SKILL.md` is what MAKES a directory a skill — it is what
+                // `skillPath` names and what `skillIdOfPath` recognises. Materializing only the
+                // auxiliaries would place a directory no discovery pass can see.
+                if not (normalized |> List.contains "SKILL.md") then
+                    MissingSkillFile
+                yield! unsafe
+                yield! duplicated
+            ]
             |> List.distinct
             |> List.sortBy reasonRank
 
@@ -180,15 +190,19 @@ module SkillMirror =
         // unsafe one would materialize a HALF skill — silent under-materialization, which is the
         // exact failure this library exists to make impossible.
         let writes =
-            [ for skill, reasons in evaluated |> List.sortBy (fun (skill, _) -> skill.Id) do
-                  if List.isEmpty reasons then
-                      for file in
-                          skill.Files
-                          |> List.map (fun file -> normalizeRelative file.RelativePath, file.Body)
-                          |> List.sortBy fst do
-                          for root in roots ->
-                              { Path = skillFilePath root skill.Id (fst file)
-                                Body = snd file } ]
+            [
+                for skill, reasons in evaluated |> List.sortBy (fun (skill, _) -> skill.Id) do
+                    if List.isEmpty reasons then
+                        for file in
+                            skill.Files
+                            |> List.map (fun file -> normalizeRelative file.RelativePath, file.Body)
+                            |> List.sortBy fst do
+                            for root in roots ->
+                                {
+                                    Path = skillFilePath root skill.Id (fst file)
+                                    Body = snd file
+                                }
+            ]
 
         // One refusal per distinct id (a duplicated id is one subject, not two), reasons merged.
         let refused =
@@ -196,28 +210,36 @@ module SkillMirror =
             |> List.filter (fun (_, reasons) -> not (List.isEmpty reasons))
             |> List.groupBy (fun (skill, _) -> skill.Id)
             |> List.map (fun (id, group) ->
-                { Id = id
-                  Reasons = group |> List.collect snd |> List.distinct |> List.sortBy reasonRank })
+                {
+                    Id = id
+                    Reasons = group |> List.collect snd |> List.distinct |> List.sortBy reasonRank
+                })
             |> List.sortBy (fun refusal -> refusal.Id)
 
         { Writes = writes; Refused = refused }
 
     type ExpectedSkill =
-        { Id: string
-          Scope: SkillScope
-          Sha256: string }
+        {
+            Id: string
+            Scope: SkillScope
+            Sha256: string
+        }
 
     type ActualCopy =
-        { Root: string
-          Id: string
-          Body: string option }
+        {
+            Root: string
+            Id: string
+            Body: string option
+        }
 
     type SkillDrift =
-        { Id: string
-          Scope: SkillScope
-          MissingRoots: string list
-          Divergent: bool
-          HashMismatchRoots: string list }
+        {
+            Id: string
+            Scope: SkillScope
+            MissingRoots: string list
+            Divergent: bool
+            HashMismatchRoots: string list
+        }
 
     let verify (roots: string list) (expected: ExpectedSkill list) (actual: ActualCopy list) : SkillDrift list =
         let bodyAt =
@@ -258,11 +280,13 @@ module SkillMirror =
                 None
             else
                 Some
-                    { Id = skill.Id
-                      Scope = skill.Scope
-                      MissingRoots = missingRoots
-                      Divergent = divergent
-                      HashMismatchRoots = hashMismatchRoots })
+                    {
+                        Id = skill.Id
+                        Scope = skill.Scope
+                        MissingRoots = missingRoots
+                        Divergent = divergent
+                        HashMismatchRoots = hashMismatchRoots
+                    })
 
     // -----------------------------------------------------------------------------------------
     // MULTI-FILE verify (FS.GG.SDD#721).
@@ -279,21 +303,27 @@ module SkillMirror =
     // it reports precisely what `verify` reports (see `SkillMirrorTests`).
 
     type ActualSkillFiles =
-        { Root: string
-          Id: string
-          Files: SkillFile list option }
+        {
+            Root: string
+            Id: string
+            Files: SkillFile list option
+        }
 
     type SkillFileDrift =
-        { RelativePath: string
-          MissingRoots: string list
-          Divergent: bool
-          HashMismatchRoots: string list }
+        {
+            RelativePath: string
+            MissingRoots: string list
+            Divergent: bool
+            HashMismatchRoots: string list
+        }
 
     type MultiFileSkillDrift =
-        { Id: string
-          Scope: SkillScope
-          MissingRoots: string list
-          Files: SkillFileDrift list }
+        {
+            Id: string
+            Scope: SkillScope
+            MissingRoots: string list
+            Files: SkillFileDrift list
+        }
 
     // The observation model's THIRD STATE, threaded through the two folds below as a lookup rather
     // than as a public parameter — the public spellings are added at the foot of this file
@@ -429,19 +459,23 @@ module SkillMirror =
                         None
                     else
                         Some
-                            { RelativePath = relativePath
-                              MissingRoots = fileMissingRoots
-                              Divergent = divergent
-                              HashMismatchRoots = hashMismatchRoots })
+                            {
+                                RelativePath = relativePath
+                                MissingRoots = fileMissingRoots
+                                Divergent = divergent
+                                HashMismatchRoots = hashMismatchRoots
+                            })
 
             if List.isEmpty missingRoots && List.isEmpty fileDrift then
                 None
             else
                 Some
-                    { Id = skill.Id
-                      Scope = skill.Scope
-                      MissingRoots = missingRoots
-                      Files = fileDrift })
+                    {
+                        Id = skill.Id
+                        Scope = skill.Scope
+                        MissingRoots = missingRoots
+                        Files = fileDrift
+                    })
 
     // Every subject observed: the spelling that predates the third state, and the one every
     // existing caller keeps. Defined AS the core with an empty unobserved set rather than beside
@@ -475,22 +509,28 @@ module SkillMirror =
     // a coordinated MAJOR nobody authorised (docs/release/contracts-version-bump-checklist.md).
 
     type ExpectedSkillFiles =
-        { Id: string
-          Scope: SkillScope
-          Files: SkillManifestFile list }
+        {
+            Id: string
+            Scope: SkillScope
+            Files: SkillManifestFile list
+        }
 
     type DeclaredFileDrift =
-        { RelativePath: string
-          MissingRoots: string list
-          Divergent: bool
-          HashMismatchRoots: string list
-          UndeclaredRoots: string list }
+        {
+            RelativePath: string
+            MissingRoots: string list
+            Divergent: bool
+            HashMismatchRoots: string list
+            UndeclaredRoots: string list
+        }
 
     type DeclaredSkillDrift =
-        { Id: string
-          Scope: SkillScope
-          MissingRoots: string list
-          Files: DeclaredFileDrift list }
+        {
+            Id: string
+            Scope: SkillScope
+            MissingRoots: string list
+            Files: DeclaredFileDrift list
+        }
 
     let private verifyFileSetCore
         (roots: string list)
@@ -626,20 +666,24 @@ module SkillMirror =
                         None
                     else
                         Some
-                            { RelativePath = relativePath
-                              MissingRoots = fileMissingRoots
-                              Divergent = divergent
-                              HashMismatchRoots = hashMismatchRoots
-                              UndeclaredRoots = undeclaredRoots })
+                            {
+                                RelativePath = relativePath
+                                MissingRoots = fileMissingRoots
+                                Divergent = divergent
+                                HashMismatchRoots = hashMismatchRoots
+                                UndeclaredRoots = undeclaredRoots
+                            })
 
             if List.isEmpty missingRoots && List.isEmpty fileDrift then
                 None
             else
                 Some
-                    { Id = skill.Id
-                      Scope = skill.Scope
-                      MissingRoots = missingRoots
-                      Files = fileDrift })
+                    {
+                        Id = skill.Id
+                        Scope = skill.Scope
+                        MissingRoots = missingRoots
+                        Files = fileDrift
+                    })
 
     // Every subject observed — `verifyFiles`'s counterpart, and unchanged for the same reason.
     let verifyFileSet
@@ -682,9 +726,11 @@ module SkillMirror =
     // record shape carrying a fact its only reader already has.
 
     type UnobservedSkillFiles =
-        { Root: string
-          Id: string
-          RelativePaths: string list }
+        {
+            Root: string
+            Id: string
+            RelativePaths: string list
+        }
 
     // `(root, id)` -> the unobserved relative paths for that copy, normalized like every other
     // relative path in this module. Several entries for one copy UNION rather than shadow: a caller

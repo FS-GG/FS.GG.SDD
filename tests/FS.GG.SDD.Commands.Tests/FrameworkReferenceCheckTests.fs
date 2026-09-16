@@ -67,9 +67,11 @@ No blocking planning findings recorded.
     let private parse text : PlanFacts =
         match
             parsePlanFacts
-                { Path = "work/008-plan-command/plan.md"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = "work/008-plan-command/plan.md"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"plan did not parse: {diagnostics}"

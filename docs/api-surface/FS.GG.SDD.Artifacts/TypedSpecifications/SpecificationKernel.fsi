@@ -19,62 +19,78 @@ type SourceLocation = { Line: int; Column: int }
 
 /// Authorship and authoritative-source provenance. Author/session/time are not semantic model bytes.
 type SpecificationProvenance =
-    { Agent: string
-      Session: string
-      SourcePath: string
-      SourceRevision: string
-      AuthoredAtUtc: string }
+    {
+        Agent: string
+        Session: string
+        SourcePath: string
+        SourceRevision: string
+        AuthoredAtUtc: string
+    }
 
 /// One semantic evidence obligation declared by a specification.
 type EvidenceObligation =
-    { Id: SpecificationId
-      Kind: string
-      Description: string }
+    {
+        Id: SpecificationId
+        Kind: string
+        Description: string
+    }
 
 /// One observed receipt offered to evidence validation.
 type EvidenceReceipt =
-    { ObligationId: SpecificationId
-      Kind: string
-      EvidenceRef: string }
+    {
+        ObligationId: SpecificationId
+        Kind: string
+        EvidenceRef: string
+    }
 
 /// Stable, path-addressed diagnostic suitable for machine and human projections.
 type SpecificationDiagnostic =
-    { Code: string
-      Path: string
-      Message: string
-      Location: SourceLocation option }
+    {
+        Code: string
+        Path: string
+        Message: string
+        Location: SourceLocation option
+    }
 
 /// Generic specification envelope. The consuming domain owns the concrete extension type.
 type SpecificationModel<'extension> =
-    { Identity: SpecificationId
-      SchemaVersion: int
-      Provenance: SpecificationProvenance
-      Intent: string
-      EvidenceObligations: EvidenceObligation list
-      Extension: 'extension }
+    {
+        Identity: SpecificationId
+        SchemaVersion: int
+        Provenance: SpecificationProvenance
+        Intent: string
+        EvidenceObligations: EvidenceObligation list
+        Extension: 'extension
+    }
 
 /// Explicit static contract for one concrete extension type; no boxing or reflection discovery is required.
 type ExtensionContract<'extension> =
-    { Kind: string
-      SchemaVersion: int
-      Validate: EvidenceObligation list -> 'extension -> SpecificationDiagnostic list
-      EncodeCanonical: 'extension -> byte array
-      WriteJson: Utf8JsonWriter -> 'extension -> unit
-      DecodeJson: JsonElement -> Result<'extension, SpecificationDiagnostic list>
-      ProjectMarkdown: 'extension -> string list }
+    {
+        Kind: string
+        SchemaVersion: int
+        Validate: EvidenceObligation list -> 'extension -> SpecificationDiagnostic list
+        EncodeCanonical: 'extension -> byte array
+        WriteJson: Utf8JsonWriter -> 'extension -> unit
+        DecodeJson: JsonElement -> Result<'extension, SpecificationDiagnostic list>
+        ProjectMarkdown: 'extension -> string list
+    }
 
 /// Validated model plus its deterministic semantic representation.
 type CompiledSpecification<'extension> =
-    { Model: SpecificationModel<'extension>
-      NormalizedBytes: byte array
-      Fingerprint: string }
+    {
+        Model: SpecificationModel<'extension>
+        NormalizedBytes: byte array
+        Fingerprint: string
+    }
 
 /// One stable semantic change between two specifications.
 type SemanticChange =
-    { Path: string
-      Summary: string
-      BeforeFingerprint: string
-      AfterFingerprint: string }
+    {
+        Path: string
+        Summary: string
+        BeforeFingerprint: string
+        AfterFingerprint: string
+    }
 
 /// Semantic comparison independent of author/session/time/intent noise.
 type SemanticDiff =
@@ -83,15 +99,19 @@ type SemanticDiff =
 
 /// Evidence validation retains all satisfied obligations and all detectable findings.
 type EvidenceValidation =
-    { Satisfied: SpecificationId list
-      Diagnostics: SpecificationDiagnostic list }
+    {
+        Satisfied: SpecificationId list
+        Diagnostics: SpecificationDiagnostic list
+    }
 
 /// A generated human/machine projection pair bound to one normalized source.
 type SpecificationProjection =
-    { Markdown: string
-      Json: string
-      SourceFingerprint: string
-      GeneratedFingerprint: string }
+    {
+        Markdown: string
+        Json: string
+        SourceFingerprint: string
+        GeneratedFingerprint: string
+    }
 
 /// Observation keeps absence and unreadability distinct at the pure validation boundary.
 type ProjectionObservation =
@@ -108,10 +128,12 @@ type MigrationReason =
 
 /// One migration ambiguity or unsupported construct with its authored source location.
 type MigrationFinding =
-    { Code: string
-      Reason: MigrationReason
-      Message: string
-      Location: SourceLocation }
+    {
+        Code: string
+        Reason: MigrationReason
+        Message: string
+        Location: SourceLocation
+    }
 
 /// Migration analysis never guesses and never writes.
 type MigrationOutcome<'model> =

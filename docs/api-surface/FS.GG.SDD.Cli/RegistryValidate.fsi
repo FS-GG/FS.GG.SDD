@@ -10,16 +10,20 @@ module RegistryValidate =
 
     /// One validation finding: the offending entry, the rule kind, and the message.
     type ReportDiagnostic =
-        { Entry: string
-          Rule: string
-          Message: string }
+        {
+            Entry: string
+            Rule: string
+            Message: string
+        }
 
     /// The deterministic verdict report. The `--json`/default projection is the
     /// automation contract the CI gate consumes (FR-007/SC-004).
     type RegistryValidateReport =
-        { Path: string
-          Valid: bool
-          Diagnostics: ReportDiagnostic list }
+        {
+            Path: string
+            Valid: bool
+            Diagnostics: ReportDiagnostic list
+        }
 
     /// Compose `load <path>` with `validateDocument`. A load/parse failure becomes a
     /// single `MalformedDocument`-class diagnostic (never a crash — Constitution VIII).

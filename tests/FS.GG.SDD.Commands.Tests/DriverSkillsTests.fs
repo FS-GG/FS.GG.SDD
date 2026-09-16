@@ -37,42 +37,52 @@ module DriverSkillsTests =
 
     let private deliveredFiles =
         Map.ofList
-            [ "padd-item", [ "SKILL.md"; "agents/openai.yaml" ]
-              "work-board-best", [ "SKILL.md"; "agents/openai.yaml" ]
-              "work-board-normal", [ "SKILL.md"; "agents/openai.yaml" ]
-              "work-board",
-              [ "SKILL.md"
-                "agents/openai.yaml"
-                "references/backlog-triage.md"
-                "references/deep-detail.md"
-                "references/feedback-contract.md"
-                "references/host-loop.md"
-                "references/workspace-scope.md" ]
-              "work-roadmap",
-              [ "SKILL.md"
-                "agents/openai.yaml"
-                "references/critique-contract.md"
-                "references/deep-detail.md"
-                "references/feedback-contract.md"
-                "references/host-loop.md"
-                "references/lifecycle-log.md"
-                "references/roadmap-ledger.md"
-                "scripts/fsgg_telemetry_defaults.py"
-                "scripts/roadmap-telemetry.py" ] ]
+            [
+                "padd-item", [ "SKILL.md"; "agents/openai.yaml" ]
+                "work-board-best", [ "SKILL.md"; "agents/openai.yaml" ]
+                "work-board-normal", [ "SKILL.md"; "agents/openai.yaml" ]
+                "work-board",
+                [
+                    "SKILL.md"
+                    "agents/openai.yaml"
+                    "references/backlog-triage.md"
+                    "references/deep-detail.md"
+                    "references/feedback-contract.md"
+                    "references/host-loop.md"
+                    "references/workspace-scope.md"
+                ]
+                "work-roadmap",
+                [
+                    "SKILL.md"
+                    "agents/openai.yaml"
+                    "references/critique-contract.md"
+                    "references/deep-detail.md"
+                    "references/feedback-contract.md"
+                    "references/host-loop.md"
+                    "references/lifecycle-log.md"
+                    "references/roadmap-ledger.md"
+                    "scripts/fsgg_telemetry_defaults.py"
+                    "scripts/roadmap-telemetry.py"
+                ]
+            ]
 
     let private workspacePaths =
-        [ ".fsgg/routine-development.json"
-          ".github/workflows/routine-eligibility.yml"
-          "scripts/check-claim-generation.py"
-          "scripts/check-routine-eligibility-envelope.py"
-          "scripts/lib/gate.py"
-          "tools/fsgg_telemetry_defaults.py"
-          "tools/routine-delivery.py" ]
+        [
+            ".fsgg/routine-development.json"
+            ".github/workflows/routine-eligibility.yml"
+            "scripts/check-claim-generation.py"
+            "scripts/check-routine-eligibility-envelope.py"
+            "scripts/lib/gate.py"
+            "tools/fsgg_telemetry_defaults.py"
+            "tools/routine-delivery.py"
+        ]
 
     let private driverPathFor id =
-        [ for root in roots do
-              for relativePath in deliveredFiles[id] do
-                  yield $"{root}/skills/{id}/{relativePath}" ]
+        [
+            for root in roots do
+                for relativePath in deliveredFiles[id] do
+                    yield $"{root}/skills/{id}/{relativePath}"
+        ]
         |> List.sort
 
     // The union of driver targets across ids, id-sorted then root-sorted — the deterministic
@@ -89,11 +99,13 @@ module DriverSkillsTests =
         let outcome = DriverSkills.plan Set.empty
 
         Assert.Equal<string list>(
-            [ "padd-item"
-              "work-board"
-              "work-board-best"
-              "work-board-normal"
-              "work-roadmap" ],
+            [
+                "padd-item"
+                "work-board"
+                "work-board-best"
+                "work-board-normal"
+                "work-roadmap"
+            ],
             outcome.MaterializedIds
         )
 
@@ -106,11 +118,13 @@ module DriverSkillsTests =
 
         Assert.Equal<string list>(
             driverPathsFor
-                [ "padd-item"
-                  "work-board"
-                  "work-board-best"
-                  "work-board-normal"
-                  "work-roadmap" ],
+                [
+                    "padd-item"
+                    "work-board"
+                    "work-board-best"
+                    "work-board-normal"
+                    "work-roadmap"
+                ],
             writtenPaths |> List.except workspacePaths
         )
 
@@ -273,11 +287,13 @@ module DriverSkillsTests =
         let manifest, files = v2Fixture ()
 
         let cases =
-            [ files |> Map.remove ("driver", "scripts/run.sh")
-              files |> Map.add ("driver", "extra.txt") (Encoding.UTF8.GetBytes "extra")
-              files
-              |> Map.add ("driver", "scripts/run.sh") (Encoding.UTF8.GetBytes "tampered")
-              files |> Map.add ("driver", "scripts/run.sh") [| 0xffuy |] ]
+            [
+                files |> Map.remove ("driver", "scripts/run.sh")
+                files |> Map.add ("driver", "extra.txt") (Encoding.UTF8.GetBytes "extra")
+                files
+                |> Map.add ("driver", "scripts/run.sh") (Encoding.UTF8.GetBytes "tampered")
+                files |> Map.add ("driver", "scripts/run.sh") [| 0xffuy |]
+            ]
 
         for invalid in cases do
             let outcome = DriverSkills.planFilesFrom (Some manifest) invalid Set.empty

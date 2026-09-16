@@ -22,21 +22,25 @@ module Evidence =
     type EvidenceSubject = { SubjectType: string; Id: string }
 
     type EvidenceSourceSnapshot =
-        { Label: string
-          Path: string
-          Digest: string option
-          SchemaVersion: int option
-          SourceLocation: SourceLocation option }
+        {
+            Label: string
+            Path: string
+            Digest: string option
+            SchemaVersion: int option
+            SourceLocation: SourceLocation option
+        }
 
     type EvidenceSourceReference =
-        { ReferenceId: string option
-          Kind: string
-          Path: string option
-          Uri: string option
-          Digest: string option
-          RelatedSourceId: string option
-          Result: string option
-          SourceLocation: SourceLocation option }
+        {
+            ReferenceId: string option
+            Kind: string
+            Path: string option
+            Uri: string option
+            Digest: string option
+            RelatedSourceId: string option
+            Result: string option
+            SourceLocation: SourceLocation option
+        }
 
     type SyntheticDisclosure = { StandsInFor: string; Reason: string }
 
@@ -92,48 +96,52 @@ module Evidence =
         }
 
     type JourneyReceipt =
-        { SchemaVersion: int
-          RunnerIdentity: string
-          RunnerVersion: string
-          Origin: string
-          RouteId: string
-          ScenarioId: string
-          TestId: string
-          InputKind: string
-          InputDigest: string
-          ReplayDigest: string
-          TraceDigest: string
-          InitialFingerprint: string
-          TerminalFingerprint: string
-          TerminalPredicateReached: bool
-          Outcome: string
-          MaximumSteps: int
-          ActualSteps: int
-          ObservedReportSource: string
-          ObservedReportDigest: string
-          ObservedTestName: string
-          ObservedTestOutcome: string }
+        {
+            SchemaVersion: int
+            RunnerIdentity: string
+            RunnerVersion: string
+            Origin: string
+            RouteId: string
+            ScenarioId: string
+            TestId: string
+            InputKind: string
+            InputDigest: string
+            ReplayDigest: string
+            TraceDigest: string
+            InitialFingerprint: string
+            TerminalFingerprint: string
+            TerminalPredicateReached: bool
+            Outcome: string
+            MaximumSteps: int
+            ActualSteps: int
+            ObservedReportSource: string
+            ObservedReportDigest: string
+            ObservedTestName: string
+            ObservedTestOutcome: string
+        }
 
     /// A typed, active normal-play performance gate attached to an evidence declaration.
     /// Absence means the cited artifact is baseline/stress information only and carries no target.
     type PerformanceIntentDeclaration = Fsgg.Schemas.PerformanceIntentDeclaration
 
     type PerformanceBudgetDeclaration =
-        { ArtifactPath: string
-          Intent: PerformanceIntentDeclaration option
-          TargetFps: int
-          WorkloadIds: string list
-          StressWorkloadIds: string list
-          WorkloadDefinitionDigests: string list
-          CurrencyToken: string
-          CapturedAfterUtc: string
-          MaxP95Ms: decimal
-          MaxP99Ms: decimal
-          MaxCatchUpFrames: int
-          MeasurementScope: string
-          RequiredCapability: string
-          LiveCompositorRequired: bool
-          DeferralIssue: string option }
+        {
+            ArtifactPath: string
+            Intent: PerformanceIntentDeclaration option
+            TargetFps: int
+            WorkloadIds: string list
+            StressWorkloadIds: string list
+            WorkloadDefinitionDigests: string list
+            CurrencyToken: string
+            CapturedAfterUtc: string
+            MaxP95Ms: decimal
+            MaxP99Ms: decimal
+            MaxCatchUpFrames: int
+            MeasurementScope: string
+            RequiredCapability: string
+            LiveCompositorRequired: bool
+            DeferralIssue: string option
+        }
 
     type PerformanceBudgetState =
         | PerformancePassed
@@ -146,14 +154,16 @@ module Evidence =
     type PerformanceEvidenceMeasurement = Fsgg.Schemas.PerformanceEvidenceMeasurement
 
     type PerformanceBudgetEvaluation =
-        { DeclarationId: string
-          ArtifactPath: string
-          State: PerformanceBudgetState
-          WorkloadIds: string list
-          Reasons: string list
-          DeferralIssue: string option
-          Artifact: PerformanceEvidenceArtifact option
-          Measurements: PerformanceEvidenceMeasurement list }
+        {
+            DeclarationId: string
+            ArtifactPath: string
+            State: PerformanceBudgetState
+            WorkloadIds: string list
+            Reasons: string list
+            DeferralIssue: string option
+            Artifact: PerformanceEvidenceArtifact option
+            Measurements: PerformanceEvidenceMeasurement list
+        }
 
     val parsePerformanceIntentYaml: yaml: string -> Result<PerformanceIntentDeclaration option, string>
     val isPerformanceDebtIssueReference: value: string -> bool
@@ -231,20 +241,22 @@ module Evidence =
         }
 
     type EvidenceArtifact =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Stage: LifecycleStage
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          SourceChecklist: string
-          SourcePlan: string
-          SourceTasks: string
-          SourceAnalysis: string
-          SourceSnapshots: EvidenceSourceSnapshot list
-          Evidence: EvidenceDeclaration list
-          LifecycleNotes: string list
-          Diagnostics: Diagnostic list }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Stage: LifecycleStage
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            SourceChecklist: string
+            SourcePlan: string
+            SourceTasks: string
+            SourceAnalysis: string
+            SourceSnapshots: EvidenceSourceSnapshot list
+            Evidence: EvidenceDeclaration list
+            LifecycleNotes: string list
+            Diagnostics: Diagnostic list
+        }
 
     /// Shared authored-record field lists (ADR-0002 invariant 1 / FR-007, FS.GG.SDD#201): one
     /// `FieldCodec` list drives both the reader (here) and the renderer (`HandlersEvidence`) for each
@@ -254,8 +266,10 @@ module Evidence =
         val sourceRefFields: ArtifactCodec.FieldCodec<EvidenceSourceReference> list
 
         type DisclosureDraft =
-            { StandsInFor: string option
-              Reason: string option }
+            {
+                StandsInFor: string option
+                Reason: string option
+            }
 
         val disclosureDraftSeed: DisclosureDraft
         val disclosureFields: ArtifactCodec.FieldCodec<DisclosureDraft> list
@@ -265,13 +279,15 @@ module Evidence =
         /// empty strings. The counts are plain ints — a junk token reads as `0` and
         /// `observedRunInconsistency` judges it, rather than the codec dropping the whole receipt.
         type ObservedRunDraft =
-            { Source: string option
-              Digest: string option
-              DigestContract: string option
-              Outcome: string option
-              Passed: int
-              Failed: int
-              Skipped: int }
+            {
+                Source: string option
+                Digest: string option
+                DigestContract: string option
+                Outcome: string option
+                Passed: int
+                Failed: int
+                Skipped: int
+            }
 
         val observedRunDraftSeed: ObservedRunDraft
         val observedRunFields: ArtifactCodec.FieldCodec<ObservedRunDraft> list
@@ -286,12 +302,14 @@ module Evidence =
         /// `digest` is option-carrying because its absence is legal for an `issue`/`commit` record —
         /// `recordReceiptInconsistency` decides per kind whether the absence is right.
         type RecordReceiptDraft =
-            { Kind: string option
-              Locator: string option
-              LocatorContract: string option
-              Digest: string option
-              Statement: string option
-              RecordedAt: string option }
+            {
+                Kind: string option
+                Locator: string option
+                LocatorContract: string option
+                Digest: string option
+                Statement: string option
+                RecordedAt: string option
+            }
 
         val recordReceiptDraftSeed: RecordReceiptDraft
         val recordReceiptFields: ArtifactCodec.FieldCodec<RecordReceiptDraft> list

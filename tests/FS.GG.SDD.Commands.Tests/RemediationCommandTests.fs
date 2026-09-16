@@ -119,9 +119,11 @@ module DriftTests =
         let seeds =
             Drift.expectedArtifactPaths
             |> List.map (fun path ->
-                { Path = path
-                  Owner = ArtifactOwner.Sdd
-                  Sha256 = None })
+                {
+                    Path = path
+                    Owner = ArtifactOwner.Sdd
+                    Sha256 = None
+                })
 
         devRepoRecord (FS.GG.SDD.Artifacts.SchemaVersion.currentGeneratorVersion ()) seeds
 
@@ -353,12 +355,14 @@ module UpgradeCommandTests =
         Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).AppliedStepIds)
 
         let expectedRelative =
-            [ "SKILL.md"
-              "agents/openai.yaml"
-              "references/backlog-triage.md"
-              "references/deep-detail.md"
-              "references/host-loop.md"
-              "references/workspace-scope.md" ]
+            [
+                "SKILL.md"
+                "agents/openai.yaml"
+                "references/backlog-triage.md"
+                "references/deep-detail.md"
+                "references/host-loop.md"
+                "references/workspace-scope.md"
+            ]
 
         for skillRoot in [ ".agents"; ".claude" ] do
             for relativePath in expectedRelative do
@@ -433,9 +437,11 @@ module UpgradeCommandTests =
     let private producedRows owner rows : ScaffoldProducedPath list =
         rows
         |> List.map (fun (path: string, sha256: string) ->
-            { Path = path
-              Owner = owner
-              Sha256 = Some sha256 })
+            {
+                Path = path
+                Owner = owner
+                Sha256 = Some sha256
+            })
 
     /// The `.agents` copy of the first game skill this build delivers on the game profile, with the
     /// digest its plan verified — the backfill target these cases drive. `None` in a build with no
@@ -466,7 +472,8 @@ module UpgradeCommandTests =
                     gameRows
                     |> List.filter (fun (path, _) -> path <> missing)
                     |> producedRows ArtifactOwner.GameSkill
-                EffectiveParameters = gameProfile }
+                EffectiveParameters = gameProfile
+            }
 
         TestSupport.writeRelative root provenancePath (serialize updated)
 
@@ -484,15 +491,21 @@ module UpgradeCommandTests =
     let private providerManifestEntry: ProductSkillManifest.ProductManifestEntry =
         let body = "# provider-owned\n"
 
-        { Id = "fs-gg-provider-owned"
-          Scope = "product"
-          Sha256 = Fsgg.SkillMirror.sha256 body
-          ResolvablePath = Some ".agents/skills/fs-gg-provider-owned/SKILL.md"
-          MaterializesWhen = "always"
-          SuppliedBy = Some "template/product-skills/fs-gg-provider-owned/"
-          Files =
-            [ { Path = "SKILL.md"
-                Sha256 = Fsgg.SkillMirror.sha256 body } ] }
+        {
+            Id = "fs-gg-provider-owned"
+            Scope = "product"
+            Sha256 = Fsgg.SkillMirror.sha256 body
+            ResolvablePath = Some ".agents/skills/fs-gg-provider-owned/SKILL.md"
+            MaterializesWhen = "always"
+            SuppliedBy = Some "template/product-skills/fs-gg-provider-owned/"
+            Files =
+                [
+                    {
+                        Path = "SKILL.md"
+                        Sha256 = Fsgg.SkillMirror.sha256 body
+                    }
+                ]
+        }
 
     /// A pre-owner-backfill workspace whose provider already shipped a supported schema-v2 product
     /// manifest into all three roots. Its recorded manifest digests model the real scaffold shape,
@@ -509,16 +522,23 @@ module UpgradeCommandTests =
         let updated =
             { record with
                 ProducedPaths =
-                    [ { Path = HandlersScaffold.productSkillManifestSourcePath
-                        Owner = ArtifactOwner.GeneratedProduct
-                        Sha256 = Some manifestDigest } ]
+                    [
+                        {
+                            Path = HandlersScaffold.productSkillManifestSourcePath
+                            Owner = ArtifactOwner.GeneratedProduct
+                            Sha256 = Some manifestDigest
+                        }
+                    ]
                 MirroredPaths =
                     HandlersScaffold.productSkillManifestPaths
                     |> List.filter ((<>) HandlersScaffold.productSkillManifestSourcePath)
                     |> List.map (fun path ->
-                        { Path = path
-                          Owner = ArtifactOwner.Mirrored
-                          Sha256 = Some manifestDigest }) }
+                        {
+                            Path = path
+                            Owner = ArtifactOwner.Mirrored
+                            Sha256 = Some manifestDigest
+                        })
+            }
 
         TestSupport.writeRelative root provenancePath (serialize updated)
         root
@@ -606,13 +626,15 @@ module UpgradeCommandTests =
         let scope = "process"
 
         let sourceEntry: ProductSkillManifest.ProductManifestEntry =
-            { Id = id
-              Scope = scope
-              Sha256 = digest
-              ResolvablePath = Some $".agents/skills/{id}/SKILL.md"
-              MaterializesWhen = predicate
-              SuppliedBy = Some "template/rendering-fixture/skill/"
-              Files = [ { Path = "SKILL.md"; Sha256 = digest } ] }
+            {
+                Id = id
+                Scope = scope
+                Sha256 = digest
+                ResolvablePath = Some $".agents/skills/{id}/SKILL.md"
+                MaterializesWhen = predicate
+                SuppliedBy = Some "template/rendering-fixture/skill/"
+                Files = [ { Path = "SKILL.md"; Sha256 = digest } ]
+            }
 
         let sourceManifest = ProductSkillManifest.serialize 2 [ sourceEntry ]
 
@@ -623,7 +645,8 @@ module UpgradeCommandTests =
                     |> List.map (fun root -> $"{root}/skills/{id}/SKILL.md", digest)
                 MaterializedIds = [ id ]
                 MaterializedScopes = Map.ofList [ id, scope ]
-                MaterializedSuppliers = Map.ofList [ id, sourceEntry.SuppliedBy.Value ] }
+                MaterializedSuppliers = Map.ofList [ id, sourceEntry.SuppliedBy.Value ]
+            }
 
         let additions =
             HandlersUpgrade.ownerBackfillManifestAdditionsFromRenderingManifest

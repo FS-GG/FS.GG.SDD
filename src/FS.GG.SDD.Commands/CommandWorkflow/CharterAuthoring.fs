@@ -92,14 +92,18 @@ policyPointers:
             match parseCharterFrontMatter path existing.Text with
             | Error diagnostic -> [ diagnostic ], existing.Text
             | Ok frontMatter when frontMatter.SchemaVersion <> "1" ->
-                [ malformedCharterFrontMatter
-                      path
-                      $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported." ],
+                [
+                    malformedCharterFrontMatter
+                        path
+                        $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported."
+                ],
                 existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
                 [ charterIdentityMismatch path workId frontMatter.WorkId ], existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.Stage, "charter", StringComparison.OrdinalIgnoreCase)) ->
-                [ malformedCharterFrontMatter path $"Charter stage '{frontMatter.Stage}' is not 'charter'." ],
+                [
+                    malformedCharterFrontMatter path $"Charter stage '{frontMatter.Stage}' is not 'charter'."
+                ],
                 existing.Text
             | Ok _ when
                 existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase)
@@ -115,16 +119,22 @@ policyPointers:
         | Some existing ->
             match parseCharterFrontMatter path existing.Text with
             | Error _ ->
-                [ missingCharterPrerequisite path "Charter prerequisite front matter is malformed." ],
+                [
+                    missingCharterPrerequisite path "Charter prerequisite front matter is malformed."
+                ],
                 Some existing.Text
             | Ok frontMatter when frontMatter.SchemaVersion <> "1" ->
-                [ missingCharterPrerequisite
-                      path
-                      $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported." ],
+                [
+                    missingCharterPrerequisite
+                        path
+                        $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported."
+                ],
                 Some existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
                 [ charterIdentityMismatch path workId frontMatter.WorkId ], Some existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.Stage, "charter", StringComparison.OrdinalIgnoreCase)) ->
-                [ missingCharterPrerequisite path $"Charter stage '{frontMatter.Stage}' is not 'charter'." ],
+                [
+                    missingCharterPrerequisite path $"Charter stage '{frontMatter.Stage}' is not 'charter'."
+                ],
                 Some existing.Text
             | Ok _ -> [], Some existing.Text

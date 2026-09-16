@@ -36,122 +36,148 @@ module RichRenderingTests =
     // ----- A hand-built, fully populated report exercising every section. -----
 
     let diag id severity message =
-        { Id = id
-          Severity = severity
-          Artifact = None
-          Location = None
-          Message = message
-          Correction = "correction-for-" + id
-          RelatedIds = []
-          IsToolDefect = false
-          DefectTag = None }
+        {
+            Id = id
+            Severity = severity
+            Artifact = None
+            Location = None
+            Message = message
+            Correction = "correction-for-" + id
+            RelatedIds = []
+            IsToolDefect = false
+            DefectTag = None
+        }
 
     let generatedView path currency =
-        { Path = path
-          Kind = "workModel"
-          SchemaVersion = Some 1
-          Generator = None
-          Sources = []
-          Currency = currency
-          DiagnosticIds = [] }
+        {
+            Path = path
+            Kind = "workModel"
+            SchemaVersion = Some 1
+            Generator = None
+            Sources = []
+            Currency = currency
+            DiagnosticIds = []
+        }
 
     let changedArtifact path =
-        { Path = path
-          Kind = "structuredSource"
-          Ownership = "sdd"
-          Operation = ArtifactOperation.Create
-          BeforeDigest = None
-          AfterDigest = None
-          SafeWriteDecision = "create"
-          DiagnosticIds = [] }
+        {
+            Path = path
+            Kind = "structuredSource"
+            Ownership = "sdd"
+            Operation = ArtifactOperation.Create
+            BeforeDigest = None
+            AfterDigest = None
+            SafeWriteDecision = "create"
+            DiagnosticIds = []
+        }
 
     let specification: SpecificationSummary =
-        { WorkId = "042-rich-sample"
-          Stage = "specify"
-          Status = "draft"
-          StoryIds = [ "US1"; "US2" ]
-          RequirementIds = [ "FR-001"; "FR-002"; "FR-003" ]
-          AcceptanceScenarioIds = [ "AS-001" ]
-          AmbiguityIds = [ "AMB-001" ] }
+        {
+            WorkId = "042-rich-sample"
+            Stage = "specify"
+            Status = "draft"
+            StoryIds = [ "US1"; "US2" ]
+            RequirementIds = [ "FR-001"; "FR-002"; "FR-003" ]
+            AcceptanceScenarioIds = [ "AS-001" ]
+            AmbiguityIds = [ "AMB-001" ]
+        }
 
     /// Feature 084: a representative lifecycle-status for the Specify sample (ordinal 2, current).
     let stageEntry command ordinal state : StageEntry =
-        { Command = command
-          Ordinal = ordinal
-          State = state }
+        {
+            Command = command
+            Ordinal = ordinal
+            State = state
+        }
 
     let sampleLifecycleStatus: LifecycleStatus =
-        { WorkId = Some "042-rich-sample"
-          Stages =
-            [ stageEntry Charter 1 StageState.Done
-              stageEntry Specify 2 StageState.Current
-              stageEntry Clarify 3 StageState.Next
-              stageEntry Checklist 4 StageState.Pending
-              stageEntry Plan 5 StageState.Pending
-              stageEntry Tasks 6 StageState.Pending
-              stageEntry Analyze 7 StageState.Pending
-              stageEntry Evidence 8 StageState.Pending
-              stageEntry Verify 9 StageState.Pending
-              stageEntry Ship 10 StageState.Pending ]
-          CurrentOrdinal = Some 2
-          TotalStages = 10
-          Outcome = SucceededWithWarnings
-          NextCommand = Some Clarify
-          IsLifecycleStage = true }
+        {
+            WorkId = Some "042-rich-sample"
+            Stages =
+                [
+                    stageEntry Charter 1 StageState.Done
+                    stageEntry Specify 2 StageState.Current
+                    stageEntry Clarify 3 StageState.Next
+                    stageEntry Checklist 4 StageState.Pending
+                    stageEntry Plan 5 StageState.Pending
+                    stageEntry Tasks 6 StageState.Pending
+                    stageEntry Analyze 7 StageState.Pending
+                    stageEntry Evidence 8 StageState.Pending
+                    stageEntry Verify 9 StageState.Pending
+                    stageEntry Ship 10 StageState.Pending
+                ]
+            CurrentOrdinal = Some 2
+            TotalStages = 10
+            Outcome = SucceededWithWarnings
+            NextCommand = Some Clarify
+            IsLifecycleStage = true
+        }
 
     /// Specify command, populated stage + every report section.
     let sampleReport: CommandReport =
-        { SchemaVersion = 1
-          ReportVersion = "1.0"
-          ToolVersion = "0.0.0-test"
-          Command = Specify
-          ProjectRoot = "."
-          OutputFormat = Rich
-          DryRun = true
-          Outcome = SucceededWithWarnings
-          Coherent = false
-          WorkId = Some "042-rich-sample"
-          ChangedArtifacts = [ changedArtifact "work/042-rich-sample/spec.md" ]
-          Specification = Some specification
-          Clarification = None
-          Checklist = None
-          Plan = None
-          Tasks = None
-          Analysis = None
-          Evidence = None
-          Verification = None
-          Ship = None
-          AgentGuidance = None
-          Refresh = None
-          Scaffold = None
-          Doctor = None
-          Upgrade = None
-          Lint = None
-          Surface = None
-          DependencySurface = None
-          GeneratedViews =
-            [ generatedView "readiness/042-rich-sample/work-model.json" GeneratedViewCurrency.Current
-              generatedView "readiness/042-rich-sample/analysis.json" GeneratedViewCurrency.Stale ]
-          Diagnostics =
-            [ diag "ERR-1" DiagnosticError "a blocking problem"
-              diag "WARN-1" DiagnosticWarning "a warning worth noting"
-              diag "INFO-1" DiagnosticInfo "an informational note" ]
-          GovernanceCompatibility =
-            [ { Path = ".fsgg/config.yml"
-                Relationship = "governance-config"
-                RequiredBySdd = false
-                State = "unevaluated"
-                DiagnosticIds = [] } ]
-          NextAction =
-            Some
-                { ActionId = "NEXT-CLARIFY"
-                  Command = Some Clarify
-                  WorkId = Some "042-rich-sample"
-                  Reason = "resolve the remaining ambiguity"
-                  RequiredArtifacts = [ "work/042-rich-sample/clarifications.md" ]
-                  BlockingDiagnosticIds = [] }
-          Help = None
-          LifecycleStatus = sampleLifecycleStatus }
+        {
+            SchemaVersion = 1
+            ReportVersion = "1.0"
+            ToolVersion = "0.0.0-test"
+            Command = Specify
+            ProjectRoot = "."
+            OutputFormat = Rich
+            DryRun = true
+            Outcome = SucceededWithWarnings
+            Coherent = false
+            WorkId = Some "042-rich-sample"
+            ChangedArtifacts = [ changedArtifact "work/042-rich-sample/spec.md" ]
+            Specification = Some specification
+            Clarification = None
+            Checklist = None
+            Plan = None
+            Tasks = None
+            Analysis = None
+            Evidence = None
+            Verification = None
+            Ship = None
+            AgentGuidance = None
+            Refresh = None
+            Scaffold = None
+            Doctor = None
+            Upgrade = None
+            Lint = None
+            Surface = None
+            DependencySurface = None
+            GeneratedViews =
+                [
+                    generatedView "readiness/042-rich-sample/work-model.json" GeneratedViewCurrency.Current
+                    generatedView "readiness/042-rich-sample/analysis.json" GeneratedViewCurrency.Stale
+                ]
+            Diagnostics =
+                [
+                    diag "ERR-1" DiagnosticError "a blocking problem"
+                    diag "WARN-1" DiagnosticWarning "a warning worth noting"
+                    diag "INFO-1" DiagnosticInfo "an informational note"
+                ]
+            GovernanceCompatibility =
+                [
+                    {
+                        Path = ".fsgg/config.yml"
+                        Relationship = "governance-config"
+                        RequiredBySdd = false
+                        State = "unevaluated"
+                        DiagnosticIds = []
+                    }
+                ]
+            NextAction =
+                Some
+                    {
+                        ActionId = "NEXT-CLARIFY"
+                        Command = Some Clarify
+                        WorkId = Some "042-rich-sample"
+                        Reason = "resolve the remaining ambiguity"
+                        RequiredArtifacts = [ "work/042-rich-sample/clarifications.md" ]
+                        BlockingDiagnosticIds = []
+                    }
+            Help = None
+            LifecycleStatus = sampleLifecycleStatus
+        }
 
     [<Fact>]
     let ``T010 rich projection represents every populated report section`` () =
@@ -278,7 +304,8 @@ module RichRenderingTests =
         let blocked =
             { sampleReport with
                 Outcome = CommandOutcome.Blocked
-                Diagnostics = [ diag "ERR-BLOCK" DiagnosticError "blocking" ] }
+                Diagnostics = [ diag "ERR-BLOCK" DiagnosticError "blocking" ]
+            }
 
         let text = render blocked
         Assert.Contains(outcomeValue CommandOutcome.Blocked, text)

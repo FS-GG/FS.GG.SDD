@@ -27,21 +27,25 @@ module Evidence =
     type EvidenceSubject = { SubjectType: string; Id: string }
 
     type EvidenceSourceSnapshot =
-        { Label: string
-          Path: string
-          Digest: string option
-          SchemaVersion: int option
-          SourceLocation: SourceLocation option }
+        {
+            Label: string
+            Path: string
+            Digest: string option
+            SchemaVersion: int option
+            SourceLocation: SourceLocation option
+        }
 
     type EvidenceSourceReference =
-        { ReferenceId: string option
-          Kind: string
-          Path: string option
-          Uri: string option
-          Digest: string option
-          RelatedSourceId: string option
-          Result: string option
-          SourceLocation: SourceLocation option }
+        {
+            ReferenceId: string option
+            Kind: string
+            Path: string option
+            Uri: string option
+            Digest: string option
+            RelatedSourceId: string option
+            Result: string option
+            SourceLocation: SourceLocation option
+        }
 
     type SyntheticDisclosure = { StandsInFor: string; Reason: string }
 
@@ -125,46 +129,50 @@ module Evidence =
     /// producer's
     /// `journeyReceipt` map; none is inferred from a test name or authored boolean.
     type JourneyReceipt =
-        { SchemaVersion: int
-          RunnerIdentity: string
-          RunnerVersion: string
-          Origin: string
-          RouteId: string
-          ScenarioId: string
-          TestId: string
-          InputKind: string
-          InputDigest: string
-          ReplayDigest: string
-          TraceDigest: string
-          InitialFingerprint: string
-          TerminalFingerprint: string
-          TerminalPredicateReached: bool
-          Outcome: string
-          MaximumSteps: int
-          ActualSteps: int
-          ObservedReportSource: string
-          ObservedReportDigest: string
-          ObservedTestName: string
-          ObservedTestOutcome: string }
+        {
+            SchemaVersion: int
+            RunnerIdentity: string
+            RunnerVersion: string
+            Origin: string
+            RouteId: string
+            ScenarioId: string
+            TestId: string
+            InputKind: string
+            InputDigest: string
+            ReplayDigest: string
+            TraceDigest: string
+            InitialFingerprint: string
+            TerminalFingerprint: string
+            TerminalPredicateReached: bool
+            Outcome: string
+            MaximumSteps: int
+            ActualSteps: int
+            ObservedReportSource: string
+            ObservedReportDigest: string
+            ObservedTestName: string
+            ObservedTestOutcome: string
+        }
 
     type PerformanceIntentDeclaration = Fsgg.Schemas.PerformanceIntentDeclaration
 
     type PerformanceBudgetDeclaration =
-        { ArtifactPath: string
-          Intent: PerformanceIntentDeclaration option
-          TargetFps: int
-          WorkloadIds: string list
-          StressWorkloadIds: string list
-          WorkloadDefinitionDigests: string list
-          CurrencyToken: string
-          CapturedAfterUtc: string
-          MaxP95Ms: decimal
-          MaxP99Ms: decimal
-          MaxCatchUpFrames: int
-          MeasurementScope: string
-          RequiredCapability: string
-          LiveCompositorRequired: bool
-          DeferralIssue: string option }
+        {
+            ArtifactPath: string
+            Intent: PerformanceIntentDeclaration option
+            TargetFps: int
+            WorkloadIds: string list
+            StressWorkloadIds: string list
+            WorkloadDefinitionDigests: string list
+            CurrencyToken: string
+            CapturedAfterUtc: string
+            MaxP95Ms: decimal
+            MaxP99Ms: decimal
+            MaxCatchUpFrames: int
+            MeasurementScope: string
+            RequiredCapability: string
+            LiveCompositorRequired: bool
+            DeferralIssue: string option
+        }
 
     type PerformanceBudgetState =
         | PerformancePassed
@@ -177,14 +185,16 @@ module Evidence =
     type PerformanceEvidenceMeasurement = Fsgg.Schemas.PerformanceEvidenceMeasurement
 
     type PerformanceBudgetEvaluation =
-        { DeclarationId: string
-          ArtifactPath: string
-          State: PerformanceBudgetState
-          WorkloadIds: string list
-          Reasons: string list
-          DeferralIssue: string option
-          Artifact: PerformanceEvidenceArtifact option
-          Measurements: PerformanceEvidenceMeasurement list }
+        {
+            DeclarationId: string
+            ArtifactPath: string
+            State: PerformanceBudgetState
+            WorkloadIds: string list
+            Reasons: string list
+            DeferralIssue: string option
+            Artifact: PerformanceEvidenceArtifact option
+            Measurements: PerformanceEvidenceMeasurement list
+        }
 
     let isPerformanceDebtIssueReference (value: string) =
         not (String.IsNullOrWhiteSpace value)
@@ -226,62 +236,64 @@ module Evidence =
                 || lowered.Contains("todo")
                 || lowered.Contains("tbd"))
 
-        [ if String.IsNullOrWhiteSpace intent.Id then
-              "id is required"
-          match disposition with
-          | "active" ->
-              if intent.TargetFps <= 0 then
-                  "targetFps must be positive"
+        [
+            if String.IsNullOrWhiteSpace intent.Id then
+                "id is required"
+            match disposition with
+            | "active" ->
+                if intent.TargetFps <= 0 then
+                    "targetFps must be positive"
 
-              if List.isEmpty intent.WorkloadIds then
-                  "workloadIds must name at least one normal workload"
+                if List.isEmpty intent.WorkloadIds then
+                    "workloadIds must name at least one normal workload"
 
-              if bindings |> List.exists Option.isNone then
-                  "workloadDefinitionDigests entries must use '<workloadId>=<digest>'"
+                if bindings |> List.exists Option.isNone then
+                    "workloadDefinitionDigests entries must use '<workloadId>=<digest>'"
 
-              for workloadId in intent.WorkloadIds |> List.distinct do
-                  let matches = validBindings |> List.filter (fun (id, _) -> id = workloadId)
+                for workloadId in intent.WorkloadIds |> List.distinct do
+                    let matches = validBindings |> List.filter (fun (id, _) -> id = workloadId)
 
-                  if List.isEmpty matches then
-                      $"workloadDefinitionDigests must bind '{workloadId}'"
-                  elif matches.Length <> 1 then
-                      $"workloadDefinitionDigests must bind '{workloadId}' exactly once"
+                    if List.isEmpty matches then
+                        $"workloadDefinitionDigests must bind '{workloadId}'"
+                    elif matches.Length <> 1 then
+                        $"workloadDefinitionDigests must bind '{workloadId}' exactly once"
 
-              for workloadId, digest in validBindings do
-                  if not (List.contains workloadId intent.WorkloadIds) then
-                      $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
+                for workloadId, digest in validBindings do
+                    if not (List.contains workloadId intent.WorkloadIds) then
+                        $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
 
-                  if not (Regex.IsMatch(digest, @"^sha256:[A-Za-z0-9._-]+$", RegexOptions.CultureInvariant)) then
-                      $"workloadDefinitionDigests for '{workloadId}' must use a nonblank sha256 digest token"
+                    if not (Regex.IsMatch(digest, @"^sha256:[A-Za-z0-9._-]+$", RegexOptions.CultureInvariant)) then
+                        $"workloadDefinitionDigests for '{workloadId}' must use a nonblank sha256 digest token"
 
-              if not (List.isEmpty placeholders) then
-                  "workloadDefinitionDigests cannot contain placeholder/TODO/TBD values"
+                if not (List.isEmpty placeholders) then
+                    "workloadDefinitionDigests cannot contain placeholder/TODO/TBD values"
 
-              if String.IsNullOrWhiteSpace intent.MaximumExpectedScale then
-                  "maximumExpectedScale is required"
+                if String.IsNullOrWhiteSpace intent.MaximumExpectedScale then
+                    "maximumExpectedScale is required"
 
-              if intent.MaxP95Ms <= 0m || intent.MaxP99Ms <= 0m || intent.MaxCatchUpFrames < 0 then
-                  "timing thresholds must contain positive p95/p99 and non-negative catch-up limits"
+                if intent.MaxP95Ms <= 0m || intent.MaxP99Ms <= 0m || intent.MaxCatchUpFrames < 0 then
+                    "timing thresholds must contain positive p95/p99 and non-negative catch-up limits"
 
-              if List.isEmpty intent.StructuralCostBudgets then
-                  "structuralCostBudgets must declare at least one structural limit"
+                if List.isEmpty intent.StructuralCostBudgets then
+                    "structuralCostBudgets must declare at least one structural limit"
 
-              if String.IsNullOrWhiteSpace intent.RequiredCapability then
-                  "requiredCapability is required"
-          | "not-applicable" ->
-              if List.isEmpty intent.EvidenceRefs then
-                  "not-applicable intent requires evidenceRefs"
+                if String.IsNullOrWhiteSpace intent.RequiredCapability then
+                    "requiredCapability is required"
+            | "not-applicable" ->
+                if List.isEmpty intent.EvidenceRefs then
+                    "not-applicable intent requires evidenceRefs"
 
-              if intent.Rationale |> Option.forall String.IsNullOrWhiteSpace then
-                  "not-applicable intent requires rationale"
-          | "deferred" ->
-              if List.isEmpty intent.EvidenceRefs then
-                  "deferred intent requires evidenceRefs"
+                if intent.Rationale |> Option.forall String.IsNullOrWhiteSpace then
+                    "not-applicable intent requires rationale"
+            | "deferred" ->
+                if List.isEmpty intent.EvidenceRefs then
+                    "deferred intent requires evidenceRefs"
 
-              match intent.DeferralIssue with
-              | Some issue when isPerformanceDebtIssueReference issue -> ()
-              | _ -> "deferred intent requires an owner/repo#N or GitHub issue URL"
-          | _ -> $"unknown disposition '{intent.Disposition}'" ]
+                match intent.DeferralIssue with
+                | Some issue when isPerformanceDebtIssueReference issue -> ()
+                | _ -> "deferred intent requires an owner/repo#N or GitHub issue URL"
+            | _ -> $"unknown disposition '{intent.Disposition}'"
+        ]
 
     type EvidenceDeclaration =
         {
@@ -355,20 +367,22 @@ module Evidence =
         }
 
     type EvidenceArtifact =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Stage: LifecycleStage
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          SourceChecklist: string
-          SourcePlan: string
-          SourceTasks: string
-          SourceAnalysis: string
-          SourceSnapshots: EvidenceSourceSnapshot list
-          Evidence: EvidenceDeclaration list
-          LifecycleNotes: string list
-          Diagnostics: Diagnostic list }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Stage: LifecycleStage
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            SourceChecklist: string
+            SourcePlan: string
+            SourceTasks: string
+            SourceAnalysis: string
+            SourceSnapshots: EvidenceSourceSnapshot list
+            Evidence: EvidenceDeclaration list
+            LifecycleNotes: string list
+            Diagnostics: Diagnostic list
+        }
 
     let parseEvidenceKind (value: string) =
         match
@@ -508,64 +522,70 @@ module Evidence =
         match declaration.JourneyReceipt with
         | None -> [ "journey receipt is missing" ]
         | Some receipt ->
-            [ if receipt.SchemaVersion <> 1 then
-                  $"unsupported journey receipt schemaVersion {receipt.SchemaVersion}"
-              if String.IsNullOrWhiteSpace receipt.RunnerIdentity then
-                  "runner.identity is required"
-              if String.IsNullOrWhiteSpace receipt.RunnerVersion then
-                  "runner.version is required"
-              if not (receipt.Origin.Equals("production-journey", StringComparison.OrdinalIgnoreCase)) then
-                  $"origin '{receipt.Origin}' is not production-journey"
-              for label, value in
-                  [ "routeId", receipt.RouteId
-                    "scenarioId", receipt.ScenarioId
-                    "testId", receipt.TestId
-                    "observedTestReport.source", receipt.ObservedReportSource
-                    "observedTestReport.testName", receipt.ObservedTestName ] do
-                  if String.IsNullOrWhiteSpace value then
-                      $"{label} is required"
-              if
-                  not (
-                      receipt.InputKind.Equals("fixed-script", StringComparison.OrdinalIgnoreCase)
-                      || receipt.InputKind.Equals("seeded-policy", StringComparison.OrdinalIgnoreCase)
-                  )
-              then
-                  $"input.kind '{receipt.InputKind}' is not fixed-script or seeded-policy"
-              for label, digest in
-                  [ "input.digest", receipt.InputDigest
-                    "replayDigest", receipt.ReplayDigest
-                    "traceDigest", receipt.TraceDigest
-                    "initialFingerprint", receipt.InitialFingerprint
-                    "terminalFingerprint", receipt.TerminalFingerprint
-                    "observedTestReport.digest", receipt.ObservedReportDigest ] do
-                  if not (sha256Digest digest) then
-                      $"{label} is not a sha256:<hex> digest"
-              if not receipt.TerminalPredicateReached then
-                  "terminal predicate was not reached"
-              if not (receipt.Outcome.Equals("passed", StringComparison.OrdinalIgnoreCase)) then
-                  $"journey outcome '{receipt.Outcome}' is not passed"
-              if receipt.MaximumSteps <= 0 then
-                  "maximumSteps must be positive"
-              if receipt.ActualSteps <= 0 then
-                  "actualSteps must be positive"
-              if receipt.ActualSteps > receipt.MaximumSteps then
-                  $"actualSteps {receipt.ActualSteps} exceeds maximumSteps {receipt.MaximumSteps}"
-              if not (receipt.ObservedTestOutcome.Equals("passed", StringComparison.OrdinalIgnoreCase)) then
-                  $"observed test outcome '{receipt.ObservedTestOutcome}' is not passed"
-              match declaration.ObservedRun with
-              | None -> "matching observedRun is missing"
-              | Some run ->
-                  if not (receipt.ObservedReportSource.Equals(run.Source, StringComparison.Ordinal)) then
-                      "journey receipt report source does not match observedRun.source"
+            [
+                if receipt.SchemaVersion <> 1 then
+                    $"unsupported journey receipt schemaVersion {receipt.SchemaVersion}"
+                if String.IsNullOrWhiteSpace receipt.RunnerIdentity then
+                    "runner.identity is required"
+                if String.IsNullOrWhiteSpace receipt.RunnerVersion then
+                    "runner.version is required"
+                if not (receipt.Origin.Equals("production-journey", StringComparison.OrdinalIgnoreCase)) then
+                    $"origin '{receipt.Origin}' is not production-journey"
+                for label, value in
+                    [
+                        "routeId", receipt.RouteId
+                        "scenarioId", receipt.ScenarioId
+                        "testId", receipt.TestId
+                        "observedTestReport.source", receipt.ObservedReportSource
+                        "observedTestReport.testName", receipt.ObservedTestName
+                    ] do
+                    if String.IsNullOrWhiteSpace value then
+                        $"{label} is required"
+                if
+                    not (
+                        receipt.InputKind.Equals("fixed-script", StringComparison.OrdinalIgnoreCase)
+                        || receipt.InputKind.Equals("seeded-policy", StringComparison.OrdinalIgnoreCase)
+                    )
+                then
+                    $"input.kind '{receipt.InputKind}' is not fixed-script or seeded-policy"
+                for label, digest in
+                    [
+                        "input.digest", receipt.InputDigest
+                        "replayDigest", receipt.ReplayDigest
+                        "traceDigest", receipt.TraceDigest
+                        "initialFingerprint", receipt.InitialFingerprint
+                        "terminalFingerprint", receipt.TerminalFingerprint
+                        "observedTestReport.digest", receipt.ObservedReportDigest
+                    ] do
+                    if not (sha256Digest digest) then
+                        $"{label} is not a sha256:<hex> digest"
+                if not receipt.TerminalPredicateReached then
+                    "terminal predicate was not reached"
+                if not (receipt.Outcome.Equals("passed", StringComparison.OrdinalIgnoreCase)) then
+                    $"journey outcome '{receipt.Outcome}' is not passed"
+                if receipt.MaximumSteps <= 0 then
+                    "maximumSteps must be positive"
+                if receipt.ActualSteps <= 0 then
+                    "actualSteps must be positive"
+                if receipt.ActualSteps > receipt.MaximumSteps then
+                    $"actualSteps {receipt.ActualSteps} exceeds maximumSteps {receipt.MaximumSteps}"
+                if not (receipt.ObservedTestOutcome.Equals("passed", StringComparison.OrdinalIgnoreCase)) then
+                    $"observed test outcome '{receipt.ObservedTestOutcome}' is not passed"
+                match declaration.ObservedRun with
+                | None -> "matching observedRun is missing"
+                | Some run ->
+                    if not (receipt.ObservedReportSource.Equals(run.Source, StringComparison.Ordinal)) then
+                        "journey receipt report source does not match observedRun.source"
 
-                  if not (receipt.ObservedReportDigest.Equals(run.Digest, StringComparison.OrdinalIgnoreCase)) then
-                      "journey receipt report digest does not match observedRun.digest"
+                    if not (receipt.ObservedReportDigest.Equals(run.Digest, StringComparison.OrdinalIgnoreCase)) then
+                        "journey receipt report digest does not match observedRun.digest"
 
-                  if
-                      not (run.Outcome.Equals("passed", StringComparison.OrdinalIgnoreCase))
-                      || run.Failed <> 0
-                  then
-                      "observedRun is not passing" ]
+                    if
+                        not (run.Outcome.Equals("passed", StringComparison.OrdinalIgnoreCase))
+                        || run.Failed <> 0
+                    then
+                        "observedRun is not passing"
+            ]
 
     let hasValidJourneyReceipt declaration =
         List.isEmpty (journeyReceiptProblems declaration)
@@ -704,28 +724,30 @@ module Evidence =
             declaration.PerformanceBudget
             |> Option.map (fun budget ->
                 let malformed =
-                    [ if String.IsNullOrWhiteSpace budget.ArtifactPath then
-                          "artifactPath is required"
-                      if budget.TargetFps <= 0 then
-                          "targetFps must be positive"
-                      if List.isEmpty budget.WorkloadIds then
-                          "workloadIds must name at least one active normal-play workload"
-                      if budget.MaxP95Ms <= 0m then
-                          "maxP95Ms must be positive"
-                      if budget.MaxP99Ms <= 0m then
-                          "maxP99Ms must be positive"
-                      if budget.MaxCatchUpFrames < 0 then
-                          "maxCatchUpFrames cannot be negative"
-                      if String.IsNullOrWhiteSpace budget.MeasurementScope then
-                          "measurementScope is required"
-                      if String.IsNullOrWhiteSpace budget.RequiredCapability then
-                          "requiredCapability is required"
-                      let overlap =
-                          Set.intersect (Set.ofList budget.WorkloadIds) (Set.ofList budget.StressWorkloadIds)
+                    [
+                        if String.IsNullOrWhiteSpace budget.ArtifactPath then
+                            "artifactPath is required"
+                        if budget.TargetFps <= 0 then
+                            "targetFps must be positive"
+                        if List.isEmpty budget.WorkloadIds then
+                            "workloadIds must name at least one active normal-play workload"
+                        if budget.MaxP95Ms <= 0m then
+                            "maxP95Ms must be positive"
+                        if budget.MaxP99Ms <= 0m then
+                            "maxP99Ms must be positive"
+                        if budget.MaxCatchUpFrames < 0 then
+                            "maxCatchUpFrames cannot be negative"
+                        if String.IsNullOrWhiteSpace budget.MeasurementScope then
+                            "measurementScope is required"
+                        if String.IsNullOrWhiteSpace budget.RequiredCapability then
+                            "requiredCapability is required"
+                        let overlap =
+                            Set.intersect (Set.ofList budget.WorkloadIds) (Set.ofList budget.StressWorkloadIds)
 
-                      if not (Set.isEmpty overlap) then
-                          let overlappingIds = String.concat ", " (Set.toList overlap)
-                          $"normal and stress workload ids overlap: {overlappingIds}" ]
+                        if not (Set.isEmpty overlap) then
+                            let overlappingIds = String.concat ", " (Set.toList overlap)
+                            $"normal and stress workload ids overlap: {overlappingIds}"
+                    ]
 
                 let state, reasons =
                     if not (List.isEmpty malformed) then
@@ -737,7 +759,9 @@ module Evidence =
                             match performanceArtifactFacts text with
                             | None ->
                                 PerformanceMalformed,
-                                [ $"performance artifact '{budget.ArtifactPath}' is missing or has malformed targets" ]
+                                [
+                                    $"performance artifact '{budget.ArtifactPath}' is missing or has malformed targets"
+                                ]
                             | Some(artifactP95,
                                    artifactP99,
                                    artifactCatchUp,
@@ -746,55 +770,57 @@ module Evidence =
                                    liveProof,
                                    workloads) ->
                                 let bindingFailures =
-                                    [ if artifactP95 <> budget.MaxP95Ms then
-                                          $"artifact p95 target {decimalText artifactP95} does not match declared {decimalText budget.MaxP95Ms}"
-                                      if artifactP99 <> budget.MaxP99Ms then
-                                          $"artifact p99 target {decimalText artifactP99} does not match declared {decimalText budget.MaxP99Ms}"
-                                      if artifactCatchUp <> budget.MaxCatchUpFrames then
-                                          $"artifact catch-up target {artifactCatchUp} does not match declared {budget.MaxCatchUpFrames}"
-                                      if
-                                          not (
-                                              String.Equals(
-                                                  artifactScope,
-                                                  budget.MeasurementScope,
-                                                  StringComparison.Ordinal
-                                              )
-                                          )
-                                      then
-                                          $"artifact scope '{artifactScope}' does not match declared '{budget.MeasurementScope}'"
-                                      if
-                                          not (
-                                              String.Equals(
-                                                  capability,
-                                                  budget.RequiredCapability,
-                                                  StringComparison.Ordinal
-                                              )
-                                          )
-                                      then
-                                          $"artifact capability '{capability}' does not match required '{budget.RequiredCapability}'"
-                                      if budget.LiveCompositorRequired && not liveProof then
-                                          "live compositor proof is required but the artifact declares live-compositor-proof=false"
-                                      for workloadId in budget.WorkloadIds do
-                                          match Map.tryFind workloadId workloads with
-                                          | None -> $"normal-play workload '{workloadId}' is absent"
-                                          | Some facts ->
-                                              match tryDecimal "p95-ms" facts with
-                                              | Some actual when actual <= budget.MaxP95Ms -> ()
-                                              | Some actual ->
-                                                  $"{workloadId} p95 {decimalText actual} ms exceeds {decimalText budget.MaxP95Ms} ms"
-                                              | None -> $"{workloadId} p95-ms is missing or malformed"
+                                    [
+                                        if artifactP95 <> budget.MaxP95Ms then
+                                            $"artifact p95 target {decimalText artifactP95} does not match declared {decimalText budget.MaxP95Ms}"
+                                        if artifactP99 <> budget.MaxP99Ms then
+                                            $"artifact p99 target {decimalText artifactP99} does not match declared {decimalText budget.MaxP99Ms}"
+                                        if artifactCatchUp <> budget.MaxCatchUpFrames then
+                                            $"artifact catch-up target {artifactCatchUp} does not match declared {budget.MaxCatchUpFrames}"
+                                        if
+                                            not (
+                                                String.Equals(
+                                                    artifactScope,
+                                                    budget.MeasurementScope,
+                                                    StringComparison.Ordinal
+                                                )
+                                            )
+                                        then
+                                            $"artifact scope '{artifactScope}' does not match declared '{budget.MeasurementScope}'"
+                                        if
+                                            not (
+                                                String.Equals(
+                                                    capability,
+                                                    budget.RequiredCapability,
+                                                    StringComparison.Ordinal
+                                                )
+                                            )
+                                        then
+                                            $"artifact capability '{capability}' does not match required '{budget.RequiredCapability}'"
+                                        if budget.LiveCompositorRequired && not liveProof then
+                                            "live compositor proof is required but the artifact declares live-compositor-proof=false"
+                                        for workloadId in budget.WorkloadIds do
+                                            match Map.tryFind workloadId workloads with
+                                            | None -> $"normal-play workload '{workloadId}' is absent"
+                                            | Some facts ->
+                                                match tryDecimal "p95-ms" facts with
+                                                | Some actual when actual <= budget.MaxP95Ms -> ()
+                                                | Some actual ->
+                                                    $"{workloadId} p95 {decimalText actual} ms exceeds {decimalText budget.MaxP95Ms} ms"
+                                                | None -> $"{workloadId} p95-ms is missing or malformed"
 
-                                              match tryDecimal "p99-ms" facts with
-                                              | Some actual when actual <= budget.MaxP99Ms -> ()
-                                              | Some actual ->
-                                                  $"{workloadId} p99 {decimalText actual} ms exceeds {decimalText budget.MaxP99Ms} ms"
-                                              | None -> $"{workloadId} p99-ms is missing or malformed"
+                                                match tryDecimal "p99-ms" facts with
+                                                | Some actual when actual <= budget.MaxP99Ms -> ()
+                                                | Some actual ->
+                                                    $"{workloadId} p99 {decimalText actual} ms exceeds {decimalText budget.MaxP99Ms} ms"
+                                                | None -> $"{workloadId} p99-ms is missing or malformed"
 
-                                              match tryInt "catch-up-frames" facts with
-                                              | Some actual when actual <= budget.MaxCatchUpFrames -> ()
-                                              | Some actual ->
-                                                  $"{workloadId} catch-up frames {actual} exceeds {budget.MaxCatchUpFrames}"
-                                              | None -> $"{workloadId} catch-up-frames is missing or malformed" ]
+                                                match tryInt "catch-up-frames" facts with
+                                                | Some actual when actual <= budget.MaxCatchUpFrames -> ()
+                                                | Some actual ->
+                                                    $"{workloadId} catch-up frames {actual} exceeds {budget.MaxCatchUpFrames}"
+                                                | None -> $"{workloadId} catch-up-frames is missing or malformed"
+                                    ]
 
                                 if List.isEmpty bindingFailures then
                                     PerformancePassed, []
@@ -803,14 +829,16 @@ module Evidence =
                                 else
                                     PerformanceFailed, bindingFailures
 
-                { DeclarationId = declaration.Id.Value
-                  ArtifactPath = budget.ArtifactPath
-                  State = state
-                  WorkloadIds = budget.WorkloadIds |> List.distinct |> List.sort
-                  Reasons = reasons
-                  DeferralIssue = budget.DeferralIssue
-                  Artifact = None
-                  Measurements = [] }))
+                {
+                    DeclarationId = declaration.Id.Value
+                    ArtifactPath = budget.ArtifactPath
+                    State = state
+                    WorkloadIds = budget.WorkloadIds |> List.distinct |> List.sort
+                    Reasons = reasons
+                    DeferralIssue = budget.DeferralIssue
+                    Artifact = None
+                    Measurements = []
+                }))
         |> List.sortBy _.DeclarationId
 
     let private tryProperty (name: string) (element: JsonElement) =
@@ -905,42 +933,46 @@ module Evidence =
                         value.EnumerateArray()
                         |> Seq.map (fun item ->
                             let sample: Fsgg.Schemas.PerformanceEvidenceSampleSet =
-                                { WorkloadId = jsonString "workloadId" item
-                                  WorkloadDefinitionDigest = jsonString "workloadDefinitionDigest" item
-                                  WorkloadClass = jsonString "workloadClass" item
-                                  TargetFps = jsonInt "targetFps" item
-                                  MaxP95Ms = jsonDecimal "maxP95Ms" item
-                                  MaxP99Ms = jsonDecimal "maxP99Ms" item
-                                  MaxCatchUpFrames = jsonInt "maxCatchUpFrames" item
-                                  MeasurementScope = jsonString "measurementScope" item
-                                  RequiredCapability = jsonString "requiredCapability" item
-                                  HostProfile = jsonString "hostProfile" item
-                                  PackageVersions = jsonStrings "packageVersions" item
-                                  MeasurementMode = jsonString "measurementMode" item
-                                  Capabilities = jsonStrings "capabilities" item
-                                  WarmupPolicy = jsonString "warmupPolicy" item
-                                  SamplePolicy = jsonString "samplePolicy" item
-                                  CapturedAtUtc = jsonString "capturedAtUtc" item
-                                  CurrencyToken = jsonString "currencyToken" item
-                                  ProbeReadbackContaminated = jsonBool "probeReadbackContaminated" item
-                                  DurationSamplesMs = jsonDecimals "durationSamplesMs" item
-                                  CatchUpFrames = jsonInts "catchUpFrames" item }
+                                {
+                                    WorkloadId = jsonString "workloadId" item
+                                    WorkloadDefinitionDigest = jsonString "workloadDefinitionDigest" item
+                                    WorkloadClass = jsonString "workloadClass" item
+                                    TargetFps = jsonInt "targetFps" item
+                                    MaxP95Ms = jsonDecimal "maxP95Ms" item
+                                    MaxP99Ms = jsonDecimal "maxP99Ms" item
+                                    MaxCatchUpFrames = jsonInt "maxCatchUpFrames" item
+                                    MeasurementScope = jsonString "measurementScope" item
+                                    RequiredCapability = jsonString "requiredCapability" item
+                                    HostProfile = jsonString "hostProfile" item
+                                    PackageVersions = jsonStrings "packageVersions" item
+                                    MeasurementMode = jsonString "measurementMode" item
+                                    Capabilities = jsonStrings "capabilities" item
+                                    WarmupPolicy = jsonString "warmupPolicy" item
+                                    SamplePolicy = jsonString "samplePolicy" item
+                                    CapturedAtUtc = jsonString "capturedAtUtc" item
+                                    CurrencyToken = jsonString "currencyToken" item
+                                    ProbeReadbackContaminated = jsonBool "probeReadbackContaminated" item
+                                    DurationSamplesMs = jsonDecimals "durationSamplesMs" item
+                                    CatchUpFrames = jsonInts "catchUpFrames" item
+                                }
 
                             let itemErrors =
-                                [ match tryProperty "probeReadbackContaminated" item with
-                                  | Some property when
-                                      property.ValueKind = JsonValueKind.True
-                                      || property.ValueKind = JsonValueKind.False
-                                      ->
-                                      ()
-                                  | _ ->
-                                      let id =
-                                          if String.IsNullOrWhiteSpace sample.WorkloadId then
-                                              "<missing workloadId>"
-                                          else
-                                              sample.WorkloadId
+                                [
+                                    match tryProperty "probeReadbackContaminated" item with
+                                    | Some property when
+                                        property.ValueKind = JsonValueKind.True
+                                        || property.ValueKind = JsonValueKind.False
+                                        ->
+                                        ()
+                                    | _ ->
+                                        let id =
+                                            if String.IsNullOrWhiteSpace sample.WorkloadId then
+                                                "<missing workloadId>"
+                                            else
+                                                sample.WorkloadId
 
-                                      $"{id} probeReadbackContaminated must be present and boolean" ]
+                                        $"{id} probeReadbackContaminated must be present and boolean"
+                                ]
 
                             sample, itemErrors)
                         |> List.ofSeq)
@@ -949,17 +981,21 @@ module Evidence =
                 let sampleSets = parsedSampleSets |> List.map fst
 
                 let errors =
-                    [ if contractVersion <> "performance-evidence-v1" then
-                          "contractVersion must be 'performance-evidence-v1'"
-                      if List.isEmpty sampleSets then
-                          "sampleSets must contain at least one independently verifiable sample set"
-                      yield! parsedSampleSets |> List.collect snd ]
+                    [
+                        if contractVersion <> "performance-evidence-v1" then
+                            "contractVersion must be 'performance-evidence-v1'"
+                        if List.isEmpty sampleSets then
+                            "sampleSets must contain at least one independently verifiable sample set"
+                        yield! parsedSampleSets |> List.collect snd
+                    ]
 
                 if List.isEmpty errors then
                     Ok
-                        { ContractVersion = contractVersion
-                          ClaimedBudgetPassed = claimed
-                          SampleSets = sampleSets }
+                        {
+                            ContractVersion = contractVersion
+                            ClaimedBudgetPassed = claimed
+                            SampleSets = sampleSets
+                        }
                 else
                     Error errors
         with :? JsonException as ex ->
@@ -1024,112 +1060,116 @@ module Evidence =
 
                     let declaredIds = budget.WorkloadIds @ budget.StressWorkloadIds |> List.distinct
 
-                    [ if String.IsNullOrWhiteSpace budget.ArtifactPath then
-                          "artifactPath is required"
-                      match budget.Intent with
-                      | Some intent ->
-                          yield!
-                              performanceIntentProblems intent
-                              |> List.map (fun problem -> $"intent.{problem}")
+                    [
+                        if String.IsNullOrWhiteSpace budget.ArtifactPath then
+                            "artifactPath is required"
+                        match budget.Intent with
+                        | Some intent ->
+                            yield!
+                                performanceIntentProblems intent
+                                |> List.map (fun problem -> $"intent.{problem}")
 
-                          if
-                              not (String.Equals(intent.Disposition, "active", StringComparison.OrdinalIgnoreCase))
-                          then
-                              "a performanceBudget may bind only an active performance intent"
+                            if
+                                not (String.Equals(intent.Disposition, "active", StringComparison.OrdinalIgnoreCase))
+                            then
+                                "a performanceBudget may bind only an active performance intent"
 
-                          if String.IsNullOrWhiteSpace intent.Id then
-                              "intent.id is required"
+                            if String.IsNullOrWhiteSpace intent.Id then
+                                "intent.id is required"
 
-                          if intent.TargetFps <> budget.TargetFps then
-                              "intent.targetFps must equal performanceBudget.targetFps"
+                            if intent.TargetFps <> budget.TargetFps then
+                                "intent.targetFps must equal performanceBudget.targetFps"
 
-                          if Set.ofList intent.WorkloadIds <> Set.ofList budget.WorkloadIds then
-                              "intent.workloadIds must equal performanceBudget.workloadIds"
+                            if Set.ofList intent.WorkloadIds <> Set.ofList budget.WorkloadIds then
+                                "intent.workloadIds must equal performanceBudget.workloadIds"
 
-                          if
-                              (workloadDefinitionBindings intent.WorkloadDefinitionDigests |> Map.ofList)
-                              <> (workloadDefinitions
-                                  |> List.filter (fun (id, _) -> List.contains id intent.WorkloadIds)
-                                  |> Map.ofList)
-                          then
-                              "intent.workloadDefinitionDigests must equal the performanceBudget normal-workload bindings"
+                            if
+                                (workloadDefinitionBindings intent.WorkloadDefinitionDigests |> Map.ofList)
+                                <> (workloadDefinitions
+                                    |> List.filter (fun (id, _) -> List.contains id intent.WorkloadIds)
+                                    |> Map.ofList)
+                            then
+                                "intent.workloadDefinitionDigests must equal the performanceBudget normal-workload bindings"
 
-                          if intent.MaxP95Ms <> budget.MaxP95Ms || intent.MaxP99Ms <> budget.MaxP99Ms then
-                              "intent timing thresholds must equal the performanceBudget thresholds"
+                            if intent.MaxP95Ms <> budget.MaxP95Ms || intent.MaxP99Ms <> budget.MaxP99Ms then
+                                "intent timing thresholds must equal the performanceBudget thresholds"
 
-                          if intent.MaxCatchUpFrames <> budget.MaxCatchUpFrames then
-                              "intent.maxCatchUpFrames must equal performanceBudget.maxCatchUpFrames"
+                            if intent.MaxCatchUpFrames <> budget.MaxCatchUpFrames then
+                                "intent.maxCatchUpFrames must equal performanceBudget.maxCatchUpFrames"
 
-                          if
-                              not (
-                                  String.Equals(
-                                      intent.RequiredCapability,
-                                      budget.RequiredCapability,
-                                      StringComparison.Ordinal
-                                  )
-                              )
-                          then
-                              "intent.requiredCapability must equal performanceBudget.requiredCapability"
+                            if
+                                not (
+                                    String.Equals(
+                                        intent.RequiredCapability,
+                                        budget.RequiredCapability,
+                                        StringComparison.Ordinal
+                                    )
+                                )
+                            then
+                                "intent.requiredCapability must equal performanceBudget.requiredCapability"
 
-                          if intent.LiveCompositorRequired <> budget.LiveCompositorRequired then
-                              "intent.liveCompositorRequired must equal performanceBudget.liveCompositorRequired"
+                            if intent.LiveCompositorRequired <> budget.LiveCompositorRequired then
+                                "intent.liveCompositorRequired must equal performanceBudget.liveCompositorRequired"
 
-                          if String.IsNullOrWhiteSpace intent.MaximumExpectedScale then
-                              "intent.maximumExpectedScale is required"
+                            if String.IsNullOrWhiteSpace intent.MaximumExpectedScale then
+                                "intent.maximumExpectedScale is required"
 
-                          if List.isEmpty intent.StructuralCostBudgets then
-                              "intent.structuralCostBudgets must declare at least one structural limit"
-                      | None -> ()
-                      match budget.DeferralIssue with
-                      | Some issue when not (isPerformanceDebtIssueReference issue) ->
-                          "deferralIssue must use owner/repo#N or a GitHub issue URL"
-                      | _ -> ()
-                      if budget.TargetFps <= 0 then
-                          "targetFps must be positive"
-                      if List.isEmpty budget.WorkloadIds then
-                          "workloadIds must name at least one active normal-play workload"
-                      if workloadDefinitions.Length <> budget.WorkloadDefinitionDigests.Length then
-                          "workloadDefinitionDigests entries must use '<workloadId>=<digest>'"
-                      for workloadId in declaredIds do
-                          let matches = workloadDefinitions |> List.filter (fun (id, _) -> id = workloadId)
+                            if List.isEmpty intent.StructuralCostBudgets then
+                                "intent.structuralCostBudgets must declare at least one structural limit"
+                        | None -> ()
+                        match budget.DeferralIssue with
+                        | Some issue when not (isPerformanceDebtIssueReference issue) ->
+                            "deferralIssue must use owner/repo#N or a GitHub issue URL"
+                        | _ -> ()
+                        if budget.TargetFps <= 0 then
+                            "targetFps must be positive"
+                        if List.isEmpty budget.WorkloadIds then
+                            "workloadIds must name at least one active normal-play workload"
+                        if workloadDefinitions.Length <> budget.WorkloadDefinitionDigests.Length then
+                            "workloadDefinitionDigests entries must use '<workloadId>=<digest>'"
+                        for workloadId in declaredIds do
+                            let matches = workloadDefinitions |> List.filter (fun (id, _) -> id = workloadId)
 
-                          if List.isEmpty matches then
-                              $"workloadDefinitionDigests must bind '{workloadId}'"
-                          elif matches.Length <> 1 then
-                              $"workloadDefinitionDigests must bind '{workloadId}' exactly once"
-                      for workloadId, _ in workloadDefinitions do
-                          if not (List.contains workloadId declaredIds) then
-                              $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
-                      if String.IsNullOrWhiteSpace budget.CurrencyToken then
-                          "currencyToken is required"
-                      if tryIsoTimestamp budget.CapturedAfterUtc |> Option.isNone then
-                          "capturedAfterUtc must be an ISO-8601 timestamp"
-                      if budget.MaxP95Ms <= 0m then
-                          "maxP95Ms must be positive"
-                      if budget.MaxP99Ms <= 0m then
-                          "maxP99Ms must be positive"
-                      if budget.MaxCatchUpFrames < 0 then
-                          "maxCatchUpFrames cannot be negative"
-                      if String.IsNullOrWhiteSpace budget.MeasurementScope then
-                          "measurementScope is required"
-                      if String.IsNullOrWhiteSpace budget.RequiredCapability then
-                          "requiredCapability is required"
-                      let overlap =
-                          Set.intersect (Set.ofList budget.WorkloadIds) (Set.ofList budget.StressWorkloadIds)
+                            if List.isEmpty matches then
+                                $"workloadDefinitionDigests must bind '{workloadId}'"
+                            elif matches.Length <> 1 then
+                                $"workloadDefinitionDigests must bind '{workloadId}' exactly once"
+                        for workloadId, _ in workloadDefinitions do
+                            if not (List.contains workloadId declaredIds) then
+                                $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
+                        if String.IsNullOrWhiteSpace budget.CurrencyToken then
+                            "currencyToken is required"
+                        if tryIsoTimestamp budget.CapturedAfterUtc |> Option.isNone then
+                            "capturedAfterUtc must be an ISO-8601 timestamp"
+                        if budget.MaxP95Ms <= 0m then
+                            "maxP95Ms must be positive"
+                        if budget.MaxP99Ms <= 0m then
+                            "maxP99Ms must be positive"
+                        if budget.MaxCatchUpFrames < 0 then
+                            "maxCatchUpFrames cannot be negative"
+                        if String.IsNullOrWhiteSpace budget.MeasurementScope then
+                            "measurementScope is required"
+                        if String.IsNullOrWhiteSpace budget.RequiredCapability then
+                            "requiredCapability is required"
+                        let overlap =
+                            Set.intersect (Set.ofList budget.WorkloadIds) (Set.ofList budget.StressWorkloadIds)
 
-                      if not (Set.isEmpty overlap) then
-                          let names = String.concat ", " (Set.toList overlap)
-                          $"normal and stress workload ids overlap: {names}" ]
+                        if not (Set.isEmpty overlap) then
+                            let names = String.concat ", " (Set.toList overlap)
+                            $"normal and stress workload ids overlap: {names}"
+                    ]
 
                 let finish state reasons artifact measurements =
-                    { DeclarationId = declaration.Id.Value
-                      ArtifactPath = budget.ArtifactPath
-                      State = state
-                      WorkloadIds = budget.WorkloadIds |> List.distinct |> List.sort
-                      Reasons = reasons
-                      DeferralIssue = budget.DeferralIssue
-                      Artifact = artifact
-                      Measurements = measurements }
+                    {
+                        DeclarationId = declaration.Id.Value
+                        ArtifactPath = budget.ArtifactPath
+                        State = state
+                        WorkloadIds = budget.WorkloadIds |> List.distinct |> List.sort
+                        Reasons = reasons
+                        DeferralIssue = budget.DeferralIssue
+                        Artifact = artifact
+                        Measurements = measurements
+                    }
 
                 if not (List.isEmpty declarationErrors) then
                     finish PerformanceMalformed declarationErrors None []
@@ -1153,118 +1193,123 @@ module Evidence =
                             let capturedAfter = tryIsoTimestamp budget.CapturedAfterUtc |> Option.get
 
                             let bindingErrors =
-                                [ for sample in artifact.SampleSets do
-                                      let id =
-                                          if String.IsNullOrWhiteSpace sample.WorkloadId then
-                                              "<missing workloadId>"
-                                          else
-                                              sample.WorkloadId
+                                [
+                                    for sample in artifact.SampleSets do
+                                        let id =
+                                            if String.IsNullOrWhiteSpace sample.WorkloadId then
+                                                "<missing workloadId>"
+                                            else
+                                                sample.WorkloadId
 
-                                      if not (Set.contains sample.WorkloadId declaredIds) then
-                                          $"{id} is not a declared workload"
+                                        if not (Set.contains sample.WorkloadId declaredIds) then
+                                            $"{id} is not a declared workload"
 
-                                      if String.IsNullOrWhiteSpace sample.WorkloadDefinitionDigest then
-                                          $"{id} workloadDefinitionDigest is required"
-                                      elif
-                                          Map.tryFind sample.WorkloadId expectedDefinitions
-                                          <> Some sample.WorkloadDefinitionDigest
-                                      then
-                                          $"{id} workloadDefinitionDigest does not match the declaration"
+                                        if String.IsNullOrWhiteSpace sample.WorkloadDefinitionDigest then
+                                            $"{id} workloadDefinitionDigest is required"
+                                        elif
+                                            Map.tryFind sample.WorkloadId expectedDefinitions
+                                            <> Some sample.WorkloadDefinitionDigest
+                                        then
+                                            $"{id} workloadDefinitionDigest does not match the declaration"
 
-                                      if String.IsNullOrWhiteSpace sample.HostProfile then
-                                          $"{id} hostProfile is required"
+                                        if String.IsNullOrWhiteSpace sample.HostProfile then
+                                            $"{id} hostProfile is required"
 
-                                      if List.isEmpty sample.PackageVersions then
-                                          $"{id} packageVersions must not be empty"
+                                        if List.isEmpty sample.PackageVersions then
+                                            $"{id} packageVersions must not be empty"
 
-                                      if String.IsNullOrWhiteSpace sample.WarmupPolicy then
-                                          $"{id} warmupPolicy is required"
+                                        if String.IsNullOrWhiteSpace sample.WarmupPolicy then
+                                            $"{id} warmupPolicy is required"
 
-                                      if String.IsNullOrWhiteSpace sample.SamplePolicy then
-                                          $"{id} samplePolicy is required"
+                                        if String.IsNullOrWhiteSpace sample.SamplePolicy then
+                                            $"{id} samplePolicy is required"
 
-                                      if String.IsNullOrWhiteSpace sample.CapturedAtUtc then
-                                          $"{id} capturedAtUtc is required"
-                                      else
-                                          match tryIsoTimestamp sample.CapturedAtUtc with
-                                          | None -> $"{id} capturedAtUtc must be an ISO-8601 timestamp"
-                                          | Some captured when captured < capturedAfter ->
-                                              $"{id} capturedAtUtc predates declared capturedAfterUtc"
-                                          | Some _ -> ()
+                                        if String.IsNullOrWhiteSpace sample.CapturedAtUtc then
+                                            $"{id} capturedAtUtc is required"
+                                        else
+                                            match tryIsoTimestamp sample.CapturedAtUtc with
+                                            | None -> $"{id} capturedAtUtc must be an ISO-8601 timestamp"
+                                            | Some captured when captured < capturedAfter ->
+                                                $"{id} capturedAtUtc predates declared capturedAfterUtc"
+                                            | Some _ -> ()
 
-                                      if String.IsNullOrWhiteSpace sample.CurrencyToken then
-                                          $"{id} currencyToken is required"
-                                      elif sample.CurrencyToken <> budget.CurrencyToken then
-                                          $"{id} currencyToken does not match the declaration"
+                                        if String.IsNullOrWhiteSpace sample.CurrencyToken then
+                                            $"{id} currencyToken is required"
+                                        elif sample.CurrencyToken <> budget.CurrencyToken then
+                                            $"{id} currencyToken does not match the declaration"
 
-                                      if List.isEmpty sample.DurationSamplesMs then
-                                          $"{id} durationSamplesMs must not be empty"
+                                        if List.isEmpty sample.DurationSamplesMs then
+                                            $"{id} durationSamplesMs must not be empty"
 
-                                      if sample.DurationSamplesMs |> List.exists (fun value -> value < 0m) then
-                                          $"{id} durationSamplesMs cannot contain negative values"
+                                        if sample.DurationSamplesMs |> List.exists (fun value -> value < 0m) then
+                                            $"{id} durationSamplesMs cannot contain negative values"
 
-                                      if List.isEmpty sample.CatchUpFrames then
-                                          $"{id} catchUpFrames must not be empty"
+                                        if List.isEmpty sample.CatchUpFrames then
+                                            $"{id} catchUpFrames must not be empty"
 
-                                      if sample.CatchUpFrames |> List.exists (fun value -> value < 0) then
-                                          $"{id} catchUpFrames cannot contain negative values"
+                                        if sample.CatchUpFrames |> List.exists (fun value -> value < 0) then
+                                            $"{id} catchUpFrames cannot contain negative values"
 
-                                      if sample.TargetFps <> budget.TargetFps then
-                                          $"{id} targetFps {sample.TargetFps} does not match declared {budget.TargetFps}"
+                                        if sample.TargetFps <> budget.TargetFps then
+                                            $"{id} targetFps {sample.TargetFps} does not match declared {budget.TargetFps}"
 
-                                      if sample.MaxP95Ms <> budget.MaxP95Ms then
-                                          $"{id} maxP95Ms does not match the declaration"
+                                        if sample.MaxP95Ms <> budget.MaxP95Ms then
+                                            $"{id} maxP95Ms does not match the declaration"
 
-                                      if sample.MaxP99Ms <> budget.MaxP99Ms then
-                                          $"{id} maxP99Ms does not match the declaration"
+                                        if sample.MaxP99Ms <> budget.MaxP99Ms then
+                                            $"{id} maxP99Ms does not match the declaration"
 
-                                      if sample.MaxCatchUpFrames <> budget.MaxCatchUpFrames then
-                                          $"{id} maxCatchUpFrames does not match the declaration"
+                                        if sample.MaxCatchUpFrames <> budget.MaxCatchUpFrames then
+                                            $"{id} maxCatchUpFrames does not match the declaration"
 
-                                      if sample.MeasurementScope <> budget.MeasurementScope then
-                                          $"{id} measurementScope does not match the declaration"
+                                        if sample.MeasurementScope <> budget.MeasurementScope then
+                                            $"{id} measurementScope does not match the declaration"
 
-                                      if
-                                          sample.RequiredCapability <> budget.RequiredCapability
-                                          || not (List.contains budget.RequiredCapability sample.Capabilities)
-                                      then
-                                          $"{id} does not bind the required capability '{budget.RequiredCapability}'"
+                                        if
+                                            sample.RequiredCapability <> budget.RequiredCapability
+                                            || not (List.contains budget.RequiredCapability sample.Capabilities)
+                                        then
+                                            $"{id} does not bind the required capability '{budget.RequiredCapability}'"
 
-                                      if
-                                          sample.MeasurementMode <> "headless"
-                                          && sample.MeasurementMode <> "live-compositor"
-                                      then
-                                          $"{id} measurementMode '{sample.MeasurementMode}' is unsupported"
+                                        if
+                                            sample.MeasurementMode <> "headless"
+                                            && sample.MeasurementMode <> "live-compositor"
+                                        then
+                                            $"{id} measurementMode '{sample.MeasurementMode}' is unsupported"
 
-                                      if
-                                          budget.LiveCompositorRequired && sample.MeasurementMode <> "live-compositor"
-                                      then
-                                          $"{id} uses '{sample.MeasurementMode}' but live-compositor evidence is required"
+                                        if
+                                            budget.LiveCompositorRequired
+                                            && sample.MeasurementMode <> "live-compositor"
+                                        then
+                                            $"{id} uses '{sample.MeasurementMode}' but live-compositor evidence is required"
 
-                                      if budget.LiveCompositorRequired && sample.ProbeReadbackContaminated then
-                                          $"{id} is probe/readback contaminated and cannot prove live-compositor performance"
+                                        if budget.LiveCompositorRequired && sample.ProbeReadbackContaminated then
+                                            $"{id} is probe/readback contaminated and cannot prove live-compositor performance"
 
-                                  for workloadId in budget.WorkloadIds do
-                                      let sets =
-                                          artifact.SampleSets |> List.filter (fun set -> set.WorkloadId = workloadId)
+                                    for workloadId in budget.WorkloadIds do
+                                        let sets =
+                                            artifact.SampleSets
+                                            |> List.filter (fun set -> set.WorkloadId = workloadId)
 
-                                      if List.isEmpty sets then
-                                          $"normal-play workload '{workloadId}' is absent"
-                                      elif sets |> List.exists (fun set -> set.WorkloadClass <> "normal-play") then
-                                          $"{workloadId} must be classified as normal-play"
-                                      elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
-                                          $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings"
+                                        if List.isEmpty sets then
+                                            $"normal-play workload '{workloadId}' is absent"
+                                        elif sets |> List.exists (fun set -> set.WorkloadClass <> "normal-play") then
+                                            $"{workloadId} must be classified as normal-play"
+                                        elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
+                                            $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings"
 
-                                  for workloadId in budget.StressWorkloadIds do
-                                      let sets =
-                                          artifact.SampleSets |> List.filter (fun set -> set.WorkloadId = workloadId)
+                                    for workloadId in budget.StressWorkloadIds do
+                                        let sets =
+                                            artifact.SampleSets
+                                            |> List.filter (fun set -> set.WorkloadId = workloadId)
 
-                                      if
-                                          sets |> List.exists (fun set -> set.WorkloadClass <> "stress-throughput")
-                                      then
-                                          $"{workloadId} must be classified as stress-throughput"
-                                      elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
-                                          $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings" ]
+                                        if
+                                            sets |> List.exists (fun set -> set.WorkloadClass <> "stress-throughput")
+                                        then
+                                            $"{workloadId} must be classified as stress-throughput"
+                                        elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
+                                            $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings"
+                                ]
 
                             let measurements =
                                 budget.WorkloadIds @ budget.StressWorkloadIds
@@ -1280,40 +1325,46 @@ module Evidence =
                                         None
                                     else
                                         let measured: Fsgg.Schemas.PerformanceEvidenceMeasurement =
-                                            { WorkloadId = workloadId
-                                              P95Ms = nearestRank 0.95 durations
-                                              P99Ms = nearestRank 0.99 durations
-                                              MaxCatchUpFrames = List.max catchUps }
+                                            {
+                                                WorkloadId = workloadId
+                                                P95Ms = nearestRank 0.95 durations
+                                                P99Ms = nearestRank 0.99 durations
+                                                MaxCatchUpFrames = List.max catchUps
+                                            }
 
                                         Some measured)
 
                             let measurementFailures =
-                                [ for measured in measurements do
-                                      if
-                                          List.contains measured.WorkloadId budget.WorkloadIds
-                                          && measured.P95Ms > budget.MaxP95Ms
-                                      then
-                                          $"{measured.WorkloadId} recomputed p95 {decimalText measured.P95Ms} ms exceeds {decimalText budget.MaxP95Ms} ms"
+                                [
+                                    for measured in measurements do
+                                        if
+                                            List.contains measured.WorkloadId budget.WorkloadIds
+                                            && measured.P95Ms > budget.MaxP95Ms
+                                        then
+                                            $"{measured.WorkloadId} recomputed p95 {decimalText measured.P95Ms} ms exceeds {decimalText budget.MaxP95Ms} ms"
 
-                                      if
-                                          List.contains measured.WorkloadId budget.WorkloadIds
-                                          && measured.P99Ms > budget.MaxP99Ms
-                                      then
-                                          $"{measured.WorkloadId} recomputed p99 {decimalText measured.P99Ms} ms exceeds {decimalText budget.MaxP99Ms} ms"
+                                        if
+                                            List.contains measured.WorkloadId budget.WorkloadIds
+                                            && measured.P99Ms > budget.MaxP99Ms
+                                        then
+                                            $"{measured.WorkloadId} recomputed p99 {decimalText measured.P99Ms} ms exceeds {decimalText budget.MaxP99Ms} ms"
 
-                                      if
-                                          List.contains measured.WorkloadId budget.WorkloadIds
-                                          && measured.MaxCatchUpFrames > budget.MaxCatchUpFrames
-                                      then
-                                          $"{measured.WorkloadId} recomputed catch-up frames {measured.MaxCatchUpFrames} exceeds {budget.MaxCatchUpFrames}" ]
+                                        if
+                                            List.contains measured.WorkloadId budget.WorkloadIds
+                                            && measured.MaxCatchUpFrames > budget.MaxCatchUpFrames
+                                        then
+                                            $"{measured.WorkloadId} recomputed catch-up frames {measured.MaxCatchUpFrames} exceeds {budget.MaxCatchUpFrames}"
+                                ]
 
                             let failures =
-                                [ yield! measurementFailures
-                                  if
-                                      artifact.ClaimedBudgetPassed = Some true
-                                      && not (List.isEmpty measurementFailures)
-                                  then
-                                      "claimedBudgetPassed=true disagrees with the raw samples" ]
+                                [
+                                    yield! measurementFailures
+                                    if
+                                        artifact.ClaimedBudgetPassed = Some true
+                                        && not (List.isEmpty measurementFailures)
+                                    then
+                                        "claimedBudgetPassed=true disagrees with the raw samples"
+                                ]
 
                             if not (List.isEmpty bindingErrors) then
                                 finish PerformanceMalformed bindingErrors (Some artifact) measurements
@@ -1359,53 +1410,55 @@ module Evidence =
         // rule HERE, before the caller plans a probe for it: an escaping path is malformed input and is
         // blocked by `malformedArtifactPath`, never statted (#365 — the probe used to resolve `..`
         // right out of the workspace, so an out-of-repo file could discharge this very gate).
-        [ for ref in declaration.ArtifactRefs do
-              if named ref.Path then
-                  ref.Path
-          for source in declaration.SourceRefs do
-              match source.Path with
-              | Some path when named path && citedPathIsContained path -> path
-              | _ -> ()
-          // FS.GG.SDD#350 (FR-009). The receipt's report IS a cited local path, so it belongs in the
-          // same bucket — and then the #349 cascade probes it for free. A report deleted *after* the
-          // receipt was recorded turns its obligation `invalid` at `verify`, the merge boundary,
-          // rather than only at authoring time. That is what "compare against reality, not against a
-          // record of reality" means for a receipt: the record is not self-certifying.
-          match declaration.ObservedRun with
-          | Some run when named run.Source && citedPathIsContained run.Source -> run.Source
-          | _ -> ()
-          // FS.GG.SDD#865, the exact analogue one field along. A `decision` receipt names a record
-          // committed in THIS repository, so its locator IS a cited local path and belongs in the same
-          // bucket — and then the #349 cascade probes it for free: a decision record deleted after the
-          // receipt was written turns its obligation `invalid` at `verify`, with no new gate. Only
-          // `decision` is included; an `issue` URI and a `commit` object name are not local files and
-          // are never probed, the same line `sourceRefs[].uri` already sits on.
-          // The `:// ` clause mirrors `recordReceiptInconsistency`'s decision-locator rule exactly, and
-          // is not redundant with it. Without it a `decision` receipt carrying a URI would be cited as a
-          // local path, `exists` would report it absent, and the ladder's `artifactNotFound` arm — which
-          // sits ABOVE the receipt arms — would report "artifact not found" for what is really "your
-          // locator is the wrong kind for this receipt". The author would be sent looking for a file
-          // they never meant to name.
-          match declaration.RecordReceipt with
-          | Some receipt when
-              String.Equals(receipt.Kind.Trim(), "decision", StringComparison.OrdinalIgnoreCase)
-              && named receipt.Locator
-              && citedPathIsContained receipt.Locator
-              && not (receipt.Locator.Contains "://")
-              ->
-              receipt.Locator
-          | _ -> ()
-          match declaration.JourneyReceipt with
-          | Some receipt when
-              not (String.IsNullOrWhiteSpace receipt.ObservedReportSource)
-              && citedPathIsContained receipt.ObservedReportSource
-              ->
-              receipt.ObservedReportSource
-          | _ -> ()
-          match declaration.PerformanceBudget with
-          | Some budget when named budget.ArtifactPath && citedPathIsContained budget.ArtifactPath ->
-              budget.ArtifactPath
-          | _ -> () ]
+        [
+            for ref in declaration.ArtifactRefs do
+                if named ref.Path then
+                    ref.Path
+            for source in declaration.SourceRefs do
+                match source.Path with
+                | Some path when named path && citedPathIsContained path -> path
+                | _ -> ()
+            // FS.GG.SDD#350 (FR-009). The receipt's report IS a cited local path, so it belongs in the
+            // same bucket — and then the #349 cascade probes it for free. A report deleted *after* the
+            // receipt was recorded turns its obligation `invalid` at `verify`, the merge boundary,
+            // rather than only at authoring time. That is what "compare against reality, not against a
+            // record of reality" means for a receipt: the record is not self-certifying.
+            match declaration.ObservedRun with
+            | Some run when named run.Source && citedPathIsContained run.Source -> run.Source
+            | _ -> ()
+            // FS.GG.SDD#865, the exact analogue one field along. A `decision` receipt names a record
+            // committed in THIS repository, so its locator IS a cited local path and belongs in the same
+            // bucket — and then the #349 cascade probes it for free: a decision record deleted after the
+            // receipt was written turns its obligation `invalid` at `verify`, with no new gate. Only
+            // `decision` is included; an `issue` URI and a `commit` object name are not local files and
+            // are never probed, the same line `sourceRefs[].uri` already sits on.
+            // The `:// ` clause mirrors `recordReceiptInconsistency`'s decision-locator rule exactly, and
+            // is not redundant with it. Without it a `decision` receipt carrying a URI would be cited as a
+            // local path, `exists` would report it absent, and the ladder's `artifactNotFound` arm — which
+            // sits ABOVE the receipt arms — would report "artifact not found" for what is really "your
+            // locator is the wrong kind for this receipt". The author would be sent looking for a file
+            // they never meant to name.
+            match declaration.RecordReceipt with
+            | Some receipt when
+                String.Equals(receipt.Kind.Trim(), "decision", StringComparison.OrdinalIgnoreCase)
+                && named receipt.Locator
+                && citedPathIsContained receipt.Locator
+                && not (receipt.Locator.Contains "://")
+                ->
+                receipt.Locator
+            | _ -> ()
+            match declaration.JourneyReceipt with
+            | Some receipt when
+                not (String.IsNullOrWhiteSpace receipt.ObservedReportSource)
+                && citedPathIsContained receipt.ObservedReportSource
+                ->
+                receipt.ObservedReportSource
+            | _ -> ()
+            match declaration.PerformanceBudget with
+            | Some budget when named budget.ArtifactPath && citedPathIsContained budget.ArtifactPath ->
+                budget.ArtifactPath
+            | _ -> ()
+        ]
         |> List.distinct
         |> List.sort
 
@@ -1663,18 +1716,20 @@ module Evidence =
                     // `evidenceSourceSnapshotStale` compare "" against the real digest as a
                     // permanent, unfixable mismatch, and would re-render as a trailing-whitespace
                     // `digest: ` line. Unlike `rationale`, an empty digest is never a real value.
-                    { Label = tryScalarAt [ "label" ] mapping |> Option.defaultValue ""
-                      Path = tryScalarAt [ "path" ] mapping |> Option.defaultValue ""
-                      Digest =
-                        tryScalarNonNullAt [ "digest" ] mapping
-                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                      SchemaVersion =
-                        tryScalarNonNullAt [ "schemaVersion" ] mapping
-                        |> Option.bind (fun value ->
-                            match Int32.TryParse value with
-                            | true, parsed -> Some parsed
-                            | _ -> None)
-                      SourceLocation = sourceLocation (index + 1) }))
+                    {
+                        Label = tryScalarAt [ "label" ] mapping |> Option.defaultValue ""
+                        Path = tryScalarAt [ "path" ] mapping |> Option.defaultValue ""
+                        Digest =
+                            tryScalarNonNullAt [ "digest" ] mapping
+                            |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                        SchemaVersion =
+                            tryScalarNonNullAt [ "schemaVersion" ] mapping
+                            |> Option.bind (fun value ->
+                                match Int32.TryParse value with
+                                | true, parsed -> Some parsed
+                                | _ -> None)
+                        SourceLocation = sourceLocation (index + 1)
+                    }))
             |> Seq.choose id
             |> Seq.toList)
         |> Option.defaultValue []
@@ -1687,38 +1742,46 @@ module Evidence =
     // quoted "null" survives as the literal string).
     module EvidenceCodec =
         let sourceRefSeed: EvidenceSourceReference =
-            { ReferenceId = None
-              Kind = "artifact"
-              Path = None
-              Uri = None
-              Digest = None
-              RelatedSourceId = None
-              Result = None
-              SourceLocation = None }
+            {
+                ReferenceId = None
+                Kind = "artifact"
+                Path = None
+                Uri = None
+                Digest = None
+                RelatedSourceId = None
+                Result = None
+                SourceLocation = None
+            }
 
         let sourceRefFields: ArtifactCodec.FieldCodec<EvidenceSourceReference> list =
-            [ ArtifactCodec.defaultedScalar "kind" "artifact" (fun r -> r.Kind) (fun v r -> { r with Kind = v })
-              ArtifactCodec.optionalScalar "id" (fun r -> r.ReferenceId) (fun v r -> { r with ReferenceId = v })
-              ArtifactCodec.optionalScalar "path" (fun r -> r.Path) (fun v r -> { r with Path = v })
-              ArtifactCodec.optionalScalar "uri" (fun r -> r.Uri) (fun v r -> { r with Uri = v })
-              ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
-              ArtifactCodec.optionalScalar "relatedSourceId" (fun r -> r.RelatedSourceId) (fun v r ->
-                  { r with RelatedSourceId = v })
-              ArtifactCodec.optionalScalar "result" (fun r -> r.Result) (fun v r -> { r with Result = v }) ]
+            [
+                ArtifactCodec.defaultedScalar "kind" "artifact" (fun r -> r.Kind) (fun v r -> { r with Kind = v })
+                ArtifactCodec.optionalScalar "id" (fun r -> r.ReferenceId) (fun v r -> { r with ReferenceId = v })
+                ArtifactCodec.optionalScalar "path" (fun r -> r.Path) (fun v r -> { r with Path = v })
+                ArtifactCodec.optionalScalar "uri" (fun r -> r.Uri) (fun v r -> { r with Uri = v })
+                ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
+                ArtifactCodec.optionalScalar "relatedSourceId" (fun r -> r.RelatedSourceId) (fun v r ->
+                    { r with RelatedSourceId = v })
+                ArtifactCodec.optionalScalar "result" (fun r -> r.Result) (fun v r -> { r with Result = v })
+            ]
 
         // The disclosure's inner scalars read null-aware into an option-carrying draft (#180); the
         // caller lifts a fully-populated, non-blank draft to `Some SyntheticDisclosure` and everything
         // else (bare null, absence, blank) to `None`, so the undisclosed-synthetic gate stays honest.
         type DisclosureDraft =
-            { StandsInFor: string option
-              Reason: string option }
+            {
+                StandsInFor: string option
+                Reason: string option
+            }
 
         let disclosureDraftSeed = { StandsInFor = None; Reason = None }
 
         let disclosureFields: ArtifactCodec.FieldCodec<DisclosureDraft> list =
-            [ ArtifactCodec.optionalScalar "standsInFor" (fun d -> d.StandsInFor) (fun v d ->
-                  { d with StandsInFor = v })
-              ArtifactCodec.optionalScalar "reason" (fun d -> d.Reason) (fun v d -> { d with Reason = v }) ]
+            [
+                ArtifactCodec.optionalScalar "standsInFor" (fun d -> d.StandsInFor) (fun v d ->
+                    { d with StandsInFor = v })
+                ArtifactCodec.optionalScalar "reason" (fun d -> d.Reason) (fun v d -> { d with Reason = v })
+            ]
 
         // The disclosure draft <-> field projection (the #180 gate lives in `lift`): a blank/partial
         // draft lifts to None (undisclosed), a fully-populated one to Some.
@@ -1729,13 +1792,17 @@ module Evidence =
                 && not (String.IsNullOrWhiteSpace reason)
                 ->
                 Some
-                    { StandsInFor = standsInFor
-                      Reason = reason }
+                    {
+                        StandsInFor = standsInFor
+                        Reason = reason
+                    }
             | _ -> None
 
         let lowerDisclosure (d: SyntheticDisclosure) : DisclosureDraft =
-            { StandsInFor = Some d.StandsInFor
-              Reason = Some d.Reason }
+            {
+                StandsInFor = Some d.StandsInFor
+                Reason = Some d.Reason
+            }
 
         // FS.GG.SDD#350. The receipt reads through a draft for the same reason the disclosure does:
         // its two identifying scalars are null-aware, and a partial/blank mapping must lift to `None`
@@ -1746,32 +1813,38 @@ module Evidence =
         // reads as `0`, and `observedRunInconsistency` then decides whether that is coherent —
         // rather than the codec silently dropping the whole receipt over one bad token.
         type ObservedRunDraft =
-            { Source: string option
-              Digest: string option
-              DigestContract: string option
-              Outcome: string option
-              Passed: int
-              Failed: int
-              Skipped: int }
+            {
+                Source: string option
+                Digest: string option
+                DigestContract: string option
+                Outcome: string option
+                Passed: int
+                Failed: int
+                Skipped: int
+            }
 
         let observedRunDraftSeed =
-            { Source = None
-              Digest = None
-              DigestContract = None
-              Outcome = None
-              Passed = 0
-              Failed = 0
-              Skipped = 0 }
+            {
+                Source = None
+                Digest = None
+                DigestContract = None
+                Outcome = None
+                Passed = 0
+                Failed = 0
+                Skipped = 0
+            }
 
         let observedRunFields: ArtifactCodec.FieldCodec<ObservedRunDraft> list =
-            [ ArtifactCodec.optionalScalar "source" (fun r -> r.Source) (fun v r -> { r with Source = v })
-              ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
-              ArtifactCodec.optionalScalar "digestContract" (fun r -> r.DigestContract) (fun v r ->
-                  { r with DigestContract = v })
-              ArtifactCodec.optionalScalar "outcome" (fun r -> r.Outcome) (fun v r -> { r with Outcome = v })
-              ArtifactCodec.intScalar "passed" 0 (fun r -> r.Passed) (fun v r -> { r with Passed = v })
-              ArtifactCodec.intScalar "failed" 0 (fun r -> r.Failed) (fun v r -> { r with Failed = v })
-              ArtifactCodec.intScalar "skipped" 0 (fun r -> r.Skipped) (fun v r -> { r with Skipped = v }) ]
+            [
+                ArtifactCodec.optionalScalar "source" (fun r -> r.Source) (fun v r -> { r with Source = v })
+                ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
+                ArtifactCodec.optionalScalar "digestContract" (fun r -> r.DigestContract) (fun v r ->
+                    { r with DigestContract = v })
+                ArtifactCodec.optionalScalar "outcome" (fun r -> r.Outcome) (fun v r -> { r with Outcome = v })
+                ArtifactCodec.intScalar "passed" 0 (fun r -> r.Passed) (fun v r -> { r with Passed = v })
+                ArtifactCodec.intScalar "failed" 0 (fun r -> r.Failed) (fun v r -> { r with Failed = v })
+                ArtifactCodec.intScalar "skipped" 0 (fun r -> r.Skipped) (fun v r -> { r with Skipped = v })
+            ]
 
         // A receipt exists only if it names BOTH what was read and the hash of what was read. Either
         // one alone is not a receipt: a source with no digest is a filename, and a digest with no
@@ -1782,23 +1855,27 @@ module Evidence =
                 not (String.IsNullOrWhiteSpace source) && not (String.IsNullOrWhiteSpace digest)
                 ->
                 Some
-                    { Source = source
-                      Digest = digest
-                      DigestContract = draft.DigestContract |> Option.defaultValue "normalized-text-v1"
-                      Outcome = draft.Outcome |> Option.defaultValue ""
-                      Passed = draft.Passed
-                      Failed = draft.Failed
-                      Skipped = draft.Skipped }
+                    {
+                        Source = source
+                        Digest = digest
+                        DigestContract = draft.DigestContract |> Option.defaultValue "normalized-text-v1"
+                        Outcome = draft.Outcome |> Option.defaultValue ""
+                        Passed = draft.Passed
+                        Failed = draft.Failed
+                        Skipped = draft.Skipped
+                    }
             | _ -> None
 
         let lowerObservedRun (run: ObservedRun) : ObservedRunDraft =
-            { Source = Some run.Source
-              Digest = Some run.Digest
-              DigestContract = Some run.DigestContract
-              Outcome = Some run.Outcome
-              Passed = run.Passed
-              Failed = run.Failed
-              Skipped = run.Skipped }
+            {
+                Source = Some run.Source
+                Digest = Some run.Digest
+                DigestContract = Some run.DigestContract
+                Outcome = Some run.Outcome
+                Passed = run.Passed
+                Failed = run.Failed
+                Skipped = run.Skipped
+            }
 
         // FS.GG.SDD#865. The record receipt reads through a draft for exactly the reason the observed-run
         // receipt does: its identifying scalars are null-aware, and a partial or blank mapping must lift
@@ -1811,29 +1888,35 @@ module Evidence =
         // `recordReceiptInconsistency` decides per kind whether the absence is right, instead of the
         // codec dropping the receipt over it.
         type RecordReceiptDraft =
-            { Kind: string option
-              Locator: string option
-              LocatorContract: string option
-              Digest: string option
-              Statement: string option
-              RecordedAt: string option }
+            {
+                Kind: string option
+                Locator: string option
+                LocatorContract: string option
+                Digest: string option
+                Statement: string option
+                RecordedAt: string option
+            }
 
         let recordReceiptDraftSeed =
-            { Kind = None
-              Locator = None
-              LocatorContract = None
-              Digest = None
-              Statement = None
-              RecordedAt = None }
+            {
+                Kind = None
+                Locator = None
+                LocatorContract = None
+                Digest = None
+                Statement = None
+                RecordedAt = None
+            }
 
         let recordReceiptFields: ArtifactCodec.FieldCodec<RecordReceiptDraft> list =
-            [ ArtifactCodec.optionalScalar "kind" (fun r -> r.Kind) (fun v r -> { r with Kind = v })
-              ArtifactCodec.optionalScalar "locator" (fun r -> r.Locator) (fun v r -> { r with Locator = v })
-              ArtifactCodec.optionalScalar "locatorContract" (fun r -> r.LocatorContract) (fun v r ->
-                  { r with LocatorContract = v })
-              ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
-              ArtifactCodec.optionalScalar "statement" (fun r -> r.Statement) (fun v r -> { r with Statement = v })
-              ArtifactCodec.optionalScalar "recordedAt" (fun r -> r.RecordedAt) (fun v r -> { r with RecordedAt = v }) ]
+            [
+                ArtifactCodec.optionalScalar "kind" (fun r -> r.Kind) (fun v r -> { r with Kind = v })
+                ArtifactCodec.optionalScalar "locator" (fun r -> r.Locator) (fun v r -> { r with Locator = v })
+                ArtifactCodec.optionalScalar "locatorContract" (fun r -> r.LocatorContract) (fun v r ->
+                    { r with LocatorContract = v })
+                ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
+                ArtifactCodec.optionalScalar "statement" (fun r -> r.Statement) (fun v r -> { r with Statement = v })
+                ArtifactCodec.optionalScalar "recordedAt" (fun r -> r.RecordedAt) (fun v r -> { r with RecordedAt = v })
+            ]
 
         /// A record receipt exists only if it names BOTH what class of record backs the claim and the
         /// record itself. Either alone is not a receipt: a kind with no locator is a category, and a
@@ -1851,280 +1934,336 @@ module Evidence =
                 not (String.IsNullOrWhiteSpace kind) && not (String.IsNullOrWhiteSpace locator)
                 ->
                 Some
-                    { Kind = kind
-                      Locator = locator
-                      LocatorContract = draft.LocatorContract |> Option.defaultValue ""
-                      Digest = draft.Digest |> Option.defaultValue ""
-                      Statement = draft.Statement |> Option.defaultValue ""
-                      RecordedAt = draft.RecordedAt |> Option.defaultValue "" }
+                    {
+                        Kind = kind
+                        Locator = locator
+                        LocatorContract = draft.LocatorContract |> Option.defaultValue ""
+                        Digest = draft.Digest |> Option.defaultValue ""
+                        Statement = draft.Statement |> Option.defaultValue ""
+                        RecordedAt = draft.RecordedAt |> Option.defaultValue ""
+                    }
             | _ -> None
 
         let lowerRecordReceipt (receipt: RecordReceipt) : RecordReceiptDraft =
-            { Kind = Some receipt.Kind
-              Locator = Some receipt.Locator
-              LocatorContract = Some receipt.LocatorContract
-              // Rendered only when present, so a round-trip of an `issue`/`commit` receipt does not
-              // grow a `digest: ` line the reader would then have to explain.
-              Digest =
-                (if String.IsNullOrWhiteSpace receipt.Digest then
-                     None
-                 else
-                     Some receipt.Digest)
-              Statement = Some receipt.Statement
-              RecordedAt = Some receipt.RecordedAt }
+            {
+                Kind = Some receipt.Kind
+                Locator = Some receipt.Locator
+                LocatorContract = Some receipt.LocatorContract
+                // Rendered only when present, so a round-trip of an `issue`/`commit` receipt does not
+                // grow a `digest: ` line the reader would then have to explain.
+                Digest =
+                    (if String.IsNullOrWhiteSpace receipt.Digest then
+                         None
+                     else
+                         Some receipt.Digest)
+                Statement = Some receipt.Statement
+                RecordedAt = Some receipt.RecordedAt
+            }
 
         let journeyReceiptSeed: JourneyReceipt =
-            { SchemaVersion = 0
-              RunnerIdentity = ""
-              RunnerVersion = ""
-              Origin = ""
-              RouteId = ""
-              ScenarioId = ""
-              TestId = ""
-              InputKind = ""
-              InputDigest = ""
-              ReplayDigest = ""
-              TraceDigest = ""
-              InitialFingerprint = ""
-              TerminalFingerprint = ""
-              TerminalPredicateReached = false
-              Outcome = ""
-              MaximumSteps = 0
-              ActualSteps = 0
-              ObservedReportSource = ""
-              ObservedReportDigest = ""
-              ObservedTestName = ""
-              ObservedTestOutcome = "" }
+            {
+                SchemaVersion = 0
+                RunnerIdentity = ""
+                RunnerVersion = ""
+                Origin = ""
+                RouteId = ""
+                ScenarioId = ""
+                TestId = ""
+                InputKind = ""
+                InputDigest = ""
+                ReplayDigest = ""
+                TraceDigest = ""
+                InitialFingerprint = ""
+                TerminalFingerprint = ""
+                TerminalPredicateReached = false
+                Outcome = ""
+                MaximumSteps = 0
+                ActualSteps = 0
+                ObservedReportSource = ""
+                ObservedReportDigest = ""
+                ObservedTestName = ""
+                ObservedTestOutcome = ""
+            }
 
         let private journeyRunnerFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
-            [ ArtifactCodec.requiredScalar "identity" _.RunnerIdentity (fun value receipt ->
-                  { receipt with RunnerIdentity = value })
-              ArtifactCodec.requiredScalar "version" _.RunnerVersion (fun value receipt ->
-                  { receipt with RunnerVersion = value }) ]
+            [
+                ArtifactCodec.requiredScalar "identity" _.RunnerIdentity (fun value receipt ->
+                    { receipt with RunnerIdentity = value })
+                ArtifactCodec.requiredScalar "version" _.RunnerVersion (fun value receipt ->
+                    { receipt with RunnerVersion = value })
+            ]
 
         let private journeyInputFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
-            [ ArtifactCodec.requiredScalar "kind" _.InputKind (fun value receipt -> { receipt with InputKind = value })
-              ArtifactCodec.requiredScalar "digest" _.InputDigest (fun value receipt ->
-                  { receipt with InputDigest = value }) ]
+            [
+                ArtifactCodec.requiredScalar "kind" _.InputKind (fun value receipt ->
+                    { receipt with InputKind = value })
+                ArtifactCodec.requiredScalar "digest" _.InputDigest (fun value receipt ->
+                    { receipt with InputDigest = value })
+            ]
 
         let private journeyTerminalFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
-            [ ArtifactCodec.boolScalar "reached" false _.TerminalPredicateReached (fun value receipt ->
-                  { receipt with
-                      TerminalPredicateReached = value }) ]
+            [
+                ArtifactCodec.boolScalar "reached" false _.TerminalPredicateReached (fun value receipt ->
+                    { receipt with
+                        TerminalPredicateReached = value
+                    })
+            ]
 
         let private journeyObservedReportFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
-            [ ArtifactCodec.requiredScalar "source" _.ObservedReportSource (fun value receipt ->
-                  { receipt with
-                      ObservedReportSource = value })
-              ArtifactCodec.requiredScalar "digest" _.ObservedReportDigest (fun value receipt ->
-                  { receipt with
-                      ObservedReportDigest = value })
-              ArtifactCodec.requiredScalar "testName" _.ObservedTestName (fun value receipt ->
-                  { receipt with
-                      ObservedTestName = value })
-              ArtifactCodec.requiredScalar "outcome" _.ObservedTestOutcome (fun value receipt ->
-                  { receipt with
-                      ObservedTestOutcome = value }) ]
+            [
+                ArtifactCodec.requiredScalar "source" _.ObservedReportSource (fun value receipt ->
+                    { receipt with
+                        ObservedReportSource = value
+                    })
+                ArtifactCodec.requiredScalar "digest" _.ObservedReportDigest (fun value receipt ->
+                    { receipt with
+                        ObservedReportDigest = value
+                    })
+                ArtifactCodec.requiredScalar "testName" _.ObservedTestName (fun value receipt ->
+                    { receipt with
+                        ObservedTestName = value
+                    })
+                ArtifactCodec.requiredScalar "outcome" _.ObservedTestOutcome (fun value receipt ->
+                    { receipt with
+                        ObservedTestOutcome = value
+                    })
+            ]
 
         let journeyReceiptFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
-            [ ArtifactCodec.intScalar "schemaVersion" 0 _.SchemaVersion (fun value receipt ->
-                  { receipt with SchemaVersion = value })
-              ArtifactCodec.nested "runner" journeyRunnerFields journeyReceiptSeed id (fun value receipt ->
-                  { receipt with
-                      RunnerIdentity = value.RunnerIdentity
-                      RunnerVersion = value.RunnerVersion })
-              ArtifactCodec.requiredScalar "origin" _.Origin (fun value receipt -> { receipt with Origin = value })
-              ArtifactCodec.requiredScalar "routeId" _.RouteId (fun value receipt -> { receipt with RouteId = value })
-              ArtifactCodec.requiredScalar "scenarioId" _.ScenarioId (fun value receipt ->
-                  { receipt with ScenarioId = value })
-              ArtifactCodec.requiredScalar "testId" _.TestId (fun value receipt -> { receipt with TestId = value })
-              ArtifactCodec.nested "input" journeyInputFields journeyReceiptSeed id (fun value receipt ->
-                  { receipt with
-                      InputKind = value.InputKind
-                      InputDigest = value.InputDigest })
-              ArtifactCodec.requiredScalar "replayDigest" _.ReplayDigest (fun value receipt ->
-                  { receipt with ReplayDigest = value })
-              ArtifactCodec.requiredScalar "traceDigest" _.TraceDigest (fun value receipt ->
-                  { receipt with TraceDigest = value })
-              ArtifactCodec.requiredScalar "initialFingerprint" _.InitialFingerprint (fun value receipt ->
-                  { receipt with
-                      InitialFingerprint = value })
-              ArtifactCodec.requiredScalar "terminalFingerprint" _.TerminalFingerprint (fun value receipt ->
-                  { receipt with
-                      TerminalFingerprint = value })
-              ArtifactCodec.nested "terminalPredicate" journeyTerminalFields journeyReceiptSeed id (fun value receipt ->
-                  { receipt with
-                      TerminalPredicateReached = value.TerminalPredicateReached })
-              ArtifactCodec.requiredScalar "outcome" _.Outcome (fun value receipt -> { receipt with Outcome = value })
-              ArtifactCodec.intScalar "maximumSteps" 0 _.MaximumSteps (fun value receipt ->
-                  { receipt with MaximumSteps = value })
-              ArtifactCodec.intScalar "actualSteps" 0 _.ActualSteps (fun value receipt ->
-                  { receipt with ActualSteps = value })
-              ArtifactCodec.nested
-                  "observedTestReport"
-                  journeyObservedReportFields
-                  journeyReceiptSeed
-                  id
-                  (fun value receipt ->
-                      { receipt with
-                          ObservedReportSource = value.ObservedReportSource
-                          ObservedReportDigest = value.ObservedReportDigest
-                          ObservedTestName = value.ObservedTestName
-                          ObservedTestOutcome = value.ObservedTestOutcome }) ]
+            [
+                ArtifactCodec.intScalar "schemaVersion" 0 _.SchemaVersion (fun value receipt ->
+                    { receipt with SchemaVersion = value })
+                ArtifactCodec.nested "runner" journeyRunnerFields journeyReceiptSeed id (fun value receipt ->
+                    { receipt with
+                        RunnerIdentity = value.RunnerIdentity
+                        RunnerVersion = value.RunnerVersion
+                    })
+                ArtifactCodec.requiredScalar "origin" _.Origin (fun value receipt -> { receipt with Origin = value })
+                ArtifactCodec.requiredScalar "routeId" _.RouteId (fun value receipt -> { receipt with RouteId = value })
+                ArtifactCodec.requiredScalar "scenarioId" _.ScenarioId (fun value receipt ->
+                    { receipt with ScenarioId = value })
+                ArtifactCodec.requiredScalar "testId" _.TestId (fun value receipt -> { receipt with TestId = value })
+                ArtifactCodec.nested "input" journeyInputFields journeyReceiptSeed id (fun value receipt ->
+                    { receipt with
+                        InputKind = value.InputKind
+                        InputDigest = value.InputDigest
+                    })
+                ArtifactCodec.requiredScalar "replayDigest" _.ReplayDigest (fun value receipt ->
+                    { receipt with ReplayDigest = value })
+                ArtifactCodec.requiredScalar "traceDigest" _.TraceDigest (fun value receipt ->
+                    { receipt with TraceDigest = value })
+                ArtifactCodec.requiredScalar "initialFingerprint" _.InitialFingerprint (fun value receipt ->
+                    { receipt with
+                        InitialFingerprint = value
+                    })
+                ArtifactCodec.requiredScalar "terminalFingerprint" _.TerminalFingerprint (fun value receipt ->
+                    { receipt with
+                        TerminalFingerprint = value
+                    })
+                ArtifactCodec.nested
+                    "terminalPredicate"
+                    journeyTerminalFields
+                    journeyReceiptSeed
+                    id
+                    (fun value receipt ->
+                        { receipt with
+                            TerminalPredicateReached = value.TerminalPredicateReached
+                        })
+                ArtifactCodec.requiredScalar "outcome" _.Outcome (fun value receipt -> { receipt with Outcome = value })
+                ArtifactCodec.intScalar "maximumSteps" 0 _.MaximumSteps (fun value receipt ->
+                    { receipt with MaximumSteps = value })
+                ArtifactCodec.intScalar "actualSteps" 0 _.ActualSteps (fun value receipt ->
+                    { receipt with ActualSteps = value })
+                ArtifactCodec.nested
+                    "observedTestReport"
+                    journeyObservedReportFields
+                    journeyReceiptSeed
+                    id
+                    (fun value receipt ->
+                        { receipt with
+                            ObservedReportSource = value.ObservedReportSource
+                            ObservedReportDigest = value.ObservedReportDigest
+                            ObservedTestName = value.ObservedTestName
+                            ObservedTestOutcome = value.ObservedTestOutcome
+                        })
+            ]
 
         let performanceBudgetSeed: PerformanceBudgetDeclaration =
-            { ArtifactPath = ""
-              Intent = None
-              TargetFps = 0
-              WorkloadIds = []
-              StressWorkloadIds = []
-              WorkloadDefinitionDigests = []
-              CurrencyToken = ""
-              CapturedAfterUtc = ""
-              MaxP95Ms = -1m
-              MaxP99Ms = -1m
-              MaxCatchUpFrames = -1
-              MeasurementScope = ""
-              RequiredCapability = ""
-              LiveCompositorRequired = false
-              DeferralIssue = None }
+            {
+                ArtifactPath = ""
+                Intent = None
+                TargetFps = 0
+                WorkloadIds = []
+                StressWorkloadIds = []
+                WorkloadDefinitionDigests = []
+                CurrencyToken = ""
+                CapturedAfterUtc = ""
+                MaxP95Ms = -1m
+                MaxP99Ms = -1m
+                MaxCatchUpFrames = -1
+                MeasurementScope = ""
+                RequiredCapability = ""
+                LiveCompositorRequired = false
+                DeferralIssue = None
+            }
 
         let performanceIntentSeed: PerformanceIntentDeclaration =
-            { Id = ""
-              Disposition = ""
-              TargetFps = 0
-              WorkloadIds = []
-              WorkloadDefinitionDigests = []
-              MaximumExpectedScale = ""
-              MaxP95Ms = -1m
-              MaxP99Ms = -1m
-              MaxCatchUpFrames = -1
-              StructuralCostBudgets = []
-              RequiredCapability = ""
-              LiveCompositorRequired = false
-              DeferralIssue = None
-              EvidenceRefs = []
-              Rationale = None }
+            {
+                Id = ""
+                Disposition = ""
+                TargetFps = 0
+                WorkloadIds = []
+                WorkloadDefinitionDigests = []
+                MaximumExpectedScale = ""
+                MaxP95Ms = -1m
+                MaxP99Ms = -1m
+                MaxCatchUpFrames = -1
+                StructuralCostBudgets = []
+                RequiredCapability = ""
+                LiveCompositorRequired = false
+                DeferralIssue = None
+                EvidenceRefs = []
+                Rationale = None
+            }
 
         let performanceIntentFields: ArtifactCodec.FieldCodec<PerformanceIntentDeclaration> list =
-            [ ArtifactCodec.requiredScalar "id" _.Id (fun value intent -> { intent with Id = value })
-              ArtifactCodec.requiredScalar "disposition" _.Disposition (fun value intent ->
-                  { intent with Disposition = value })
-              ArtifactCodec.intScalar "targetFps" 0 _.TargetFps (fun value intent -> { intent with TargetFps = value })
-              ArtifactCodec.alwaysInlineList "workloadIds" _.WorkloadIds (fun value intent ->
-                  { intent with WorkloadIds = value })
-              ArtifactCodec.alwaysInlineList
-                  "workloadDefinitionDigests"
-                  _.WorkloadDefinitionDigests
-                  (fun value intent ->
-                      { intent with
-                          WorkloadDefinitionDigests = value })
-              ArtifactCodec.requiredScalar "maximumExpectedScale" _.MaximumExpectedScale (fun value intent ->
-                  { intent with
-                      MaximumExpectedScale = value })
-              ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value intent ->
-                  { intent with MaxP95Ms = value })
-              ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value intent ->
-                  { intent with MaxP99Ms = value })
-              ArtifactCodec.intScalar "maxCatchUpFrames" -1 _.MaxCatchUpFrames (fun value intent ->
-                  { intent with MaxCatchUpFrames = value })
-              ArtifactCodec.alwaysInlineList "structuralCostBudgets" _.StructuralCostBudgets (fun value intent ->
-                  { intent with
-                      StructuralCostBudgets = value })
-              ArtifactCodec.requiredScalar "requiredCapability" _.RequiredCapability (fun value intent ->
-                  { intent with
-                      RequiredCapability = value })
-              ArtifactCodec.boolScalar "liveCompositorRequired" false _.LiveCompositorRequired (fun value intent ->
-                  { intent with
-                      LiveCompositorRequired = value })
-              ArtifactCodec.optionalScalar "deferralIssue" _.DeferralIssue (fun value intent ->
-                  { intent with DeferralIssue = value })
-              ArtifactCodec.alwaysInlineList "evidenceRefs" _.EvidenceRefs (fun value intent ->
-                  { intent with EvidenceRefs = value })
-              ArtifactCodec.optionalScalar "rationale" _.Rationale (fun value intent ->
-                  { intent with Rationale = value }) ]
+            [
+                ArtifactCodec.requiredScalar "id" _.Id (fun value intent -> { intent with Id = value })
+                ArtifactCodec.requiredScalar "disposition" _.Disposition (fun value intent ->
+                    { intent with Disposition = value })
+                ArtifactCodec.intScalar "targetFps" 0 _.TargetFps (fun value intent ->
+                    { intent with TargetFps = value })
+                ArtifactCodec.alwaysInlineList "workloadIds" _.WorkloadIds (fun value intent ->
+                    { intent with WorkloadIds = value })
+                ArtifactCodec.alwaysInlineList
+                    "workloadDefinitionDigests"
+                    _.WorkloadDefinitionDigests
+                    (fun value intent ->
+                        { intent with
+                            WorkloadDefinitionDigests = value
+                        })
+                ArtifactCodec.requiredScalar "maximumExpectedScale" _.MaximumExpectedScale (fun value intent ->
+                    { intent with
+                        MaximumExpectedScale = value
+                    })
+                ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value intent ->
+                    { intent with MaxP95Ms = value })
+                ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value intent ->
+                    { intent with MaxP99Ms = value })
+                ArtifactCodec.intScalar "maxCatchUpFrames" -1 _.MaxCatchUpFrames (fun value intent ->
+                    { intent with MaxCatchUpFrames = value })
+                ArtifactCodec.alwaysInlineList "structuralCostBudgets" _.StructuralCostBudgets (fun value intent ->
+                    { intent with
+                        StructuralCostBudgets = value
+                    })
+                ArtifactCodec.requiredScalar "requiredCapability" _.RequiredCapability (fun value intent ->
+                    { intent with
+                        RequiredCapability = value
+                    })
+                ArtifactCodec.boolScalar "liveCompositorRequired" false _.LiveCompositorRequired (fun value intent ->
+                    { intent with
+                        LiveCompositorRequired = value
+                    })
+                ArtifactCodec.optionalScalar "deferralIssue" _.DeferralIssue (fun value intent ->
+                    { intent with DeferralIssue = value })
+                ArtifactCodec.alwaysInlineList "evidenceRefs" _.EvidenceRefs (fun value intent ->
+                    { intent with EvidenceRefs = value })
+                ArtifactCodec.optionalScalar "rationale" _.Rationale (fun value intent ->
+                    { intent with Rationale = value })
+            ]
 
         let performanceBudgetFields: ArtifactCodec.FieldCodec<PerformanceBudgetDeclaration> list =
-            [ ArtifactCodec.requiredScalar "artifactPath" _.ArtifactPath (fun value budget ->
-                  { budget with ArtifactPath = value })
-              ArtifactCodec.optionalNestedVia
-                  "intent"
-                  performanceIntentFields
-                  performanceIntentSeed
-                  Some
-                  id
-                  _.Intent
-                  (fun value budget -> { budget with Intent = value })
-              ArtifactCodec.intScalar "targetFps" 0 _.TargetFps (fun value budget -> { budget with TargetFps = value })
-              ArtifactCodec.alwaysInlineList "workloadIds" _.WorkloadIds (fun value budget ->
-                  { budget with WorkloadIds = value })
-              ArtifactCodec.alwaysInlineList "stressWorkloadIds" _.StressWorkloadIds (fun value budget ->
-                  { budget with
-                      StressWorkloadIds = value })
-              ArtifactCodec.alwaysInlineList
-                  "workloadDefinitionDigests"
-                  _.WorkloadDefinitionDigests
-                  (fun value budget ->
-                      { budget with
-                          WorkloadDefinitionDigests = value })
-              ArtifactCodec.requiredScalar "currencyToken" _.CurrencyToken (fun value budget ->
-                  { budget with CurrencyToken = value })
-              ArtifactCodec.requiredScalar "capturedAfterUtc" _.CapturedAfterUtc (fun value budget ->
-                  { budget with CapturedAfterUtc = value })
-              ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value budget ->
-                  { budget with MaxP95Ms = value })
-              ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value budget ->
-                  { budget with MaxP99Ms = value })
-              ArtifactCodec.intScalar "maxCatchUpFrames" -1 _.MaxCatchUpFrames (fun value budget ->
-                  { budget with MaxCatchUpFrames = value })
-              ArtifactCodec.requiredScalar "measurementScope" _.MeasurementScope (fun value budget ->
-                  { budget with MeasurementScope = value })
-              ArtifactCodec.requiredScalar "requiredCapability" _.RequiredCapability (fun value budget ->
-                  { budget with
-                      RequiredCapability = value })
-              ArtifactCodec.boolScalar "liveCompositorRequired" false _.LiveCompositorRequired (fun value budget ->
-                  { budget with
-                      LiveCompositorRequired = value })
-              ArtifactCodec.optionalScalar "deferralIssue" _.DeferralIssue (fun value budget ->
-                  { budget with DeferralIssue = value }) ]
+            [
+                ArtifactCodec.requiredScalar "artifactPath" _.ArtifactPath (fun value budget ->
+                    { budget with ArtifactPath = value })
+                ArtifactCodec.optionalNestedVia
+                    "intent"
+                    performanceIntentFields
+                    performanceIntentSeed
+                    Some
+                    id
+                    _.Intent
+                    (fun value budget -> { budget with Intent = value })
+                ArtifactCodec.intScalar "targetFps" 0 _.TargetFps (fun value budget ->
+                    { budget with TargetFps = value })
+                ArtifactCodec.alwaysInlineList "workloadIds" _.WorkloadIds (fun value budget ->
+                    { budget with WorkloadIds = value })
+                ArtifactCodec.alwaysInlineList "stressWorkloadIds" _.StressWorkloadIds (fun value budget ->
+                    { budget with
+                        StressWorkloadIds = value
+                    })
+                ArtifactCodec.alwaysInlineList
+                    "workloadDefinitionDigests"
+                    _.WorkloadDefinitionDigests
+                    (fun value budget ->
+                        { budget with
+                            WorkloadDefinitionDigests = value
+                        })
+                ArtifactCodec.requiredScalar "currencyToken" _.CurrencyToken (fun value budget ->
+                    { budget with CurrencyToken = value })
+                ArtifactCodec.requiredScalar "capturedAfterUtc" _.CapturedAfterUtc (fun value budget ->
+                    { budget with CapturedAfterUtc = value })
+                ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value budget ->
+                    { budget with MaxP95Ms = value })
+                ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value budget ->
+                    { budget with MaxP99Ms = value })
+                ArtifactCodec.intScalar "maxCatchUpFrames" -1 _.MaxCatchUpFrames (fun value budget ->
+                    { budget with MaxCatchUpFrames = value })
+                ArtifactCodec.requiredScalar "measurementScope" _.MeasurementScope (fun value budget ->
+                    { budget with MeasurementScope = value })
+                ArtifactCodec.requiredScalar "requiredCapability" _.RequiredCapability (fun value budget ->
+                    { budget with
+                        RequiredCapability = value
+                    })
+                ArtifactCodec.boolScalar "liveCompositorRequired" false _.LiveCompositorRequired (fun value budget ->
+                    { budget with
+                        LiveCompositorRequired = value
+                    })
+                ArtifactCodec.optionalScalar "deferralIssue" _.DeferralIssue (fun value budget ->
+                    { budget with DeferralIssue = value })
+            ]
 
         let subjectSeed: EvidenceSubject = { SubjectType = "task"; Id = "" }
 
         let subjectFields: ArtifactCodec.FieldCodec<EvidenceSubject> list =
-            [ ArtifactCodec.defaultedScalar "type" "task" (fun s -> s.SubjectType) (fun v s ->
-                  { s with SubjectType = v })
-              ArtifactCodec.defaultedScalar "id" "" (fun s -> s.Id) (fun v s -> { s with Id = v }) ]
+            [
+                ArtifactCodec.defaultedScalar "type" "task" (fun s -> s.SubjectType) (fun v s ->
+                    { s with SubjectType = v })
+                ArtifactCodec.defaultedScalar "id" "" (fun s -> s.Id) (fun v s -> { s with Id = v })
+            ]
 
         // A placeholder declaration; the semantic layer in `parseEvidenceArtifact` overwrites `Id`,
         // `Source`, and `SourceLocation` (parse provenance) and applies the subject-type ref merge
         // after `foldInto`, so these seed values never reach the decoded result.
         let declarationSeed: EvidenceDeclaration =
-            { Id = { Value = "EV000" }
-              Kind = Verification
-              Subject = subjectSeed
-              TaskRefs = []
-              RequirementRefs = []
-              AcceptanceScenarioRefs = []
-              ClarificationDecisionRefs = []
-              ChecklistResultRefs = []
-              PlanDecisionRefs = []
-              ObligationRefs = []
-              ArtifactRefs = []
-              SourceRefs = []
-              Result = "pending"
-              Synthetic = false
-              SyntheticDisclosure = None
-              ObservedRun = None
-              RecordReceipt = None
-              JourneyReceipt = None
-              PerformanceBudget = None
-              Rationale = None
-              Owner = None
-              Scope = None
-              LaterLifecycleVisibility = None
-              Notes = []
-              Source = sourceArtifact "work/seed/evidence.yml" ArtifactKind.Evidence
-              SourceLocation = None }
+            {
+                Id = { Value = "EV000" }
+                Kind = Verification
+                Subject = subjectSeed
+                TaskRefs = []
+                RequirementRefs = []
+                AcceptanceScenarioRefs = []
+                ClarificationDecisionRefs = []
+                ChecklistResultRefs = []
+                PlanDecisionRefs = []
+                ObligationRefs = []
+                ArtifactRefs = []
+                SourceRefs = []
+                Result = "pending"
+                Synthetic = false
+                SyntheticDisclosure = None
+                ObservedRun = None
+                RecordReceipt = None
+                JourneyReceipt = None
+                PerformanceBudget = None
+                Rationale = None
+                Owner = None
+                Scope = None
+                LaterLifecycleVisibility = None
+                Notes = []
+                Source = sourceArtifact "work/seed/evidence.yml" ArtifactKind.Evidence
+                SourceLocation = None
+            }
 
         // The whole authored declaration, in emission order — `id` first, so the artifact's `evidence`
         // `recordList` frames each item as `  - id: …`. One list drives both the reader and the
@@ -2132,120 +2271,130 @@ module Evidence =
         // and re-applies it after decode; typed-id ref lists read leniently — the malformed-ref
         // diagnostics stay the semantic layer's job.
         let declarationFields: ArtifactCodec.FieldCodec<EvidenceDeclaration> list =
-            [ ArtifactCodec.requiredScalar "id" (fun d -> d.Id.Value) (fun v d -> { d with Id = { Value = v } })
-              ArtifactCodec.mappedScalar "kind" evidenceKindSourceValue parseEvidenceKind (fun d -> d.Kind) (fun v d ->
-                  { d with Kind = v })
-              ArtifactCodec.nested "subject" subjectFields subjectSeed (fun d -> d.Subject) (fun v d ->
-                  { d with Subject = v })
-              ArtifactCodec.refList
-                  "taskRefs"
-                  Identifiers.createTaskId
-                  (fun (id: TaskId) -> id.Value)
-                  (fun d -> d.TaskRefs)
-                  (fun v d -> { d with TaskRefs = v })
-              ArtifactCodec.refList
-                  "requirementRefs"
-                  Identifiers.createRequirementId
-                  (fun (id: RequirementId) -> id.Value)
-                  (fun d -> d.RequirementRefs)
-                  (fun v d -> { d with RequirementRefs = v })
-              ArtifactCodec.refList
-                  "acceptanceScenarioRefs"
-                  Identifiers.createAcceptanceScenarioId
-                  (fun (id: AcceptanceScenarioId) -> id.Value)
-                  (fun d -> d.AcceptanceScenarioRefs)
-                  (fun v d -> { d with AcceptanceScenarioRefs = v })
-              ArtifactCodec.refList
-                  "clarificationDecisionRefs"
-                  Identifiers.createDecisionId
-                  (fun (id: DecisionId) -> id.Value)
-                  (fun d -> d.ClarificationDecisionRefs)
-                  (fun v d -> { d with ClarificationDecisionRefs = v })
-              ArtifactCodec.refList
-                  "checklistResultRefs"
-                  Identifiers.createChecklistResultId
-                  (fun (id: ChecklistResultId) -> id.Value)
-                  (fun d -> d.ChecklistResultRefs)
-                  (fun v d -> { d with ChecklistResultRefs = v })
-              ArtifactCodec.refList
-                  "planDecisionRefs"
-                  Identifiers.createPlanDecisionId
-                  (fun (id: PlanDecisionId) -> id.Value)
-                  (fun d -> d.PlanDecisionRefs)
-                  (fun v d -> { d with PlanDecisionRefs = v })
-              ArtifactCodec.alwaysInlineList
-                  "obligationRefs"
-                  (fun d -> d.ObligationRefs)
-                  // The reader distinct+sorts obligationRefs to match the pre-codec parser (the
-                  // renderer already distinct+sorts every inline list); notes deliberately do not.
-                  (fun v d ->
-                      { d with
-                          ObligationRefs = v |> List.distinct |> List.sort })
-              ArtifactCodec.alwaysInlineList
-                  "artifacts"
-                  (fun d -> d.ArtifactRefs |> List.map (fun (a: ArtifactRef) -> a.Path))
-                  (fun v d ->
-                      { d with
-                          ArtifactRefs = parseArtifactRefs v })
-              ArtifactCodec.recordList "sourceRefs" sourceRefFields sourceRefSeed (fun d -> d.SourceRefs) (fun v d ->
-                  { d with SourceRefs = v })
-              ArtifactCodec.mappedScalar "result" normalizedEvidenceResult id (fun d -> d.Result) (fun v d ->
-                  { d with Result = v })
-              ArtifactCodec.boolScalar "synthetic" false (fun d -> d.Synthetic) (fun v d -> { d with Synthetic = v })
-              ArtifactCodec.optionalNestedVia
-                  "syntheticDisclosure"
-                  disclosureFields
-                  disclosureDraftSeed
-                  liftDisclosure
-                  lowerDisclosure
-                  (fun d -> d.SyntheticDisclosure)
-                  (fun v d -> { d with SyntheticDisclosure = v })
-              // FS.GG.SDD#350. Recorded by `evidence --from-test-report`, never authored — but it round-trips
-              // through the SAME shared field list as everything else, so it cannot be written without
-              // being read (ADR-0002 invariant 1). A receipt the renderer emitted and the reader
-              // dropped would silently un-observe every obligation on the next `evidence` run.
-              ArtifactCodec.optionalNestedVia
-                  "observedRun"
-                  observedRunFields
-                  observedRunDraftSeed
-                  liftObservedRun
-                  lowerObservedRun
-                  (fun d -> d.ObservedRun)
-                  (fun v d -> { d with ObservedRun = v })
-              // FS.GG.SDD#865. AUTHORED, unlike `observedRun` — there is no runner to read a record
-              // from, which is the whole reason this channel exists — but round-tripped through the
-              // same shared field list for the same reason: a receipt the renderer emitted and the
-              // reader dropped would silently un-record every obligation on the next `evidence` run.
-              ArtifactCodec.optionalNestedVia
-                  "recordReceipt"
-                  recordReceiptFields
-                  recordReceiptDraftSeed
-                  liftRecordReceipt
-                  lowerRecordReceipt
-                  (fun d -> d.RecordReceipt)
-                  (fun v d -> { d with RecordReceipt = v })
-              ArtifactCodec.optionalNestedVia
-                  "journeyReceipt"
-                  journeyReceiptFields
-                  journeyReceiptSeed
-                  Some
-                  id
-                  (fun d -> d.JourneyReceipt)
-                  (fun v d -> { d with JourneyReceipt = v })
-              ArtifactCodec.optionalNestedVia
-                  "performanceBudget"
-                  performanceBudgetFields
-                  performanceBudgetSeed
-                  Some
-                  id
-                  (fun d -> d.PerformanceBudget)
-                  (fun v d -> { d with PerformanceBudget = v })
-              ArtifactCodec.optionalScalar "rationale" (fun d -> d.Rationale) (fun v d -> { d with Rationale = v })
-              ArtifactCodec.optionalScalar "owner" (fun d -> d.Owner) (fun v d -> { d with Owner = v })
-              ArtifactCodec.optionalScalar "scope" (fun d -> d.Scope) (fun v d -> { d with Scope = v })
-              ArtifactCodec.optionalScalar "laterLifecycleVisibility" (fun d -> d.LaterLifecycleVisibility) (fun v d ->
-                  { d with LaterLifecycleVisibility = v })
-              ArtifactCodec.alwaysInlineList "notes" (fun d -> d.Notes) (fun v d -> { d with Notes = v }) ]
+            [
+                ArtifactCodec.requiredScalar "id" (fun d -> d.Id.Value) (fun v d -> { d with Id = { Value = v } })
+                ArtifactCodec.mappedScalar
+                    "kind"
+                    evidenceKindSourceValue
+                    parseEvidenceKind
+                    (fun d -> d.Kind)
+                    (fun v d -> { d with Kind = v })
+                ArtifactCodec.nested "subject" subjectFields subjectSeed (fun d -> d.Subject) (fun v d ->
+                    { d with Subject = v })
+                ArtifactCodec.refList
+                    "taskRefs"
+                    Identifiers.createTaskId
+                    (fun (id: TaskId) -> id.Value)
+                    (fun d -> d.TaskRefs)
+                    (fun v d -> { d with TaskRefs = v })
+                ArtifactCodec.refList
+                    "requirementRefs"
+                    Identifiers.createRequirementId
+                    (fun (id: RequirementId) -> id.Value)
+                    (fun d -> d.RequirementRefs)
+                    (fun v d -> { d with RequirementRefs = v })
+                ArtifactCodec.refList
+                    "acceptanceScenarioRefs"
+                    Identifiers.createAcceptanceScenarioId
+                    (fun (id: AcceptanceScenarioId) -> id.Value)
+                    (fun d -> d.AcceptanceScenarioRefs)
+                    (fun v d -> { d with AcceptanceScenarioRefs = v })
+                ArtifactCodec.refList
+                    "clarificationDecisionRefs"
+                    Identifiers.createDecisionId
+                    (fun (id: DecisionId) -> id.Value)
+                    (fun d -> d.ClarificationDecisionRefs)
+                    (fun v d -> { d with ClarificationDecisionRefs = v })
+                ArtifactCodec.refList
+                    "checklistResultRefs"
+                    Identifiers.createChecklistResultId
+                    (fun (id: ChecklistResultId) -> id.Value)
+                    (fun d -> d.ChecklistResultRefs)
+                    (fun v d -> { d with ChecklistResultRefs = v })
+                ArtifactCodec.refList
+                    "planDecisionRefs"
+                    Identifiers.createPlanDecisionId
+                    (fun (id: PlanDecisionId) -> id.Value)
+                    (fun d -> d.PlanDecisionRefs)
+                    (fun v d -> { d with PlanDecisionRefs = v })
+                ArtifactCodec.alwaysInlineList
+                    "obligationRefs"
+                    (fun d -> d.ObligationRefs)
+                    // The reader distinct+sorts obligationRefs to match the pre-codec parser (the
+                    // renderer already distinct+sorts every inline list); notes deliberately do not.
+                    (fun v d ->
+                        { d with
+                            ObligationRefs = v |> List.distinct |> List.sort
+                        })
+                ArtifactCodec.alwaysInlineList
+                    "artifacts"
+                    (fun d -> d.ArtifactRefs |> List.map (fun (a: ArtifactRef) -> a.Path))
+                    (fun v d ->
+                        { d with
+                            ArtifactRefs = parseArtifactRefs v
+                        })
+                ArtifactCodec.recordList "sourceRefs" sourceRefFields sourceRefSeed (fun d -> d.SourceRefs) (fun v d ->
+                    { d with SourceRefs = v })
+                ArtifactCodec.mappedScalar "result" normalizedEvidenceResult id (fun d -> d.Result) (fun v d ->
+                    { d with Result = v })
+                ArtifactCodec.boolScalar "synthetic" false (fun d -> d.Synthetic) (fun v d -> { d with Synthetic = v })
+                ArtifactCodec.optionalNestedVia
+                    "syntheticDisclosure"
+                    disclosureFields
+                    disclosureDraftSeed
+                    liftDisclosure
+                    lowerDisclosure
+                    (fun d -> d.SyntheticDisclosure)
+                    (fun v d -> { d with SyntheticDisclosure = v })
+                // FS.GG.SDD#350. Recorded by `evidence --from-test-report`, never authored — but it round-trips
+                // through the SAME shared field list as everything else, so it cannot be written without
+                // being read (ADR-0002 invariant 1). A receipt the renderer emitted and the reader
+                // dropped would silently un-observe every obligation on the next `evidence` run.
+                ArtifactCodec.optionalNestedVia
+                    "observedRun"
+                    observedRunFields
+                    observedRunDraftSeed
+                    liftObservedRun
+                    lowerObservedRun
+                    (fun d -> d.ObservedRun)
+                    (fun v d -> { d with ObservedRun = v })
+                // FS.GG.SDD#865. AUTHORED, unlike `observedRun` — there is no runner to read a record
+                // from, which is the whole reason this channel exists — but round-tripped through the
+                // same shared field list for the same reason: a receipt the renderer emitted and the
+                // reader dropped would silently un-record every obligation on the next `evidence` run.
+                ArtifactCodec.optionalNestedVia
+                    "recordReceipt"
+                    recordReceiptFields
+                    recordReceiptDraftSeed
+                    liftRecordReceipt
+                    lowerRecordReceipt
+                    (fun d -> d.RecordReceipt)
+                    (fun v d -> { d with RecordReceipt = v })
+                ArtifactCodec.optionalNestedVia
+                    "journeyReceipt"
+                    journeyReceiptFields
+                    journeyReceiptSeed
+                    Some
+                    id
+                    (fun d -> d.JourneyReceipt)
+                    (fun v d -> { d with JourneyReceipt = v })
+                ArtifactCodec.optionalNestedVia
+                    "performanceBudget"
+                    performanceBudgetFields
+                    performanceBudgetSeed
+                    Some
+                    id
+                    (fun d -> d.PerformanceBudget)
+                    (fun v d -> { d with PerformanceBudget = v })
+                ArtifactCodec.optionalScalar "rationale" (fun d -> d.Rationale) (fun v d -> { d with Rationale = v })
+                ArtifactCodec.optionalScalar "owner" (fun d -> d.Owner) (fun v d -> { d with Owner = v })
+                ArtifactCodec.optionalScalar "scope" (fun d -> d.Scope) (fun v d -> { d with Scope = v })
+                ArtifactCodec.optionalScalar
+                    "laterLifecycleVisibility"
+                    (fun d -> d.LaterLifecycleVisibility)
+                    (fun v d -> { d with LaterLifecycleVisibility = v })
+                ArtifactCodec.alwaysInlineList "notes" (fun d -> d.Notes) (fun v d -> { d with Notes = v })
+            ]
 
     // `parseEvidenceSourceRefs`/`parseSyntheticDisclosure` were retired when the declaration moved onto
     // `declarationFields` (FS.GG.SDD#260): its `recordList "sourceRefs"` and
@@ -2281,12 +2430,14 @@ module Evidence =
     let private evidenceRefField (value: string) =
         // Each row collapses its `Result<'a, _>` to a bool so the list is homogeneous — the id classes
         // are distinct types, but here we only care whether the value parses as that class.
-        [ Identifiers.createTaskId value |> Result.isOk, "task", "taskRefs"
-          Identifiers.createRequirementId value |> Result.isOk, "requirement", "requirementRefs"
-          Identifiers.createAcceptanceScenarioId value |> Result.isOk, "acceptance-scenario", "acceptanceScenarioRefs"
-          Identifiers.createDecisionId value |> Result.isOk, "clarification decision", "clarificationDecisionRefs"
-          Identifiers.createChecklistResultId value |> Result.isOk, "checklist-result", "checklistResultRefs"
-          Identifiers.createPlanDecisionId value |> Result.isOk, "plan-decision", "planDecisionRefs" ]
+        [
+            Identifiers.createTaskId value |> Result.isOk, "task", "taskRefs"
+            Identifiers.createRequirementId value |> Result.isOk, "requirement", "requirementRefs"
+            Identifiers.createAcceptanceScenarioId value |> Result.isOk, "acceptance-scenario", "acceptanceScenarioRefs"
+            Identifiers.createDecisionId value |> Result.isOk, "clarification decision", "clarificationDecisionRefs"
+            Identifiers.createChecklistResultId value |> Result.isOk, "checklist-result", "checklistResultRefs"
+            Identifiers.createPlanDecisionId value |> Result.isOk, "plan-decision", "planDecisionRefs"
+        ]
         |> List.tryPick (fun (parses, kind, field) -> if parses then Some(kind, field) else None)
 
     // Emit `misfiledReference` naming the right field when the value is a well-formed id of another
@@ -2351,18 +2502,20 @@ module Evidence =
                                     |> List.map (Diagnostics.malformedArtifactPath artifact)
 
                                 let refDiagnostics =
-                                    [ scalarList [ "taskRefs" ] mapping
-                                      |> malformedRefs Identifiers.createTaskId
-                                      |> List.map (evidenceRefDiagnostic artifact "task" "taskRefs")
-                                      scalarList [ "requirementRefs" ] mapping
-                                      |> malformedRefs Identifiers.createRequirementId
-                                      |> List.map (evidenceRefDiagnostic artifact "requirement" "requirementRefs")
-                                      scalarList [ "clarificationDecisionRefs" ] mapping
-                                      |> malformedRefs Identifiers.createDecisionId
-                                      |> List.map (
-                                          evidenceRefDiagnostic artifact "decision" "clarificationDecisionRefs"
-                                      )
-                                      citedPathDiagnostics ]
+                                    [
+                                        scalarList [ "taskRefs" ] mapping
+                                        |> malformedRefs Identifiers.createTaskId
+                                        |> List.map (evidenceRefDiagnostic artifact "task" "taskRefs")
+                                        scalarList [ "requirementRefs" ] mapping
+                                        |> malformedRefs Identifiers.createRequirementId
+                                        |> List.map (evidenceRefDiagnostic artifact "requirement" "requirementRefs")
+                                        scalarList [ "clarificationDecisionRefs" ] mapping
+                                        |> malformedRefs Identifiers.createDecisionId
+                                        |> List.map (
+                                            evidenceRefDiagnostic artifact "decision" "clarificationDecisionRefs"
+                                        )
+                                        citedPathDiagnostics
+                                    ]
                                     |> List.concat
 
                                 match Identifiers.createEvidenceId rawId with
@@ -2409,7 +2562,8 @@ module Evidence =
                                             TaskRefs = taskRefs
                                             RequirementRefs = requirementRefs
                                             Source = artifact
-                                            SourceLocation = sourceLocation (index + 1) },
+                                            SourceLocation = sourceLocation (index + 1)
+                                        },
                                     refDiagnostics)
                     |> Seq.toList)
                 |> Option.defaultValue []
@@ -2432,53 +2586,59 @@ module Evidence =
                         None)
 
             let artifactDiagnostics =
-                [ if stage <> LifecycleStage.Evidence then
-                      Diagnostics.workModelInconsistent
-                          artifact
-                          $"Evidence stage '{Identifiers.stageValue stage}' is not 'evidence'."
-                          "Set stage: evidence before rerunning."
-                          [ Identifiers.stageValue stage ] ]
+                [
+                    if stage <> LifecycleStage.Evidence then
+                        Diagnostics.workModelInconsistent
+                            artifact
+                            $"Evidence stage '{Identifiers.stageValue stage}' is not 'evidence'."
+                            "Set stage: evidence before rerunning."
+                            [ Identifiers.stageValue stage ]
+                ]
 
             match version, workId, versionDiagnostics with
             | Some schema, Ok workId, [] ->
                 Ok
-                    { SchemaVersion = schema
-                      WorkId = workId
-                      Stage = stage
-                      Status = tryScalarAt [ "status" ] root |> Option.defaultValue "draft"
-                      SourceSpec =
-                        tryScalarAt [ "sourceSpec" ] root
-                        |> Option.defaultValue $"work/{workId.Value}/spec.md"
-                      SourceClarifications =
-                        tryScalarAt [ "sourceClarifications" ] root
-                        |> Option.defaultValue $"work/{workId.Value}/clarifications.md"
-                      SourceChecklist =
-                        tryScalarAt [ "sourceChecklist" ] root
-                        |> Option.defaultValue $"work/{workId.Value}/checklist.md"
-                      SourcePlan =
-                        tryScalarAt [ "sourcePlan" ] root
-                        |> Option.defaultValue $"work/{workId.Value}/plan.md"
-                      SourceTasks =
-                        tryScalarAt [ "sourceTasks" ] root
-                        |> Option.defaultValue $"work/{workId.Value}/tasks.yml"
-                      SourceAnalysis =
-                        tryScalarAt [ "sourceAnalysis" ] root
-                        |> Option.defaultValue $"readiness/{workId.Value}/analysis.json"
-                      SourceSnapshots = parseEvidenceSourceSnapshots root
-                      Evidence = evidence |> List.sortBy (fun declaration -> declaration.Id.Value)
-                      LifecycleNotes = scalarList [ "lifecycleNotes" ] root
-                      Diagnostics =
-                        duplicateDiagnostics @ artifactDiagnostics @ referenceDiagnostics
-                        |> Diagnostics.sort }
+                    {
+                        SchemaVersion = schema
+                        WorkId = workId
+                        Stage = stage
+                        Status = tryScalarAt [ "status" ] root |> Option.defaultValue "draft"
+                        SourceSpec =
+                            tryScalarAt [ "sourceSpec" ] root
+                            |> Option.defaultValue $"work/{workId.Value}/spec.md"
+                        SourceClarifications =
+                            tryScalarAt [ "sourceClarifications" ] root
+                            |> Option.defaultValue $"work/{workId.Value}/clarifications.md"
+                        SourceChecklist =
+                            tryScalarAt [ "sourceChecklist" ] root
+                            |> Option.defaultValue $"work/{workId.Value}/checklist.md"
+                        SourcePlan =
+                            tryScalarAt [ "sourcePlan" ] root
+                            |> Option.defaultValue $"work/{workId.Value}/plan.md"
+                        SourceTasks =
+                            tryScalarAt [ "sourceTasks" ] root
+                            |> Option.defaultValue $"work/{workId.Value}/tasks.yml"
+                        SourceAnalysis =
+                            tryScalarAt [ "sourceAnalysis" ] root
+                            |> Option.defaultValue $"readiness/{workId.Value}/analysis.json"
+                        SourceSnapshots = parseEvidenceSourceSnapshots root
+                        Evidence = evidence |> List.sortBy (fun declaration -> declaration.Id.Value)
+                        LifecycleNotes = scalarList [ "lifecycleNotes" ] root
+                        Diagnostics =
+                            duplicateDiagnostics @ artifactDiagnostics @ referenceDiagnostics
+                            |> Diagnostics.sort
+                    }
             | _ ->
                 let workIdDiagnostics =
                     match workId with
                     | Error message ->
-                        [ Diagnostics.workModelInconsistent
-                              artifact
-                              message
-                              "Use a valid work id in evidence.yml."
-                              [ workIdValue ] ]
+                        [
+                            Diagnostics.workModelInconsistent
+                                artifact
+                                message
+                                "Use a valid work id in evidence.yml."
+                                [ workIdValue ]
+                        ]
                     | Ok _ -> []
 
                 Error(versionDiagnostics @ duplicateDiagnostics @ workIdDiagnostics)

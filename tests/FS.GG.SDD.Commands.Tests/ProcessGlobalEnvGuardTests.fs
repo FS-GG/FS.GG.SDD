@@ -27,13 +27,15 @@ module ProcessGlobalEnvGuardTests =
     /// `Process.Start` was unavoidable (you could not spawn without writing it); a module-qualified
     /// call can be aliased away, so match the entry points too, not just the qualified path.
     let private spawnOrMutateMarkers =
-        [ "runCliRaw"
-          "Process.Start"
-          "ChildProcess"
-          "runBounded"
-          "Environment.SetEnvironmentVariable"
-          "runScaffold"
-          "scaffoldRequest" ]
+        [
+            "runCliRaw"
+            "Process.Start"
+            "ChildProcess"
+            "runBounded"
+            "Environment.SetEnvironmentVariable"
+            "runScaffold"
+            "scaffoldRequest"
+        ]
 
     let private collectionAttribute = "[<Collection(\"ProcessGlobalEnv\")>]"
 

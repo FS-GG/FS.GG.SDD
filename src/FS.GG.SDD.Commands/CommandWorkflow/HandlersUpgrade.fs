@@ -127,9 +127,11 @@ module internal HandlersUpgrade =
         provenancePaths
         |> List.filter (fun (path, _) -> ownerSkillIdOfPath path |> Option.exists affectedSkillIds.Contains)
         |> List.map (fun (path, sha256) ->
-            { Path = path
-              Owner = owner
-              Sha256 = Some sha256 }
+            {
+                Path = path
+                Owner = owner
+                Sha256 = Some sha256
+            }
             : ScaffoldProvenance.ScaffoldProducedPath)
 
     // Merge freshly-attested rows over the recorded ones: last write wins per path, path-sorted.
@@ -226,9 +228,11 @@ module internal HandlersUpgrade =
                 @ (driver.ProvenancePaths
                    |> List.filter (fun (path, _) -> targetSet.Contains path && ownerSkillIdOfPath path |> Option.isNone)
                    |> List.map (fun (path, sha256) ->
-                       { Path = path
-                         Owner = ArtifactOwner.Driver
-                         Sha256 = Some sha256 }
+                       {
+                           Path = path
+                           Owner = ArtifactOwner.Driver
+                           Sha256 = Some sha256
+                       }
                        : ScaffoldProvenance.ScaffoldProducedPath))
 
             let newGameSkillPaths =
@@ -309,13 +313,16 @@ module internal HandlersUpgrade =
                                 RenderingSkillPaths =
                                     mergeProducedRows
                                         record.RenderingSkillPaths
-                                        (newRenderingSkillPaths @ newAudioSkillPaths) }
+                                        (newRenderingSkillPaths @ newAudioSkillPaths)
+                            }
 
-                        [ WriteFile(
-                              ScaffoldProvenance.provenancePath,
-                              ScaffoldProvenance.serialize updated,
-                              GeneratedView
-                          ) ]
+                        [
+                            WriteFile(
+                                ScaffoldProvenance.provenancePath,
+                                ScaffoldProvenance.serialize updated,
+                                GeneratedView
+                            )
+                        ]
 
                 Ok(writes @ manifestWrites @ provenanceWrite)
         | None -> Ok []
@@ -446,14 +453,16 @@ module internal HandlersUpgrade =
         (undeclared: string list)
         =
         match
-            [ if not (List.isEmpty notMirrored) then
-                  notMirroredHint
-              if not (List.isEmpty lost) then
-                  lostHint
-              if not (List.isEmpty divergent) then
-                  divergentHint
-              if not (List.isEmpty undeclared) then
-                  undeclaredHint ]
+            [
+                if not (List.isEmpty notMirrored) then
+                    notMirroredHint
+                if not (List.isEmpty lost) then
+                    lostHint
+                if not (List.isEmpty divergent) then
+                    divergentHint
+                if not (List.isEmpty undeclared) then
+                    undeclaredHint
+            ]
         with
         | [] -> divergentHint
         | sentences -> String.concat " " sentences
@@ -582,19 +591,21 @@ module internal HandlersUpgrade =
             | None -> -1
 
     let private noOpSummary (request: CommandRequest) (drift: Drift.DriftReport) hint : UpgradeSummary =
-        { HasProvenance = drift.HasProvenance
-          Mode = if request.AssumeYes then "assumeYes" else "interactive"
-          AlreadyCoherent = true
-          Steps = drift.Steps
-          AppliedStepIds = []
-          SkippedStepIds = []
-          FailedStepIds = []
-          SkillDriftPaths = drift.SkillDriftPaths
-          ResidualDrift = false
-          // #747: the no-op summaries are exactly where the exclusion MUST be stated — this is the
-          // "Already coherent — nothing to reconcile." close, and after #747 that sentence can be
-          // true only because something was subtracted.
-          NextActionHint = withIgnoredJunk drift hint }
+        {
+            HasProvenance = drift.HasProvenance
+            Mode = if request.AssumeYes then "assumeYes" else "interactive"
+            AlreadyCoherent = true
+            Steps = drift.Steps
+            AppliedStepIds = []
+            SkippedStepIds = []
+            FailedStepIds = []
+            SkillDriftPaths = drift.SkillDriftPaths
+            ResidualDrift = false
+            // #747: the no-op summaries are exactly where the exclusion MUST be stated — this is the
+            // "Already coherent — nothing to reconcile." close, and after #747 that sentence can be
+            // true only because something was subtracted.
+            NextActionHint = withIgnoredJunk drift hint
+        }
 
     let private finalizeApply
         model
@@ -737,20 +748,23 @@ module internal HandlersUpgrade =
                 "Reconciliation complete; run `fsgg-sdd doctor` to confirm coherence."
 
         let summary: UpgradeSummary =
-            { HasProvenance = drift.HasProvenance
-              Mode = if request.AssumeYes then "assumeYes" else "interactive"
-              AlreadyCoherent = false
-              Steps = steps
-              AppliedStepIds = applied
-              SkippedStepIds = skipped
-              FailedStepIds = failed
-              SkillDriftPaths = unrepairedSkillDrift
-              ResidualDrift = residualDrift
-              NextActionHint = withIgnoredJunk drift hint }
+            {
+                HasProvenance = drift.HasProvenance
+                Mode = if request.AssumeYes then "assumeYes" else "interactive"
+                AlreadyCoherent = false
+                Steps = steps
+                AppliedStepIds = applied
+                SkippedStepIds = skipped
+                FailedStepIds = failed
+                SkillDriftPaths = unrepairedSkillDrift
+                ResidualDrift = residualDrift
+                NextActionHint = withIgnoredJunk drift hint
+            }
 
         { model with
             Upgrade = Some summary
-            Diagnostics = model.Diagnostics @ diagnostics },
+            Diagnostics = model.Diagnostics @ diagnostics
+        },
         []
 
     let computeUpgradeNext model =
@@ -767,7 +781,8 @@ module internal HandlersUpgrade =
                     model, []
                 else
                     { model with
-                        PendingEffects = model.PendingEffects @ effects },
+                        PendingEffects = model.PendingEffects @ effects
+                    },
                     effects
             | None ->
                 let request = model.Request
@@ -812,11 +827,13 @@ module internal HandlersUpgrade =
                 // workspace whose provenance is right there and merely unopenable.
                 if not drift.HasProvenance && List.isEmpty actionable && List.isEmpty unreadable then
                     { model with
-                        Upgrade = Some(noOpSummary request drift "No scaffold provenance — nothing to reconcile.") },
+                        Upgrade = Some(noOpSummary request drift "No scaffold provenance — nothing to reconcile.")
+                    },
                     []
                 elif drift.IsCoherent && List.isEmpty unreadable then
                     { model with
-                        Upgrade = Some(noOpSummary request drift "Already coherent — nothing to reconcile.") },
+                        Upgrade = Some(noOpSummary request drift "Already coherent — nothing to reconcile.")
+                    },
                     []
                 elif List.isEmpty actionable then
                     // 058/ADR-0014 P1: the only drift is advisory content drift (a divergent/
@@ -824,62 +841,69 @@ module internal HandlersUpgrade =
                     // nothing to confirm or `--yes`, so this is NOT a non-interactive refusal — it is
                     // reported advisory (exit 0, residual), so CI's `upgrade` doesn't dead-end at exit 1.
                     let summary: UpgradeSummary =
-                        { HasProvenance = true
-                          Mode = if request.AssumeYes then "assumeYes" else "interactive"
-                          AlreadyCoherent = false
-                          Steps = drift.Steps
-                          AppliedStepIds = []
-                          SkippedStepIds = []
-                          FailedStepIds = []
-                          SkillDriftPaths = drift.SkillDriftPaths
-                          ResidualDrift = true
-                          NextActionHint =
-                            // #760: `skillDriftHint` describes DRIFT, and its no-condition fallback
-                            // is the divergence sentence — which would tell an operator whose only
-                            // problem is a permissions bit that "some copies diverge from their
-                            // canonical body", about copies nothing compared. When the reason this
-                            // arm was reached is unreadable subjects rather than drift, say so; when
-                            // both are present, say both, drift first, exactly as the three drift
-                            // conditions are already concatenated in a fixed order.
-                            [ if not (List.isEmpty drift.SkillDriftPaths) then
-                                  skillDriftHint
-                                      drift.SkillNotMirroredPaths
-                                      drift.SkillLostPaths
-                                      drift.SkillDivergentPaths
-                                      drift.SkillUndeclaredPaths
-                              if not (List.isEmpty unreadable) then
-                                  unreadableSubjectHint ]
-                            |> function
-                                | [] ->
-                                    skillDriftHint
-                                        drift.SkillNotMirroredPaths
-                                        drift.SkillLostPaths
-                                        drift.SkillDivergentPaths
-                                        drift.SkillUndeclaredPaths
-                                | sentences -> String.concat " " sentences
-                            |> withIgnoredJunk drift }
+                        {
+                            HasProvenance = true
+                            Mode = if request.AssumeYes then "assumeYes" else "interactive"
+                            AlreadyCoherent = false
+                            Steps = drift.Steps
+                            AppliedStepIds = []
+                            SkippedStepIds = []
+                            FailedStepIds = []
+                            SkillDriftPaths = drift.SkillDriftPaths
+                            ResidualDrift = true
+                            NextActionHint =
+                                // #760: `skillDriftHint` describes DRIFT, and its no-condition fallback
+                                // is the divergence sentence — which would tell an operator whose only
+                                // problem is a permissions bit that "some copies diverge from their
+                                // canonical body", about copies nothing compared. When the reason this
+                                // arm was reached is unreadable subjects rather than drift, say so; when
+                                // both are present, say both, drift first, exactly as the three drift
+                                // conditions are already concatenated in a fixed order.
+                                [
+                                    if not (List.isEmpty drift.SkillDriftPaths) then
+                                        skillDriftHint
+                                            drift.SkillNotMirroredPaths
+                                            drift.SkillLostPaths
+                                            drift.SkillDivergentPaths
+                                            drift.SkillUndeclaredPaths
+                                    if not (List.isEmpty unreadable) then
+                                        unreadableSubjectHint
+                                ]
+                                |> function
+                                    | [] ->
+                                        skillDriftHint
+                                            drift.SkillNotMirroredPaths
+                                            drift.SkillLostPaths
+                                            drift.SkillDivergentPaths
+                                            drift.SkillUndeclaredPaths
+                                    | sentences -> String.concat " " sentences
+                                |> withIgnoredJunk drift
+                        }
 
                     { model with Upgrade = Some summary }, []
                 elif not request.AssumeYes && not request.IsInteractive then
                     // FR-012 / SC-004: non-interactive without `--yes` refuses up front when there IS
                     // actionable reconciliation — zero writes, no `Confirm`, no prompt-hang (exit 1).
                     let summary: UpgradeSummary =
-                        { HasProvenance = drift.HasProvenance
-                          Mode = "refusedNonInteractive"
-                          AlreadyCoherent = false
-                          Steps = drift.Steps
-                          AppliedStepIds = []
-                          SkippedStepIds = []
-                          FailedStepIds = []
-                          SkillDriftPaths = drift.SkillDriftPaths
-                          ResidualDrift = true
-                          NextActionHint =
-                            "Re-run `fsgg-sdd upgrade` interactively, or pass `--yes` to apply without prompting."
-                            |> withIgnoredJunk drift }
+                        {
+                            HasProvenance = drift.HasProvenance
+                            Mode = "refusedNonInteractive"
+                            AlreadyCoherent = false
+                            Steps = drift.Steps
+                            AppliedStepIds = []
+                            SkippedStepIds = []
+                            FailedStepIds = []
+                            SkillDriftPaths = drift.SkillDriftPaths
+                            ResidualDrift = true
+                            NextActionHint =
+                                "Re-run `fsgg-sdd upgrade` interactively, or pass `--yes` to apply without prompting."
+                                |> withIgnoredJunk drift
+                        }
 
                     { model with
                         Upgrade = Some summary
-                        Diagnostics = model.Diagnostics @ [ upgradeNonInteractiveNoYes () ] },
+                        Diagnostics = model.Diagnostics @ [ upgradeNonInteractiveNoYes () ]
+                    },
                     []
                 else
                     let rec walk steps =
@@ -894,7 +918,8 @@ module internal HandlersUpgrade =
                     match walk actionable with
                     | Some(Choice1Of2 effects) ->
                         { model with
-                            PendingEffects = model.PendingEffects @ effects },
+                            PendingEffects = model.PendingEffects @ effects
+                        },
                         effects
                     | Some(Choice2Of2()) -> model, []
                     | None -> finalizeApply model request drift actionable

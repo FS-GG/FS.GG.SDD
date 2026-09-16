@@ -37,35 +37,39 @@ module internal ClarifyAuthoring =
 
     let clarificationSummary (facts: ClarificationFacts) : ClarificationSummary =
         let answeredQuestionIds =
-            [ facts.Answers
-              |> List.choose (fun answer -> answer.QuestionId |> Option.map _.Value)
-              facts.Decisions
-              |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value)
-              facts.AcceptedDeferrals
-              |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value) ]
+            [
+                facts.Answers
+                |> List.choose (fun answer -> answer.QuestionId |> Option.map _.Value)
+                facts.Decisions
+                |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value)
+                facts.AcceptedDeferrals
+                |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value)
+            ]
             |> List.concat
             |> List.distinct
             |> List.sort
 
-        { WorkId = facts.FrontMatter.WorkId.Value
-          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
-          Status = facts.FrontMatter.Status
-          SourceSpec = facts.FrontMatter.SourceSpec
-          QuestionIds =
-            facts.Questions
-            |> List.map (fun question -> question.QuestionId.Value)
-            |> List.sort
-          AnsweredQuestionIds = answeredQuestionIds
-          DecisionIds =
-            facts.Decisions
-            |> List.map (fun decision -> decision.DecisionId.Value)
-            |> List.sort
-          AcceptedDeferralIds =
-            facts.AcceptedDeferrals
-            |> List.map (fun decision -> decision.DecisionId.Value)
-            |> List.sort
-          RemainingAmbiguityCount = facts.RemainingAmbiguity.Length
-          BlockingAmbiguityCount = facts.BlockingAmbiguityCount }
+        {
+            WorkId = facts.FrontMatter.WorkId.Value
+            Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+            Status = facts.FrontMatter.Status
+            SourceSpec = facts.FrontMatter.SourceSpec
+            QuestionIds =
+                facts.Questions
+                |> List.map (fun question -> question.QuestionId.Value)
+                |> List.sort
+            AnsweredQuestionIds = answeredQuestionIds
+            DecisionIds =
+                facts.Decisions
+                |> List.map (fun decision -> decision.DecisionId.Value)
+                |> List.sort
+            AcceptedDeferralIds =
+                facts.AcceptedDeferrals
+                |> List.map (fun decision -> decision.DecisionId.Value)
+                |> List.sort
+            RemainingAmbiguityCount = facts.RemainingAmbiguity.Length
+            BlockingAmbiguityCount = facts.BlockingAmbiguityCount
+        }
 
     let mapClarificationDiagnostics (path: string) (diagnostics: Diagnostic list) =
         diagnostics
@@ -81,9 +85,11 @@ module internal ClarifyAuthoring =
 
     let parseClarificationForCommand path text : Result<ClarificationFacts * Diagnostic list, Diagnostic list> =
         let snapshot =
-            { Path = path
-              Text = text
-              RawBytes = None }
+            {
+                Path = path
+                Text = text
+                RawBytes = None
+            }
 
         match parseClarificationFacts snapshot with
         | Error diagnostics -> Error(mapClarificationDiagnostics path diagnostics)
@@ -150,11 +156,13 @@ module internal ClarifyAuthoring =
         Regex.Replace((if String.IsNullOrEmpty text then "" else text).Trim().ToLowerInvariant(), @"\s+", " ")
 
     type PlannedClarificationAnswer =
-        { AmbiguityId: string
-          QuestionId: string
-          DecisionId: string option
-          Kind: string
-          Text: string }
+        {
+            AmbiguityId: string
+            QuestionId: string
+            DecisionId: string option
+            Kind: string
+            Text: string
+        }
 
     let unknownReferenceDiagnostics path (specFacts: SpecificationFacts) existingQuestions lines =
         let knownAmbiguities = specFacts.AmbiguityIds |> List.map _.Value |> Set.ofList
@@ -185,11 +193,13 @@ module internal ClarifyAuthoring =
                 else
                     Some(unknownClarificationReference path id))
 
-        [ check @"\bAMB-\d{3,}\b" knownAmbiguities
-          check @"\bFR-\d{3,}\b" knownRequirements
-          check @"\bUS-\d{3,}\b" knownStories
-          check @"\bAC-\d{3,}\b" knownScenarios
-          check @"\bCQ-\d{3,}\b" knownQuestions ]
+        [
+            check @"\bAMB-\d{3,}\b" knownAmbiguities
+            check @"\bFR-\d{3,}\b" knownRequirements
+            check @"\bUS-\d{3,}\b" knownStories
+            check @"\bAC-\d{3,}\b" knownScenarios
+            check @"\bCQ-\d{3,}\b" knownQuestions
+        ]
         |> List.concat
 
     let plannedClarificationAnswers
@@ -282,11 +292,13 @@ module internal ClarifyAuthoring =
                                 Some id
 
                         Some(
-                            { AmbiguityId = ambiguityValue
-                              QuestionId = knownQuestionIdForAmbiguity index existingQuestions ambiguityValue
-                              DecisionId = decisionId
-                              Kind = kind
-                              Text = if String.IsNullOrWhiteSpace text then line else text }
+                            {
+                                AmbiguityId = ambiguityValue
+                                QuestionId = knownQuestionIdForAmbiguity index existingQuestions ambiguityValue
+                                DecisionId = decisionId
+                                Kind = kind
+                                Text = if String.IsNullOrWhiteSpace text then line else text
+                            }
                             : PlannedClarificationAnswer
                         ))
 
@@ -342,10 +354,12 @@ module internal ClarifyAuthoring =
     let noBlockingAmbiguityRemains = "No blocking ambiguity remains."
 
     let emptyStatePlaceholders =
-        [ noClarificationQuestions
-          noClarificationAnswers
-          noConcreteDecisions
-          noAcceptedDeferrals ]
+        [
+            noClarificationQuestions
+            noClarificationAnswers
+            noConcreteDecisions
+            noAcceptedDeferrals
+        ]
 
     /// An ambiguity is *resolved* only by a concrete decision or an accepted deferral. A
     /// `stillOpen` answer records that it is unresolved; it does not resolve it.
@@ -665,10 +679,12 @@ publicOrToolFacingImpact: true
 
         let bodies =
             Map
-                [ "Clarification Questions", questionLines
-                  "Answers", answerLines
-                  "Decisions", decisionLines
-                  "Accepted Deferrals", deferralLines ]
+                [
+                    "Clarification Questions", questionLines
+                    "Answers", answerLines
+                    "Decisions", decisionLines
+                    "Accepted Deferrals", deferralLines
+                ]
 
         // `Remaining Ambiguity` is the one appended section with a conditional pass of its own, so it
         // is appended below rather than in the fold. The rest come from the policy, in policy order.
@@ -730,10 +746,12 @@ publicOrToolFacingImpact: true
                 | Ok(facts, diagnostics) ->
                     let unresolved =
                         if facts.BlockingAmbiguityCount > 0 then
-                            [ unresolvedBlockingAmbiguity
-                                  path
-                                  (facts.RemainingAmbiguity
-                                   |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
+                            [
+                                unresolvedBlockingAmbiguity
+                                    path
+                                    (facts.RemainingAmbiguity
+                                     |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value))
+                            ]
                         else
                             []
 
@@ -767,7 +785,8 @@ publicOrToolFacingImpact: true
                             existingFacts.FrontMatter.SchemaVersion.Major
                             existingFacts.FrontMatter.WorkId.Value
                             existingFacts.FrontMatter.Stage
-                        @ [ if
+                        @ [
+                            if
                                 not (
                                     String.Equals(
                                         normalizeRelativePath existingFacts.FrontMatter.SourceSpec,
@@ -778,7 +797,8 @@ publicOrToolFacingImpact: true
                             then
                                 malformedClarificationFrontMatter
                                     path
-                                    $"Clarification sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
+                                    $"Clarification sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                        ]
 
                     let ensuredText =
                         if List.isEmpty identityDiagnostics then
@@ -820,7 +840,9 @@ publicOrToolFacingImpact: true
 
         match snapshot path model with
         | None ->
-            [ missingClarificationPrerequisite path $"Clarification prerequisite '{path}' is missing." ],
+            [
+                missingClarificationPrerequisite path $"Clarification prerequisite '{path}' is missing."
+            ],
             None,
             None,
             None
@@ -846,7 +868,8 @@ publicOrToolFacingImpact: true
                         facts.FrontMatter.SchemaVersion.Major
                         facts.FrontMatter.WorkId.Value
                         facts.FrontMatter.Stage
-                    @ [ if
+                    @ [
+                        if
                             not (
                                 String.Equals(
                                     normalizeRelativePath facts.FrontMatter.SourceSpec,
@@ -857,14 +880,17 @@ publicOrToolFacingImpact: true
                         then
                             malformedClarificationFrontMatter
                                 path
-                                $"Clarification sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
+                                $"Clarification sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                    ]
 
                 let blocking =
                     if facts.BlockingAmbiguityCount > 0 then
-                        [ unresolvedBlockingAmbiguity
-                              path
-                              (facts.RemainingAmbiguity
-                               |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
+                        [
+                            unresolvedBlockingAmbiguity
+                                path
+                                (facts.RemainingAmbiguity
+                                 |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value))
+                        ]
                     else
                         []
 

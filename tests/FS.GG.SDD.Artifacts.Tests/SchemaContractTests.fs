@@ -79,9 +79,11 @@ module SchemaContractTests =
         Assert.True(WorkModel.blockingDiagnostics model |> List.length >= 6)
 
     let private projectSnapshot text : FileSnapshot =
-        { Path = ".fsgg/project.yml"
-          Text = text
-          RawBytes = None }
+        {
+            Path = ".fsgg/project.yml"
+            Text = text
+            RawBytes = None
+        }
 
     let private parsedTestFramework text =
         match parseProjectConfig (projectSnapshot text) with

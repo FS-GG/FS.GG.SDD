@@ -12,119 +12,147 @@ type AmbiguityState =
     | Deferred
 
 type ScopeBoundary =
-    { Id: SpecificationId
-      Statement: string }
+    {
+        Id: SpecificationId
+        Statement: string
+    }
 
 type RequirementStory =
-    { Id: SpecificationId
-      Priority: string
-      Statement: string }
+    {
+        Id: SpecificationId
+        Priority: string
+        Statement: string
+    }
 
 type Requirement =
-    { Id: SpecificationId
-      Statement: string
-      AcceptanceIds: SpecificationId list
-      EvidenceObligationIds: SpecificationId list }
+    {
+        Id: SpecificationId
+        Statement: string
+        AcceptanceIds: SpecificationId list
+        EvidenceObligationIds: SpecificationId list
+    }
 
 type AcceptanceCriterion =
-    { Id: SpecificationId
-      StoryIds: SpecificationId list
-      RequirementIds: SpecificationId list
-      Statement: string }
+    {
+        Id: SpecificationId
+        StoryIds: SpecificationId list
+        RequirementIds: SpecificationId list
+        Statement: string
+    }
 
 type RequirementAmbiguity =
-    { Id: SpecificationId
-      Question: string
-      State: AmbiguityState
-      Decision: string option }
+    {
+        Id: SpecificationId
+        Question: string
+        State: AmbiguityState
+        Decision: string option
+    }
 
 type RequirementsExtension =
-    { UserValue: string
-      Scope: ScopeBoundary list
-      NonGoals: ScopeBoundary list
-      Stories: RequirementStory list
-      Requirements: Requirement list
-      Acceptance: AcceptanceCriterion list
-      Ambiguities: RequirementAmbiguity list
-      PublicImpact: string list
-      LifecycleNotes: string list }
+    {
+        UserValue: string
+        Scope: ScopeBoundary list
+        NonGoals: ScopeBoundary list
+        Stories: RequirementStory list
+        Requirements: Requirement list
+        Acceptance: AcceptanceCriterion list
+        Ambiguities: RequirementAmbiguity list
+        PublicImpact: string list
+        LifecycleNotes: string list
+    }
 
 type RequirementsDraft =
     private
-        { UserValue: string
-          Scope: ScopeBoundary list
-          NonGoals: ScopeBoundary list
-          Stories: RequirementStory list
-          Requirements: Requirement list
-          Acceptance: AcceptanceCriterion list
-          Ambiguities: RequirementAmbiguity list
-          PublicImpact: string list
-          LifecycleNotes: string list }
+        {
+            UserValue: string
+            Scope: ScopeBoundary list
+            NonGoals: ScopeBoundary list
+            Stories: RequirementStory list
+            Requirements: Requirement list
+            Acceptance: AcceptanceCriterion list
+            Ambiguities: RequirementAmbiguity list
+            PublicImpact: string list
+            LifecycleNotes: string list
+        }
 
 [<RequireQualifiedAccess>]
 module RequirementsDraft =
     let empty: RequirementsDraft =
-        { UserValue = ""
-          Scope = []
-          NonGoals = []
-          Stories = []
-          Requirements = []
-          Acceptance = []
-          Ambiguities = []
-          PublicImpact = []
-          LifecycleNotes = [] }
+        {
+            UserValue = ""
+            Scope = []
+            NonGoals = []
+            Stories = []
+            Requirements = []
+            Acceptance = []
+            Ambiguities = []
+            PublicImpact = []
+            LifecycleNotes = []
+        }
 
     let withUserValue value (draft: RequirementsDraft) = { draft with UserValue = value }
 
     let addScope boundary (draft: RequirementsDraft) =
         { draft with
-            Scope = boundary :: draft.Scope }
+            Scope = boundary :: draft.Scope
+        }
 
     let addNonGoal boundary (draft: RequirementsDraft) =
         { draft with
-            NonGoals = boundary :: draft.NonGoals }
+            NonGoals = boundary :: draft.NonGoals
+        }
 
     let addStory story (draft: RequirementsDraft) =
         { draft with
-            Stories = story :: draft.Stories }
+            Stories = story :: draft.Stories
+        }
 
     let addRequirement requirement (draft: RequirementsDraft) =
         { draft with
-            Requirements = requirement :: draft.Requirements }
+            Requirements = requirement :: draft.Requirements
+        }
 
     let addAcceptance acceptance (draft: RequirementsDraft) =
         { draft with
-            Acceptance = acceptance :: draft.Acceptance }
+            Acceptance = acceptance :: draft.Acceptance
+        }
 
     let addAmbiguity ambiguity (draft: RequirementsDraft) =
         { draft with
-            Ambiguities = ambiguity :: draft.Ambiguities }
+            Ambiguities = ambiguity :: draft.Ambiguities
+        }
 
     let addPublicImpact impact (draft: RequirementsDraft) =
         { draft with
-            PublicImpact = impact :: draft.PublicImpact }
+            PublicImpact = impact :: draft.PublicImpact
+        }
 
     let addLifecycleNote note (draft: RequirementsDraft) =
         { draft with
-            LifecycleNotes = note :: draft.LifecycleNotes }
+            LifecycleNotes = note :: draft.LifecycleNotes
+        }
 
     let build (draft: RequirementsDraft) : RequirementsExtension =
-        { UserValue = draft.UserValue
-          Scope = List.rev draft.Scope
-          NonGoals = List.rev draft.NonGoals
-          Stories = List.rev draft.Stories
-          Requirements = List.rev draft.Requirements
-          Acceptance = List.rev draft.Acceptance
-          Ambiguities = List.rev draft.Ambiguities
-          PublicImpact = List.rev draft.PublicImpact
-          LifecycleNotes = List.rev draft.LifecycleNotes }
+        {
+            UserValue = draft.UserValue
+            Scope = List.rev draft.Scope
+            NonGoals = List.rev draft.NonGoals
+            Stories = List.rev draft.Stories
+            Requirements = List.rev draft.Requirements
+            Acceptance = List.rev draft.Acceptance
+            Ambiguities = List.rev draft.Ambiguities
+            PublicImpact = List.rev draft.PublicImpact
+            LifecycleNotes = List.rev draft.LifecycleNotes
+        }
 
 module private Requirements =
     let diagnostic code path message : SpecificationDiagnostic =
-        { Code = code
-          Path = path
-          Message = message
-          Location = None }
+        {
+            Code = code
+            Path = path
+            Message = message
+            Location = None
+        }
 
     let sortDiagnostics (diagnostics: SpecificationDiagnostic list) =
         diagnostics
@@ -182,154 +210,156 @@ module private Requirements =
         let acceptance = Set.ofList acceptanceIds
         let evidence = obligations |> List.map _.Id |> Set.ofList
 
-        [ yield! blank "REQ-USER-VALUE-REQUIRED" "/extension/userValue" "User value" extension.UserValue
-          yield! duplicates "/extension" allIds
+        [
+            yield! blank "REQ-USER-VALUE-REQUIRED" "/extension/userValue" "User value" extension.UserValue
+            yield! duplicates "/extension" allIds
 
-          for index, boundary in extension.Scope |> List.indexed do
-              yield!
-                  blank
-                      "REQ-SCOPE-STATEMENT-REQUIRED"
-                      $"/extension/scope/%d{index}/statement"
-                      "Scope statement"
-                      boundary.Statement
+            for index, boundary in extension.Scope |> List.indexed do
+                yield!
+                    blank
+                        "REQ-SCOPE-STATEMENT-REQUIRED"
+                        $"/extension/scope/%d{index}/statement"
+                        "Scope statement"
+                        boundary.Statement
 
-          for index, boundary in extension.NonGoals |> List.indexed do
-              yield!
-                  blank
-                      "REQ-NON-GOAL-STATEMENT-REQUIRED"
-                      $"/extension/nonGoals/%d{index}/statement"
-                      "Non-goal statement"
-                      boundary.Statement
+            for index, boundary in extension.NonGoals |> List.indexed do
+                yield!
+                    blank
+                        "REQ-NON-GOAL-STATEMENT-REQUIRED"
+                        $"/extension/nonGoals/%d{index}/statement"
+                        "Non-goal statement"
+                        boundary.Statement
 
-          for index, story in extension.Stories |> List.indexed do
-              yield!
-                  blank
-                      "REQ-STORY-PRIORITY-REQUIRED"
-                      $"/extension/stories/%d{index}/priority"
-                      "Story priority"
-                      story.Priority
+            for index, story in extension.Stories |> List.indexed do
+                yield!
+                    blank
+                        "REQ-STORY-PRIORITY-REQUIRED"
+                        $"/extension/stories/%d{index}/priority"
+                        "Story priority"
+                        story.Priority
 
-              yield!
-                  blank
-                      "REQ-STORY-STATEMENT-REQUIRED"
-                      $"/extension/stories/%d{index}/statement"
-                      "Story statement"
-                      story.Statement
+                yield!
+                    blank
+                        "REQ-STORY-STATEMENT-REQUIRED"
+                        $"/extension/stories/%d{index}/statement"
+                        "Story statement"
+                        story.Statement
 
-          for index, requirement in extension.Requirements |> List.indexed do
-              yield!
-                  blank
-                      "REQ-STATEMENT-REQUIRED"
-                      $"/extension/requirements/%d{index}/statement"
-                      "Requirement statement"
-                      requirement.Statement
+            for index, requirement in extension.Requirements |> List.indexed do
+                yield!
+                    blank
+                        "REQ-STATEMENT-REQUIRED"
+                        $"/extension/requirements/%d{index}/statement"
+                        "Requirement statement"
+                        requirement.Statement
 
-              yield!
-                  duplicateReferences
-                      "REQ-ACCEPTANCE-DUPLICATE"
-                      $"/extension/requirements/%d{index}/acceptanceIds"
-                      requirement.AcceptanceIds
+                yield!
+                    duplicateReferences
+                        "REQ-ACCEPTANCE-DUPLICATE"
+                        $"/extension/requirements/%d{index}/acceptanceIds"
+                        requirement.AcceptanceIds
 
-              yield!
-                  duplicateReferences
-                      "REQ-EVIDENCE-DUPLICATE"
-                      $"/extension/requirements/%d{index}/evidenceObligationIds"
-                      requirement.EvidenceObligationIds
+                yield!
+                    duplicateReferences
+                        "REQ-EVIDENCE-DUPLICATE"
+                        $"/extension/requirements/%d{index}/evidenceObligationIds"
+                        requirement.EvidenceObligationIds
 
-              if List.isEmpty requirement.AcceptanceIds then
-                  yield
-                      diagnostic
-                          "REQ-ACCEPTANCE-REQUIRED"
-                          $"/extension/requirements/%d{index}/acceptanceIds"
-                          "Requirement must reference at least one acceptance criterion."
+                if List.isEmpty requirement.AcceptanceIds then
+                    yield
+                        diagnostic
+                            "REQ-ACCEPTANCE-REQUIRED"
+                            $"/extension/requirements/%d{index}/acceptanceIds"
+                            "Requirement must reference at least one acceptance criterion."
 
-              for referenced in requirement.AcceptanceIds do
-                  if not (Set.contains referenced acceptance) then
-                      yield
-                          diagnostic
-                              "REQ-ACCEPTANCE-UNRESOLVED"
-                              $"/extension/requirements/%d{index}/acceptanceIds"
-                              $"Acceptance reference '%s{idText referenced}' does not resolve."
+                for referenced in requirement.AcceptanceIds do
+                    if not (Set.contains referenced acceptance) then
+                        yield
+                            diagnostic
+                                "REQ-ACCEPTANCE-UNRESOLVED"
+                                $"/extension/requirements/%d{index}/acceptanceIds"
+                                $"Acceptance reference '%s{idText referenced}' does not resolve."
 
-              for referenced in requirement.EvidenceObligationIds do
-                  if not (Set.contains referenced evidence) then
-                      yield
-                          diagnostic
-                              "REQ-EVIDENCE-UNRESOLVED"
-                              $"/extension/requirements/%d{index}/evidenceObligationIds"
-                              $"Evidence reference '%s{idText referenced}' does not resolve."
+                for referenced in requirement.EvidenceObligationIds do
+                    if not (Set.contains referenced evidence) then
+                        yield
+                            diagnostic
+                                "REQ-EVIDENCE-UNRESOLVED"
+                                $"/extension/requirements/%d{index}/evidenceObligationIds"
+                                $"Evidence reference '%s{idText referenced}' does not resolve."
 
-          for index, criterion in extension.Acceptance |> List.indexed do
-              yield!
-                  blank
-                      "REQ-ACCEPTANCE-STATEMENT-REQUIRED"
-                      $"/extension/acceptance/%d{index}/statement"
-                      "Acceptance statement"
-                      criterion.Statement
+            for index, criterion in extension.Acceptance |> List.indexed do
+                yield!
+                    blank
+                        "REQ-ACCEPTANCE-STATEMENT-REQUIRED"
+                        $"/extension/acceptance/%d{index}/statement"
+                        "Acceptance statement"
+                        criterion.Statement
 
-              yield!
-                  duplicateReferences
-                      "REQ-STORY-REFERENCE-DUPLICATE"
-                      $"/extension/acceptance/%d{index}/storyIds"
-                      criterion.StoryIds
+                yield!
+                    duplicateReferences
+                        "REQ-STORY-REFERENCE-DUPLICATE"
+                        $"/extension/acceptance/%d{index}/storyIds"
+                        criterion.StoryIds
 
-              yield!
-                  duplicateReferences
-                      "REQ-REQUIREMENT-REFERENCE-DUPLICATE"
-                      $"/extension/acceptance/%d{index}/requirementIds"
-                      criterion.RequirementIds
+                yield!
+                    duplicateReferences
+                        "REQ-REQUIREMENT-REFERENCE-DUPLICATE"
+                        $"/extension/acceptance/%d{index}/requirementIds"
+                        criterion.RequirementIds
 
-              for referenced in criterion.StoryIds do
-                  if not (Set.contains referenced stories) then
-                      yield
-                          diagnostic
-                              "REQ-STORY-UNRESOLVED"
-                              $"/extension/acceptance/%d{index}/storyIds"
-                              $"Story reference '%s{idText referenced}' does not resolve."
+                for referenced in criterion.StoryIds do
+                    if not (Set.contains referenced stories) then
+                        yield
+                            diagnostic
+                                "REQ-STORY-UNRESOLVED"
+                                $"/extension/acceptance/%d{index}/storyIds"
+                                $"Story reference '%s{idText referenced}' does not resolve."
 
-              for referenced in criterion.RequirementIds do
-                  if not (Set.contains referenced requirements) then
-                      yield
-                          diagnostic
-                              "REQ-REQUIREMENT-UNRESOLVED"
-                              $"/extension/acceptance/%d{index}/requirementIds"
-                              $"Requirement reference '%s{idText referenced}' does not resolve."
+                for referenced in criterion.RequirementIds do
+                    if not (Set.contains referenced requirements) then
+                        yield
+                            diagnostic
+                                "REQ-REQUIREMENT-UNRESOLVED"
+                                $"/extension/acceptance/%d{index}/requirementIds"
+                                $"Requirement reference '%s{idText referenced}' does not resolve."
 
-          for index, ambiguity in extension.Ambiguities |> List.indexed do
-              yield!
-                  blank
-                      "REQ-AMBIGUITY-QUESTION-REQUIRED"
-                      $"/extension/ambiguities/%d{index}/question"
-                      "Ambiguity question"
-                      ambiguity.Question
+            for index, ambiguity in extension.Ambiguities |> List.indexed do
+                yield!
+                    blank
+                        "REQ-AMBIGUITY-QUESTION-REQUIRED"
+                        $"/extension/ambiguities/%d{index}/question"
+                        "Ambiguity question"
+                        ambiguity.Question
 
-              match ambiguity.State, ambiguity.Decision with
-              | Open, None -> ()
-              | Open, Some _ ->
-                  yield
-                      diagnostic
-                          "REQ-AMBIGUITY-OPEN-DECISION"
-                          $"/extension/ambiguities/%d{index}/decision"
-                          "Open ambiguity cannot carry a resolved decision."
-              | (Resolved | Deferred), Some decision when not (String.IsNullOrWhiteSpace decision) -> ()
-              | Resolved, _ ->
-                  yield
-                      diagnostic
-                          "REQ-AMBIGUITY-DECISION-REQUIRED"
-                          $"/extension/ambiguities/%d{index}/decision"
-                          "Resolved ambiguity requires a decision."
-              | Deferred, _ ->
-                  yield
-                      diagnostic
-                          "REQ-AMBIGUITY-DEFERRAL-REQUIRED"
-                          $"/extension/ambiguities/%d{index}/decision"
-                          "Deferred ambiguity requires a visible deferral decision."
+                match ambiguity.State, ambiguity.Decision with
+                | Open, None -> ()
+                | Open, Some _ ->
+                    yield
+                        diagnostic
+                            "REQ-AMBIGUITY-OPEN-DECISION"
+                            $"/extension/ambiguities/%d{index}/decision"
+                            "Open ambiguity cannot carry a resolved decision."
+                | (Resolved | Deferred), Some decision when not (String.IsNullOrWhiteSpace decision) -> ()
+                | Resolved, _ ->
+                    yield
+                        diagnostic
+                            "REQ-AMBIGUITY-DECISION-REQUIRED"
+                            $"/extension/ambiguities/%d{index}/decision"
+                            "Resolved ambiguity requires a decision."
+                | Deferred, _ ->
+                    yield
+                        diagnostic
+                            "REQ-AMBIGUITY-DEFERRAL-REQUIRED"
+                            $"/extension/ambiguities/%d{index}/decision"
+                            "Deferred ambiguity requires a visible deferral decision."
 
-          for index, impact in extension.PublicImpact |> List.indexed do
-              yield! blank "REQ-PUBLIC-IMPACT-REQUIRED" $"/extension/publicImpact/%d{index}" "Public impact" impact
+            for index, impact in extension.PublicImpact |> List.indexed do
+                yield! blank "REQ-PUBLIC-IMPACT-REQUIRED" $"/extension/publicImpact/%d{index}" "Public impact" impact
 
-          for index, note in extension.LifecycleNotes |> List.indexed do
-              yield! blank "REQ-LIFECYCLE-NOTE-REQUIRED" $"/extension/lifecycleNotes/%d{index}" "Lifecycle note" note ]
+            for index, note in extension.LifecycleNotes |> List.indexed do
+                yield! blank "REQ-LIFECYCLE-NOTE-REQUIRED" $"/extension/lifecycleNotes/%d{index}" "Lifecycle note" note
+        ]
         |> sortDiagnostics
 
     let stateName =
@@ -536,8 +566,10 @@ module private Requirements =
                     (parseRecord "id" (fun identifier item ->
                         stringProperty "statement" item
                         |> Result.map (fun statement ->
-                            { Id = identifier
-                              Statement = statement })))
+                            {
+                                Id = identifier
+                                Statement = statement
+                            })))
                     element
 
             let stories =
@@ -547,9 +579,11 @@ module private Requirements =
                         match stringProperty "priority" item, stringProperty "statement" item with
                         | Ok priority, Ok statement ->
                             Ok
-                                { Id = identifier
-                                  Priority = priority
-                                  Statement = statement }
+                                {
+                                    Id = identifier
+                                    Priority = priority
+                                    Statement = statement
+                                }
                         | Error error, _
                         | _, Error error -> Error error))
                     element
@@ -565,20 +599,24 @@ module private Requirements =
                         with
                         | Ok statement, Ok acceptanceIds, Ok evidenceIds ->
                             Ok
-                                { Id = identifier
-                                  Statement = statement
-                                  AcceptanceIds = acceptanceIds
-                                  EvidenceObligationIds = evidenceIds }
+                                {
+                                    Id = identifier
+                                    Statement = statement
+                                    AcceptanceIds = acceptanceIds
+                                    EvidenceObligationIds = evidenceIds
+                                }
                         | values ->
-                            [ match values with
-                              | Error error, _, _ -> yield error
-                              | _ -> ()
-                              match values with
-                              | _, Error error, _ -> yield error
-                              | _ -> ()
-                              match values with
-                              | _, _, Error error -> yield error
-                              | _ -> () ]
+                            [
+                                match values with
+                                | Error error, _, _ -> yield error
+                                | _ -> ()
+                                match values with
+                                | _, Error error, _ -> yield error
+                                | _ -> ()
+                                match values with
+                                | _, _, Error error -> yield error
+                                | _ -> ()
+                            ]
                             |> String.concat "; "
                             |> Error))
                     element
@@ -594,20 +632,24 @@ module private Requirements =
                         with
                         | Ok storyIds, Ok requirementIds, Ok statement ->
                             Ok
-                                { Id = identifier
-                                  StoryIds = storyIds
-                                  RequirementIds = requirementIds
-                                  Statement = statement }
+                                {
+                                    Id = identifier
+                                    StoryIds = storyIds
+                                    RequirementIds = requirementIds
+                                    Statement = statement
+                                }
                         | values ->
-                            [ match values with
-                              | Error error, _, _ -> yield error
-                              | _ -> ()
-                              match values with
-                              | _, Error error, _ -> yield error
-                              | _ -> ()
-                              match values with
-                              | _, _, Error error -> yield error
-                              | _ -> () ]
+                            [
+                                match values with
+                                | Error error, _, _ -> yield error
+                                | _ -> ()
+                                match values with
+                                | _, Error error, _ -> yield error
+                                | _ -> ()
+                                match values with
+                                | _, _, Error error -> yield error
+                                | _ -> ()
+                            ]
                             |> String.concat "; "
                             |> Error))
                     element
@@ -626,10 +668,12 @@ module private Requirements =
                                         value.GetString() |> Option.ofObj
                                     | _ -> None
 
-                                { Id = identifier
-                                  Question = question
-                                  State = state
-                                  Decision = decision })
+                                {
+                                    Id = identifier
+                                    Question = question
+                                    State = state
+                                    Decision = decision
+                                })
                         | Error error, _
                         | _, Error error -> Error error))
                     element
@@ -671,58 +715,62 @@ module private Requirements =
               Ok publicImpact,
               Ok lifecycleNotes when schemaValue = "fsgg.requirements-extension/v1" && versionValue = 1 ->
                 let decoded: RequirementsExtension =
-                    { UserValue = userValue
-                      Scope = scope
-                      NonGoals = nonGoals
-                      Stories = storyRows
-                      Requirements = requirementRows
-                      Acceptance = acceptanceRows
-                      Ambiguities = ambiguityRows
-                      PublicImpact = publicImpact
-                      LifecycleNotes = lifecycleNotes }
+                    {
+                        UserValue = userValue
+                        Scope = scope
+                        NonGoals = nonGoals
+                        Stories = storyRows
+                        Requirements = requirementRows
+                        Acceptance = acceptanceRows
+                        Ambiguities = ambiguityRows
+                        PublicImpact = publicImpact
+                        LifecycleNotes = lifecycleNotes
+                    }
 
                 Ok decoded
             | values ->
                 let message =
-                    [ match values with
-                      | Error e, _, _, _, _, _, _, _, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, Error e, _, _, _, _, _, _, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, Error e, _, _, _, _, _, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, Error e, _, _, _, _, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, _, Error e, _, _, _, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, _, _, Error e, _, _, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, _, _, _, Error e, _, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, _, _, _, _, Error e, _, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, _, _, _, _, _, Error e, _, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, _, _, _, _, _, _, Error e, _ -> yield e
-                      | _ -> ()
-                      match values with
-                      | _, _, _, _, _, _, _, _, _, _, Error e -> yield e
-                      | _ -> ()
-                      match schema, version with
-                      | Ok schemaValue, Ok versionValue when
-                          schemaValue <> "fsgg.requirements-extension/v1" || versionValue <> 1
-                          ->
-                          yield "Requirements extension schema is unsupported."
-                      | _ -> () ]
+                    [
+                        match values with
+                        | Error e, _, _, _, _, _, _, _, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, Error e, _, _, _, _, _, _, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, Error e, _, _, _, _, _, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, Error e, _, _, _, _, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, _, Error e, _, _, _, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, _, _, Error e, _, _, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, _, _, _, Error e, _, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, _, _, _, _, Error e, _, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, _, _, _, _, _, Error e, _, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, _, _, _, _, _, _, Error e, _ -> yield e
+                        | _ -> ()
+                        match values with
+                        | _, _, _, _, _, _, _, _, _, _, Error e -> yield e
+                        | _ -> ()
+                        match schema, version with
+                        | Ok schemaValue, Ok versionValue when
+                            schemaValue <> "fsgg.requirements-extension/v1" || versionValue <> 1
+                            ->
+                            yield "Requirements extension schema is unsupported."
+                        | _ -> ()
+                    ]
                     |> String.concat "; "
 
                 Error [ diagnostic "REQ-CODEC-MALFORMED" "/extension" message ]
@@ -809,13 +857,15 @@ module RequirementsExtension =
         Requirements.validateWithEvidence [] extension
 
     let contract: ExtensionContract<RequirementsExtension> =
-        { Kind = "requirements"
-          SchemaVersion = 1
-          Validate = Requirements.validateWithEvidence
-          EncodeCanonical = Requirements.canonicalBytes
-          WriteJson = Requirements.writeExtension
-          DecodeJson = Requirements.parseExtension
-          ProjectMarkdown = Requirements.markdown }
+        {
+            Kind = "requirements"
+            SchemaVersion = 1
+            Validate = Requirements.validateWithEvidence
+            EncodeCanonical = Requirements.canonicalBytes
+            WriteJson = Requirements.writeExtension
+            DecodeJson = Requirements.parseExtension
+            ProjectMarkdown = Requirements.markdown
+        }
 
 [<RequireQualifiedAccess>]
 module RequirementsMigration =
@@ -845,10 +895,12 @@ module RequirementsMigration =
     let private location line column = { Line = line; Column = column }
 
     let private finding code reason message line column =
-        { Code = code
-          Reason = reason
-          Message = message
-          Location = location line column }
+        {
+            Code = code
+            Reason = reason
+            Message = message
+            Location = location line column
+        }
 
     let private identifier (value: string) line =
         match SpecificationId.create (value.ToUpperInvariant()) with
@@ -883,15 +935,17 @@ module RequirementsMigration =
 
         let supported =
             set
-                [ "User Value"
-                  "Scope"
-                  "Non-Goals"
-                  "User Stories"
-                  "Acceptance Scenarios"
-                  "Functional Requirements"
-                  "Ambiguities"
-                  "Public Or Tool-Facing Impact"
-                  "Lifecycle Notes" ]
+                [
+                    "User Value"
+                    "Scope"
+                    "Non-Goals"
+                    "User Stories"
+                    "Acceptance Scenarios"
+                    "Functional Requirements"
+                    "Ambiguities"
+                    "Public Or Tool-Facing Impact"
+                    "Lifecycle Notes"
+                ]
 
         for index, line in lines |> Array.indexed do
             let matched = heading.Match line
@@ -922,14 +976,23 @@ module RequirementsMigration =
             match schemaLine with
             | Some(index, line) when (line.Split([| ':' |], 2)[1]).Trim() = "1" -> []
             | Some(index, _) ->
-                [ finding
-                      "REQ-MIGRATION-SCHEMA"
-                      UnsupportedSchemaVersion
-                      "Only Standard SDD schemaVersion 1 can migrate."
-                      (index + 1)
-                      1 ]
+                [
+                    finding
+                        "REQ-MIGRATION-SCHEMA"
+                        UnsupportedSchemaVersion
+                        "Only Standard SDD schemaVersion 1 can migrate."
+                        (index + 1)
+                        1
+                ]
             | None ->
-                [ finding "REQ-MIGRATION-SCHEMA" UnsupportedSchemaVersion "Standard SDD schemaVersion is required." 1 1 ]
+                [
+                    finding
+                        "REQ-MIGRATION-SCHEMA"
+                        UnsupportedSchemaVersion
+                        "Standard SDD schemaVersion is required."
+                        1
+                        1
+                ]
 
         let nonEmptyUnknown =
             unknown
@@ -950,8 +1013,10 @@ module RequirementsMigration =
                 if matched.Success then
                     identifier matched.Groups[1].Value line
                     |> Result.map (fun id ->
-                        { Id = id
-                          Statement = matched.Groups[2].Value })
+                        {
+                            Id = id
+                            Statement = matched.Groups[2].Value
+                        })
                 else
                     Error(
                         finding
@@ -974,9 +1039,11 @@ module RequirementsMigration =
                 if matched.Success then
                     identifier matched.Groups[1].Value line
                     |> Result.map (fun id ->
-                        { Id = id
-                          Priority = matched.Groups[2].Value
-                          Statement = matched.Groups[3].Value })
+                        {
+                            Id = id
+                            Priority = matched.Groups[2].Value
+                            Statement = matched.Groups[3].Value
+                        })
                 else
                     Error(
                         finding
@@ -1008,14 +1075,20 @@ module RequirementsMigration =
                             |> List.choose (fun value -> SpecificationId.create value |> Result.toOption)
 
                         Ok
-                            { Id = id
-                              StoryIds =
-                                ids
-                                |> List.filter (SpecificationId.value >> _.StartsWith("US-", StringComparison.Ordinal))
-                              RequirementIds =
-                                ids
-                                |> List.filter (SpecificationId.value >> _.StartsWith("FR-", StringComparison.Ordinal))
-                              Statement = matched.Groups[3].Value }
+                            {
+                                Id = id
+                                StoryIds =
+                                    ids
+                                    |> List.filter (
+                                        SpecificationId.value >> _.StartsWith("US-", StringComparison.Ordinal)
+                                    )
+                                RequirementIds =
+                                    ids
+                                    |> List.filter (
+                                        SpecificationId.value >> _.StartsWith("FR-", StringComparison.Ordinal)
+                                    )
+                                Statement = matched.Groups[3].Value
+                            }
                 else
                     Error(
                         finding
@@ -1047,14 +1120,20 @@ module RequirementsMigration =
                             |> List.choose (fun value -> SpecificationId.create value |> Result.toOption)
 
                         Ok
-                            { Id = id
-                              Statement = matched.Groups[2].Value
-                              AcceptanceIds =
-                                ids
-                                |> List.filter (SpecificationId.value >> _.StartsWith("AC-", StringComparison.Ordinal))
-                              EvidenceObligationIds =
-                                ids
-                                |> List.filter (SpecificationId.value >> _.StartsWith("EV", StringComparison.Ordinal)) }
+                            {
+                                Id = id
+                                Statement = matched.Groups[2].Value
+                                AcceptanceIds =
+                                    ids
+                                    |> List.filter (
+                                        SpecificationId.value >> _.StartsWith("AC-", StringComparison.Ordinal)
+                                    )
+                                EvidenceObligationIds =
+                                    ids
+                                    |> List.filter (
+                                        SpecificationId.value >> _.StartsWith("EV", StringComparison.Ordinal)
+                                    )
+                            }
                 else
                     Error(
                         finding
@@ -1089,16 +1168,20 @@ module RequirementsMigration =
                         match state, separator with
                         | Open, _ ->
                             Ok
-                                { Id = id
-                                  Question = body
-                                  State = state
-                                  Decision = None }
+                                {
+                                    Id = id
+                                    Question = body
+                                    State = state
+                                    Decision = None
+                                }
                         | (Resolved | Deferred), index when index > 0 && index + 3 < body.Length ->
                             Ok
-                                { Id = id
-                                  Question = body.Substring(0, index)
-                                  State = state
-                                  Decision = Some(body.Substring(index + 3)) }
+                                {
+                                    Id = id
+                                    Question = body.Substring(0, index)
+                                    State = state
+                                    Decision = Some(body.Substring(index + 3))
+                                }
                         | _ ->
                             Error(
                                 finding
@@ -1135,28 +1218,30 @@ module RequirementsMigration =
         let valueRows = sectionRows sections "User Value" |> meaningful
 
         let missingRequired =
-            [ if List.isEmpty valueRows then
-                  yield finding "REQ-MIGRATION-USER-VALUE" MalformedConstruct "User Value section is required." 1 1
-              if List.isEmpty (sectionRows sections "Scope" |> meaningful) then
-                  yield finding "REQ-MIGRATION-SCOPE" MalformedConstruct "Scope section is required." 1 1
-              if List.isEmpty (sectionRows sections "User Stories" |> meaningful) then
-                  yield finding "REQ-MIGRATION-STORY" MalformedConstruct "User Stories section is required." 1 1
-              if List.isEmpty (sectionRows sections "Acceptance Scenarios" |> meaningful) then
-                  yield
-                      finding
-                          "REQ-MIGRATION-ACCEPTANCE"
-                          MalformedConstruct
-                          "Acceptance Scenarios section is required."
-                          1
-                          1
-              if List.isEmpty (sectionRows sections "Functional Requirements" |> meaningful) then
-                  yield
-                      finding
-                          "REQ-MIGRATION-REQUIREMENT"
-                          MalformedConstruct
-                          "Functional Requirements section is required."
-                          1
-                          1 ]
+            [
+                if List.isEmpty valueRows then
+                    yield finding "REQ-MIGRATION-USER-VALUE" MalformedConstruct "User Value section is required." 1 1
+                if List.isEmpty (sectionRows sections "Scope" |> meaningful) then
+                    yield finding "REQ-MIGRATION-SCOPE" MalformedConstruct "Scope section is required." 1 1
+                if List.isEmpty (sectionRows sections "User Stories" |> meaningful) then
+                    yield finding "REQ-MIGRATION-STORY" MalformedConstruct "User Stories section is required." 1 1
+                if List.isEmpty (sectionRows sections "Acceptance Scenarios" |> meaningful) then
+                    yield
+                        finding
+                            "REQ-MIGRATION-ACCEPTANCE"
+                            MalformedConstruct
+                            "Acceptance Scenarios section is required."
+                            1
+                            1
+                if List.isEmpty (sectionRows sections "Functional Requirements" |> meaningful) then
+                    yield
+                        finding
+                            "REQ-MIGRATION-REQUIREMENT"
+                            MalformedConstruct
+                            "Functional Requirements section is required."
+                            1
+                            1
+            ]
 
         let unsupported = schemaFindings @ nonEmptyUnknown @ parseFindings @ missingRequired
 
@@ -1173,21 +1258,23 @@ module RequirementsMigration =
                     | _ -> None)
 
             let extension: RequirementsExtension =
-                { UserValue = valueRows |> List.map snd |> String.concat "\n"
-                  Scope = take parsedScope
-                  NonGoals = take parsedNonGoals
-                  Stories = take parsedStories
-                  Requirements = take parsedRequirements
-                  Acceptance = take parsedAcceptance
-                  Ambiguities = take parsedAmbiguities
-                  PublicImpact =
-                    sectionRows sections "Public Or Tool-Facing Impact"
-                    |> logicalRows
-                    |> List.map (snd >> _.TrimStart('-', ' '))
-                  LifecycleNotes =
-                    sectionRows sections "Lifecycle Notes"
-                    |> logicalRows
-                    |> List.map (snd >> _.TrimStart('-', ' ')) }
+                {
+                    UserValue = valueRows |> List.map snd |> String.concat "\n"
+                    Scope = take parsedScope
+                    NonGoals = take parsedNonGoals
+                    Stories = take parsedStories
+                    Requirements = take parsedRequirements
+                    Acceptance = take parsedAcceptance
+                    Ambiguities = take parsedAmbiguities
+                    PublicImpact =
+                        sectionRows sections "Public Or Tool-Facing Impact"
+                        |> logicalRows
+                        |> List.map (snd >> _.TrimStart('-', ' '))
+                    LifecycleNotes =
+                        sectionRows sections "Lifecycle Notes"
+                        |> logicalRows
+                        |> List.map (snd >> _.TrimStart('-', ' '))
+                }
 
             let validation = Requirements.validateWithEvidence [] extension
 

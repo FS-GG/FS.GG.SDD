@@ -8,17 +8,27 @@ let identifier value =
 let evidenceId = identifier "EVIDENCE-001"
 
 let obligations =
-    [ { Id = evidenceId
-        Kind = "test"
-        Description = "Must have a nonblank evidence reference." } ]
+    [
+        {
+            Id = evidenceId
+            Kind = "test"
+            Description = "Must have a nonblank evidence reference."
+        }
+    ]
 
 let receipts =
-    [ { ObligationId = evidenceId
-        Kind = "wrong-kind"
-        EvidenceRef = "" }
-      { ObligationId = evidenceId
-        Kind = "wrong-kind"
-        EvidenceRef = "" } ]
+    [
+        {
+            ObligationId = evidenceId
+            Kind = "wrong-kind"
+            EvidenceRef = ""
+        }
+        {
+            ObligationId = evidenceId
+            Kind = "wrong-kind"
+            EvidenceRef = ""
+        }
+    ]
 
 let result = SpecificationEvidence.validate obligations receipts
 

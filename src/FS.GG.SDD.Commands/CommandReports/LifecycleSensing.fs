@@ -25,16 +25,18 @@ module internal LifecycleSensing =
 
     /// The ten lifecycle stages in canonical order, each with its sensing path builder.
     let stages: (SddCommand * (string -> string)) list =
-        [ Charter, charterPath
-          Specify, specPath
-          Clarify, clarificationPath
-          Checklist, checklistPath
-          Plan, planPath
-          Tasks, tasksPath
-          Analyze, analysisPath
-          Evidence, evidencePath
-          Verify, verifyPath
-          Ship, shipPath ]
+        [
+            Charter, charterPath
+            Specify, specPath
+            Clarify, clarificationPath
+            Checklist, checklistPath
+            Plan, planPath
+            Tasks, tasksPath
+            Analyze, analysisPath
+            Evidence, evidencePath
+            Verify, verifyPath
+            Ship, shipPath
+        ]
 
     let totalStages = List.length stages
 
@@ -124,9 +126,11 @@ module internal LifecycleSensing =
                     else
                         StageState.Pending
 
-                { Command = stageCommand
-                  Ordinal = ordinal
-                  State = state })
+                {
+                    Command = stageCommand
+                    Ordinal = ordinal
+                    State = state
+                })
 
         // Cross-cutting commands have no Current; mark the lowest-ordinal Pending stage as Next.
         let entries =
@@ -163,10 +167,12 @@ module internal LifecycleSensing =
             |> List.tryFind (fun entry -> entry.State = StageState.Next)
             |> Option.map (fun entry -> entry.Command)
 
-        { WorkId = workId
-          Stages = entries
-          CurrentOrdinal = currentOrdinal
-          TotalStages = totalStages
-          Outcome = outcome
-          NextCommand = nextCommand
-          IsLifecycleStage = isStage }
+        {
+            WorkId = workId
+            Stages = entries
+            CurrentOrdinal = currentOrdinal
+            TotalStages = totalStages
+            Outcome = outcome
+            NextCommand = nextCommand
+            IsLifecycleStage = isStage
+        }

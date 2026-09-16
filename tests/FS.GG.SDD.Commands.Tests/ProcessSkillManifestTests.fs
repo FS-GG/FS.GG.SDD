@@ -55,7 +55,9 @@ module ProcessSkillManifestTests =
     let private committedDoc () = JsonDocument.Parse(committedText ())
 
     let private skills () =
-        [ for entry in committedDoc().RootElement.GetProperty("skills").EnumerateArray() -> entry ]
+        [
+            for entry in committedDoc().RootElement.GetProperty("skills").EnumerateArray() -> entry
+        ]
 
     let private prop (name: string) (entry: JsonElement) =
         match entry.GetProperty(name).GetString() with

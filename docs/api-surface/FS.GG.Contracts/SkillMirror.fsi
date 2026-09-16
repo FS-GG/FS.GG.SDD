@@ -81,16 +81,20 @@ module SkillMirror =
 
     /// One skill the fan-out refused, with every reason it was refused for, in a stable order.
     type MirrorRefusal =
-        { Id: string
-          Reasons: MirrorRefusalReason list }
+        {
+            Id: string
+            Reasons: MirrorRefusalReason list
+        }
 
     /// The plan for a multi-file fan-out: the writes to perform and the skills REFUSED, as two
     /// independent facts on one record. A refusal is reported, never thrown and never a silently
     /// dropped file, and a refused skill contributes NO writes at all — a plan that materialized a
     /// skill's safe files while dropping its unsafe one would place a HALF skill.
     type MirrorPlan =
-        { Writes: MirrorWrite list
-          Refused: MirrorRefusal list }
+        {
+            Writes: MirrorWrite list
+            Refused: MirrorRefusal list
+        }
 
     /// Every write placing each multi-file skill into every root — one `MirrorWrite` per
     /// (file × root) at `<root>/skills/<id>/<relativePath>`. Pure and deterministic: skills sorted
@@ -104,24 +108,30 @@ module SkillMirror =
     /// One expected skill and the canonical digest each present copy must match. An empty `Sha256`
     /// means "no reference digest" — hash-match is skipped; presence and cross-root identity hold.
     type ExpectedSkill =
-        { Id: string
-          Scope: SkillScope
-          Sha256: string }
+        {
+            Id: string
+            Scope: SkillScope
+            Sha256: string
+        }
 
     /// The body found at `(Root, Id)`, or `None` when that copy is absent.
     type ActualCopy =
-        { Root: string
-          Id: string
-          Body: string option }
+        {
+            Root: string
+            Id: string
+            Body: string option
+        }
 
     /// The drift found for one skill. All-clean (`MissingRoots`/`HashMismatchRoots` empty and
     /// `Divergent` false) ⇒ the skill is coherent and is not returned by `verify`.
     type SkillDrift =
-        { Id: string
-          Scope: SkillScope
-          MissingRoots: string list
-          Divergent: bool
-          HashMismatchRoots: string list }
+        {
+            Id: string
+            Scope: SkillScope
+            MissingRoots: string list
+            Divergent: bool
+            HashMismatchRoots: string list
+        }
 
     /// For every expected skill: present-in-each-root ∧ byte-identical-across-roots ∧ matches-hash.
     /// Returns only the skills exhibiting drift, sorted by id. Pure, content-addressed.
@@ -133,9 +143,11 @@ module SkillMirror =
     /// drift fact (the first wins): two entries for one destination is a producer question, and
     /// `mirrorFiles` already refuses it as `DuplicateRelativePath`.
     type ActualSkillFiles =
-        { Root: string
-          Id: string
-          Files: SkillFile list option }
+        {
+            Root: string
+            Id: string
+            Files: SkillFile list option
+        }
 
     /// The drift found for ONE FILE of a skill, as the SAME three INDEPENDENT facts `SkillDrift`
     /// keeps apart — never collapsed into a per-file verdict. `MissingRoots` here ranges only over
@@ -155,19 +167,23 @@ module SkillMirror =
     /// exactly why the ADR-0017 manifest was amended: reading the empty list as "hash checked,
     /// clean" is the misreading, and at v1 it was unavoidable for 19 of this repo's 51 skill files.
     type SkillFileDrift =
-        { RelativePath: string
-          MissingRoots: string list
-          Divergent: bool
-          HashMismatchRoots: string list }
+        {
+            RelativePath: string
+            MissingRoots: string list
+            Divergent: bool
+            HashMismatchRoots: string list
+        }
 
     /// The drift found for one multi-file skill: the roots carrying no copy at all, plus the
     /// per-FILE drift naming the offending relative path. All-clean (both lists empty) ⇒ the skill
     /// is coherent and is not returned by `verifyFiles`.
     type MultiFileSkillDrift =
-        { Id: string
-          Scope: SkillScope
-          MissingRoots: string list
-          Files: SkillFileDrift list }
+        {
+            Id: string
+            Scope: SkillScope
+            MissingRoots: string list
+            Files: SkillFileDrift list
+        }
 
     /// The verify half of `mirrorFiles`: present-in-each-root ∧ every file byte-identical across
     /// roots ∧ `SKILL.md` matching the canonical digest, over a skill's WHOLE file set. Returns
@@ -195,9 +211,11 @@ module SkillMirror =
     /// theoretical — a root may vendor a CO-TENANT skill from a producer whose manifest this
     /// caller does not hold, and inventing an expectation for it would be a fabricated authority.
     type ExpectedSkillFiles =
-        { Id: string
-          Scope: SkillScope
-          Files: SkillManifestFile list }
+        {
+            Id: string
+            Scope: SkillScope
+            Files: SkillManifestFile list
+        }
 
     /// The drift found for ONE FILE against a DECLARED file set — `SkillFileDrift`'s three
     /// independent facts, unchanged in meaning, plus the fourth one a declaration makes statable.
@@ -216,20 +234,24 @@ module SkillMirror =
     /// Empty when the caller holds no declaration for the skill: with no authority, nothing can be
     /// said to lie outside it.
     type DeclaredFileDrift =
-        { RelativePath: string
-          MissingRoots: string list
-          Divergent: bool
-          HashMismatchRoots: string list
-          UndeclaredRoots: string list }
+        {
+            RelativePath: string
+            MissingRoots: string list
+            Divergent: bool
+            HashMismatchRoots: string list
+            UndeclaredRoots: string list
+        }
 
     /// The drift found for one skill against a DECLARED file set — `MultiFileSkillDrift`'s shape
     /// over `DeclaredFileDrift`. All-clean (both lists empty) ⇒ the skill is coherent WITH ITS
     /// DECLARATION and is not returned by `verifyFileSet`.
     type DeclaredSkillDrift =
-        { Id: string
-          Scope: SkillScope
-          MissingRoots: string list
-          Files: DeclaredFileDrift list }
+        {
+            Id: string
+            Scope: SkillScope
+            MissingRoots: string list
+            Files: DeclaredFileDrift list
+        }
 
     /// `verifyFiles` with the third fact widened from `SKILL.md` to the WHOLE declared file set:
     /// present-in-each-root ∧ every file byte-identical across roots ∧ every file matching the
@@ -287,9 +309,11 @@ module SkillMirror =
     ///
     /// Several entries for one `(Root, Id)` UNION; none of them shadows another.
     type UnobservedSkillFiles =
-        { Root: string
-          Id: string
-          RelativePaths: string list }
+        {
+            Root: string
+            Id: string
+            RelativePaths: string list
+        }
 
     /// `verifyFiles`, told which subjects the caller could not OBSERVE — and therefore may say
     /// nothing about. An unobserved subject is withheld from `MissingRoots`, at the file level and

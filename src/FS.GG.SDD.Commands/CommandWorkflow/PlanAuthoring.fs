@@ -47,36 +47,38 @@ module internal PlanAuthoring =
         ensureSections MergePolicies.plan (planSectionText workId) text
 
     let planSummary (facts: PlanFacts) : PlanSummary =
-        { WorkId = facts.FrontMatter.WorkId.Value
-          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
-          Status = facts.FrontMatter.Status
-          SourceSpec = facts.FrontMatter.SourceSpec
-          SourceClarifications = facts.FrontMatter.SourceClarifications
-          SourceChecklist = facts.FrontMatter.SourceChecklist
-          DecisionIds =
-            facts.Decisions
-            |> List.map (fun decision -> decision.DecisionId.Value)
-            |> List.sort
-          ContractReferenceIds =
-            facts.ContractReferences
-            |> List.map (fun reference -> reference.ContractId.Value)
-            |> List.sort
-          VerificationObligationIds =
-            facts.VerificationObligations
-            |> List.map (fun obligation -> obligation.ObligationId.Value)
-            |> List.sort
-          MigrationNoteIds =
-            facts.MigrationNotes
-            |> List.map (fun note -> note.MigrationId.Value)
-            |> List.sort
-          GeneratedViewImpactIds =
-            facts.GeneratedViewImpacts
-            |> List.map (fun impact -> impact.ImpactId.Value)
-            |> List.sort
-          AcceptedDeferralCount = facts.AcceptedDeferrals.Length
-          StaleDecisionCount = facts.StaleDecisionCount
-          BlockingFindingCount = facts.BlockingFindings.Length
-          AdvisoryCount = facts.AdvisoryNotes.Length }
+        {
+            WorkId = facts.FrontMatter.WorkId.Value
+            Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+            Status = facts.FrontMatter.Status
+            SourceSpec = facts.FrontMatter.SourceSpec
+            SourceClarifications = facts.FrontMatter.SourceClarifications
+            SourceChecklist = facts.FrontMatter.SourceChecklist
+            DecisionIds =
+                facts.Decisions
+                |> List.map (fun decision -> decision.DecisionId.Value)
+                |> List.sort
+            ContractReferenceIds =
+                facts.ContractReferences
+                |> List.map (fun reference -> reference.ContractId.Value)
+                |> List.sort
+            VerificationObligationIds =
+                facts.VerificationObligations
+                |> List.map (fun obligation -> obligation.ObligationId.Value)
+                |> List.sort
+            MigrationNoteIds =
+                facts.MigrationNotes
+                |> List.map (fun note -> note.MigrationId.Value)
+                |> List.sort
+            GeneratedViewImpactIds =
+                facts.GeneratedViewImpacts
+                |> List.map (fun impact -> impact.ImpactId.Value)
+                |> List.sort
+            AcceptedDeferralCount = facts.AcceptedDeferrals.Length
+            StaleDecisionCount = facts.StaleDecisionCount
+            BlockingFindingCount = facts.BlockingFindings.Length
+            AdvisoryCount = facts.AdvisoryNotes.Length
+        }
 
     let mapPlanDiagnostics (path: string) (diagnostics: Diagnostic list) =
         diagnostics
@@ -92,9 +94,11 @@ module internal PlanAuthoring =
 
     let parsePlanForCommand path text : Result<PlanFacts * Diagnostic list, Diagnostic list> =
         let snapshot =
-            { Path = path
-              Text = text
-              RawBytes = None }
+            {
+                Path = path
+                Text = text
+                RawBytes = None
+            }
 
         match parsePlanFacts snapshot with
         | Error diagnostics -> Error(mapPlanDiagnostics path diagnostics)
@@ -103,43 +107,49 @@ module internal PlanAuthoring =
             Ok(facts, diagnostics)
 
     type PlannedPlanEntries =
-        { DecisionLines: string list
-          // The subset of `DecisionLines` that is auto-generated deferral mirrors (#649): one
-          // `PD-### [DEC-###] acceptedDeferral: Accepted deferral DEC-### remains visible to task
-          // generation.` per accepted deferral. Carried out separately so the #351 unauthored-scaffold
-          // gate can exempt them — a deferral mirror restates an already-authored deferral, it is not a
-          // design decision the author must write, so requiring them to rewrite it is the very
-          // busywork #646 flags. Requirement-decision scaffold lines stay gated.
-          DeferralDecisionLines: string list
-          ContractLines: string list
-          ObligationLines: string list
-          MigrationLines: string list
-          ImpactLines: string list
-          DeferralLines: string list
-          FindingLines: string list
-          AdvisoryLines: string list }
+        {
+            DecisionLines: string list
+            // The subset of `DecisionLines` that is auto-generated deferral mirrors (#649): one
+            // `PD-### [DEC-###] acceptedDeferral: Accepted deferral DEC-### remains visible to task
+            // generation.` per accepted deferral. Carried out separately so the #351 unauthored-scaffold
+            // gate can exempt them — a deferral mirror restates an already-authored deferral, it is not a
+            // design decision the author must write, so requiring them to rewrite it is the very
+            // busywork #646 flags. Requirement-decision scaffold lines stay gated.
+            DeferralDecisionLines: string list
+            ContractLines: string list
+            ObligationLines: string list
+            MigrationLines: string list
+            ImpactLines: string list
+            DeferralLines: string list
+            FindingLines: string list
+            AdvisoryLines: string list
+        }
 
     let emptyPlanEntries =
-        { DecisionLines = []
-          DeferralDecisionLines = []
-          ContractLines = []
-          ObligationLines = []
-          MigrationLines = []
-          ImpactLines = []
-          DeferralLines = []
-          FindingLines = []
-          AdvisoryLines = [] }
+        {
+            DecisionLines = []
+            DeferralDecisionLines = []
+            ContractLines = []
+            ObligationLines = []
+            MigrationLines = []
+            ImpactLines = []
+            DeferralLines = []
+            FindingLines = []
+            AdvisoryLines = []
+        }
 
     let planIdsText (facts: PlanFacts option) =
         facts
         |> Option.map (fun (facts: PlanFacts) ->
-            [ facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
-              facts.ContractReferences
-              |> List.map (fun reference -> reference.ContractId.Value)
-              facts.VerificationObligations
-              |> List.map (fun obligation -> obligation.ObligationId.Value)
-              facts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value)
-              facts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value) ]
+            [
+                facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+                facts.ContractReferences
+                |> List.map (fun reference -> reference.ContractId.Value)
+                facts.VerificationObligations
+                |> List.map (fun obligation -> obligation.ObligationId.Value)
+                facts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value)
+                facts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
+            ]
             |> List.concat
             |> String.concat "\n")
         |> Option.defaultValue ""
@@ -154,13 +164,15 @@ module internal PlanAuthoring =
         match facts with
         | None -> Set.empty
         | Some(facts: PlanFacts) ->
-            [ facts.Decisions |> List.collect (fun decision -> decision.SourceIds)
-              facts.ContractReferences |> List.collect (fun reference -> reference.SourceIds)
-              facts.VerificationObligations
-              |> List.collect (fun obligation -> obligation.SourceIds)
-              facts.MigrationNotes |> List.collect (fun note -> note.SourceIds)
-              facts.GeneratedViewImpacts |> List.collect (fun impact -> impact.SourceIds)
-              facts.AcceptedDeferrals |> List.collect (fun deferral -> deferral.SourceIds) ]
+            [
+                facts.Decisions |> List.collect (fun decision -> decision.SourceIds)
+                facts.ContractReferences |> List.collect (fun reference -> reference.SourceIds)
+                facts.VerificationObligations
+                |> List.collect (fun obligation -> obligation.SourceIds)
+                facts.MigrationNotes |> List.collect (fun note -> note.SourceIds)
+                facts.GeneratedViewImpacts |> List.collect (fun impact -> impact.SourceIds)
+                facts.AcceptedDeferrals |> List.collect (fun deferral -> deferral.SourceIds)
+            ]
             |> List.concat
             |> Set.ofList
 
@@ -242,7 +254,10 @@ module internal PlanAuthoring =
                 []
             else
                 let id = allocate "PC" nextContract
-                [ $"- {id} [{firstDecision}] command report: fsgg-sdd plan, {planPath workId}, and command-report JSON are tool-facing and compatibility-preserving." ]
+
+                [
+                    $"- {id} [{firstDecision}] command report: fsgg-sdd plan, {planPath workId}, and command-report JSON are tool-facing and compatibility-preserving."
+                ]
 
         let contractId =
             existingFacts
@@ -268,7 +283,10 @@ module internal PlanAuthoring =
                 []
             else
                 let id = allocate "VO" nextObligation
-                [ $"- {id} [{firstDecision}] [{contractId}] semanticTest: Run focused command tests, FSI/prelude evidence, and CLI smoke evidence before task generation." ]
+
+                [
+                    $"- {id} [{firstDecision}] [{contractId}] semanticTest: Run focused command tests, FSI/prelude evidence, and CLI smoke evidence before task generation."
+                ]
 
         let migrationLines =
             if
@@ -278,7 +296,10 @@ module internal PlanAuthoring =
                 []
             else
                 let id = allocate "PM" nextMigration
-                [ $"- {id} [{contractId}] diagnoseOnly: Plan schemaVersion 1 is accepted; unsupported plan schemas diagnose before write." ]
+
+                [
+                    $"- {id} [{contractId}] diagnoseOnly: Plan schemaVersion 1 is accepted; unsupported plan schemas diagnose before write."
+                ]
 
         let impactLines =
             if
@@ -288,7 +309,10 @@ module internal PlanAuthoring =
                 []
             else
                 let id = allocate "GV" nextImpact
-                [ $"- {id} [{firstDecision}] workModel: readiness/{workId}/work-model.json refreshes from current plan sources or reports staleGeneratedView." ]
+
+                [
+                    $"- {id} [{firstDecision}] workModel: readiness/{workId}/work-model.json refreshes from current plan sources or reports staleGeneratedView."
+                ]
 
         let deferralLines =
             (clarificationFacts.AcceptedDeferrals
@@ -309,7 +333,8 @@ module internal PlanAuthoring =
             ObligationLines = obligationLines
             MigrationLines = migrationLines
             ImpactLines = impactLines
-            DeferralLines = deferralLines }
+            DeferralLines = deferralLines
+        }
 
     /// FS.GG.SDD#351 — the unauthored-scaffold rule, stated once, beside the generator it re-derives.
     ///
@@ -400,9 +425,11 @@ module internal PlanAuthoring =
 
     let sourceSnapshotLines workId specText clarificationText checklistText planText =
         let lines =
-            [ sourceSnapshotLine "spec" (specPath workId) specText
-              sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText
-              sourceSnapshotLine "checklist" (checklistPath workId) checklistText ]
+            [
+                sourceSnapshotLine "spec" (specPath workId) specText
+                sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText
+                sourceSnapshotLine "checklist" (checklistPath workId) checklistText
+            ]
 
         match planText with
         | Some text -> lines @ [ sourceSnapshotLine "plan" (planPath workId) text ]
@@ -417,18 +444,20 @@ module internal PlanAuthoring =
             let definitions = String.concat ", " intent.WorkloadDefinitionDigests
             let structuralBudgets = String.concat ", " intent.StructuralCostBudgets
 
-            [ $"- id: {intent.Id}"
-              $"- disposition: {intent.Disposition}"
-              $"- targetFps: {intent.TargetFps}"
-              $"- workloadIds: [{workloads}]"
-              $"- workloadDefinitionDigests: [{definitions}]"
-              $"- maximumExpectedScale: {intent.MaximumExpectedScale}"
-              $"- maxP95Ms: {intent.MaxP95Ms}"
-              $"- maxP99Ms: {intent.MaxP99Ms}"
-              $"- maxCatchUpFrames: {intent.MaxCatchUpFrames}"
-              $"- structuralCostBudgets: [{structuralBudgets}]"
-              $"- requiredCapability: {intent.RequiredCapability}"
-              $"- liveCompositorRequired: {intent.LiveCompositorRequired.ToString().ToLowerInvariant()}" ]
+            [
+                $"- id: {intent.Id}"
+                $"- disposition: {intent.Disposition}"
+                $"- targetFps: {intent.TargetFps}"
+                $"- workloadIds: [{workloads}]"
+                $"- workloadDefinitionDigests: [{definitions}]"
+                $"- maximumExpectedScale: {intent.MaximumExpectedScale}"
+                $"- maxP95Ms: {intent.MaxP95Ms}"
+                $"- maxP99Ms: {intent.MaxP99Ms}"
+                $"- maxCatchUpFrames: {intent.MaxCatchUpFrames}"
+                $"- structuralCostBudgets: [{structuralBudgets}]"
+                $"- requiredCapability: {intent.RequiredCapability}"
+                $"- liveCompositorRequired: {intent.LiveCompositorRequired.ToString().ToLowerInvariant()}"
+            ]
             |> String.concat "\n")
         |> Option.defaultValue "No performance intent is declared for this work item."
 
@@ -502,13 +531,17 @@ module internal PlanAuthoring =
 
         let migrations =
             if List.isEmpty entries.MigrationLines then
-                [ "- PM-001 [PC-001] diagnoseOnly: No migration is required beyond schemaVersion 1 diagnostics." ]
+                [
+                    "- PM-001 [PC-001] diagnoseOnly: No migration is required beyond schemaVersion 1 diagnostics."
+                ]
             else
                 entries.MigrationLines
 
         let impacts =
             if List.isEmpty entries.ImpactLines then
-                [ $"- GV-001 [PD-001] workModel: readiness/{workId}/work-model.json records current plan sources." ]
+                [
+                    $"- GV-001 [PD-001] workModel: readiness/{workId}/work-model.json records current plan sources."
+                ]
             else
                 entries.ImpactLines
 
@@ -581,40 +614,44 @@ No blocking planning findings recorded.
         (checklistFacts: ChecklistFacts)
         (planFacts: PlanFacts)
         =
-        [ specFacts.RequirementIds |> List.map _.Value
-          specFacts.UserStoryIds |> List.map _.Value
-          specFacts.AcceptanceScenarioIds |> List.map _.Value
-          specFacts.ScopeBoundaryIds |> List.map _.Value
-          specFacts.AmbiguityIds |> List.map _.Value
-          clarificationFacts.Questions
-          |> List.map (fun question -> question.QuestionId.Value)
-          clarificationFacts.Decisions
-          |> List.map (fun decision -> decision.DecisionId.Value)
-          clarificationFacts.AcceptedDeferrals
-          |> List.map (fun decision -> decision.DecisionId.Value)
-          checklistFacts.Items |> List.map (fun item -> item.ItemId.Value)
-          checklistFacts.Results |> List.map (fun result -> result.ResultId.Value)
-          planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
-          planFacts.ContractReferences
-          |> List.map (fun reference -> reference.ContractId.Value)
-          planFacts.VerificationObligations
-          |> List.map (fun obligation -> obligation.ObligationId.Value)
-          planFacts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value)
-          planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value) ]
+        [
+            specFacts.RequirementIds |> List.map _.Value
+            specFacts.UserStoryIds |> List.map _.Value
+            specFacts.AcceptanceScenarioIds |> List.map _.Value
+            specFacts.ScopeBoundaryIds |> List.map _.Value
+            specFacts.AmbiguityIds |> List.map _.Value
+            clarificationFacts.Questions
+            |> List.map (fun question -> question.QuestionId.Value)
+            clarificationFacts.Decisions
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            clarificationFacts.AcceptedDeferrals
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            checklistFacts.Items |> List.map (fun item -> item.ItemId.Value)
+            checklistFacts.Results |> List.map (fun result -> result.ResultId.Value)
+            planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+            planFacts.ContractReferences
+            |> List.map (fun reference -> reference.ContractId.Value)
+            planFacts.VerificationObligations
+            |> List.map (fun obligation -> obligation.ObligationId.Value)
+            planFacts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value)
+            planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
+        ]
         |> List.concat
         |> Set.ofList
 
     let unknownPlanReferences path specFacts clarificationFacts checklistFacts planFacts =
         let known = knownPlanSourceIds specFacts clarificationFacts checklistFacts planFacts
 
-        [ planFacts.Decisions |> List.collect (fun decision -> decision.SourceIds)
-          planFacts.ContractReferences
-          |> List.collect (fun reference -> reference.SourceIds)
-          planFacts.VerificationObligations
-          |> List.collect (fun obligation -> obligation.SourceIds)
-          planFacts.MigrationNotes |> List.collect (fun note -> note.SourceIds)
-          planFacts.GeneratedViewImpacts |> List.collect (fun impact -> impact.SourceIds)
-          planFacts.AcceptedDeferrals |> List.collect (fun deferral -> deferral.SourceIds) ]
+        [
+            planFacts.Decisions |> List.collect (fun decision -> decision.SourceIds)
+            planFacts.ContractReferences
+            |> List.collect (fun reference -> reference.SourceIds)
+            planFacts.VerificationObligations
+            |> List.collect (fun obligation -> obligation.SourceIds)
+            planFacts.MigrationNotes |> List.collect (fun note -> note.SourceIds)
+            planFacts.GeneratedViewImpacts |> List.collect (fun impact -> impact.SourceIds)
+            planFacts.AcceptedDeferrals |> List.collect (fun deferral -> deferral.SourceIds)
+        ]
         |> List.concat
         |> List.distinct
         |> List.choose (fun id ->
@@ -624,9 +661,11 @@ No blocking planning findings recorded.
                 Some(unknownPlanSourceReference path id))
 
     let private currentPlanSourceDigests workId specText clarificationText checklistText =
-        [ specPath workId, (SchemaVersionModule.sha256Text specText).Value
-          clarificationPath workId, (SchemaVersionModule.sha256Text clarificationText).Value
-          checklistPath workId, (SchemaVersionModule.sha256Text checklistText).Value ]
+        [
+            specPath workId, (SchemaVersionModule.sha256Text specText).Value
+            clarificationPath workId, (SchemaVersionModule.sha256Text clarificationText).Value
+            checklistPath workId, (SchemaVersionModule.sha256Text checklistText).Value
+        ]
         |> Map.ofList
 
     let planSourceSnapshotStale workId specText clarificationText checklistText (existingFacts: PlanFacts) =
@@ -685,14 +724,16 @@ No blocking planning findings recorded.
     let appendPlanEntries existingText entries =
         let bodies =
             Map
-                [ "Plan Decisions", entries.DecisionLines
-                  "Contract Impact", entries.ContractLines
-                  "Verification Obligations", entries.ObligationLines
-                  "Migration Posture", entries.MigrationLines
-                  "Generated View Impact", entries.ImpactLines
-                  "Accepted Deferrals", entries.DeferralLines
-                  "Planning Findings", entries.FindingLines
-                  "Advisory Notes", entries.AdvisoryLines ]
+                [
+                    "Plan Decisions", entries.DecisionLines
+                    "Contract Impact", entries.ContractLines
+                    "Verification Obligations", entries.ObligationLines
+                    "Migration Posture", entries.MigrationLines
+                    "Generated View Impact", entries.ImpactLines
+                    "Accepted Deferrals", entries.DeferralLines
+                    "Planning Findings", entries.FindingLines
+                    "Advisory Notes", entries.AdvisoryLines
+                ]
 
         existingText
         |> appendToSections bodies (MergePolicy.appendedSections MergePolicies.plan)
@@ -734,7 +775,9 @@ No blocking planning findings recorded.
             then
                 []
             else
-                [ planAuthoringWindow path [ specPath workId; clarificationPath workId; checklistPath workId ] ]
+                [
+                    planAuthoringWindow path [ specPath workId; clarificationPath workId; checklistPath workId ]
+                ]
 
         match snapshot path model with
         | None ->
@@ -781,7 +824,8 @@ No blocking planning findings recorded.
                             existingFacts.FrontMatter.SchemaVersion.Major
                             existingFacts.FrontMatter.WorkId.Value
                             existingFacts.FrontMatter.Stage
-                        @ [ if
+                        @ [
+                            if
                                 not (
                                     String.Equals(
                                         normalizeRelativePath existingFacts.FrontMatter.SourceSpec,
@@ -816,7 +860,8 @@ No blocking planning findings recorded.
                             then
                                 malformedPlanFrontMatter
                                     path
-                                    $"Plan sourceChecklist '{existingFacts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'." ]
+                                    $"Plan sourceChecklist '{existingFacts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'."
+                        ]
 
                     let unknownDiagnostics =
                         unknownPlanReferences path specFacts clarificationFacts checklistFacts existingFacts
@@ -974,7 +1019,8 @@ No blocking planning findings recorded.
                         facts.FrontMatter.SchemaVersion.Major
                         facts.FrontMatter.WorkId.Value
                         facts.FrontMatter.Stage
-                    @ [ if
+                    @ [
+                        if
                             not (
                                 String.Equals(
                                     normalizeRelativePath facts.FrontMatter.SourceSpec,
@@ -1009,43 +1055,46 @@ No blocking planning findings recorded.
                         then
                             malformedPlanFrontMatter
                                 path
-                                $"Plan sourceChecklist '{facts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'." ]
+                                $"Plan sourceChecklist '{facts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'."
+                    ]
 
                 let unknownDiagnostics =
                     unknownPlanReferences path specFacts clarificationFacts checklistFacts facts
 
                 let readinessDiagnostics =
-                    [ if
-                          not (String.Equals(facts.FrontMatter.Status, "planned", StringComparison.OrdinalIgnoreCase))
-                      then
-                          failedPlanPrerequisite
-                              path
-                              $"Plan status '{facts.FrontMatter.Status}' is not planned."
-                              [ facts.FrontMatter.Status ]
+                    [
+                        if
+                            not (String.Equals(facts.FrontMatter.Status, "planned", StringComparison.OrdinalIgnoreCase))
+                        then
+                            failedPlanPrerequisite
+                                path
+                                $"Plan status '{facts.FrontMatter.Status}' is not planned."
+                                [ facts.FrontMatter.Status ]
 
-                      let stale =
-                          facts.Decisions
-                          |> List.filter (fun decision -> decision.Status = "stale")
-                          |> List.map (fun decision -> decision.DecisionId.Value)
+                        let stale =
+                            facts.Decisions
+                            |> List.filter (fun decision -> decision.Status = "stale")
+                            |> List.map (fun decision -> decision.DecisionId.Value)
 
-                      if not (List.isEmpty stale) then
-                          failedPlanPrerequisite path "Plan contains stale decisions." stale
+                        if not (List.isEmpty stale) then
+                            failedPlanPrerequisite path "Plan contains stale decisions." stale
 
-                      let incomplete =
-                          facts.Decisions
-                          |> List.filter (fun decision -> decision.Status = "incomplete")
-                          |> List.map (fun decision -> decision.DecisionId.Value)
+                        let incomplete =
+                            facts.Decisions
+                            |> List.filter (fun decision -> decision.Status = "incomplete")
+                            |> List.map (fun decision -> decision.DecisionId.Value)
 
-                      if not (List.isEmpty incomplete) then
-                          failedPlanPrerequisite path "Plan contains incomplete decisions." incomplete
+                        if not (List.isEmpty incomplete) then
+                            failedPlanPrerequisite path "Plan contains incomplete decisions." incomplete
 
-                      // `BlockingFindings` is already sentinel-free (the parser drops
-                      // no-outstanding disclaimers); filtering `StartsWith "No "` here would
-                      // wrongly re-drop a genuine finding like "No tests cover FR-003".
-                      let findings = facts.BlockingFindings
+                        // `BlockingFindings` is already sentinel-free (the parser drops
+                        // no-outstanding disclaimers); filtering `StartsWith "No "` here would
+                        // wrongly re-drop a genuine finding like "No tests cover FR-003".
+                        let findings = facts.BlockingFindings
 
-                      if not (List.isEmpty findings) then
-                          failedPlanPrerequisite path "Plan contains blocking planning findings." findings ]
+                        if not (List.isEmpty findings) then
+                            failedPlanPrerequisite path "Plan contains blocking planning findings." findings
+                    ]
 
                 // Feature 090 (#163), FR-008. `tasks` and `analyze` read the plan as a prerequisite.
                 // `plan` no longer injects a `stale:` decision marker for them to key on, so they

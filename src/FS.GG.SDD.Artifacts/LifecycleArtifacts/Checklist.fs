@@ -14,62 +14,74 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module Checklist =
     type ChecklistFrontMatter =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          ChangeTier: string
-          Status: string
-          SourceSpec: string
-          SourceClarifications: string
-          PublicOrToolFacingImpact: bool option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            ChangeTier: string
+            Status: string
+            SourceSpec: string
+            SourceClarifications: string
+            PublicOrToolFacingImpact: bool option
+        }
 
     type ChecklistSourceSnapshot =
-        { Label: string
-          Path: string
-          Digest: string option
-          SchemaVersion: int option
-          SourceLocation: SourceLocation option }
+        {
+            Label: string
+            Path: string
+            Digest: string option
+            SchemaVersion: int option
+            SourceLocation: SourceLocation option
+        }
 
     type ChecklistItem =
-        { ItemId: ChecklistItemId
-          Text: string
-          Blocking: bool
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            ItemId: ChecklistItemId
+            Text: string
+            Blocking: bool
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type ChecklistReviewResult =
-        { ResultId: ChecklistResultId
-          ItemId: ChecklistItemId option
-          Status: string
-          Text: string
-          SourceIds: string list
-          SourceLocation: SourceLocation option }
+        {
+            ResultId: ChecklistResultId
+            ItemId: ChecklistItemId option
+            Status: string
+            Text: string
+            SourceIds: string list
+            SourceLocation: SourceLocation option
+        }
 
     type ChecklistFacts =
-        { FrontMatter: ChecklistFrontMatter
-          StandardSections: string list
-          MissingStandardSections: string list
-          SourceSnapshots: ChecklistSourceSnapshot list
-          Items: ChecklistItem list
-          Results: ChecklistReviewResult list
-          AcceptedDeferrals: ChecklistReviewResult list
-          BlockingFindings: string list
-          AdvisoryNotes: string list
-          LifecycleNotes: string list
-          StaleResultCount: int
-          Diagnostics: Diagnostic list }
+        {
+            FrontMatter: ChecklistFrontMatter
+            StandardSections: string list
+            MissingStandardSections: string list
+            SourceSnapshots: ChecklistSourceSnapshot list
+            Items: ChecklistItem list
+            Results: ChecklistReviewResult list
+            AcceptedDeferrals: ChecklistReviewResult list
+            BlockingFindings: string list
+            AdvisoryNotes: string list
+            LifecycleNotes: string list
+            StaleResultCount: int
+            Diagnostics: Diagnostic list
+        }
 
     let checklistStandardSections () =
-        [ "Source Specification"
-          "Source Clarifications"
-          "Source Snapshot"
-          "Checklist Items"
-          "Review Results"
-          "Accepted Deferrals"
-          "Blocking Findings"
-          "Advisory Notes"
-          "Lifecycle Notes" ]
+        [
+            "Source Specification"
+            "Source Clarifications"
+            "Source Snapshot"
+            "Checklist Items"
+            "Review Results"
+            "Accepted Deferrals"
+            "Blocking Findings"
+            "Advisory Notes"
+            "Lifecycle Notes"
+        ]
 
     let parseChecklistFrontMatter (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Checklist
@@ -77,7 +89,9 @@ module Checklist =
         match frontMatter snapshot with
         | None ->
             Error
-                [ Diagnostics.malformedSchemaVersion artifact "Checklist artifact is missing structured front matter." ]
+                [
+                    Diagnostics.malformedSchemaVersion artifact "Checklist artifact is missing structured front matter."
+                ]
         | Some(yaml, body) ->
             match yamlRoot artifact "Checklist front matter is empty." 1 yaml with
             | Error diagnostics -> Error diagnostics
@@ -98,28 +112,32 @@ module Checklist =
                 match version, workId, stage, sourceSpec, sourceClarifications, versionDiagnostics with
                 | Some schema, Some workId, Some stage, Some sourceSpec, Some sourceClarifications, [] ->
                     Ok(
-                        { SchemaVersion = schema
-                          WorkId = workId
-                          Title =
-                            tryScalarAt [ "title" ] root
-                            |> Option.defaultValue (Identifiers.workIdValue workId)
-                          Stage = stage
-                          ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
-                          Status = tryScalarAt [ "status" ] root |> Option.defaultValue "needsReview"
-                          SourceSpec = sourceSpec
-                          SourceClarifications = sourceClarifications
-                          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
+                        {
+                            SchemaVersion = schema
+                            WorkId = workId
+                            Title =
+                                tryScalarAt [ "title" ] root
+                                |> Option.defaultValue (Identifiers.workIdValue workId)
+                            Stage = stage
+                            ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
+                            Status = tryScalarAt [ "status" ] root |> Option.defaultValue "needsReview"
+                            SourceSpec = sourceSpec
+                            SourceClarifications = sourceClarifications
+                            PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root
+                        },
                         body
                     )
                 | _ ->
                     Error(
                         versionDiagnostics
-                        @ [ Diagnostics.workModelInconsistent
+                        @ [
+                            Diagnostics.workModelInconsistent
                                 artifact
                                 "Checklist front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage: checklist, changeTier, status, sourceSpec, and sourceClarifications to checklist.md."
                                 []
-                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete
+                        ]
                     )
 
     let checklistItemIdsInLine line =
@@ -163,15 +181,17 @@ module Checklist =
                         None
 
                 Some
-                    { Label = m.Groups.[1].Value
-                      Path = normalizePath m.Groups.[2].Value
-                      Digest =
-                        if m.Groups.[3].Success then
-                            Some(m.Groups.[3].Value.ToLowerInvariant())
-                        else
-                            None
-                      SchemaVersion = schema
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        Label = m.Groups.[1].Value
+                        Path = normalizePath m.Groups.[2].Value
+                        Digest =
+                            if m.Groups.[3].Success then
+                                Some(m.Groups.[3].Value.ToLowerInvariant())
+                            else
+                                None
+                        SchemaVersion = schema
+                        SourceLocation = sourceLocation lineNumber
+                    }
             else
                 None)
 
@@ -183,11 +203,13 @@ module Checklist =
                 let lowered = line.ToLowerInvariant()
 
                 Some
-                    { ItemId = itemId
-                      Text = cleanAfterId itemId.Value line
-                      Blocking = not (containsWord "advisory" lowered)
-                      SourceIds = sourceIdsInLine line |> List.filter ((<>) itemId.Value)
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        ItemId = itemId
+                        Text = cleanAfterId itemId.Value line
+                        Blocking = not (containsWord "advisory" lowered)
+                        SourceIds = sourceIdsInLine line |> List.filter ((<>) itemId.Value)
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let parseChecklistResultsInSection heading text =
@@ -216,14 +238,16 @@ module Checklist =
                         "unknown"
 
                 Some
-                    { ResultId = resultId
-                      ItemId = itemId
-                      Status = status
-                      Text = cleanAfterId resultId.Value line
-                      SourceIds =
-                        sourceIdsInLine line
-                        |> List.filter (fun value -> itemId |> Option.exists (fun id -> id.Value = value) |> not)
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        ResultId = resultId
+                        ItemId = itemId
+                        Status = status
+                        Text = cleanAfterId resultId.Value line
+                        SourceIds =
+                            sourceIdsInLine line
+                            |> List.filter (fun value -> itemId |> Option.exists (fun id -> id.Value = value) |> not)
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let checklistReferenceDiagnostics artifact (items: ChecklistItem list) (results: ChecklistReviewResult list) =
@@ -273,35 +297,39 @@ module Checklist =
             let lifecycleNotes = parseNonEmptySectionLines "Lifecycle Notes" text
 
             let diagnostics =
-                [ duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: ChecklistItemId) -> id.Value)
-                      (items |> List.map (fun item -> item.ItemId, item.SourceLocation))
-                  duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: ChecklistResultId) -> id.Value)
-                      (results |> List.map (fun result -> result.ResultId, result.SourceLocation))
-                  checklistReferenceDiagnostics artifact items results
-                  missingStandardSections
-                  |> List.map (fun heading ->
-                      Diagnostics.workModelInconsistent
-                          artifact
-                          $"Checklist artifact is missing the '{heading}' section."
-                          $"Add a '## {heading}' section to checklist.md before relying on the parsed facts."
-                          [ heading ]) ]
+                [
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: ChecklistItemId) -> id.Value)
+                        (items |> List.map (fun item -> item.ItemId, item.SourceLocation))
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: ChecklistResultId) -> id.Value)
+                        (results |> List.map (fun result -> result.ResultId, result.SourceLocation))
+                    checklistReferenceDiagnostics artifact items results
+                    missingStandardSections
+                    |> List.map (fun heading ->
+                        Diagnostics.workModelInconsistent
+                            artifact
+                            $"Checklist artifact is missing the '{heading}' section."
+                            $"Add a '## {heading}' section to checklist.md before relying on the parsed facts."
+                            [ heading ])
+                ]
                 |> List.concat
                 |> Diagnostics.sort
 
             Ok
-                { FrontMatter = frontMatter
-                  StandardSections = standardSections
-                  MissingStandardSections = missingStandardSections
-                  SourceSnapshots = snapshots |> List.sortBy (fun snapshot -> snapshot.Label, snapshot.Path)
-                  Items = items |> List.sortBy (fun item -> item.ItemId.Value)
-                  Results = results |> List.sortBy (fun result -> result.ResultId.Value)
-                  AcceptedDeferrals = acceptedDeferrals |> List.sortBy (fun result -> result.ResultId.Value)
-                  BlockingFindings = blockingFindings |> List.sort
-                  AdvisoryNotes = advisoryNotes |> List.sort
-                  LifecycleNotes = lifecycleNotes
-                  StaleResultCount = results |> List.filter (fun result -> result.Status = "stale") |> List.length
-                  Diagnostics = diagnostics }
+                {
+                    FrontMatter = frontMatter
+                    StandardSections = standardSections
+                    MissingStandardSections = missingStandardSections
+                    SourceSnapshots = snapshots |> List.sortBy (fun snapshot -> snapshot.Label, snapshot.Path)
+                    Items = items |> List.sortBy (fun item -> item.ItemId.Value)
+                    Results = results |> List.sortBy (fun result -> result.ResultId.Value)
+                    AcceptedDeferrals = acceptedDeferrals |> List.sortBy (fun result -> result.ResultId.Value)
+                    BlockingFindings = blockingFindings |> List.sort
+                    AdvisoryNotes = advisoryNotes |> List.sort
+                    LifecycleNotes = lifecycleNotes
+                    StaleResultCount = results |> List.filter (fun result -> result.Status = "stale") |> List.length
+                    Diagnostics = diagnostics
+                }

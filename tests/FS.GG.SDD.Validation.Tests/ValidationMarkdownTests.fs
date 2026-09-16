@@ -13,44 +13,60 @@ module ValidationMarkdownTests =
     let private generator: GeneratorVersion = { Id = "fsgg-sdd"; Version = "1.0.0" }
 
     let private failDiagnostic (message: string) : Diagnostic =
-        { Id = "VALIDATION-CELL-DIVERGENCE"
-          Severity = DiagnosticError
-          Artifact = None
-          Location = None
-          Message = message
-          Correction = "re-run the cell"
-          RelatedIds = []
-          IsToolDefect = false
-          DefectTag = None }
+        {
+            Id = "VALIDATION-CELL-DIVERGENCE"
+            Severity = DiagnosticError
+            Artifact = None
+            Location = None
+            Message = message
+            Correction = "re-run the cell"
+            RelatedIds = []
+            IsToolDefect = false
+            DefectTag = None
+        }
 
     let private cell coordinates status : MatrixCell =
-        { Coordinates = coordinates
-          Status = status }
+        {
+            Coordinates = coordinates
+            Status = status
+        }
 
     let private report (matrices: Matrix list) : ValidationReport =
-        { SchemaVersion = 1
-          GeneratorVersion = generator
-          Matrices = matrices
-          Summary = summarize matrices
-          Sensed = emptySensed }
+        {
+            SchemaVersion = 1
+            GeneratorVersion = generator
+            Matrices = matrices
+            Summary = summarize matrices
+            Sensed = emptySensed
+        }
 
     /// One all-pass matrix and one matrix carrying every non-pass status.
     let private passingMatrix: Matrix =
-        { Name = "baseline-conformance"
-          Dimensions = [ "contract"; "check" ]
-          Cells =
-            [ cell [ "contract", "a"; "check", "conformance" ] Pass
-              cell [ "contract", "b"; "check", "conformance" ] Pass ] }
+        {
+            Name = "baseline-conformance"
+            Dimensions = [ "contract"; "check" ]
+            Cells =
+                [
+                    cell [ "contract", "a"; "check", "conformance" ] Pass
+                    cell [ "contract", "b"; "check", "conformance" ] Pass
+                ]
+        }
 
     let private mixedMatrix: Matrix =
-        { Name = "determinism"
-          Dimensions = [ "output"; "environment" ]
-          Cells =
-            [ cell [ "output", "workmodel"; "environment", "interactive" ] Pass
-              cell [ "output", "verify"; "environment", "colorDisabled" ] (Fail(failDiagnostic "verify text diverged"))
-              cell [ "output", "summary"; "environment", "termDumb" ] (CoverageGap "summary surface")
-              cell [ "output", "audit"; "environment", "redirected" ] (NotValidated "not run")
-              cell [ "output", "ship"; "environment", "interactive" ] (SkippedWithReason "deferred") ] }
+        {
+            Name = "determinism"
+            Dimensions = [ "output"; "environment" ]
+            Cells =
+                [
+                    cell [ "output", "workmodel"; "environment", "interactive" ] Pass
+                    cell
+                        [ "output", "verify"; "environment", "colorDisabled" ]
+                        (Fail(failDiagnostic "verify text diverged"))
+                    cell [ "output", "summary"; "environment", "termDumb" ] (CoverageGap "summary surface")
+                    cell [ "output", "audit"; "environment", "redirected" ] (NotValidated "not run")
+                    cell [ "output", "ship"; "environment", "interactive" ] (SkippedWithReason "deferred")
+                ]
+        }
 
     let private mixedReport = report [ passingMatrix; mixedMatrix ]
 
@@ -138,9 +154,13 @@ module ValidationMarkdownTests =
     let ``a pipe in a matrix name is escaped so the rollup table is not broken`` () =
         let piped =
             report
-                [ { Name = "weird|name"
-                    Dimensions = [ "d" ]
-                    Cells = [ cell [ "d", "v" ] Pass ] } ]
+                [
+                    {
+                        Name = "weird|name"
+                        Dimensions = [ "d" ]
+                        Cells = [ cell [ "d", "v" ] Pass ]
+                    }
+                ]
 
         let md = renderMarkdown piped
         Assert.Contains("| weird\\|name |", md)

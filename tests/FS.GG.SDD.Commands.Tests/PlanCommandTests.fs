@@ -24,7 +24,8 @@ module PlanCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -146,7 +147,8 @@ No material ambiguities recorded.
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         let report = TestSupport.runPlan root workId title
@@ -237,7 +239,8 @@ No material ambiguities recorded.
     let private acceptUpstream root =
         TestSupport.runRequest
             { TestSupport.planRequest root workId title with
-                AcceptUpstream = true }
+                AcceptUpstream = true
+            }
 
     /// C2 / FR-001..FR-003 / SC-002. The regression this feature exists to prevent. Before the
     /// change this run exited 0, appended a synthesized `PD-### … stale:` line to the operator's
@@ -379,8 +382,10 @@ No material ambiguities recorded.
         let root, _ = plannedThenSpecEdited ()
 
         for report in
-            [ TestSupport.runTasks root workId title
-              TestSupport.runAnalyze root workId title ] do
+            [
+                TestSupport.runTasks root workId title
+                TestSupport.runAnalyze root workId title
+            ] do
             Assert.Equal(CommandOutcome.Blocked, report.Outcome)
             Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
             Assert.Equal(Some "plan.acceptUpstream", report.NextAction |> Option.map _.ActionId)
@@ -394,7 +399,8 @@ No material ambiguities recorded.
         let report =
             TestSupport.runRequest
                 { TestSupport.tasksRequest root workId title with
-                    AcceptUpstream = true }
+                    AcceptUpstream = true
+                }
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
@@ -451,17 +457,19 @@ No material ambiguities recorded.
 
             let mutable inSnapshot = false
 
-            [ for line in lines do
-                  if line.StartsWith "## Source Snapshot" then
-                      inSnapshot <- true
-                      yield line
-                  elif inSnapshot && line.StartsWith "## " then
-                      inSnapshot <- false
-                      yield line
-                  elif inSnapshot && line.TrimStart().StartsWith "- " then
-                      () // drop every recorded digest row
-                  else
-                      yield line ]
+            [
+                for line in lines do
+                    if line.StartsWith "## Source Snapshot" then
+                        inSnapshot <- true
+                        yield line
+                    elif inSnapshot && line.StartsWith "## " then
+                        inSnapshot <- false
+                        yield line
+                    elif inSnapshot && line.TrimStart().StartsWith "- " then
+                        () // drop every recorded digest row
+                    else
+                        yield line
+            ]
             |> String.concat "\n"
 
         TestSupport.writeRelative root planPath emptied
@@ -496,9 +504,11 @@ No material ambiguities recorded.
         let root, _ = plannedThenSpecEdited ()
 
         for report in
-            [ TestSupport.runEvidence root workId title
-              TestSupport.runVerify root workId title
-              TestSupport.runShip root workId title ] do
+            [
+                TestSupport.runEvidence root workId title
+                TestSupport.runVerify root workId title
+                TestSupport.runShip root workId title
+            ] do
             Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
 
     /// C13 / FR-009. The safety net for *authored* staleness survives: `plan` warns, `tasks` blocks.
@@ -773,7 +783,8 @@ No material ambiguities recorded.
 
         let request =
             { TestSupport.planRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -809,7 +820,8 @@ No material ambiguities recorded.
 
         let request =
             { TestSupport.planRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport

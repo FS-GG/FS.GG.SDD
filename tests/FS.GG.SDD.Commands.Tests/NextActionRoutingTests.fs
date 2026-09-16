@@ -16,29 +16,31 @@ open Xunit
 module NextActionRoutingTests =
 
     let private modelWith (command: SddCommand) (diagnostics: Diagnostic list) =
-        { Request = TestSupport.request command "."
-          PendingEffects = []
-          InterpretedEffects = []
-          Diagnostics = diagnostics
-          Specification = None
-          Clarification = None
-          Checklist = None
-          Plan = None
-          Tasks = None
-          Analysis = None
-          Evidence = None
-          Verification = None
-          Ship = None
-          AgentGuidance = None
-          Refresh = None
-          Scaffold = None
-          Doctor = None
-          Upgrade = None
-          Lint = None
-          Surface = None
-          DependencySurface = None
-          GeneratedViews = []
-          Report = None }
+        {
+            Request = TestSupport.request command "."
+            PendingEffects = []
+            InterpretedEffects = []
+            Diagnostics = diagnostics
+            Specification = None
+            Clarification = None
+            Checklist = None
+            Plan = None
+            Tasks = None
+            Analysis = None
+            Evidence = None
+            Verification = None
+            Ship = None
+            AgentGuidance = None
+            Refresh = None
+            Scaffold = None
+            Doctor = None
+            Upgrade = None
+            Lint = None
+            Surface = None
+            DependencySurface = None
+            GeneratedViews = []
+            Report = None
+        }
 
     [<Fact>]
     let ``a sole tool-defect blocker routes to reportToolDefect, not correctBlockingDiagnostics`` () =
@@ -107,29 +109,37 @@ module NextActionRoutingTests =
                 |> List.filter (fun path -> path.StartsWith(dir + "/"))
                 |> String.concat "\n"
 
-            { Effect = EnumerateDirectory dir
-              Succeeded = true
-              Read =
-                Bytes
-                    { Path = dir
-                      Text = listed
-                      RawBytes = None }
-              Snapshot =
-                Some
-                    { Path = dir
-                      Text = listed
-                      RawBytes = None }
-              Process = None
-              Confirmed = None
-              Diagnostic = None }
+            {
+                Effect = EnumerateDirectory dir
+                Succeeded = true
+                Read =
+                    Bytes
+                        {
+                            Path = dir
+                            Text = listed
+                            RawBytes = None
+                        }
+                Snapshot =
+                    Some
+                        {
+                            Path = dir
+                            Text = listed
+                            RawBytes = None
+                        }
+                Process = None
+                Confirmed = None
+                Diagnostic = None
+            }
 
         let baseModel = modelWith command diagnostics
 
         { baseModel with
             Request =
                 { baseModel.Request with
-                    WorkId = Some workId }
-            InterpretedEffects = [ enumResult "work"; enumResult "readiness" ] }
+                    WorkId = Some workId
+                }
+            InterpretedEffects = [ enumResult "work"; enumResult "readiness" ]
+        }
 
     [<Fact>]
     let ``downstreamLifecycleStages walks the canonical order and is empty past ship`` () =

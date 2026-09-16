@@ -68,11 +68,13 @@ module RequiredFieldContractTests =
         let text = authoringContracts root
 
         let stages =
-            [ "charter", Charter
-              "specify", Specify
-              "clarify", Clarify
-              "checklist", Checklist
-              "plan", Plan ]
+            [
+                "charter", Charter
+                "specify", Specify
+                "clarify", Clarify
+                "checklist", Checklist
+                "plan", Plan
+            ]
 
         for label, stage in stages do
             let cell = gatingCell text label
@@ -113,11 +115,13 @@ module RequiredFieldContractTests =
             if key = omit then "" else sprintf "\n    %s: %s" key value
 
         let passes =
-            [ for i in 1..5 ->
-                  sprintf
-                      "  - id: EV%03d\n    kind: verification\n    subject:\n      type: task\n      id: T%03d\n    result: pass"
-                      i
-                      i ]
+            [
+                for i in 1..5 ->
+                    sprintf
+                        "  - id: EV%03d\n    kind: verification\n    subject:\n      type: task\n      id: T%03d\n    result: pass"
+                        i
+                        i
+            ]
 
         let deferral =
             "  - id: EV006\n    kind: deferral\n    subject:\n      type: task\n      id: T006\n    result: deferred\n    synthetic: false"

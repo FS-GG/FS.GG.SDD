@@ -32,8 +32,10 @@ let fixtureRoot =
 let snapshots =
     Directory.EnumerateFiles(fixtureRoot, "*", SearchOption.AllDirectories)
     |> Seq.map (fun path ->
-        ({ Path = Path.GetRelativePath(fixtureRoot, path).Replace('\\', '/')
-           Text = File.ReadAllText path }
+        ({
+            Path = Path.GetRelativePath(fixtureRoot, path).Replace('\\', '/')
+            Text = File.ReadAllText path
+        }
         : LifecycleArtifacts.FileSnapshot))
     |> Seq.toList
 
@@ -44,10 +46,12 @@ let workId =
 printfn "workId=%s" (Identifiers.workIdValue workId)
 
 let request =
-    ({ WorkId = Identifiers.workIdValue workId
-       Snapshots = snapshots
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
-       ExpectedOutputPath = None }
+    ({
+        WorkId = Identifiers.workIdValue workId
+        Snapshots = snapshots
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+        ExpectedOutputPath = None
+    }
     : WorkModel.WorkModelGenerationRequest)
 
 let result = Serialization.generateWorkModel request
@@ -69,15 +73,17 @@ let commandRoot =
 Directory.CreateDirectory commandRoot |> ignore
 
 let initRequest =
-    ({ Command = Init
-       ProjectRoot = commandRoot
-       WorkId = None
-       Title = None
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Init
+        ProjectRoot = commandRoot
+        WorkId = None
+        Title = None
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let runCommand request =
@@ -105,87 +111,99 @@ let runCommand request =
 let initFinalModel = runCommand initRequest
 
 let charterRequest =
-    ({ Command = Charter
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Charter
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let charterFinalModel = runCommand charterRequest
 
 let specifyRequest =
-    ({ Command = Specify
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText =
-         Some
-             "value: create a native tasks command\nscope: one planned work item\nrequirement: create a traceable implementation task graph with stable ids"
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Specify
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText =
+            Some
+                "value: create a native tasks command\nscope: one planned work item\nrequirement: create a traceable implementation task graph with stable ids"
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let specifyFinalModel = runCommand specifyRequest
 
 let clarifyRequest =
-    ({ Command = Clarify
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Clarify
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let clarifyFinalModel = runCommand clarifyRequest
 
 let checklistRequest =
-    ({ Command = Checklist
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Checklist
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let checklistFinalModel = runCommand checklistRequest
 
 let planRequest =
-    ({ Command = Plan
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Plan
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let planFinalModel = runCommand planRequest
 
 let tasksRequest =
-    ({ Command = Tasks
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Tasks
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let commandFinalModel = runCommand tasksRequest
@@ -210,11 +228,13 @@ expectEqual "guidance disposition value" "generated-current" (CommandTypes.guida
 expectEqual
     "agent-guidance diagnostics"
     "agents.behaviorDivergence,agents.malformedWorkModel,agents.missingWorkModel,agents.noTargets,agents.staleGeneratedGuidance"
-    ([ agentsBehaviorDivergence "p" [ "codex" ]
-       agentsMalformedWorkModel "p" "bad"
-       agentsMissingWorkModel "p"
-       agentsNoTargets "p"
-       agentsStaleGeneratedGuidance "p" "claude" ]
+    ([
+        agentsBehaviorDivergence "p" [ "codex" ]
+        agentsMalformedWorkModel "p" "bad"
+        agentsMissingWorkModel "p"
+        agentsNoTargets "p"
+        agentsStaleGeneratedGuidance "p" "claude"
+     ]
      |> List.map _.Id
      |> List.sort
      |> String.concat ",")
@@ -226,15 +246,17 @@ expectEqual "next after verify" (Some Ship) (CommandTypes.nextLifecycleCommand V
 expectEqual "next after ship" None (CommandTypes.nextLifecycleCommand Ship)
 
 let analyzeRequest =
-    ({ Command = Analyze
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Analyze
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let analysisFinalModel = runCommand analyzeRequest
@@ -314,22 +336,26 @@ evidence:
 
 let parsedEvidence =
     LifecycleArtifacts.parseEvidenceArtifact (
-        { Path = "work/009-tasks-command/evidence.yml"
-          Text = evidenceInput }
+        {
+            Path = "work/009-tasks-command/evidence.yml"
+            Text = evidenceInput
+        }
         : LifecycleArtifacts.FileSnapshot
     )
     |> Result.defaultWith (fun diagnostics -> failwithf "Expected evidence artifact: %A" diagnostics)
 
 let evidenceRequest =
-    ({ Command = Evidence
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = Some evidenceInput
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Evidence
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = Some evidenceInput
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let evidenceFinalModel = runCommand evidenceRequest
@@ -346,15 +372,17 @@ expectEqual "evidence command" Evidence evidenceReport.Command
 expectEqual "evidence readiness" "evidenceReady" evidenceSummary.Readiness
 
 let verifyRequest =
-    ({ Command = Verify
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Verify
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let verifyFinalModel = runCommand verifyRequest
@@ -391,26 +419,30 @@ printfn "verifyBlocking=%d" verificationSummary.BlockingCount
 
 printfn
     "verifyDiagnostics=%s"
-    ([ missingEvidencePrerequisite "work/009-tasks-command/evidence.yml" "Evidence is required."
-       malformedVerificationView "readiness/009-tasks-command/verify.json" "Verify JSON is malformed."
-       verifyIdentityMismatch "readiness/009-tasks-command/verify.json" "009-tasks-command" "other-work"
-       missingRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ]
-       staleRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ] ]
+    ([
+        missingEvidencePrerequisite "work/009-tasks-command/evidence.yml" "Evidence is required."
+        malformedVerificationView "readiness/009-tasks-command/verify.json" "Verify JSON is malformed."
+        verifyIdentityMismatch "readiness/009-tasks-command/verify.json" "009-tasks-command" "other-work"
+        missingRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ]
+        staleRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ]
+     ]
      |> List.map _.Id
      |> String.concat ",")
 
 printfn "verifyNextAction=%s" (verifyReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 
 let shipRequest =
-    ({ Command = Ship
-       ProjectRoot = commandRoot
-       WorkId = Some "009-tasks-command"
-       Title = Some "Tasks Command"
-       InputText = None
-       OutputFormat = Json
-       DryRun = false
-       OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
+    ({
+        Command = Ship
+        ProjectRoot = commandRoot
+        WorkId = Some "009-tasks-command"
+        Title = Some "Tasks Command"
+        InputText = None
+        OutputFormat = Json
+        DryRun = false
+        OverwritePolicy = RefuseUnsafe
+        GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+    }
     : CommandRequest)
 
 let shipFinalModel = runCommand shipRequest
@@ -446,11 +478,13 @@ printfn "shipBlocking=%d" shipSummary.BlockingCount
 
 printfn
     "shipDiagnostics=%s"
-    ([ missingVerificationPrerequisite "readiness/009-tasks-command/verify.json" "Verification is required."
-       verificationNotReady "readiness/009-tasks-command/verify.json" "needsVerificationCorrection"
-       failedVerification "readiness/009-tasks-command/verify.json" [ "VF001" ]
-       shipIdentityMismatch "readiness/009-tasks-command/ship.json" "009-tasks-command" "other-work"
-       malformedShipView "readiness/009-tasks-command/ship.json" "Ship JSON is malformed." ]
+    ([
+        missingVerificationPrerequisite "readiness/009-tasks-command/verify.json" "Verification is required."
+        verificationNotReady "readiness/009-tasks-command/verify.json" "needsVerificationCorrection"
+        failedVerification "readiness/009-tasks-command/verify.json" [ "VF001" ]
+        shipIdentityMismatch "readiness/009-tasks-command/ship.json" "009-tasks-command" "other-work"
+        malformedShipView "readiness/009-tasks-command/ship.json" "Ship JSON is malformed."
+     ]
      |> List.map _.Id
      |> String.concat ",")
 
@@ -522,9 +556,11 @@ printfn
 
 printfn
     "taskDiagnostics=%s"
-    ([ missingPlanPrerequisite "work/009-tasks-command/plan.md" "Plan is required."
-       staleTask "work/009-tasks-command/tasks.yml" [ "T001" ]
-       doneTaskMissingEvidence "work/009-tasks-command/tasks.yml" [ "T001" ] ]
+    ([
+        missingPlanPrerequisite "work/009-tasks-command/plan.md" "Plan is required."
+        staleTask "work/009-tasks-command/tasks.yml" [ "T001" ]
+        doneTaskMissingEvidence "work/009-tasks-command/tasks.yml" [ "T001" ]
+     ]
      |> List.map _.Id
      |> String.concat ",")
 
@@ -539,9 +575,11 @@ printfn "analysisGeneratedViews=%d" analysisReport.GeneratedViews.Length
 
 printfn
     "analysisDiagnostics=%s"
-    ([ missingTasksPrerequisite "work/009-tasks-command/tasks.yml" "Tasks are required."
-       malformedAnalysisView "readiness/009-tasks-command/analysis.json" "Analysis JSON is malformed."
-       analysisIdentityMismatch "readiness/009-tasks-command/analysis.json" "009-tasks-command" "other-work" ]
+    ([
+        missingTasksPrerequisite "work/009-tasks-command/tasks.yml" "Tasks are required."
+        malformedAnalysisView "readiness/009-tasks-command/analysis.json" "Analysis JSON is malformed."
+        analysisIdentityMismatch "readiness/009-tasks-command/analysis.json" "009-tasks-command" "other-work"
+     ]
      |> List.map _.Id
      |> String.concat ",")
 
@@ -569,12 +607,14 @@ printfn "evidenceBlocking=%d" evidenceSummary.BlockingCount
 
 printfn
     "evidenceDiagnostics=%s"
-    ([ missingAnalysisPrerequisite "readiness/009-tasks-command/analysis.json" "Analysis is required."
-       analysisNotReady "readiness/009-tasks-command/analysis.json" "blocked"
-       malformedEvidenceArtifact "work/009-tasks-command/evidence.yml" "Evidence YAML is malformed."
-       missingRequiredEvidence "work/009-tasks-command/evidence.yml" [ "EV001" ]
-       undisclosedSyntheticEvidence "work/009-tasks-command/evidence.yml" [ "EV002" ]
-       unsafeEvidenceUpdate "work/009-tasks-command/evidence.yml" [ "EV003" ] ]
+    ([
+        missingAnalysisPrerequisite "readiness/009-tasks-command/analysis.json" "Analysis is required."
+        analysisNotReady "readiness/009-tasks-command/analysis.json" "blocked"
+        malformedEvidenceArtifact "work/009-tasks-command/evidence.yml" "Evidence YAML is malformed."
+        missingRequiredEvidence "work/009-tasks-command/evidence.yml" [ "EV001" ]
+        undisclosedSyntheticEvidence "work/009-tasks-command/evidence.yml" [ "EV002" ]
+        unsafeEvidenceUpdate "work/009-tasks-command/evidence.yml" [ "EV003" ]
+     ]
      |> List.map _.Id
      |> String.concat ",")
 
@@ -623,37 +663,41 @@ printfn
 
 printfn
     "refreshDiagnostics=%s"
-    ([ refreshMissingSource "readiness/015-refresh-command/work-model.json" "work/015-refresh-command/spec.md"
-       refreshMalformedSource
-           "readiness/015-refresh-command/work-model.json"
-           "work/015-refresh-command/spec.md"
-           "malformed"
-       refreshStaleView
-           "readiness/015-refresh-command/analysis.json"
-           [ "readiness/015-refresh-command/work-model.json" ]
-       refreshMalformedGeneratedView "readiness/015-refresh-command/work-model.json" "malformed"
-       refreshBlockedUpstreamView "readiness/015-refresh-command/ship.json" "readiness/015-refresh-command/verify.json"
-       refreshUnrenderableSummary "readiness/015-refresh-command/summary.md" [ "analysis" ] ]
+    ([
+        refreshMissingSource "readiness/015-refresh-command/work-model.json" "work/015-refresh-command/spec.md"
+        refreshMalformedSource
+            "readiness/015-refresh-command/work-model.json"
+            "work/015-refresh-command/spec.md"
+            "malformed"
+        refreshStaleView
+            "readiness/015-refresh-command/analysis.json"
+            [ "readiness/015-refresh-command/work-model.json" ]
+        refreshMalformedGeneratedView "readiness/015-refresh-command/work-model.json" "malformed"
+        refreshBlockedUpstreamView "readiness/015-refresh-command/ship.json" "readiness/015-refresh-command/verify.json"
+        refreshUnrenderableSummary "readiness/015-refresh-command/summary.md" [ "analysis" ]
+     ]
      |> List.map _.Id
      |> String.concat ",")
 
 printfn "summaryOutputPath=%s" (GenerationManifest.expectedSummaryOutputPath "015-refresh-command")
 
 let refreshSummarySource: GenerationManifest.SourceIdentity =
-    { Artifact =
-        (match
-            ArtifactRef.create
-                "readiness/015-refresh-command/work-model.json"
-                ArtifactRef.ArtifactKind.GeneratedView
-                ArtifactRef.ArtifactOwner.Sdd
-                true
-         with
-         | Ok value -> value
-         | Error message -> failwith message)
-      Digest = SchemaVersion.sha256Text "bytes"
-      SchemaVersion = (SchemaVersion.classifyRaw (Some "1")).Version
-      SchemaStatus = (SchemaVersion.classifyRaw (Some "1")).Status
-      RawSchemaVersion = Some "1" }
+    {
+        Artifact =
+            (match
+                ArtifactRef.create
+                    "readiness/015-refresh-command/work-model.json"
+                    ArtifactRef.ArtifactKind.GeneratedView
+                    ArtifactRef.ArtifactOwner.Sdd
+                    true
+             with
+             | Ok value -> value
+             | Error message -> failwith message)
+        Digest = SchemaVersion.sha256Text "bytes"
+        SchemaVersion = (SchemaVersion.classifyRaw (Some "1")).Version
+        SchemaStatus = (SchemaVersion.classifyRaw (Some "1")).Status
+        RawSchemaVersion = Some "1"
+    }
 
 let refreshSummaryManifest =
     GenerationManifest.createSummaryManifest

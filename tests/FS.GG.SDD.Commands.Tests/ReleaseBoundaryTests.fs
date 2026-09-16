@@ -34,14 +34,16 @@ module ReleaseBoundaryTests =
         // optional contractVersion range and the governance* field names are
         // legitimate declared-compat facts (017) and must NOT false-positive.
         for forbidden in
-            [ "gate"
-              "route"
-              "\"profile\""
-              "freshness"
-              "publish"
-              "provenance"
-              "verdict"
-              "enforce" ] do
+            [
+                "gate"
+                "route"
+                "\"profile\""
+                "freshness"
+                "publish"
+                "provenance"
+                "verdict"
+                "enforce"
+            ] do
             Assert.DoesNotContain(forbidden, json)
 
     [<Fact>]
@@ -65,13 +67,15 @@ module ReleaseBoundaryTests =
             TestSupport.readRelative root $"readiness/{workId}/governance-handoff.json"
 
         for forbidden in
-            [ "\"route\""
-              "\"profile\""
-              "\"gate\""
-              "verdict"
-              "enforcement"
-              "provenance"
-              "publishPlan" ] do
+            [
+                "\"route\""
+                "\"profile\""
+                "\"gate\""
+                "verdict"
+                "enforcement"
+                "provenance"
+                "publishPlan"
+            ] do
             Assert.DoesNotContain(forbidden, handoff)
 
     // ===== FR-013 — no scope creep (no new stage, no new view kind) =====
@@ -86,14 +90,16 @@ module ReleaseBoundaryTests =
     let ``T024 the catalog adds no GeneratedViewKind beyond the pre-018 set plus 092's ShipVerdict`` () =
         let known =
             Set.ofList
-                [ WorkModel
-                  Analysis
-                  GeneratedViewKind.Verify
-                  GeneratedViewKind.Ship
-                  GeneratedViewKind.ShipVerdict // feature 092 / ADR-0026
-                  Summary
-                  AgentCommands
-                  GovernanceHandoff ]
+                [
+                    WorkModel
+                    Analysis
+                    GeneratedViewKind.Verify
+                    GeneratedViewKind.Ship
+                    GeneratedViewKind.ShipVerdict // feature 092 / ADR-0026
+                    Summary
+                    AgentCommands
+                    GovernanceHandoff
+                ]
 
         for entry in (currentRelease ()).Catalog do
             match entry.Kind with

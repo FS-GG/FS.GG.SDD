@@ -22,27 +22,29 @@ module CompositionAcceptanceTests =
     // authored set by the offline drift guard (SeededSkillsTests, T013); here it backs the
     // skeleton-shape conformance and the provenance partition (INV-5/INV-8).
     let private seededSkillNames =
-        [ "fs-gg-sdd-analyze"
-          "fs-gg-sdd-authoring-contracts"
-          "fs-gg-sdd-charter"
-          "fs-gg-sdd-checklist"
-          "fs-gg-sdd-clarify"
-          "fs-gg-sdd-evidence"
-          "fs-gg-sdd-getting-started"
-          "fs-gg-sdd-lifecycle"
-          "fs-gg-sdd-plan"
-          "fs-gg-sdd-refresh-agents"
-          "fs-gg-sdd-ship"
-          "fs-gg-sdd-specify"
-          "fs-gg-sdd-tasks"
-          "fs-gg-sdd-troubleshooting"
-          "fs-gg-sdd-typed-author"
-          "fs-gg-sdd-typed-correspond"
-          "fs-gg-sdd-typed-inspect"
-          "fs-gg-sdd-typed-migrate"
-          "fs-gg-sdd-typed-reconcile"
-          "fs-gg-sdd-validate"
-          "fs-gg-sdd-verify" ]
+        [
+            "fs-gg-sdd-analyze"
+            "fs-gg-sdd-authoring-contracts"
+            "fs-gg-sdd-charter"
+            "fs-gg-sdd-checklist"
+            "fs-gg-sdd-clarify"
+            "fs-gg-sdd-evidence"
+            "fs-gg-sdd-getting-started"
+            "fs-gg-sdd-lifecycle"
+            "fs-gg-sdd-plan"
+            "fs-gg-sdd-refresh-agents"
+            "fs-gg-sdd-ship"
+            "fs-gg-sdd-specify"
+            "fs-gg-sdd-tasks"
+            "fs-gg-sdd-troubleshooting"
+            "fs-gg-sdd-typed-author"
+            "fs-gg-sdd-typed-correspond"
+            "fs-gg-sdd-typed-inspect"
+            "fs-gg-sdd-typed-migrate"
+            "fs-gg-sdd-typed-reconcile"
+            "fs-gg-sdd-validate"
+            "fs-gg-sdd-verify"
+        ]
 
     let private seededSkillPaths =
         seededSkillNames
@@ -52,13 +54,15 @@ module CompositionAcceptanceTests =
     // process skills — never provider output. Used to prove the provenance partition (FR-005).
     let private skeletonPaths =
         set (
-            [ ".fsgg/project.yml"
-              ".fsgg/sdd.yml"
-              ".fsgg/agents.yml"
-              "AGENTS.md"
-              "CLAUDE.md"
-              ".fsgg/constitution.md"
-              ".gitignore" ]
+            [
+                ".fsgg/project.yml"
+                ".fsgg/sdd.yml"
+                ".fsgg/agents.yml"
+                "AGENTS.md"
+                "CLAUDE.md"
+                ".fsgg/constitution.md"
+                ".gitignore"
+            ]
             @ seededSkillPaths
         )
 
@@ -132,9 +136,11 @@ module CompositionAcceptanceTests =
                     if appBuilds then
                         runProbe declaredRun root
                     else
-                        { Started = false
-                          ExitCode = -1
-                          Diagnostic = "build failed; run probe skipped." }
+                        {
+                            Started = false
+                            ExitCode = -1
+                            Diagnostic = "build failed; run probe skipped."
+                        }
 
                 let appRuns = run.Started && run.ExitCode = 0
 
@@ -181,25 +187,29 @@ module CompositionAcceptanceTests =
                     else ""
 
                 let facts =
-                    { SkeletonPresent = skeletonPresent
-                      ConstitutionPresent = constitutionPresent
-                      AppBuilds = appBuilds
-                      AppRuns = appRuns
-                      GitInitialized = gitInitialized
-                      ScriptsExecutable = scriptsExecutable
-                      ProvenancePartitioned = provenancePartitioned
-                      RefreshExcludes = refreshExcludes
-                      ReportedComplete = reportedComplete }
+                    {
+                        SkeletonPresent = skeletonPresent
+                        ConstitutionPresent = constitutionPresent
+                        AppBuilds = appBuilds
+                        AppRuns = appRuns
+                        GitInitialized = gitInitialized
+                        ScriptsExecutable = scriptsExecutable
+                        ProvenancePartitioned = provenancePartitioned
+                        RefreshExcludes = refreshExcludes
+                        ReportedComplete = reportedComplete
+                    }
 
                 facts, factDiagnostic, (provenance |> Option.map (fun record -> record.ProviderContractVersion))
             else
                 noFacts, "", None
 
         let sensed =
-            { ResolvedTemplateVersion = sensedTemplate
-              ProviderAvailable = Some(diagnostic <> Some "scaffold.providerUnavailable")
-              Host = Some Environment.MachineName
-              Timestamp = Some(DateTime.UtcNow.ToString("o")) }
+            {
+                ResolvedTemplateVersion = sensedTemplate
+                ProviderAvailable = Some(diagnostic <> Some "scaffold.providerUnavailable")
+                Host = Some Environment.MachineName
+                Timestamp = Some(DateTime.UtcNow.ToString("o"))
+            }
 
         let record = makeRecord outcome diagnostic factDiagnostic facts sensed
         write (resultPath root) record
@@ -507,15 +517,19 @@ providers:
 
         Assert.Equal(
             Some
-                { Executable = "demo-build"
-                  Arguments = [ "--fast" ] },
+                {
+                    Executable = "demo-build"
+                    Arguments = [ "--fast" ]
+                },
             declaredBuild
         )
 
         Assert.Equal(
             Some
-                { Executable = "demo-run"
-                  Arguments = [ "--headless" ] },
+                {
+                    Executable = "demo-run"
+                    Arguments = [ "--headless" ]
+                },
             declaredRun
         )
 
@@ -554,9 +568,11 @@ providers:
         // This guard file names the token, so (like ScaffoldGuardTests) it is excluded from its
         // own scan; the meaningful surfaces are the project file and the non-guard sources.
         let scanned =
-            [ "AcceptanceSupport.fs"
-              "CompositionResult.fs"
-              "FS.GG.SDD.Acceptance.Tests.fsproj" ]
+            [
+                "AcceptanceSupport.fs"
+                "CompositionResult.fs"
+                "FS.GG.SDD.Acceptance.Tests.fsproj"
+            ]
             |> List.map (fun name -> Path.Combine(projectDir, name))
             |> List.filter File.Exists
 
@@ -600,15 +616,17 @@ providers:
     // ===================================================================
 
     let private allTrueFacts =
-        { SkeletonPresent = true
-          ConstitutionPresent = true
-          AppBuilds = true
-          AppRuns = true
-          GitInitialized = true
-          ScriptsExecutable = true
-          ProvenancePartitioned = true
-          RefreshExcludes = true
-          ReportedComplete = true }
+        {
+            SkeletonPresent = true
+            ConstitutionPresent = true
+            AppBuilds = true
+            AppRuns = true
+            GitInitialized = true
+            ScriptsExecutable = true
+            ProvenancePartitioned = true
+            RefreshExcludes = true
+            ReportedComplete = true
+        }
 
     // T008: drive verdict resolution with synthetic (outcome, diagnostic) pairs and assert each
     // branch — unavailable→skip, wrote-SDD-tree→fail(defect), non-zero-exit→fail(defect),
@@ -695,10 +713,12 @@ providers:
     [<Fact>]
     let ``result schema golden is byte-exact with the sensed block normalized`` () =
         let sensed =
-            { ResolvedTemplateVersion = Some "9.9.9"
-              ProviderAvailable = Some true
-              Host = Some "some-host"
-              Timestamp = Some "2026-06-28T00:00:00Z" }
+            {
+                ResolvedTemplateVersion = Some "9.9.9"
+                ProviderAvailable = Some true
+                Host = Some "some-host"
+                Timestamp = Some "2026-06-28T00:00:00Z"
+            }
 
         let record = makeRecord "providerSucceeded" None "" allTrueFacts sensed
         let golden = serialize (normalizeSensed record)

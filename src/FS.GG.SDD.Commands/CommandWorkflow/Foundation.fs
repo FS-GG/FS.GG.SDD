@@ -541,9 +541,11 @@ nuget-cache/
         let producedPaths =
             Drift.expectedArtifactPaths
             |> List.map (fun path ->
-                { ScaffoldProvenance.Path = path
-                  ScaffoldProvenance.Owner = ArtifactOwner.Sdd
-                  ScaffoldProvenance.Sha256 = None })
+                {
+                    ScaffoldProvenance.Path = path
+                    ScaffoldProvenance.Owner = ArtifactOwner.Sdd
+                    ScaffoldProvenance.Sha256 = None
+                })
 
         ScaffoldProvenance.devRepoRecord request.GeneratorVersion producedPaths
 
@@ -563,22 +565,24 @@ nuget-cache/
     let initEffects (request: CommandRequest) =
         let projectId = projectIdFromRoot request.ProjectRoot
 
-        [ CreateDirectory ".fsgg"
-          CreateDirectory "work"
-          CreateDirectory "readiness"
-          WriteFile(".fsgg/project.yml", projectConfigText projectId, StructuredSource)
-          WriteFile(".fsgg/sdd.yml", sddConfigText, StructuredSource)
-          WriteFile(".fsgg/agents.yml", agentsConfigText, StructuredSource)
-          // 845: the OPT-IN route to the org reference gate set. Seeded, never executed — it
-          // declares no Governance content and emits none, so the `optionalGovernance*` facts
-          // stay `notEvaluated` until a product chooses to run the Governance-owned verb.
-          WriteFile(governanceResolutionPath, governanceResolutionText, StructuredSource)
-          WriteFile(".fsgg/constitution.md", constitutionText, AgentGuidanceTarget)
-          WriteFile(earlyStageGuidancePath, earlyStageGuidanceText, AgentGuidanceTarget)
-          WriteFile("AGENTS.md", agentGuidance "Codex", AgentGuidanceTarget)
-          WriteFile("CLAUDE.md", agentGuidance "Claude", AgentGuidanceTarget)
-          // 073/ADR-0018: seed the regenerable-output `.gitignore` (whole-file, no-clobber).
-          WriteFile(".gitignore", gitignoreSeedText, AgentGuidanceTarget) ]
+        [
+            CreateDirectory ".fsgg"
+            CreateDirectory "work"
+            CreateDirectory "readiness"
+            WriteFile(".fsgg/project.yml", projectConfigText projectId, StructuredSource)
+            WriteFile(".fsgg/sdd.yml", sddConfigText, StructuredSource)
+            WriteFile(".fsgg/agents.yml", agentsConfigText, StructuredSource)
+            // 845: the OPT-IN route to the org reference gate set. Seeded, never executed — it
+            // declares no Governance content and emits none, so the `optionalGovernance*` facts
+            // stay `notEvaluated` until a product chooses to run the Governance-owned verb.
+            WriteFile(governanceResolutionPath, governanceResolutionText, StructuredSource)
+            WriteFile(".fsgg/constitution.md", constitutionText, AgentGuidanceTarget)
+            WriteFile(earlyStageGuidancePath, earlyStageGuidanceText, AgentGuidanceTarget)
+            WriteFile("AGENTS.md", agentGuidance "Codex", AgentGuidanceTarget)
+            WriteFile("CLAUDE.md", agentGuidance "Claude", AgentGuidanceTarget)
+            // 073/ADR-0018: seed the regenerable-output `.gitignore` (whole-file, no-clobber).
+            WriteFile(".gitignore", gitignoreSeedText, AgentGuidanceTarget)
+        ]
         // 051: additively seed the fs-gg-sdd-* process skills (16 since 071) into both agent
         // surfaces through this single seam (reused by scaffold, FR-007). They carry
         // the same AgentGuidanceTarget no-clobber/authored-SDD-owned semantics as the
@@ -634,11 +638,13 @@ nuget-cache/
     let readinessDirectory workId = $"readiness/{workId}"
 
     let typedAuthorityReadEffects workId =
-        [ ReadFile ScaffoldProvenance.provenancePath
-          ReadFile(TypedAuthorityManifest.path workId)
-          ReadFile($"work/{workId}/specification.fsx")
-          ReadFile($"readiness/{workId}/specification.normalized.json")
-          ReadFile(specPath workId) ]
+        [
+            ReadFile ScaffoldProvenance.provenancePath
+            ReadFile(TypedAuthorityManifest.path workId)
+            ReadFile($"work/{workId}/specification.fsx")
+            ReadFile($"readiness/{workId}/specification.normalized.json")
+            ReadFile(specPath workId)
+        ]
 
     let typedCompilerEffect workId =
         RunProcess("dotnet", [ "fsi"; "--exec"; $"work/{workId}/specification.fsx" ], "")
@@ -678,10 +684,12 @@ nuget-cache/
         else
             match manifest |> Option.map TypedAuthority.deserialize with
             | Some(Ok(QuintSpecificationV1 authority)) ->
-                [ yield! authority.Artifacts |> List.map (fun artifact -> ReadFile artifact.Path)
-                  match authority.RollbackManifestPath with
-                  | Some path -> yield ReadFile path
-                  | None -> () ]
+                [
+                    yield! authority.Artifacts |> List.map (fun artifact -> ReadFile artifact.Path)
+                    match authority.RollbackManifestPath with
+                    | Some path -> yield ReadFile path
+                    | None -> ()
+                ]
                 |> List.filter (known >> not)
             | Some(Ok(FsharpSpecificationV1 _)) ->
                 let effect = typedCompilerEffect workId
@@ -718,14 +726,16 @@ nuget-cache/
 
                     match findSnapshot manifestPath with
                     | None ->
-                        [ Diagnostics.create
-                              "typedSdd.authorityMissing"
-                              DiagnosticError
-                              None
-                              None
-                              "The Typed SDD authority manifest is missing."
-                              "Run fsgg-sdd typed-sdd author or accept a migration."
-                              [] ]
+                        [
+                            Diagnostics.create
+                                "typedSdd.authorityMissing"
+                                DiagnosticError
+                                None
+                                None
+                                "The Typed SDD authority manifest is missing."
+                                "Run fsgg-sdd typed-sdd author or accept a migration."
+                                []
+                        ]
                     | Some manifestSnapshot ->
                         match TypedAuthority.deserialize manifestSnapshot.Text with
                         | Error finding -> [ asDiagnostic finding ]
@@ -753,15 +763,19 @@ nuget-cache/
                                     authority
 
                             let pathFindings =
-                                [ if
-                                      authority.CanonicalPath <> canonicalPath
-                                      || authority.NormalizedPath <> normalizedPath
-                                      || authority.MarkdownPath <> markdownPath
-                                  then
-                                      yield
-                                          { Id = "typedSdd.authorityPathMismatch"
-                                            Message = "Authority paths do not match the selected work id."
-                                            Correction = "Regenerate the authority manifest for this work id." } ]
+                                [
+                                    if
+                                        authority.CanonicalPath <> canonicalPath
+                                        || authority.NormalizedPath <> normalizedPath
+                                        || authority.MarkdownPath <> markdownPath
+                                    then
+                                        yield
+                                            {
+                                                Id = "typedSdd.authorityPathMismatch"
+                                                Message = "Authority paths do not match the selected work id."
+                                                Correction = "Regenerate the authority manifest for this work id."
+                                            }
+                                ]
 
                             let derivationFindings =
                                 match bytes canonicalPath, bytes normalizedPath, bytes markdownPath with
@@ -772,14 +786,18 @@ nuget-cache/
                             let compilationFindings =
                                 match compilerResult with
                                 | Some result when result.Started && result.ExitCode <> 0 ->
-                                    [ { Id = "typedSdd.compilationFailed"
-                                        Message =
-                                          if String.IsNullOrWhiteSpace result.StandardError then
-                                              "Canonical F# execution failed."
-                                          else
-                                              result.StandardError
-                                        Correction =
-                                          "Correct canonical F# and restore the pinned compiler/package identity." } ]
+                                    [
+                                        {
+                                            Id = "typedSdd.compilationFailed"
+                                            Message =
+                                                if String.IsNullOrWhiteSpace result.StandardError then
+                                                    "Canonical F# execution failed."
+                                                else
+                                                    result.StandardError
+                                            Correction =
+                                                "Correct canonical F# and restore the pinned compiler/package identity."
+                                        }
+                                    ]
                                 | _ -> []
 
                             baseFindings @ pathFindings @ derivationFindings @ compilationFindings
@@ -788,21 +806,27 @@ nuget-cache/
                             let observation path =
                                 match findSnapshot path with
                                 | Some snapshot ->
-                                    { Path = path
-                                      State =
-                                        QuintAuthorityArtifactState.Present(
-                                            snapshot.RawBytes
-                                            |> Option.defaultValue (Encoding.UTF8.GetBytes snapshot.Text)
-                                        ) }
+                                    {
+                                        Path = path
+                                        State =
+                                            QuintAuthorityArtifactState.Present(
+                                                snapshot.RawBytes
+                                                |> Option.defaultValue (Encoding.UTF8.GetBytes snapshot.Text)
+                                            )
+                                    }
                                 | None ->
-                                    { Path = path
-                                      State = QuintAuthorityArtifactState.Missing }
+                                    {
+                                        Path = path
+                                        State = QuintAuthorityArtifactState.Missing
+                                    }
 
                             let observations =
-                                [ yield! authority.Artifacts |> List.map (fun artifact -> observation artifact.Path)
-                                  match authority.RollbackManifestPath with
-                                  | Some path -> yield observation path
-                                  | None -> () ]
+                                [
+                                    yield! authority.Artifacts |> List.map (fun artifact -> observation artifact.Path)
+                                    match authority.RollbackManifestPath with
+                                    | Some path -> yield observation path
+                                    | None -> ()
+                                ]
 
                             TypedAuthority.validateQuintV2
                                 $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
@@ -820,16 +844,20 @@ nuget-cache/
     /// (feature 061 / issue #71). The later generators (analyze/evidence/verify/ship/refresh)
     /// deliberately keep their own lists — their read orders genuinely differ.
     let private preWorkModelReadEffects workId (authored: CommandEffect list) =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(charterPath workId)
-          ReadFile(specPath workId) ]
+        [
+            ReadFile ".fsgg/project.yml"
+            ReadFile ".fsgg/sdd.yml"
+            ReadFile ".fsgg/agents.yml"
+            ReadFile(charterPath workId)
+            ReadFile(specPath workId)
+        ]
         @ authored
-        @ [ ReadFile(tasksPath workId)
+        @ [
+            ReadFile(tasksPath workId)
             ReadFile(evidencePath workId)
             ReadFile(workModelPath workId)
-            EnumerateDirectory "work" ]
+            EnumerateDirectory "work"
+        ]
 
     let charterReadEffects workId = preWorkModelReadEffects workId []
 
@@ -842,128 +870,144 @@ nuget-cache/
     let planReadEffects workId =
         preWorkModelReadEffects
             workId
-            [ ReadFile(clarificationPath workId)
-              ReadFile(checklistPath workId)
-              ReadFile(planPath workId) ]
+            [
+                ReadFile(clarificationPath workId)
+                ReadFile(checklistPath workId)
+                ReadFile(planPath workId)
+            ]
 
     let tasksReadEffects workId =
         preWorkModelReadEffects
             workId
-            [ ReadFile(clarificationPath workId)
-              ReadFile(checklistPath workId)
-              ReadFile(planPath workId) ]
+            [
+                ReadFile(clarificationPath workId)
+                ReadFile(checklistPath workId)
+                ReadFile(planPath workId)
+            ]
 
     let analyzeReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(planPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(workModelPath workId)
-          ReadFile(analysisPath workId)
-          // Feature 105, Phase 3: the CPM pins, so an unversioned `framework:` reference resolves to
-          // the pinned version in the second wave (`frameworkCaptureReadEffects`).
-          ReadFile "Directory.Packages.local.props"
-          ReadFile "Directory.Packages.props"
-          EnumerateDirectory "work" ]
+        [
+            ReadFile ".fsgg/project.yml"
+            ReadFile ".fsgg/sdd.yml"
+            ReadFile ".fsgg/agents.yml"
+            ReadFile(specPath workId)
+            ReadFile(clarificationPath workId)
+            ReadFile(checklistPath workId)
+            ReadFile(planPath workId)
+            ReadFile(tasksPath workId)
+            ReadFile(evidencePath workId)
+            ReadFile(workModelPath workId)
+            ReadFile(analysisPath workId)
+            // Feature 105, Phase 3: the CPM pins, so an unversioned `framework:` reference resolves to
+            // the pinned version in the second wave (`frameworkCaptureReadEffects`).
+            ReadFile "Directory.Packages.local.props"
+            ReadFile "Directory.Packages.props"
+            EnumerateDirectory "work"
+        ]
 
     let evidenceReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(planPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(workModelPath workId)
-          ReadFile(analysisPath workId)
-          ReadFile(evidencePath workId)
-          EnumerateDirectory "work" ]
+        [
+            ReadFile ".fsgg/project.yml"
+            ReadFile ".fsgg/sdd.yml"
+            ReadFile ".fsgg/agents.yml"
+            ReadFile(specPath workId)
+            ReadFile(clarificationPath workId)
+            ReadFile(checklistPath workId)
+            ReadFile(planPath workId)
+            ReadFile(tasksPath workId)
+            ReadFile(workModelPath workId)
+            ReadFile(analysisPath workId)
+            ReadFile(evidencePath workId)
+            EnumerateDirectory "work"
+        ]
 
     let verifyReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(planPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(analysisPath workId)
-          ReadFile(workModelPath workId)
-          ReadFile(verifyPath workId)
-          // Governance#366 emits this versioned, deterministic public-surface receipt.  SDD
-          // consumes the receipt rather than reimplementing Governance's policy/glob parser.
-          ReadFile "readiness/fsharp-public-surface.json"
-          EnumerateDirectory "work" ]
+        [
+            ReadFile ".fsgg/project.yml"
+            ReadFile ".fsgg/sdd.yml"
+            ReadFile ".fsgg/agents.yml"
+            ReadFile(specPath workId)
+            ReadFile(clarificationPath workId)
+            ReadFile(checklistPath workId)
+            ReadFile(planPath workId)
+            ReadFile(tasksPath workId)
+            ReadFile(evidencePath workId)
+            ReadFile(analysisPath workId)
+            ReadFile(workModelPath workId)
+            ReadFile(verifyPath workId)
+            // Governance#366 emits this versioned, deterministic public-surface receipt.  SDD
+            // consumes the receipt rather than reimplementing Governance's policy/glob parser.
+            ReadFile "readiness/fsharp-public-surface.json"
+            EnumerateDirectory "work"
+        ]
 
     let shipReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          // Optional Governance config: presence-only detection for the handoff (FR-011).
-          ReadFile ".fsgg/policy.yml"
-          ReadFile ".fsgg/capabilities.yml"
-          ReadFile ".fsgg/tooling.yml"
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(planPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(analysisPath workId)
-          ReadFile(workModelPath workId)
-          ReadFile(verifyPath workId)
-          ReadFile(shipPath workId)
-          ReadFile "readiness/fsharp-public-surface.json"
-          EnumerateDirectory "work" ]
+        [
+            ReadFile ".fsgg/project.yml"
+            ReadFile ".fsgg/sdd.yml"
+            ReadFile ".fsgg/agents.yml"
+            // Optional Governance config: presence-only detection for the handoff (FR-011).
+            ReadFile ".fsgg/policy.yml"
+            ReadFile ".fsgg/capabilities.yml"
+            ReadFile ".fsgg/tooling.yml"
+            ReadFile(specPath workId)
+            ReadFile(clarificationPath workId)
+            ReadFile(checklistPath workId)
+            ReadFile(planPath workId)
+            ReadFile(tasksPath workId)
+            ReadFile(evidencePath workId)
+            ReadFile(analysisPath workId)
+            ReadFile(workModelPath workId)
+            ReadFile(verifyPath workId)
+            ReadFile(shipPath workId)
+            ReadFile "readiness/fsharp-public-surface.json"
+            EnumerateDirectory "work"
+        ]
 
     let agentsReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(workModelPath workId)
-          EnumerateDirectory "work" ]
+        [
+            ReadFile ".fsgg/project.yml"
+            ReadFile ".fsgg/sdd.yml"
+            ReadFile ".fsgg/agents.yml"
+            ReadFile(workModelPath workId)
+            EnumerateDirectory "work"
+        ]
 
     let refreshReadEffects workId =
         // NOTE: charter.md is intentionally not read. The reused analyze/verify/ship
         // generators do not read charter standalone, so reading it here would make
         // refresh regenerate a different work model than the lifecycle, breaking
         // idempotency. Refresh never writes charter regardless.
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          // Optional Governance config: presence-only detection for the handoff (FR-011).
-          ReadFile ".fsgg/policy.yml"
-          ReadFile ".fsgg/capabilities.yml"
-          ReadFile ".fsgg/tooling.yml"
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(planPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(analysisPath workId)
-          ReadFile(workModelPath workId)
-          ReadFile(verifyPath workId)
-          ReadFile(shipPath workId)
-          ReadFile "readiness/fsharp-public-surface.json"
-          // Scaffold provenance: provider-produced paths are excluded from refresh.
-          ReadFile ".fsgg/scaffold-provenance.json"
-          ReadFile(GenerationManifestModule.expectedGovernanceHandoffOutputPath workId)
-          // 092: snapshot the committed verdict so refresh can tell already-current from refreshed.
-          ReadFile(GenerationManifestModule.expectedShipVerdictOutputPath workId)
-          ReadFile(GenerationManifestModule.expectedSummaryOutputPath workId)
-          EnumerateDirectory "work"
-          // 056: enumerate the neutral provider-skill root so refresh can re-mirror the
-          // union (FR-009); the per-skill bodies are read in the candidate-reads phase.
-          EnumerateDirectory ".agents/skills" ]
+        [
+            ReadFile ".fsgg/project.yml"
+            ReadFile ".fsgg/sdd.yml"
+            ReadFile ".fsgg/agents.yml"
+            // Optional Governance config: presence-only detection for the handoff (FR-011).
+            ReadFile ".fsgg/policy.yml"
+            ReadFile ".fsgg/capabilities.yml"
+            ReadFile ".fsgg/tooling.yml"
+            ReadFile(specPath workId)
+            ReadFile(clarificationPath workId)
+            ReadFile(checklistPath workId)
+            ReadFile(planPath workId)
+            ReadFile(tasksPath workId)
+            ReadFile(evidencePath workId)
+            ReadFile(analysisPath workId)
+            ReadFile(workModelPath workId)
+            ReadFile(verifyPath workId)
+            ReadFile(shipPath workId)
+            ReadFile "readiness/fsharp-public-surface.json"
+            // Scaffold provenance: provider-produced paths are excluded from refresh.
+            ReadFile ".fsgg/scaffold-provenance.json"
+            ReadFile(GenerationManifestModule.expectedGovernanceHandoffOutputPath workId)
+            // 092: snapshot the committed verdict so refresh can tell already-current from refreshed.
+            ReadFile(GenerationManifestModule.expectedShipVerdictOutputPath workId)
+            ReadFile(GenerationManifestModule.expectedSummaryOutputPath workId)
+            EnumerateDirectory "work"
+            // 056: enumerate the neutral provider-skill root so refresh can re-mirror the
+            // union (FR-009); the per-skill bodies are read in the candidate-reads phase.
+            EnumerateDirectory ".agents/skills"
+        ]
 
     let scaffoldReadEffects =
         // Provider registry + a before-snapshot of the target root (for the produced
@@ -978,12 +1022,14 @@ nuget-cache/
     // effect at this stage (doctor never does; upgrade plans applies only after the
     // pure driver decides).
     let remediationReadEffects =
-        [ ReadFile ".fsgg/scaffold-provenance.json"
-          ReadFile ".fsgg/providers.yml"
-          // FS-GG/FS.GG.SDD#313: the workspace-declared `sdd.minToolVersion` floor. Without this
-          // read `doctor`/`upgrade` saw only the provider floor and reported the CLI axis coherent
-          // against a floor the author had declared and every other command was warning about.
-          ReadFile ".fsgg/project.yml" ]
+        [
+            ReadFile ".fsgg/scaffold-provenance.json"
+            ReadFile ".fsgg/providers.yml"
+            // FS-GG/FS.GG.SDD#313: the workspace-declared `sdd.minToolVersion` floor. Without this
+            // read `doctor`/`upgrade` saw only the provider floor and reported the CLI axis coherent
+            // against a floor the author had declared and every other command was warning about.
+            ReadFile ".fsgg/project.yml"
+        ]
         @ (Drift.expectedArtifactPaths |> List.map ReadFile)
 
     // Feature 086: `surface` roots — convention defaults with optional `--param` overrides. The
@@ -1050,8 +1096,10 @@ nuget-cache/
     // (FR-017): an unresolvable *version axis* leaves `surface`'s own job — the drift check — intact,
     // whereas an escaping *root* is the job. So this blocks rather than degrades.
     let surfaceRootEscapeDiagnostics (request: CommandRequest) =
-        [ "baselineRoot", surfaceBaselineRoot request
-          "sourceRoot", surfaceSourceRoot request ]
+        [
+            "baselineRoot", surfaceBaselineRoot request
+            "sourceRoot", surfaceSourceRoot request
+        ]
         |> List.filter (snd >> escapesRoot)
         |> List.map (fun (param, value) -> surfaceRootEscape param value)
 
@@ -1062,14 +1110,16 @@ nuget-cache/
     // Callers must plan these only when `surfaceRootEscapeDiagnostics` is empty — an escaping root
     // plans nothing at all. `plan` enforces that; this function assumes it.
     let surfaceReadEffects (request: CommandRequest) =
-        [ EnumerateDirectory(surfaceSourceRoot request)
-          EnumerateDirectory(surfaceBaselineRoot request)
-          // Feature 094: the version axis. A missing file interprets to `Snapshot = None`
-          // (research R2, characterized in SurfaceCommandTests) — that *is* the `undeterminable`
-          // state, so no `Exists` probe is needed. An escaping path plans no read at all (FR-017):
-          // nothing outside the workspace root is ever opened.
-          if not (escapesRoot (versionAxisFile request)) then
-              ReadFile(versionAxisFile request) ]
+        [
+            EnumerateDirectory(surfaceSourceRoot request)
+            EnumerateDirectory(surfaceBaselineRoot request)
+            // Feature 094: the version axis. A missing file interprets to `Snapshot = None`
+            // (research R2, characterized in SurfaceCommandTests) — that *is* the `undeterminable`
+            // state, so no `Exists` probe is needed. An escaping path plans no read at all (FR-017):
+            // nothing outside the workspace root is ever opened.
+            if not (escapesRoot (versionAxisFile request)) then
+                ReadFile(versionAxisFile request)
+        ]
 
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with
@@ -1173,10 +1223,12 @@ nuget-cache/
                         [ dependencySurfaceRootEscape baselineRoot ], []
                     else
                         [],
-                        [ EnumerateDirectory baselineRoot
-                          EnumerateDirectory "work"
-                          ReadFile "Directory.Packages.local.props"
-                          ReadFile "Directory.Packages.props" ]
+                        [
+                            EnumerateDirectory baselineRoot
+                            EnumerateDirectory "work"
+                            ReadFile "Directory.Packages.local.props"
+                            ReadFile "Directory.Packages.props"
+                        ]
                 // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
                 // user error (nothing for the effect loop to read) surfaced as unusable input.
                 | Lint, _ ->
@@ -1456,12 +1508,14 @@ nuget-cache/
             None
 
     type CharterFrontMatter =
-        { SchemaVersion: string
-          WorkId: string
-          Title: string
-          Stage: string
-          ChangeTier: string
-          Status: string }
+        {
+            SchemaVersion: string
+            WorkId: string
+            Title: string
+            Stage: string
+            ChangeTier: string
+            Status: string
+        }
 
     let generatedViewState
         (path: string)
@@ -1471,13 +1525,15 @@ nuget-cache/
         (currency: GeneratedViewCurrency)
         (diagnosticIds: string list)
         : GeneratedViewState =
-        { Path = path
-          Kind = kind
-          SchemaVersion = Some 1
-          Generator = Some generator
-          Sources = sources |> List.sortBy _.Path
-          Currency = currency
-          DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
+        {
+            Path = path
+            Kind = kind
+            SchemaVersion = Some 1
+            Generator = Some generator
+            Sources = sources |> List.sortBy _.Path
+            Currency = currency
+            DiagnosticIds = diagnosticIds |> List.distinct |> List.sort
+        }
 
     let blockingDiagnosticIds (diagnostics: Diagnostic list) : string list =
         diagnostics
@@ -1526,14 +1582,16 @@ nuget-cache/
         (frontMatterWorkId: string)
         (stage: LifecycleStage)
         : Diagnostic list =
-        [ if schemaMajor <> 1 then
-              schemaDiag path $"{artifactLabel} schemaVersion '{schemaMajor}' is not supported."
-          if not (String.Equals(frontMatterWorkId, workId, StringComparison.OrdinalIgnoreCase)) then
-              mismatchDiag path workId frontMatterWorkId
-          if stage <> expectedStage then
-              stageDiag
-                  path
-                  $"{artifactLabel} stage '{IdentifiersModule.stageValue stage}' is not '{expectedStageLabel}'." ]
+        [
+            if schemaMajor <> 1 then
+                schemaDiag path $"{artifactLabel} schemaVersion '{schemaMajor}' is not supported."
+            if not (String.Equals(frontMatterWorkId, workId, StringComparison.OrdinalIgnoreCase)) then
+                mismatchDiag path workId frontMatterWorkId
+            if stage <> expectedStage then
+                stageDiag
+                    path
+                    $"{artifactLabel} stage '{IdentifiersModule.stageValue stage}' is not '{expectedStageLabel}'."
+        ]
 
     /// Whether any recorded source-snapshot digest disagrees with the current digest for the
     /// same path — the shared source-staleness test used by checklist/plan/tasks re-parsing.

@@ -74,9 +74,11 @@ module ShipVerdictTests =
     let private parse text =
         match
             Ship.parseShipView
-                { Path = "readiness/092/ship.json"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = "readiness/092/ship.json"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok view -> view
         | Error diagnostics -> failwithf "expected a parseable ship.json, got %A" diagnostics
@@ -108,16 +110,18 @@ module ShipVerdictTests =
 
         let expected =
             Set.ofList
-                [ "schemaVersion"
-                  "viewVersion"
-                  "workId"
-                  "stage"
-                  "status"
-                  "generator"
-                  "sourcesDigest"
-                  "verificationReadiness"
-                  "disposition"
-                  "readiness" ]
+                [
+                    "schemaVersion"
+                    "viewVersion"
+                    "workId"
+                    "stage"
+                    "status"
+                    "generator"
+                    "sourcesDigest"
+                    "verificationReadiness"
+                    "disposition"
+                    "readiness"
+                ]
 
         // Ten top-level keys; `disposition` carries two facts as its members and (since #398)
         // `verificationReadiness` carries four, mirroring ship.json's nesting.
@@ -134,10 +138,12 @@ module ShipVerdictTests =
         // future reader learns what the green rests on. `supported = selfAttested + observed`.
         Assert.Equal<Set<string>>(
             Set.ofList
-                [ "status"
-                  "evidenceSupportedCount"
-                  "evidenceSelfAttestedCount"
-                  "evidenceObservedCount" ],
+                [
+                    "status"
+                    "evidenceSupportedCount"
+                    "evidenceSelfAttestedCount"
+                    "evidenceObservedCount"
+                ],
             (doc.RootElement.GetProperty "verificationReadiness").EnumerateObject()
             |> Seq.map (fun p -> p.Name)
             |> Set.ofSeq
@@ -168,8 +174,10 @@ module ShipVerdictTests =
 
         let expected =
             recomputeAggregate
-                [ "readiness/092/verify.json", aDigest
-                  "readiness/092/work-model.json", bDigest ]
+                [
+                    "readiness/092/verify.json", aDigest
+                    "readiness/092/work-model.json", bDigest
+                ]
 
         Assert.Equal("sha256", verdict.SourcesDigest.Algorithm)
         Assert.Equal(expected, verdict.SourcesDigest.Value)

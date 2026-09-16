@@ -13,17 +13,19 @@ module SchemaVersionConstantTests =
 
         let expected =
             set
-                [ "providers"
-                  "project"
-                  "sdd"
-                  "agents"
-                  "scaffold-provenance"
-                  "governance-handoff"
-                  "skill-manifest"
-                  "governance"
-                  "policy"
-                  "capabilities"
-                  "tooling" ]
+                [
+                    "providers"
+                    "project"
+                    "sdd"
+                    "agents"
+                    "scaffold-provenance"
+                    "governance-handoff"
+                    "skill-manifest"
+                    "governance"
+                    "policy"
+                    "capabilities"
+                    "tooling"
+                ]
 
         let actual = Schemas.entries |> List.map (fun e -> e.Name) |> Set.ofList
         Assert.Equal<Set<string>>(expected, actual)
@@ -82,13 +84,15 @@ module SchemaVersionConstantTests =
             (Schemas.entries |> List.find (fun e -> e.Name = name)).Owner
 
         for name in
-            [ "providers"
-              "project"
-              "sdd"
-              "agents"
-              "scaffold-provenance"
-              "governance-handoff"
-              "skill-manifest" ] do
+            [
+                "providers"
+                "project"
+                "sdd"
+                "agents"
+                "scaffold-provenance"
+                "governance-handoff"
+                "skill-manifest"
+            ] do
             Assert.Equal(Schemas.Sdd, ownerOf name)
 
         for name in [ "governance"; "policy"; "capabilities"; "tooling" ] do
@@ -122,18 +126,26 @@ module SchemaVersionConstantTests =
     [<Fact>]
     let ``SkillManifest expresses process and product skills with a digest and a body source`` () =
         let manifest: Schemas.SkillManifest =
-            { SchemaVersion = Schemas.skillManifestVersion
-              Skills =
-                [ { Id = "fs-gg-sdd-plan"
-                    Scope = Schemas.Process
-                    Sha256 = "aa"
-                    Body = Some "# plan"
-                    ResolvablePath = None }
-                  { Id = "fs-gg-elmish"
-                    Scope = Schemas.Product
-                    Sha256 = "bb"
-                    Body = None
-                    ResolvablePath = Some "skills/fs-gg-elmish/SKILL.md" } ] }
+            {
+                SchemaVersion = Schemas.skillManifestVersion
+                Skills =
+                    [
+                        {
+                            Id = "fs-gg-sdd-plan"
+                            Scope = Schemas.Process
+                            Sha256 = "aa"
+                            Body = Some "# plan"
+                            ResolvablePath = None
+                        }
+                        {
+                            Id = "fs-gg-elmish"
+                            Scope = Schemas.Product
+                            Sha256 = "bb"
+                            Body = None
+                            ResolvablePath = Some "skills/fs-gg-elmish/SKILL.md"
+                        }
+                    ]
+            }
 
         Assert.Equal(2, List.length manifest.Skills)
         Assert.Equal(Schemas.Process, manifest.Skills.[0].Scope)

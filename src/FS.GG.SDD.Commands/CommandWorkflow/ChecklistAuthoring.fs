@@ -45,21 +45,23 @@ module internal ChecklistAuthoring =
     let checklistSummary (facts: ChecklistFacts) : ChecklistSummary =
         let results = facts.Results
 
-        { WorkId = facts.FrontMatter.WorkId.Value
-          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
-          Status = facts.FrontMatter.Status
-          SourceSpec = facts.FrontMatter.SourceSpec
-          SourceClarifications = facts.FrontMatter.SourceClarifications
-          ItemIds = facts.Items |> List.map (fun item -> item.ItemId.Value) |> List.sort
-          ResultIds = results |> List.map (fun result -> result.ResultId.Value) |> List.sort
-          PassedCount = results |> List.filter (fun result -> result.Status = "pass") |> List.length
-          FailedBlockingCount = results |> List.filter (fun result -> result.Status = "fail") |> List.length
-          AcceptedDeferralCount =
-            results
-            |> List.filter (fun result -> result.Status = "acceptedDeferral")
-            |> List.length
-          StaleResultCount = facts.StaleResultCount
-          AdvisoryCount = results |> List.filter (fun result -> result.Status = "advisory") |> List.length }
+        {
+            WorkId = facts.FrontMatter.WorkId.Value
+            Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+            Status = facts.FrontMatter.Status
+            SourceSpec = facts.FrontMatter.SourceSpec
+            SourceClarifications = facts.FrontMatter.SourceClarifications
+            ItemIds = facts.Items |> List.map (fun item -> item.ItemId.Value) |> List.sort
+            ResultIds = results |> List.map (fun result -> result.ResultId.Value) |> List.sort
+            PassedCount = results |> List.filter (fun result -> result.Status = "pass") |> List.length
+            FailedBlockingCount = results |> List.filter (fun result -> result.Status = "fail") |> List.length
+            AcceptedDeferralCount =
+                results
+                |> List.filter (fun result -> result.Status = "acceptedDeferral")
+                |> List.length
+            StaleResultCount = facts.StaleResultCount
+            AdvisoryCount = results |> List.filter (fun result -> result.Status = "advisory") |> List.length
+        }
 
     let mapChecklistDiagnostics (path: string) (diagnostics: Diagnostic list) =
         diagnostics
@@ -77,9 +79,11 @@ module internal ChecklistAuthoring =
 
     let parseChecklistForCommand path text : Result<ChecklistFacts * Diagnostic list, Diagnostic list> =
         let snapshot =
-            { Path = path
-              Text = text
-              RawBytes = None }
+            {
+                Path = path
+                Text = text
+                RawBytes = None
+            }
 
         match parseChecklistFacts snapshot with
         | Error diagnostics -> Error(mapChecklistDiagnostics path diagnostics)
@@ -88,13 +92,15 @@ module internal ChecklistAuthoring =
             Ok(facts, diagnostics)
 
     type PlannedChecklistReview =
-        { ItemId: string
-          ResultId: string
-          SourceIds: string list
-          Status: string
-          Text: string
-          Correction: string option
-          Blocking: bool }
+        {
+            ItemId: string
+            ResultId: string
+            SourceIds: string list
+            Status: string
+            Text: string
+            Correction: string option
+            Blocking: bool
+        }
 
     let sourceSnapshotLine label path text =
         let digest = (SchemaVersionModule.sha256Text text).Value
@@ -124,13 +130,15 @@ module internal ChecklistAuthoring =
             nextItem <- nextItem + 1
             nextResult <- nextResult + 1
 
-            { ItemId = itemId
-              ResultId = resultId
-              SourceIds = sourceIds
-              Status = status
-              Text = text
-              Correction = correction
-              Blocking = blocking }
+            {
+                ItemId = itemId
+                ResultId = resultId
+                SourceIds = sourceIds
+                Status = status
+                Text = text
+                Correction = correction
+                Blocking = blocking
+            }
 
         let requirementReviews =
             specFacts.RequirementIds
@@ -177,13 +185,15 @@ module internal ChecklistAuthoring =
             if not visualSurface || List.isEmpty requirementIds then
                 []
             else
-                [ allocate
-                      requirementIds
-                      "advisory"
-                      "Requirements are reviewed for incoherence that exists only BETWEEN them, which no single-requirement review can reach: draw order versus geometry, overlapping bands, and z-order versus collision bounds."
-                      (Some
-                          "Render one representative frame, look at it, and declare the rendered artifact against this work item's visual-inspection obligation.")
-                      false ]
+                [
+                    allocate
+                        requirementIds
+                        "advisory"
+                        "Requirements are reviewed for incoherence that exists only BETWEEN them, which no single-requirement review can reach: draw order versus geometry, overlapping bands, and z-order versus collision bounds."
+                        (Some
+                            "Render one representative frame, look at it, and declare the rendered artifact against this work item's visual-inspection obligation.")
+                        false
+                ]
 
         requirementReviews @ deferralReviews @ incoherenceReviews
 
@@ -326,20 +336,22 @@ Prose status: {status}
         (clarificationFacts: ClarificationFacts)
         (checklistFacts: ChecklistFacts option)
         =
-        [ specFacts.RequirementIds |> List.map _.Value
-          specFacts.UserStoryIds |> List.map _.Value
-          specFacts.AcceptanceScenarioIds |> List.map _.Value
-          specFacts.ScopeBoundaryIds |> List.map _.Value
-          specFacts.AmbiguityIds |> List.map _.Value
-          clarificationFacts.Questions
-          |> List.map (fun question -> question.QuestionId.Value)
-          clarificationFacts.Decisions
-          |> List.map (fun decision -> decision.DecisionId.Value)
-          clarificationFacts.AcceptedDeferrals
-          |> List.map (fun decision -> decision.DecisionId.Value)
-          checklistFacts
-          |> Option.map (fun facts -> facts.Items |> List.map (fun item -> item.ItemId.Value))
-          |> Option.defaultValue [] ]
+        [
+            specFacts.RequirementIds |> List.map _.Value
+            specFacts.UserStoryIds |> List.map _.Value
+            specFacts.AcceptanceScenarioIds |> List.map _.Value
+            specFacts.ScopeBoundaryIds |> List.map _.Value
+            specFacts.AmbiguityIds |> List.map _.Value
+            clarificationFacts.Questions
+            |> List.map (fun question -> question.QuestionId.Value)
+            clarificationFacts.Decisions
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            clarificationFacts.AcceptedDeferrals
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            checklistFacts
+            |> Option.map (fun facts -> facts.Items |> List.map (fun item -> item.ItemId.Value))
+            |> Option.defaultValue []
+        ]
         |> List.concat
         |> Set.ofList
 
@@ -354,8 +366,10 @@ Prose status: {status}
         | Some facts ->
             let known = knownChecklistSourceIds specFacts clarificationFacts checklistFacts
 
-            [ facts.Items |> List.collect (fun item -> item.SourceIds)
-              facts.Results |> List.collect (fun result -> result.SourceIds) ]
+            [
+                facts.Items |> List.collect (fun item -> item.SourceIds)
+                facts.Results |> List.collect (fun result -> result.SourceIds)
+            ]
             |> List.concat
             |> List.distinct
             |> List.choose (fun id ->
@@ -397,16 +411,20 @@ Prose status: {status}
             |> List.map renderBlockingFindingLine
 
         let snapshotLines =
-            [ sourceSnapshotLine "spec" (specPath workId) specText
-              sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText ]
+            [
+                sourceSnapshotLine "spec" (specPath workId) specText
+                sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText
+            ]
 
         let bodies =
             Map
-                [ "Source Snapshot", snapshotLines
-                  "Checklist Items", placeholder "No checklist items recorded." itemLines
-                  "Review Results", placeholder "No review results recorded." resultLines
-                  "Accepted Deferrals", placeholder "No accepted checklist deferrals recorded." deferralLines
-                  "Blocking Findings", placeholder "No blocking findings recorded." findingLines ]
+                [
+                    "Source Snapshot", snapshotLines
+                    "Checklist Items", placeholder "No checklist items recorded." itemLines
+                    "Review Results", placeholder "No review results recorded." resultLines
+                    "Accepted Deferrals", placeholder "No accepted checklist deferrals recorded." deferralLines
+                    "Blocking Findings", placeholder "No blocking findings recorded." findingLines
+                ]
 
         ensuredText
         |> replaceSectionBodies bodies (MergePolicy.rederivedSections MergePolicies.checklist)
@@ -527,7 +545,8 @@ Prose status: {status}
                             existingFacts.FrontMatter.SchemaVersion.Major
                             existingFacts.FrontMatter.WorkId.Value
                             existingFacts.FrontMatter.Stage
-                        @ [ if
+                        @ [
+                            if
                                 not (
                                     String.Equals(
                                         normalizeRelativePath existingFacts.FrontMatter.SourceSpec,
@@ -550,7 +569,8 @@ Prose status: {status}
                             then
                                 malformedChecklistFrontMatter
                                     path
-                                    $"Checklist sourceClarifications '{existingFacts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'." ]
+                                    $"Checklist sourceClarifications '{existingFacts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
+                        ]
 
                     let unknownDiagnostics =
                         unknownChecklistReferences path specFacts clarificationFacts (Some existingFacts)
@@ -601,7 +621,13 @@ Prose status: {status}
         let path = checklistPath workId
 
         match snapshot path model with
-        | None -> [ missingChecklistPrerequisite path $"Checklist prerequisite '{path}' is missing." ], None, None, None
+        | None ->
+            [
+                missingChecklistPrerequisite path $"Checklist prerequisite '{path}' is missing."
+            ],
+            None,
+            None,
+            None
         | Some existing ->
             match parseChecklistForCommand path existing.Text with
             | Error diagnostics ->
@@ -624,7 +650,8 @@ Prose status: {status}
                         facts.FrontMatter.SchemaVersion.Major
                         facts.FrontMatter.WorkId.Value
                         facts.FrontMatter.Stage
-                    @ [ if
+                    @ [
+                        if
                             not (
                                 String.Equals(
                                     normalizeRelativePath facts.FrontMatter.SourceSpec,
@@ -647,49 +674,52 @@ Prose status: {status}
                         then
                             malformedChecklistFrontMatter
                                 path
-                                $"Checklist sourceClarifications '{facts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'." ]
+                                $"Checklist sourceClarifications '{facts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
+                    ]
 
                 let unknownDiagnostics =
                     unknownChecklistReferences path specFacts clarificationFacts (Some facts)
 
                 let readinessDiagnostics =
-                    [ if
-                          not (
-                              String.Equals(
-                                  facts.FrontMatter.Status,
-                                  "checklistReady",
-                                  StringComparison.OrdinalIgnoreCase
-                              )
-                          )
-                      then
-                          failedChecklistPrerequisite
-                              path
-                              $"Checklist status '{facts.FrontMatter.Status}' is not checklistReady."
-                              [ facts.FrontMatter.Status ]
+                    [
+                        if
+                            not (
+                                String.Equals(
+                                    facts.FrontMatter.Status,
+                                    "checklistReady",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        then
+                            failedChecklistPrerequisite
+                                path
+                                $"Checklist status '{facts.FrontMatter.Status}' is not checklistReady."
+                                [ facts.FrontMatter.Status ]
 
-                      let failed =
-                          facts.Results
-                          |> List.filter (fun result -> result.Status = "fail")
-                          |> List.map (fun result -> result.ResultId.Value)
+                        let failed =
+                            facts.Results
+                            |> List.filter (fun result -> result.Status = "fail")
+                            |> List.map (fun result -> result.ResultId.Value)
 
-                      if not (List.isEmpty failed) then
-                          failedChecklistPrerequisite path "Checklist contains failed blocking results." failed
+                        if not (List.isEmpty failed) then
+                            failedChecklistPrerequisite path "Checklist contains failed blocking results." failed
 
-                      let stale =
-                          facts.Results
-                          |> List.filter (fun result -> result.Status = "stale")
-                          |> List.map (fun result -> result.ResultId.Value)
+                        let stale =
+                            facts.Results
+                            |> List.filter (fun result -> result.Status = "stale")
+                            |> List.map (fun result -> result.ResultId.Value)
 
-                      if not (List.isEmpty stale) then
-                          failedChecklistPrerequisite path "Checklist contains stale review results." stale
+                        if not (List.isEmpty stale) then
+                            failedChecklistPrerequisite path "Checklist contains stale review results." stale
 
-                      // `BlockingFindings` is already sentinel-free (the parser drops
-                      // no-outstanding disclaimers); filtering `StartsWith "No "` here would
-                      // wrongly re-drop a genuine finding like "No tests cover FR-003".
-                      let findings = facts.BlockingFindings
+                        // `BlockingFindings` is already sentinel-free (the parser drops
+                        // no-outstanding disclaimers); filtering `StartsWith "No "` here would
+                        // wrongly re-drop a genuine finding like "No tests cover FR-003".
+                        let findings = facts.BlockingFindings
 
-                      if not (List.isEmpty findings) then
-                          failedChecklistPrerequisite path "Checklist contains blocking findings." findings ]
+                        if not (List.isEmpty findings) then
+                            failedChecklistPrerequisite path "Checklist contains blocking findings." findings
+                    ]
 
                 let allDiagnostics =
                     identityDiagnostics @ diagnostics @ unknownDiagnostics @ readinessDiagnostics

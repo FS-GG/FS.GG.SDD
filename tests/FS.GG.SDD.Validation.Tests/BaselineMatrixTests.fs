@@ -10,7 +10,8 @@ open Xunit
 module BaselineMatrixTests =
     let private baselineOptions =
         { defaultOptions with
-            OnlyMatrix = Some baselineMatrixName }
+            OnlyMatrix = Some baselineMatrixName
+        }
 
     let private baselineMatrix (report: ValidationReport) =
         report.Matrices |> List.find (fun matrix -> matrix.Name = baselineMatrixName)

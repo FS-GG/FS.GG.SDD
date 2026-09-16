@@ -60,7 +60,8 @@ module FullShapeGoldenTests =
 
         let request =
             { TestSupport.request Init root with
-                DryRun = true }
+                DryRun = true
+            }
 
         TestSupport.runRequest request |> serializeReport
 

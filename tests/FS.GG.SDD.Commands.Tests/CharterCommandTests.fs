@@ -208,7 +208,8 @@ status: chartered
 
         let request =
             { TestSupport.charterRequest root "INVALID WORK ID" title with
-                WorkId = Some "INVALID WORK ID" }
+                WorkId = Some "INVALID WORK ID"
+            }
 
         let report = TestSupport.runRequest request
 

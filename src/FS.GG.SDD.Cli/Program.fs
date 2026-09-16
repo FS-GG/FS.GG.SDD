@@ -44,55 +44,59 @@ let printUnknown commandValue =
     let generator = SchemaVersionModule.currentGeneratorVersion ()
 
     let request =
-        { Command = Init
-          ProjectRoot = "."
-          WorkId = None
-          Title = None
-          InputText = None
-          OutputFormat = Json
-          DryRun = true
-          GeneratorVersion = generator
-          Provider = None
-          Parameters = []
-          Force = false
-          TemplateUpdate = true
-          AssumeYes = false
-          IsInteractive = false
-          Artifact = None
-          Explain = false
-          FromTests = None
-          FromTestReport = None
-          SyncObservedRun = None
-          SurfaceUpdate = false
-          AcceptUpstream = false
-          // ADR-0035 stage 3b: default on. Inert here (unknownCommand carries no verify/ship),
-          // flipped only so this builder mirrors the dispatch default.
-          RequireObserved = true }
+        {
+            Command = Init
+            ProjectRoot = "."
+            WorkId = None
+            Title = None
+            InputText = None
+            OutputFormat = Json
+            DryRun = true
+            GeneratorVersion = generator
+            Provider = None
+            Parameters = []
+            Force = false
+            TemplateUpdate = true
+            AssumeYes = false
+            IsInteractive = false
+            Artifact = None
+            Explain = false
+            FromTests = None
+            FromTestReport = None
+            SyncObservedRun = None
+            SurfaceUpdate = false
+            AcceptUpstream = false
+            // ADR-0035 stage 3b: default on. Inert here (unknownCommand carries no verify/ship),
+            // flipped only so this builder mirrors the dispatch default.
+            RequireObserved = true
+        }
 
     let model =
-        { Request = request
-          PendingEffects = []
-          InterpretedEffects = []
-          Diagnostics = [ unknownCommand commandValue ]
-          Specification = None
-          Clarification = None
-          Checklist = None
-          Plan = None
-          Tasks = None
-          Analysis = None
-          Evidence = None
-          Verification = None
-          Ship = None
-          AgentGuidance = None
-          Refresh = None
-          Scaffold = None
-          Doctor = None
-          Upgrade = None
-          Lint = None
-          Surface = None
-          DependencySurface = None
-          GeneratedViews = []
-          Report = None }
+        {
+            Request = request
+            PendingEffects = []
+            InterpretedEffects = []
+            Diagnostics = [ unknownCommand commandValue ]
+            Specification = None
+            Clarification = None
+            Checklist = None
+            Plan = None
+            Tasks = None
+            Analysis = None
+            Evidence = None
+            Verification = None
+            Ship = None
+            AgentGuidance = None
+            Refresh = None
+            Scaffold = None
+            Doctor = None
+            Upgrade = None
+            Lint = None
+            Surface = None
+            DependencySurface = None
+            GeneratedViews = []
+            Report = None
+        }
 
     let report = buildReport model
     Console.Error.WriteLine(serializeReport report)
@@ -106,7 +110,8 @@ let printValidate (rest: string list) =
     // notValidated, so a partial run never reads as a full pass.
     let options =
         { FS.GG.SDD.Validation.ValidationRunner.defaultOptions with
-            OnlyMatrix = optionValue "--matrix" rest }
+            OnlyMatrix = optionValue "--matrix" rest
+        }
 
     let report = FS.GG.SDD.Validation.ValidationRunner.run options
 
@@ -168,32 +173,34 @@ let printValidate (rest: string list) =
     | None -> if report.Summary.OverallPassed then 0 else 1
 
 let private helpRequest command format =
-    { Command = command
-      ProjectRoot = "."
-      WorkId = None
-      Title = None
-      InputText = None
-      OutputFormat = format
-      // A help request is a QUERY, not a dry run: nothing was planned and then withheld, so
-      // stamping `dryRun: true` describes a run that never happened (FS.GG.SDD#352).
-      DryRun = false
-      GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
-      Provider = None
-      Parameters = []
-      Force = false
-      TemplateUpdate = true
-      AssumeYes = false
-      IsInteractive = false
-      Artifact = None
-      Explain = false
-      FromTests = None
-      FromTestReport = None
-      SyncObservedRun = None
-      SurfaceUpdate = false
-      AcceptUpstream = false
-      // ADR-0035 stage 3b: default on. Inert here (a help request carries no verify/ship),
-      // flipped only so this builder mirrors the dispatch default.
-      RequireObserved = true }
+    {
+        Command = command
+        ProjectRoot = "."
+        WorkId = None
+        Title = None
+        InputText = None
+        OutputFormat = format
+        // A help request is a QUERY, not a dry run: nothing was planned and then withheld, so
+        // stamping `dryRun: true` describes a run that never happened (FS.GG.SDD#352).
+        DryRun = false
+        GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
+        Provider = None
+        Parameters = []
+        Force = false
+        TemplateUpdate = true
+        AssumeYes = false
+        IsInteractive = false
+        Artifact = None
+        Explain = false
+        FromTests = None
+        FromTestReport = None
+        SyncObservedRun = None
+        SurfaceUpdate = false
+        AcceptUpstream = false
+        // ADR-0035 stage 3b: default on. Inert here (a help request carries no verify/ship),
+        // flipped only so this builder mirrors the dispatch default.
+        RequireObserved = true
+    }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -216,23 +223,29 @@ let private printValidateHelp format forceColor =
     // Dispatch resolves it before printValidate: asking for help never builds fixtures or
     // executes a validation cell (#679).
     let flag name argument description : HelpFlag =
-        { Name = name
-          Argument = argument
-          Description = description }
+        {
+            Name = name
+            Argument = argument
+            Description = description
+        }
 
     let summary =
-        { Scope = Command "validate"
-          Usage = "fsgg-sdd validate [options]"
-          Commands = []
-          GlobalFlags = CommandHelp.globalFlags
-          CommandFlags =
-            [ flag
-                  "--matrix"
-                  (Some "<name>")
-                  "Evaluate only one matrix. Other matrices remain notValidated, so this partial run exits non-zero even when its cells pass. Names: lifecycle-output, determinism, baseline-conformance, compatibility."
-              flag "--markdown" None "Emit a deterministic Markdown report card."
-              flag "--out" (Some "<path>") "Persist the selected deterministic projection inside the workspace."
-              flag "--force-color" None "Enable rich color even when output is redirected." ] }
+        {
+            Scope = Command "validate"
+            Usage = "fsgg-sdd validate [options]"
+            Commands = []
+            GlobalFlags = CommandHelp.globalFlags
+            CommandFlags =
+                [
+                    flag
+                        "--matrix"
+                        (Some "<name>")
+                        "Evaluate only one matrix. Other matrices remain notValidated, so this partial run exits non-zero even when its cells pass. Names: lifecycle-output, determinism, baseline-conformance, compatibility."
+                    flag "--markdown" None "Emit a deterministic Markdown report card."
+                    flag "--out" (Some "<path>") "Persist the selected deterministic projection inside the workspace."
+                    flag "--force-color" None "Enable rich color even when output is redirected."
+                ]
+        }
 
     emitHelp format forceColor Help summary
 
@@ -244,29 +257,31 @@ let private printValidateHelp format forceColor =
 /// options that would have been honored.
 let private printArgvErrors format forceColor command diagnostics =
     let model =
-        { Request = helpRequest command format
-          PendingEffects = []
-          InterpretedEffects = []
-          Diagnostics = diagnostics
-          Specification = None
-          Clarification = None
-          Checklist = None
-          Plan = None
-          Tasks = None
-          Analysis = None
-          Evidence = None
-          Verification = None
-          Ship = None
-          AgentGuidance = None
-          Refresh = None
-          Scaffold = None
-          Doctor = None
-          Upgrade = None
-          Lint = None
-          Surface = None
-          DependencySurface = None
-          GeneratedViews = []
-          Report = None }
+        {
+            Request = helpRequest command format
+            PendingEffects = []
+            InterpretedEffects = []
+            Diagnostics = diagnostics
+            Specification = None
+            Clarification = None
+            Checklist = None
+            Plan = None
+            Tasks = None
+            Analysis = None
+            Evidence = None
+            Verification = None
+            Ship = None
+            AgentGuidance = None
+            Refresh = None
+            Scaffold = None
+            Doctor = None
+            Upgrade = None
+            Lint = None
+            Surface = None
+            DependencySurface = None
+            GeneratedViews = []
+            Report = None
+        }
 
     let report = buildReport model
     Console.Error.WriteLine((resolve format (detectCapabilities forceColor Console.IsErrorRedirected) report).Text)
@@ -284,29 +299,31 @@ let private printUnhandled (args: string list) (ex: exn) =
     let forceColor = forceColorRequested args
 
     let model =
-        { Request = helpRequest Init format
-          PendingEffects = []
-          InterpretedEffects = []
-          Diagnostics = [ unhandledException ex.Message ]
-          Specification = None
-          Clarification = None
-          Checklist = None
-          Plan = None
-          Tasks = None
-          Analysis = None
-          Evidence = None
-          Verification = None
-          Ship = None
-          AgentGuidance = None
-          Refresh = None
-          Scaffold = None
-          Doctor = None
-          Upgrade = None
-          Lint = None
-          Surface = None
-          DependencySurface = None
-          GeneratedViews = []
-          Report = None }
+        {
+            Request = helpRequest Init format
+            PendingEffects = []
+            InterpretedEffects = []
+            Diagnostics = [ unhandledException ex.Message ]
+            Specification = None
+            Clarification = None
+            Checklist = None
+            Plan = None
+            Tasks = None
+            Analysis = None
+            Evidence = None
+            Verification = None
+            Ship = None
+            AgentGuidance = None
+            Refresh = None
+            Scaffold = None
+            Doctor = None
+            Upgrade = None
+            Lint = None
+            Surface = None
+            DependencySurface = None
+            GeneratedViews = []
+            Report = None
+        }
 
     let report = buildReport model
     Console.Error.WriteLine((resolve format (detectCapabilities forceColor Console.IsErrorRedirected) report).Text)
@@ -395,59 +412,61 @@ let run args =
                 let capabilities = detectCapabilities forceColor Console.IsOutputRedirected
 
                 let request =
-                    { Command = command
-                      ProjectRoot = optionValue "--root" rest |> Option.defaultValue "."
-                      WorkId = optionValue "--work" rest
-                      Title = optionValue "--title" rest
-                      // FS.GG.SDD#538: `--input` is repeatable and newline-joined, so the intuitive
-                      // one-flag-per-labeled-fact form (`--input "value: …" --input "scope: …"
-                      // --input "requirement: …"`) composes instead of silently keeping one occurrence
-                      // and dropping the rest. A single `--input` is unchanged (join of one element),
-                      // and none stays `None`. The labels join with `\n` — the exact shape the intent
-                      // parser accepts from a single newline-separated value.
-                      InputText =
-                        match collectOptions "--input" rest with
-                        | [] -> None
-                        | values -> Some(String.concat "\n" values)
-                      OutputFormat = format
-                      DryRun = hasFlag "--dry-run" rest
-                      GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
-                      Provider = optionValue "--provider" rest
-                      Parameters = parseParams rest
-                      Force = hasFlag "--force" rest
-                      TemplateUpdate = not (hasFlag "--no-update" rest)
-                      // Feature 053: `upgrade`'s explicit non-interactive apply flag, and the
-                      // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
-                      AssumeYes = hasFlag "--yes" rest
-                      IsInteractive = capabilities.IsInputInteractive
-                      // Feature 076: the `lint <artifact>` positional (so `lint --rich spec.md` and
-                      // `lint spec.md --rich` both resolve), + `--explain`. #253 (Gap C finding 3):
-                      // `Options.positional` skips a preceding valued option's argument, so
-                      // `lint --root . spec.md` resolves `spec.md`, not the `--root` value `.`.
-                      Artifact = Options.positional command rest
-                      Explain = hasFlag "--explain" rest
-                      // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
-                      // a proving test file.
-                      FromTests = optionValue "--from-tests" rest
-                      // FS.GG.SDD#350: the run receipt. A separate flag from `--from-tests`,
-                      // which names where the tests live rather than a report of a run.
-                      FromTestReport = optionValue "--from-test-report" rest
-                      // FS.GG.SDD#550: re-sync receipts already sourced from a regenerated report.
-                      SyncObservedRun = optionValue "--sync-observed-run" rest
-                      // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
-                      // default (or `--check`) is the read-only drift check.
-                      SurfaceUpdate = hasFlag "--update" rest
-                      // Feature 090: `plan --accept-upstream` re-baselines the plan's `## Source
-                      // Snapshot` against the current sources. Read only by `plan`.
-                      AcceptUpstream = hasFlag "--accept-upstream" rest
-                      // FS.GG.SDD#350 / ADR-0035 stage 3b (the flip, FS.GG.SDD#497): requiring an
-                      // observed run is now the DEFAULT — an unobserved `result: pass` no longer
-                      // satisfies a test obligation. `--no-require-observed` restores the pre-flip
-                      // opt-out for a migration window; the legacy `--require-observed` stays a
-                      // no-op accept so existing invocations keep working. Flipped by explicit
-                      // human decision on a schema major, ahead of the fleet being green — a
-                      // deliberate override recorded in ADR-0035 § Migration and FS.GG.SDD#497.
-                      RequireObserved = not (hasFlag "--no-require-observed" rest) }
+                    {
+                        Command = command
+                        ProjectRoot = optionValue "--root" rest |> Option.defaultValue "."
+                        WorkId = optionValue "--work" rest
+                        Title = optionValue "--title" rest
+                        // FS.GG.SDD#538: `--input` is repeatable and newline-joined, so the intuitive
+                        // one-flag-per-labeled-fact form (`--input "value: …" --input "scope: …"
+                        // --input "requirement: …"`) composes instead of silently keeping one occurrence
+                        // and dropping the rest. A single `--input` is unchanged (join of one element),
+                        // and none stays `None`. The labels join with `\n` — the exact shape the intent
+                        // parser accepts from a single newline-separated value.
+                        InputText =
+                            match collectOptions "--input" rest with
+                            | [] -> None
+                            | values -> Some(String.concat "\n" values)
+                        OutputFormat = format
+                        DryRun = hasFlag "--dry-run" rest
+                        GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
+                        Provider = optionValue "--provider" rest
+                        Parameters = parseParams rest
+                        Force = hasFlag "--force" rest
+                        TemplateUpdate = not (hasFlag "--no-update" rest)
+                        // Feature 053: `upgrade`'s explicit non-interactive apply flag, and the
+                        // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
+                        AssumeYes = hasFlag "--yes" rest
+                        IsInteractive = capabilities.IsInputInteractive
+                        // Feature 076: the `lint <artifact>` positional (so `lint --rich spec.md` and
+                        // `lint spec.md --rich` both resolve), + `--explain`. #253 (Gap C finding 3):
+                        // `Options.positional` skips a preceding valued option's argument, so
+                        // `lint --root . spec.md` resolves `spec.md`, not the `--root` value `.`.
+                        Artifact = Options.positional command rest
+                        Explain = hasFlag "--explain" rest
+                        // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
+                        // a proving test file.
+                        FromTests = optionValue "--from-tests" rest
+                        // FS.GG.SDD#350: the run receipt. A separate flag from `--from-tests`,
+                        // which names where the tests live rather than a report of a run.
+                        FromTestReport = optionValue "--from-test-report" rest
+                        // FS.GG.SDD#550: re-sync receipts already sourced from a regenerated report.
+                        SyncObservedRun = optionValue "--sync-observed-run" rest
+                        // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
+                        // default (or `--check`) is the read-only drift check.
+                        SurfaceUpdate = hasFlag "--update" rest
+                        // Feature 090: `plan --accept-upstream` re-baselines the plan's `## Source
+                        // Snapshot` against the current sources. Read only by `plan`.
+                        AcceptUpstream = hasFlag "--accept-upstream" rest
+                        // FS.GG.SDD#350 / ADR-0035 stage 3b (the flip, FS.GG.SDD#497): requiring an
+                        // observed run is now the DEFAULT — an unobserved `result: pass` no longer
+                        // satisfies a test obligation. `--no-require-observed` restores the pre-flip
+                        // opt-out for a migration window; the legacy `--require-observed` stays a
+                        // no-op accept so existing invocations keep working. Flipped by explicit
+                        // human decision on a schema major, ahead of the fleet being green — a
+                        // deliberate override recorded in ADR-0035 § Migration and FS.GG.SDD#497.
+                        RequireObserved = not (hasFlag "--no-require-observed" rest)
+                    }
 
                 let report = driveToReport request
 

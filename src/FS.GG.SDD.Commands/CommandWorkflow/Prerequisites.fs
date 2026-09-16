@@ -34,26 +34,28 @@ module internal Prerequisites =
     // unsorted and unconcatenated: concatenation order and the single
     // DiagnosticsModule.sort stay at each handler call site (resolver contract C-5).
     type PrerequisiteResolution =
-        { SpecificationDiagnostics: Diagnostic list
-          SpecificationText: string option
-          Specification: SpecificationSummary option
-          SpecificationFacts: SpecificationFacts option
-          ClarificationDiagnostics: Diagnostic list
-          ClarificationText: string option
-          Clarification: ClarificationSummary option
-          ClarificationFacts: ClarificationFacts option
-          ChecklistDiagnostics: Diagnostic list
-          ChecklistText: string option
-          Checklist: ChecklistSummary option
-          ChecklistFacts: ChecklistFacts option
-          PlanDiagnostics: Diagnostic list
-          PlanText: string option
-          Plan: PlanSummary option
-          PlanFacts: PlanFacts option
-          TaskDiagnostics: Diagnostic list
-          TaskText: string option
-          Tasks: TasksSummary option
-          TaskFacts: TaskFacts option }
+        {
+            SpecificationDiagnostics: Diagnostic list
+            SpecificationText: string option
+            Specification: SpecificationSummary option
+            SpecificationFacts: SpecificationFacts option
+            ClarificationDiagnostics: Diagnostic list
+            ClarificationText: string option
+            Clarification: ClarificationSummary option
+            ClarificationFacts: ClarificationFacts option
+            ChecklistDiagnostics: Diagnostic list
+            ChecklistText: string option
+            Checklist: ChecklistSummary option
+            ChecklistFacts: ChecklistFacts option
+            PlanDiagnostics: Diagnostic list
+            PlanText: string option
+            Plan: PlanSummary option
+            PlanFacts: PlanFacts option
+            TaskDiagnostics: Diagnostic list
+            TaskText: string option
+            Tasks: TasksSummary option
+            TaskFacts: TaskFacts option
+        }
 
     let resolvePrerequisites workId model : PrerequisiteResolution =
         let specificationDiagnostics, specText, specification, specFacts =
@@ -86,26 +88,28 @@ module internal Prerequisites =
                     model
             | _ -> [], None, None, None
 
-        { SpecificationDiagnostics = specificationDiagnostics
-          SpecificationText = specText
-          Specification = specification
-          SpecificationFacts = specFacts
-          ClarificationDiagnostics = clarificationDiagnostics
-          ClarificationText = clarificationText
-          Clarification = clarification
-          ClarificationFacts = clarificationFacts
-          ChecklistDiagnostics = checklistDiagnostics
-          ChecklistText = checklistText
-          Checklist = checklist
-          ChecklistFacts = checklistFacts
-          PlanDiagnostics = planDiagnostics
-          PlanText = planText
-          Plan = plan
-          PlanFacts = planFacts
-          TaskDiagnostics = taskDiagnostics
-          TaskText = taskText
-          Tasks = tasks
-          TaskFacts = taskFacts }
+        {
+            SpecificationDiagnostics = specificationDiagnostics
+            SpecificationText = specText
+            Specification = specification
+            SpecificationFacts = specFacts
+            ClarificationDiagnostics = clarificationDiagnostics
+            ClarificationText = clarificationText
+            Clarification = clarification
+            ClarificationFacts = clarificationFacts
+            ChecklistDiagnostics = checklistDiagnostics
+            ChecklistText = checklistText
+            Checklist = checklist
+            ChecklistFacts = checklistFacts
+            PlanDiagnostics = planDiagnostics
+            PlanText = planText
+            Plan = plan
+            PlanFacts = planFacts
+            TaskDiagnostics = taskDiagnostics
+            TaskText = taskText
+            Tasks = tasks
+            TaskFacts = taskFacts
+        }
 
     // Shared handler shell: owns the four steps identical across every handler —
     // the missing-WorkId guard (H-1), the final DiagnosticsModule.sort (H-3), the
@@ -135,12 +139,12 @@ module internal Prerequisites =
             string
                 -> Diagnostic list *
                 (bool
-                    -> Diagnostic list
-                    -> 'summaries *
-                    GeneratedViewState list *
-                    CommandEffect list *
-                    CommandEffect list *
-                    CommandEffect list))
+                        -> Diagnostic list
+                        -> 'summaries *
+                        GeneratedViewState list *
+                        CommandEffect list *
+                        CommandEffect list *
+                        CommandEffect list))
         =
         match model.Request.WorkId with
         | None -> empty, model.Diagnostics, [], []
@@ -171,8 +175,8 @@ module internal Prerequisites =
             string
                 -> Diagnostic list *
                 (bool
-                    -> Diagnostic list
-                    -> 'summaries * GeneratedViewState list * CommandEffect list * CommandEffect list))
+                        -> Diagnostic list
+                        -> 'summaries * GeneratedViewState list * CommandEffect list * CommandEffect list))
         =
         runHandlerWithBlockedSeed model empty (fun workId ->
             let diagnostics, resume = body workId

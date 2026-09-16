@@ -228,7 +228,8 @@ tasks:
 
         TestSupport.runRequest
             { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with
-                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+                InputText = Some TestSupport.specifyIntentWithAmbiguity
+            }
         |> ignore
 
         let report = TestSupport.runClarify root "006-clarify-command" "Clarify Command"
@@ -250,7 +251,8 @@ tasks:
 
         TestSupport.runRequest
             { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with
-                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+                InputText = Some TestSupport.specifyIntentWithAmbiguity
+            }
         |> ignore
 
         TestSupport.writeValidTasksAndEvidenceFor root "006-clarify-command"
@@ -282,7 +284,8 @@ tasks:
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         let report =
@@ -310,7 +313,8 @@ tasks:
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.writeValidTasksAndEvidenceFor root "007-checklist-command"
@@ -339,7 +343,8 @@ tasks:
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore

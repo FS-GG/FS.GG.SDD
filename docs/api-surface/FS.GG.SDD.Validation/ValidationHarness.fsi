@@ -13,17 +13,21 @@ module ValidationHarness =
     /// The declared dimension values of the four broad matrices (FR-001). Inspectable
     /// before any I/O so coverage is auditable.
     type MatrixPlan =
-        { LifecycleCommands: SddCommand list
-          Projections: OutputFormat list
-          States: string list
-          DeterminismOutputs: string list
-          Environments: EnvironmentClass list
-          BaselineContracts: string list
-          CompatibilityEntries: string list }
+        {
+            LifecycleCommands: SddCommand list
+            Projections: OutputFormat list
+            States: string list
+            DeterminismOutputs: string list
+            Environments: EnvironmentClass list
+            BaselineContracts: string list
+            CompatibilityEntries: string list
+        }
 
     type ValidationModel =
-        { Matrices: Matrix list
-          Report: ValidationReport option }
+        {
+            Matrices: Matrix list
+            Report: ValidationReport option
+        }
 
     type ValidationMsg =
         | CellEvaluated of matrix: string * MatrixCell

@@ -81,15 +81,17 @@ module PackedApiSurfaceTests =
         let startInfo = ProcessStartInfo("dotnet", WorkingDirectory = TestShared.repoRoot)
 
         for arg in
-            [ "pack"
-              projectPath
-              "-c"
-              "Release"
-              "-o"
-              output
-              "--nologo"
-              "-v"
-              "quiet" ] do
+            [
+                "pack"
+                projectPath
+                "-c"
+                "Release"
+                "-o"
+                output
+                "--nologo"
+                "-v"
+                "quiet"
+            ] do
             startInfo.ArgumentList.Add arg
 
         let completion = TestShared.ChildProcess.runBounded packTimeoutMs startInfo

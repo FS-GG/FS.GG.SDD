@@ -60,28 +60,35 @@ module internal HandlersEvidence =
     // here and in HandlersVerify resolve them via AutoOpen (FS.GG.SDD#260).
 
     let evidenceAnalysisSummary path (view: AnalysisView) : AnalysisSummary =
-        { WorkId = view.WorkId.Value
-          Stage = IdentifiersModule.stageValue view.Stage
-          Status = view.Status
-          AnalysisPath = path
-          SourceCount = view.Sources.Length
-          SourceRelationshipCount = view.SourceRelationships.Length
-          ReadyFindingCount = view.Readiness.ReadyCount
-          AdvisoryCount = view.Readiness.AdvisoryCount
-          WarningCount = view.Readiness.WarningCount
-          BlockingCount = view.Readiness.BlockingCount
-          StaleSourceCount = view.Readiness.StaleSourceCount
-          MissingDispositionCount = view.Readiness.MissingDispositionCount
-          MalformedSourceCount = view.Readiness.MalformedSourceCount
-          GeneratedViewFindingCount = view.Readiness.GeneratedViewFindingCount
-          AcceptedDeferralCount = view.Readiness.AcceptedDeferralCount
-          Readiness = view.Readiness.Status }
+        {
+            WorkId = view.WorkId.Value
+            Stage = IdentifiersModule.stageValue view.Stage
+            Status = view.Status
+            AnalysisPath = path
+            SourceCount = view.Sources.Length
+            SourceRelationshipCount = view.SourceRelationships.Length
+            ReadyFindingCount = view.Readiness.ReadyCount
+            AdvisoryCount = view.Readiness.AdvisoryCount
+            WarningCount = view.Readiness.WarningCount
+            BlockingCount = view.Readiness.BlockingCount
+            StaleSourceCount = view.Readiness.StaleSourceCount
+            MissingDispositionCount = view.Readiness.MissingDispositionCount
+            MalformedSourceCount = view.Readiness.MalformedSourceCount
+            GeneratedViewFindingCount = view.Readiness.GeneratedViewFindingCount
+            AcceptedDeferralCount = view.Readiness.AcceptedDeferralCount
+            Readiness = view.Readiness.Status
+        }
 
     let analysisPrerequisiteDiagnosticsSummaryAndText workId model =
         let path = analysisPath workId
 
         match snapshot path model with
-        | None -> [ missingAnalysisPrerequisite path $"Analysis prerequisite '{path}' is missing." ], None, None
+        | None ->
+            [
+                missingAnalysisPrerequisite path $"Analysis prerequisite '{path}' is missing."
+            ],
+            None,
+            None
         | Some existing ->
             match parseAnalysisView existing with
             | Error diagnostics ->
@@ -119,9 +126,11 @@ module internal HandlersEvidence =
     let parseEvidenceArtifactForCommand path text : Result<EvidenceArtifact * Diagnostic list, Diagnostic list> =
         match
             parseEvidenceArtifact
-                { Path = path
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = path
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> Ok(artifact, mapEvidenceDiagnostics path artifact.Diagnostics)
         | Error diagnostics -> Error(mapEvidenceDiagnostics path diagnostics)
@@ -283,10 +292,12 @@ module internal HandlersEvidence =
                     | PreviewOnly -> notTracked, unavailable)
                 ([], [])
 
-        [ if not (List.isEmpty notTracked) then
-              evidenceLocalArtifactNotTracked (evidencePath workId) (List.rev notTracked)
-          if not (List.isEmpty unavailable) then
-              evidenceLocalArtifactAuthorityUnavailable (evidencePath workId) (List.rev unavailable) ]
+        [
+            if not (List.isEmpty notTracked) then
+                evidenceLocalArtifactNotTracked (evidencePath workId) (List.rev notTracked)
+            if not (List.isEmpty unavailable) then
+                evidenceLocalArtifactAuthorityUnavailable (evidencePath workId) (List.rev unavailable)
+        ]
 
     // ---- FS.GG.SDD#350 / ADR-0035: the observed run receipt ----
 
@@ -419,9 +430,11 @@ module internal HandlersEvidence =
                     |> List.map (fun declaration ->
                         if dischargedByARun declaration && declaration.ObservedRun.IsNone then
                             { declaration with
-                                ObservedRun = Some run }
+                                ObservedRun = Some run
+                            }
                         else
-                            declaration) }
+                            declaration)
+            }
 
     // ---- FS.GG.SDD#550: re-sync observed-run receipts when a TRX is regenerated ----
 
@@ -500,11 +513,13 @@ module internal HandlersEvidence =
                             // failing receipt would leave one `isObserved` rejects, indistinguishable from
                             // no receipt, and silently turn the evidence red. The author fixes the suite.
                             None,
-                            [ DiagnosticConstructors.observedRunFailed
-                                  artifactPath
-                                  path
-                                  run.Failed
-                                  (holders |> List.map _.Id.Value |> List.sort) ]
+                            [
+                                DiagnosticConstructors.observedRunFailed
+                                    artifactPath
+                                    path
+                                    run.Failed
+                                    (holders |> List.map _.Id.Value |> List.sort)
+                            ]
                         | Ok run -> Some run, []
 
     /// Re-stamp the recomputed receipt onto every obligation whose current receipt is sourced from the
@@ -521,9 +536,11 @@ module internal HandlersEvidence =
                     |> List.map (fun declaration ->
                         if syncedByReport run.Source declaration then
                             { declaration with
-                                ObservedRun = Some run }
+                                ObservedRun = Some run
+                            }
                         else
-                            declaration) }
+                            declaration)
+            }
 
     /// The existence verdict, read back off the interpreted effect log. A path counts as present only
     /// when it was probed *and* the probe returned a snapshot; a path that was never probed is treated
@@ -662,12 +679,14 @@ module internal HandlersEvidence =
                 | Error _ -> None)
             |> List.distinct
 
-        {| Requirements =
-            pick IdentifiersModule.createRequirementId
-            |> List.sortBy (fun (id: RequirementId) -> id.Value)
-           PlanDecisions =
-            pick IdentifiersModule.createPlanDecisionId
-            |> List.sortBy (fun (id: PlanDecisionId) -> id.Value) |}
+        {|
+            Requirements =
+                pick IdentifiersModule.createRequirementId
+                |> List.sortBy (fun (id: RequirementId) -> id.Value)
+            PlanDecisions =
+                pick IdentifiersModule.createPlanDecisionId
+                |> List.sortBy (fun (id: PlanDecisionId) -> id.Value)
+        |}
 
     // Feature 077: `evidence --from-tests <path>` pre-maps each newly scaffolded obligation to a
     // verification-kind source pointing at the proving test path. `None` (or a blank value) ⇒ no
@@ -677,14 +696,18 @@ module internal HandlersEvidence =
     let fromTestsSourceRefs (fromTests: string option) : EvidenceSourceReference list =
         match fromTests |> Option.map (fun path -> path.Trim()) with
         | Some path when path <> "" ->
-            [ { ReferenceId = None
-                Kind = "verification"
-                Path = Some path
-                Uri = None
-                Digest = None
-                RelatedSourceId = None
-                Result = None
-                SourceLocation = None } ]
+            [
+                {
+                    ReferenceId = None
+                    Kind = "verification"
+                    Path = Some path
+                    Uri = None
+                    Digest = None
+                    RelatedSourceId = None
+                    Result = None
+                    SourceLocation = None
+                }
+            ]
         | _ -> []
 
     // `source` is the pre-validated evidence `ArtifactRef` (built once by the caller from
@@ -714,56 +737,62 @@ module internal HandlersEvidence =
         let subject =
             match taskRefs with
             | task :: _ ->
-                { SubjectType = "task"
-                  Id = task.Value }
+                {
+                    SubjectType = "task"
+                    Id = task.Value
+                }
             | [] ->
-                { SubjectType = "obligation"
-                  Id = obligation.ObligationId }
+                {
+                    SubjectType = "obligation"
+                    Id = obligation.ObligationId
+                }
 
-        { Id = evidenceId
-          Kind = EvidenceKind.Missing
-          Subject = subject
-          TaskRefs = taskRefs
-          RequirementRefs = routed.Requirements
-          AcceptanceScenarioRefs = []
-          ClarificationDecisionRefs = []
-          ChecklistResultRefs = []
-          PlanDecisionRefs = routed.PlanDecisions
-          ObligationRefs = [ obligation.ObligationId ]
-          ArtifactRefs = []
-          // #306: `--from-tests` seeds a proving TEST path onto each newly scaffolded obligation.
-          // A visual-inspection obligation is discharged by a rendered frame, not by a test file,
-          // and `namesRenderedArtifact` cannot tell the two apart — so seeding one here would
-          // pre-satisfy the artifact gate with the wrong kind of proof the moment the author flipped
-          // `result: pass`. It is left unseeded: the author names the image, deliberately.
-          SourceRefs =
-            if isVisualInspectionTagged obligation.RequiredSkillOrCapabilityTags then
-                []
-            else
-                fromTestsSourceRefs fromTests
-          Result = "missing"
-          Synthetic = false
-          SyntheticDisclosure = None
-          // #350: a scaffolded obligation is `result: missing` — it claims nothing, so there is
-          // nothing for a run to have observed. The receipt is stamped by a LATER `--from-tests` run,
-          // once the author has flipped the result to a real pass. Seeding one here would record an
-          // observation of an obligation nobody has yet claimed to have discharged.
-          ObservedRun = None
-          // #865: and a record receipt is not seeded either, for the same reason plus one more. The
-          // scaffolded obligation claims nothing yet, so there is no record to name — and unlike the
-          // observed-run receipt, no later command can stamp this one: a record is authored, because
-          // there is no runner to read it from. Seeding a placeholder would be seeding the author's
-          // word, which is exactly what the receipt exists to replace.
-          RecordReceipt = None
-          JourneyReceipt = None
-          PerformanceBudget = None
-          Rationale = None
-          Owner = None
-          Scope = None
-          LaterLifecycleVisibility = None
-          Notes = [ "Evidence required before verify." ]
-          Source = source
-          SourceLocation = None }
+        {
+            Id = evidenceId
+            Kind = EvidenceKind.Missing
+            Subject = subject
+            TaskRefs = taskRefs
+            RequirementRefs = routed.Requirements
+            AcceptanceScenarioRefs = []
+            ClarificationDecisionRefs = []
+            ChecklistResultRefs = []
+            PlanDecisionRefs = routed.PlanDecisions
+            ObligationRefs = [ obligation.ObligationId ]
+            ArtifactRefs = []
+            // #306: `--from-tests` seeds a proving TEST path onto each newly scaffolded obligation.
+            // A visual-inspection obligation is discharged by a rendered frame, not by a test file,
+            // and `namesRenderedArtifact` cannot tell the two apart — so seeding one here would
+            // pre-satisfy the artifact gate with the wrong kind of proof the moment the author flipped
+            // `result: pass`. It is left unseeded: the author names the image, deliberately.
+            SourceRefs =
+                if isVisualInspectionTagged obligation.RequiredSkillOrCapabilityTags then
+                    []
+                else
+                    fromTestsSourceRefs fromTests
+            Result = "missing"
+            Synthetic = false
+            SyntheticDisclosure = None
+            // #350: a scaffolded obligation is `result: missing` — it claims nothing, so there is
+            // nothing for a run to have observed. The receipt is stamped by a LATER `--from-tests` run,
+            // once the author has flipped the result to a real pass. Seeding one here would record an
+            // observation of an obligation nobody has yet claimed to have discharged.
+            ObservedRun = None
+            // #865: and a record receipt is not seeded either, for the same reason plus one more. The
+            // scaffolded obligation claims nothing yet, so there is no record to name — and unlike the
+            // observed-run receipt, no later command can stamp this one: a record is authored, because
+            // there is no runner to read it from. Seeding a placeholder would be seeding the author's
+            // word, which is exactly what the receipt exists to replace.
+            RecordReceipt = None
+            JourneyReceipt = None
+            PerformanceBudget = None
+            Rationale = None
+            Owner = None
+            Scope = None
+            LaterLifecycleVisibility = None
+            Notes = [ "Evidence required before verify." ]
+            Source = source
+            SourceLocation = None
+        }
 
     // The default next-action note a freshly-created evidence.yml carries. On a re-run the author's
     // own `lifecycleNotes` are preserved verbatim (FS.GG.SDD#181); this is only the seed for a file
@@ -833,17 +862,22 @@ module internal HandlersEvidence =
                     Evidence =
                         (artifact.Evidence
                          @ (missing |> List.map (skeletonEvidenceDeclaration source fromTests)))
-                        |> List.sortBy (fun declaration -> declaration.Id.Value) },
-                [ DiagnosticConstructors.seededEvidenceObligations
-                      (evidencePath workId)
-                      (missing |> List.map _.ObligationId |> List.distinct |> List.sort) ]
+                        |> List.sortBy (fun declaration -> declaration.Id.Value)
+                },
+                [
+                    DiagnosticConstructors.seededEvidenceObligations
+                        (evidencePath workId)
+                        (missing |> List.map _.ObligationId |> List.distinct |> List.sort)
+                ]
             | _, None ->
                 artifact,
-                [ DiagnosticConstructors.toolDefect
-                      (Some(evidencePath workId))
-                      $"Evidence skeleton for work id '{workId}' could not be seeded into the existing \
+                [
+                    DiagnosticConstructors.toolDefect
+                        (Some(evidencePath workId))
+                        $"Evidence skeleton for work id '{workId}' could not be seeded into the existing \
                         artifact — the plan-validated evidence artifact path was rejected. This is a \
-                        tool defect, not authored input." ]
+                        tool defect, not authored input."
+                ]
 
         // `None` (with a `toolDefect` diagnostic) means the fresh-skeleton path could not seed an
         // artifact — an unreachable invariant, since `workIdDiagnostics` (Foundation) already
@@ -874,14 +908,17 @@ module internal HandlersEvidence =
                 if List.isEmpty unsafeIds then
                     []
                 else
-                    [ unsafeEvidenceUpdate (evidencePath workId) (unsafeIds |> List.distinct |> List.sort) ]
+                    [
+                        unsafeEvidenceUpdate (evidencePath workId) (unsafeIds |> List.distinct |> List.sort)
+                    ]
 
             let merged, seedDiagnostics =
                 withSeededObligations (
                     { existingArtifact with
                         Evidence =
                             (existingArtifact.Evidence @ additions)
-                            |> List.sortBy (fun declaration -> declaration.Id.Value) }
+                            |> List.sortBy (fun declaration -> declaration.Id.Value)
+                    }
                     : EvidenceArtifact
                 )
 
@@ -905,36 +942,40 @@ module internal HandlersEvidence =
             with
             | Ok workIdValue, Ok source ->
                 Some(
-                    { SchemaVersion = SchemaVersionModule.create 1
-                      WorkId = workIdValue
-                      Stage = LifecycleStage.Evidence
-                      Status = "needsEvidence"
-                      SourceSpec = specPath workId
-                      SourceClarifications = clarificationPath workId
-                      SourceChecklist = checklistPath workId
-                      SourcePlan = planPath workId
-                      SourceTasks = tasksPath workId
-                      SourceAnalysis = analysisPath workId
-                      SourceSnapshots = []
-                      Evidence =
-                        obligations
-                        |> List.choose (fun obligation ->
-                            if obligation.ObligationId.StartsWith("EV", StringComparison.OrdinalIgnoreCase) then
-                                Some(skeletonEvidenceDeclaration source fromTests obligation)
-                            else
-                                None)
-                      LifecycleNotes = [ defaultEvidenceLifecycleNote ]
-                      Diagnostics = [] }
+                    {
+                        SchemaVersion = SchemaVersionModule.create 1
+                        WorkId = workIdValue
+                        Stage = LifecycleStage.Evidence
+                        Status = "needsEvidence"
+                        SourceSpec = specPath workId
+                        SourceClarifications = clarificationPath workId
+                        SourceChecklist = checklistPath workId
+                        SourcePlan = planPath workId
+                        SourceTasks = tasksPath workId
+                        SourceAnalysis = analysisPath workId
+                        SourceSnapshots = []
+                        Evidence =
+                            obligations
+                            |> List.choose (fun obligation ->
+                                if obligation.ObligationId.StartsWith("EV", StringComparison.OrdinalIgnoreCase) then
+                                    Some(skeletonEvidenceDeclaration source fromTests obligation)
+                                else
+                                    None)
+                        LifecycleNotes = [ defaultEvidenceLifecycleNote ]
+                        Diagnostics = []
+                    }
                     : EvidenceArtifact
                 ),
                 []
             | _ ->
                 None,
-                [ DiagnosticConstructors.toolDefect
-                      (Some(evidencePath workId))
-                      $"Evidence skeleton for work id '{workId}' could not be seeded — the plan-validated \
+                [
+                    DiagnosticConstructors.toolDefect
+                        (Some(evidencePath workId))
+                        $"Evidence skeleton for work id '{workId}' could not be seeded — the plan-validated \
                         work id or evidence artifact path was rejected when constructing a fresh \
-                        evidence.yml. This is a tool defect, not authored input." ]
+                        evidence.yml. This is a tool defect, not authored input."
+                ]
 
     /// `artifact` must be the artifact as **recorded** (parsed from disk / merged), never one whose
     /// `SourceSnapshots` have been re-stamped to `currentSnapshots` — the staleEvidenceSource check
@@ -969,10 +1010,12 @@ module internal HandlersEvidence =
             specFacts.AcceptanceScenarioIds |> List.map _.Value |> Set.ofList
 
         let knownClarifications =
-            [ clarificationFacts.Decisions
-              |> List.map (fun decision -> decision.DecisionId.Value)
-              clarificationFacts.AcceptedDeferrals
-              |> List.map (fun decision -> decision.DecisionId.Value) ]
+            [
+                clarificationFacts.Decisions
+                |> List.map (fun decision -> decision.DecisionId.Value)
+                clarificationFacts.AcceptedDeferrals
+                |> List.map (fun decision -> decision.DecisionId.Value)
+            ]
             |> List.concat
             |> Set.ofList
 
@@ -987,38 +1030,42 @@ module internal HandlersEvidence =
             |> Set.ofList
 
         let knownObligations =
-            [ planFacts.VerificationObligations
-              |> List.map (fun obligation -> obligation.ObligationId.Value)
-              taskFacts.Tasks
-              |> List.collect (fun task -> task.RequiredEvidence |> List.map _.Value) ]
+            [
+                planFacts.VerificationObligations
+                |> List.map (fun obligation -> obligation.ObligationId.Value)
+                taskFacts.Tasks
+                |> List.collect (fun task -> task.RequiredEvidence |> List.map _.Value)
+            ]
             |> List.concat
             |> Set.ofList
 
         let unknowns =
             artifact.Evidence
             |> List.collect (fun declaration ->
-                [ declaration.TaskRefs
-                  |> List.map _.Value
-                  |> List.filter (fun id -> not (Set.contains id knownTasks))
-                  declaration.RequirementRefs
-                  |> List.map _.Value
-                  |> List.filter (fun id -> not (Set.contains id knownRequirements))
-                  declaration.AcceptanceScenarioRefs
-                  |> List.map _.Value
-                  |> List.filter (fun id -> not (Set.contains id knownScenarios))
-                  declaration.ClarificationDecisionRefs
-                  |> List.map _.Value
-                  |> List.filter (fun id -> not (Set.contains id knownClarifications))
-                  declaration.ChecklistResultRefs
-                  |> List.map _.Value
-                  |> List.filter (fun id -> not (Set.contains id knownChecklistResults))
-                  declaration.PlanDecisionRefs
-                  |> List.map _.Value
-                  |> List.filter (fun id -> not (Set.contains id knownPlanDecisions))
-                  declaration.ObligationRefs
-                  |> List.filter (fun id ->
-                      not (Set.contains id knownObligations)
-                      && not (id.StartsWith("EV", StringComparison.OrdinalIgnoreCase))) ]
+                [
+                    declaration.TaskRefs
+                    |> List.map _.Value
+                    |> List.filter (fun id -> not (Set.contains id knownTasks))
+                    declaration.RequirementRefs
+                    |> List.map _.Value
+                    |> List.filter (fun id -> not (Set.contains id knownRequirements))
+                    declaration.AcceptanceScenarioRefs
+                    |> List.map _.Value
+                    |> List.filter (fun id -> not (Set.contains id knownScenarios))
+                    declaration.ClarificationDecisionRefs
+                    |> List.map _.Value
+                    |> List.filter (fun id -> not (Set.contains id knownClarifications))
+                    declaration.ChecklistResultRefs
+                    |> List.map _.Value
+                    |> List.filter (fun id -> not (Set.contains id knownChecklistResults))
+                    declaration.PlanDecisionRefs
+                    |> List.map _.Value
+                    |> List.filter (fun id -> not (Set.contains id knownPlanDecisions))
+                    declaration.ObligationRefs
+                    |> List.filter (fun id ->
+                        not (Set.contains id knownObligations)
+                        && not (id.StartsWith("EV", StringComparison.OrdinalIgnoreCase)))
+                ]
                 |> List.concat)
             |> List.distinct
             |> List.sort
@@ -1109,166 +1156,171 @@ module internal HandlersEvidence =
                 |> List.filter (fun (_, bound) -> bound = intent)
             | _ -> []
 
-        [ if not (String.Equals(artifact.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-              evidenceIdentityMismatch path workId artifact.WorkId.Value
-          if artifact.Stage <> LifecycleStage.Evidence then
-              malformedEvidenceArtifact
-                  path
-                  $"Evidence stage '{IdentifiersModule.stageValue artifact.Stage}' is not 'evidence'."
-          if normalizeRelativePath artifact.SourceSpec <> specPath workId then
-              malformedEvidenceArtifact
-                  path
-                  $"Evidence sourceSpec '{artifact.SourceSpec}' does not match '{specPath workId}'."
-          if normalizeRelativePath artifact.SourceTasks <> tasksPath workId then
-              malformedEvidenceArtifact
-                  path
-                  $"Evidence sourceTasks '{artifact.SourceTasks}' does not match '{tasksPath workId}'."
-          if normalizeRelativePath artifact.SourceAnalysis <> analysisPath workId then
-              malformedEvidenceArtifact
-                  path
-                  $"Evidence sourceAnalysis '{artifact.SourceAnalysis}' does not match '{analysisPath workId}'."
-          if not (List.isEmpty unknowns) then
-              unknownEvidenceReference path (String.concat "," unknowns)
-          if not (List.isEmpty unsupportedResults) then
-              unsupportedEvidenceResultState path unsupportedResults
-          if not (List.isEmpty undisclosedSynthetic) then
-              undisclosedSyntheticEvidence path undisclosedSynthetic
-          if not (List.isEmpty missingDeferralFields) then
-              missingDeferralRationale path missingDeferralFields
-          if not (List.isEmpty missingVisualArtifacts) then
-              missingVisualInspectionArtifact path missingVisualArtifacts
-          if not (List.isEmpty missingArtifactPaths) then
-              evidenceArtifactNotFound path missingArtifactPaths
-          if not (List.isEmpty selfShipVerdictPaths) then
-              evidenceSelfShipVerdictCitedFromEvidence path selfShipVerdictPaths
-          match performanceIntent with
-          | Some intent when
-              intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase)
-              && List.isEmpty performanceIntentBindings
-              ->
-              errorDiagnostic
-                  "evidence.performanceIntentUnbound"
-                  (Some path)
-                  "The active early performance intent is not bound by any performanceBudget declaration."
-                  "Copy the canonical performanceIntent into performanceBudget.intent and cite its measured artifact."
-                  [ intent.Id ]
-          | _ -> ()
-          for evaluation in performanceEvaluations do
-              match evaluation.State with
-              | PerformancePassed ->
-                  commandDiagnostic
-                      "evidence.performanceBudgetPassed"
-                      DiagnosticInfo
-                      (Some path)
-                      "Every declared normal-play workload satisfies the active performance budget."
-                      "Keep the cited artifact fresh when the workload or target changes."
-                      ([ evaluation.DeclarationId; evaluation.ArtifactPath ] @ evaluation.WorkloadIds)
-              | state ->
-                  let id, message, correction =
-                      match state with
-                      | PerformanceMalformed ->
-                          "evidence.performanceBudgetMalformed",
-                          "An active performance budget could not be bound to well-formed measured evidence.",
-                          "Correct the typed performanceBudget declaration and regenerate the standard performance artifact."
-                      | PerformanceFailed ->
-                          "evidence.performanceBudgetExceeded",
-                          "One or more active normal-play workloads exceed the declared performance budget.",
-                          "Improve the normal-play workload or record a deliberate deferral linked to open blocking performance debt."
-                      | PerformanceDeferred ->
-                          "evidence.performanceBudgetDeferred",
-                          "An active performance target remains unresolved behind declared performance debt.",
-                          "Keep the linked debt open and blocking until a fresh performance artifact satisfies every declared workload threshold."
-                      | PerformancePassed -> failwith "unreachable"
+        [
+            if not (String.Equals(artifact.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                evidenceIdentityMismatch path workId artifact.WorkId.Value
+            if artifact.Stage <> LifecycleStage.Evidence then
+                malformedEvidenceArtifact
+                    path
+                    $"Evidence stage '{IdentifiersModule.stageValue artifact.Stage}' is not 'evidence'."
+            if normalizeRelativePath artifact.SourceSpec <> specPath workId then
+                malformedEvidenceArtifact
+                    path
+                    $"Evidence sourceSpec '{artifact.SourceSpec}' does not match '{specPath workId}'."
+            if normalizeRelativePath artifact.SourceTasks <> tasksPath workId then
+                malformedEvidenceArtifact
+                    path
+                    $"Evidence sourceTasks '{artifact.SourceTasks}' does not match '{tasksPath workId}'."
+            if normalizeRelativePath artifact.SourceAnalysis <> analysisPath workId then
+                malformedEvidenceArtifact
+                    path
+                    $"Evidence sourceAnalysis '{artifact.SourceAnalysis}' does not match '{analysisPath workId}'."
+            if not (List.isEmpty unknowns) then
+                unknownEvidenceReference path (String.concat "," unknowns)
+            if not (List.isEmpty unsupportedResults) then
+                unsupportedEvidenceResultState path unsupportedResults
+            if not (List.isEmpty undisclosedSynthetic) then
+                undisclosedSyntheticEvidence path undisclosedSynthetic
+            if not (List.isEmpty missingDeferralFields) then
+                missingDeferralRationale path missingDeferralFields
+            if not (List.isEmpty missingVisualArtifacts) then
+                missingVisualInspectionArtifact path missingVisualArtifacts
+            if not (List.isEmpty missingArtifactPaths) then
+                evidenceArtifactNotFound path missingArtifactPaths
+            if not (List.isEmpty selfShipVerdictPaths) then
+                evidenceSelfShipVerdictCitedFromEvidence path selfShipVerdictPaths
+            match performanceIntent with
+            | Some intent when
+                intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase)
+                && List.isEmpty performanceIntentBindings
+                ->
+                errorDiagnostic
+                    "evidence.performanceIntentUnbound"
+                    (Some path)
+                    "The active early performance intent is not bound by any performanceBudget declaration."
+                    "Copy the canonical performanceIntent into performanceBudget.intent and cite its measured artifact."
+                    [ intent.Id ]
+            | _ -> ()
+            for evaluation in performanceEvaluations do
+                match evaluation.State with
+                | PerformancePassed ->
+                    commandDiagnostic
+                        "evidence.performanceBudgetPassed"
+                        DiagnosticInfo
+                        (Some path)
+                        "Every declared normal-play workload satisfies the active performance budget."
+                        "Keep the cited artifact fresh when the workload or target changes."
+                        ([ evaluation.DeclarationId; evaluation.ArtifactPath ] @ evaluation.WorkloadIds)
+                | state ->
+                    let id, message, correction =
+                        match state with
+                        | PerformanceMalformed ->
+                            "evidence.performanceBudgetMalformed",
+                            "An active performance budget could not be bound to well-formed measured evidence.",
+                            "Correct the typed performanceBudget declaration and regenerate the standard performance artifact."
+                        | PerformanceFailed ->
+                            "evidence.performanceBudgetExceeded",
+                            "One or more active normal-play workloads exceed the declared performance budget.",
+                            "Improve the normal-play workload or record a deliberate deferral linked to open blocking performance debt."
+                        | PerformanceDeferred ->
+                            "evidence.performanceBudgetDeferred",
+                            "An active performance target remains unresolved behind declared performance debt.",
+                            "Keep the linked debt open and blocking until a fresh performance artifact satisfies every declared workload threshold."
+                        | PerformancePassed -> failwith "unreachable"
 
-                  let details = String.concat "; " evaluation.Reasons
+                    let details = String.concat "; " evaluation.Reasons
 
-                  errorDiagnostic
-                      id
-                      (Some path)
-                      $"{message} {details}"
-                      correction
-                      ([ evaluation.DeclarationId; evaluation.ArtifactPath ]
-                       @ evaluation.WorkloadIds
-                       @ (evaluation.DeferralIssue |> Option.toList))
-          // FS.GG.SDD#350 (FR-005). A receipt SDD recorded cannot reach here incoherent —
-          // `TestReport.parse` derives `outcome` from the counts. A receipt somebody TYPED can, and
-          // `evidence.yml` is a text file. Without this, `observedRun` would just be a new and more
-          // official-looking place to write `pass` by hand.
-          for declaration in artifact.Evidence do
-              match declaration.ObservedRun with
-              | Some run ->
-                  match observedRunInconsistency run with
-                  | Some reason -> observedRunInconsistent path [ declaration.Id.Value ] reason
-                  | None -> ()
-              | None -> ()
+                    errorDiagnostic
+                        id
+                        (Some path)
+                        $"{message} {details}"
+                        correction
+                        ([ evaluation.DeclarationId; evaluation.ArtifactPath ]
+                         @ evaluation.WorkloadIds
+                         @ (evaluation.DeferralIssue |> Option.toList))
+            // FS.GG.SDD#350 (FR-005). A receipt SDD recorded cannot reach here incoherent —
+            // `TestReport.parse` derives `outcome` from the counts. A receipt somebody TYPED can, and
+            // `evidence.yml` is a text file. Without this, `observedRun` would just be a new and more
+            // official-looking place to write `pass` by hand.
+            for declaration in artifact.Evidence do
+                match declaration.ObservedRun with
+                | Some run ->
+                    match observedRunInconsistency run with
+                    | Some reason -> observedRunInconsistent path [ declaration.Id.Value ] reason
+                    | None -> ()
+                | None -> ()
 
-              // FS.GG.SDD#865 (FR-003), and the argument above applies with MORE force here: a record
-              // receipt is always typed — there is no runner to derive one from — so its form is the
-              // entirety of what stops `recordReceipt` becoming exactly the "new and more
-              // official-looking place to write `pass` by hand" that sentence warns about. Raised at
-              // `evidence` as well as at `verify` so the author learns which field is wrong while they
-              // are still writing the file, not at the merge boundary.
-              match declaration.RecordReceipt with
-              | Some receipt ->
-                  match recordReceiptInconsistency receipt with
-                  | Some reason -> recordReceiptInvalid path [ declaration.Id.Value ] reason
-                  | None -> ()
-              | None -> ()
+                // FS.GG.SDD#865 (FR-003), and the argument above applies with MORE force here: a record
+                // receipt is always typed — there is no runner to derive one from — so its form is the
+                // entirety of what stops `recordReceipt` becoming exactly the "new and more
+                // official-looking place to write `pass` by hand" that sentence warns about. Raised at
+                // `evidence` as well as at `verify` so the author learns which field is wrong while they
+                // are still writing the file, not at the merge boundary.
+                match declaration.RecordReceipt with
+                | Some receipt ->
+                    match recordReceiptInconsistency receipt with
+                    | Some reason -> recordReceiptInvalid path [ declaration.Id.Value ] reason
+                    | None -> ()
+                | None -> ()
 
-              if
-                  declaration.JourneyReceipt.IsSome
-                  || declaration.RequirementRefs
-                     |> List.exists (fun requirement ->
-                         taskFacts.Tasks
-                         |> List.exists (fun task ->
-                             isProductionJourneyTagged task.RequiredSkills
-                             && task.Requirements |> List.contains requirement))
-              then
-                  let problems = journeyReceiptProblems declaration
+                if
+                    declaration.JourneyReceipt.IsSome
+                    || declaration.RequirementRefs
+                       |> List.exists (fun requirement ->
+                           taskFacts.Tasks
+                           |> List.exists (fun task ->
+                               isProductionJourneyTagged task.RequiredSkills
+                               && task.Requirements |> List.contains requirement))
+                then
+                    let problems = journeyReceiptProblems declaration
 
-                  if not (List.isEmpty problems) then
-                      let details = String.concat "; " problems
+                    if not (List.isEmpty problems) then
+                        let details = String.concat "; " problems
 
-                      errorDiagnostic
-                          "evidence.productionJourneyReceiptInvalid"
-                          (Some path)
-                          $"Production-journey receipt is invalid: {details}."
-                          "Import the complete producer journeyReceipt schema-v1 map bound to the same passing observed test report."
-                          [ declaration.Id.Value ]
+                        errorDiagnostic
+                            "evidence.productionJourneyReceiptInvalid"
+                            (Some path)
+                            $"Production-journey receipt is invalid: {details}."
+                            "Import the complete producer journeyReceipt schema-v1 map bound to the same passing observed test report."
+                            [ declaration.Id.Value ]
 
-                  match declaration.JourneyReceipt with
-                  | Some receipt when citedPathIsContained receipt.ObservedReportSource ->
-                      match artifactBytes receipt.ObservedReportSource with
-                      | Some reportBytes ->
-                          let digest = SchemaVersionModule.sha256Bytes reportBytes
-                          let actualDigest = $"sha256:{digest.Value}"
+                    match declaration.JourneyReceipt with
+                    | Some receipt when citedPathIsContained receipt.ObservedReportSource ->
+                        match artifactBytes receipt.ObservedReportSource with
+                        | Some reportBytes ->
+                            let digest = SchemaVersionModule.sha256Bytes reportBytes
+                            let actualDigest = $"sha256:{digest.Value}"
 
-                          if
-                              not (
-                                  receipt.ObservedReportDigest.Equals(actualDigest, StringComparison.OrdinalIgnoreCase)
-                              )
-                          then
-                              errorDiagnostic
-                                  "evidence.productionJourneyReceiptStale"
-                                  (Some path)
-                                  "Production-journey receipt digest does not match the cited test report bytes."
-                                  "Regenerate the producer receipt from the current observed test report."
-                                  [ declaration.Id.Value; receipt.ObservedReportSource ]
-                      | None -> ()
-                  | Some receipt ->
-                      errorDiagnostic
-                          "evidence.productionJourneyReceiptInvalid"
-                          (Some path)
-                          "Production-journey receipt cites a report path outside the repository."
-                          "Use a contained repository-relative observedTestReport.source path."
-                          [ declaration.Id.Value; receipt.ObservedReportSource ]
-                  | None -> ()
-          if evidenceSourceSnapshotStale currentSnapshots artifact.SourceSnapshots then
-              staleEvidenceSource
-                  path
-                  (artifact.SourceSnapshots
-                   |> List.map (fun snapshot -> snapshot.Label)
-                   |> List.filter (String.IsNullOrWhiteSpace >> not)) ]
+                            if
+                                not (
+                                    receipt.ObservedReportDigest.Equals(
+                                        actualDigest,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                            then
+                                errorDiagnostic
+                                    "evidence.productionJourneyReceiptStale"
+                                    (Some path)
+                                    "Production-journey receipt digest does not match the cited test report bytes."
+                                    "Regenerate the producer receipt from the current observed test report."
+                                    [ declaration.Id.Value; receipt.ObservedReportSource ]
+                        | None -> ()
+                    | Some receipt ->
+                        errorDiagnostic
+                            "evidence.productionJourneyReceiptInvalid"
+                            (Some path)
+                            "Production-journey receipt cites a report path outside the repository."
+                            "Use a contained repository-relative observedTestReport.source path."
+                            [ declaration.Id.Value; receipt.ObservedReportSource ]
+                    | None -> ()
+            if evidenceSourceSnapshotStale currentSnapshots artifact.SourceSnapshots then
+                staleEvidenceSource
+                    path
+                    (artifact.SourceSnapshots
+                     |> List.map (fun snapshot -> snapshot.Label)
+                     |> List.filter (String.IsNullOrWhiteSpace >> not))
+        ]
 
     let evidenceDispositions
         (obligations: EvidenceObligation list)
@@ -1461,35 +1513,37 @@ module internal HandlersEvidence =
                 else
                     "blocking", [ "evidence.missingRequiredEvidence" ]
 
-            ({ ObligationId = obligation.ObligationId
-               State = state
-               // #398: only a *supported* obligation can be observed — every other state either
-               // claims no pass (deferred/stale/blocking/advisory), discloses itself as unproven
-               // (synthetic), or is already refused (invalid). So the two counters partition
-               // `supported` exactly and `supported = selfAttested + observed` holds by construction.
-               //
-               // The rule itself lives in `Artifacts` (`obligationIsObserved`) and is CONSUMED here,
-               // not restated: `verify`, `ship`, and the committed verdict must not be able to drift
-               // on what "observed" means, which is the same discipline #349's `missingCitedArtifacts`
-               // imposed on what "cited" means. Today it is false for everything, and saying so out
-               // loud — in the console and in the committed verdict — is the feature.
-               //
-               // FS.GG.SDD#865 changed the rule this line CONSUMES, not the line: `obligationDischarged`
-               // dispatches on the obligation's own declared class, so a record-discharged obligation is
-               // observed when its record is recorded and a test obligation still only when its run was
-               // observed. The kind-directedness lives in `Artifacts` beside the two rules it chooses
-               // between, so this site cannot drift from the `TD-` site or from `ship`.
-               Observed = state = "supported" && obligationDischarged obligation.DischargeClass matches
-               ClassifiedRequirement = isGameplayTestTagged obligation.RequiredSkillOrCapabilityTags
-               JourneyRequirement = isProductionJourneyTagged obligation.RequiredSkillOrCapabilityTags
-               RecordRequirement = isRecordDischargeClass obligation.DischargeClass
-               EvidenceIds =
-                 matches
-                 |> List.map (fun declaration -> declaration.Id.Value)
-                 |> List.distinct
-                 |> List.sort
-               TaskIds = obligation.LinkedTaskIds |> List.map _.Value |> List.sort
-               DiagnosticIds = diagnostics |> List.distinct |> List.sort }
+            ({
+                ObligationId = obligation.ObligationId
+                State = state
+                // #398: only a *supported* obligation can be observed — every other state either
+                // claims no pass (deferred/stale/blocking/advisory), discloses itself as unproven
+                // (synthetic), or is already refused (invalid). So the two counters partition
+                // `supported` exactly and `supported = selfAttested + observed` holds by construction.
+                //
+                // The rule itself lives in `Artifacts` (`obligationIsObserved`) and is CONSUMED here,
+                // not restated: `verify`, `ship`, and the committed verdict must not be able to drift
+                // on what "observed" means, which is the same discipline #349's `missingCitedArtifacts`
+                // imposed on what "cited" means. Today it is false for everything, and saying so out
+                // loud — in the console and in the committed verdict — is the feature.
+                //
+                // FS.GG.SDD#865 changed the rule this line CONSUMES, not the line: `obligationDischarged`
+                // dispatches on the obligation's own declared class, so a record-discharged obligation is
+                // observed when its record is recorded and a test obligation still only when its run was
+                // observed. The kind-directedness lives in `Artifacts` beside the two rules it chooses
+                // between, so this site cannot drift from the `TD-` site or from `ship`.
+                Observed = state = "supported" && obligationDischarged obligation.DischargeClass matches
+                ClassifiedRequirement = isGameplayTestTagged obligation.RequiredSkillOrCapabilityTags
+                JourneyRequirement = isProductionJourneyTagged obligation.RequiredSkillOrCapabilityTags
+                RecordRequirement = isRecordDischargeClass obligation.DischargeClass
+                EvidenceIds =
+                    matches
+                    |> List.map (fun declaration -> declaration.Id.Value)
+                    |> List.distinct
+                    |> List.sort
+                TaskIds = obligation.LinkedTaskIds |> List.map _.Value |> List.sort
+                DiagnosticIds = diagnostics |> List.distinct |> List.sort
+            }
             : EvidenceDispositionDraft))
 
     let evidenceDispositionDiagnostics path (dispositions: EvidenceDispositionDraft list) =
@@ -1500,15 +1554,17 @@ module internal HandlersEvidence =
             |> List.distinct
             |> List.sort
 
-        [ let missing = idsFor "missing"
+        [
+            let missing = idsFor "missing"
 
-          if not (List.isEmpty missing) then
-              missingRequiredEvidence path missing
+            if not (List.isEmpty missing) then
+                missingRequiredEvidence path missing
 
-          let stale = idsFor "stale"
+            let stale = idsFor "stale"
 
-          if not (List.isEmpty stale) then
-              staleEvidence path stale ]
+            if not (List.isEmpty stale) then
+                staleEvidence path stale
+        ]
 
     /// WI-4 (ADR-0048): a classified `{gameplay}` FR obligation is UNMET unless discharged by a real
     /// non-synthetic test (`"supported"`) or an accepted deferral (`"deferred"`, a first-class outcome
@@ -1548,29 +1604,31 @@ module internal HandlersEvidence =
             elif warningCount > 0 then "needsEvidenceReview"
             else "evidenceReady"
 
-        { WorkId = workId
-          Stage = "evidence"
-          Status = readiness
-          EvidencePath = evidencePath workId
-          DeclarationIds =
-            artifact.Evidence
-            |> List.map (fun declaration -> declaration.Id.Value)
-            |> List.distinct
-            |> List.sort
-          DeclarationCount = artifact.Evidence.Length
-          ObligationCount = dispositions.Length
-          SupportedCount = count "supported"
-          DeferredCount = count "deferred"
-          MissingCount = count "missing"
-          StaleCount = count "stale"
-          SyntheticCount = count "synthetic"
-          InvalidCount = count "invalid"
-          AdvisoryCount = count "advisory"
-          BlockingCount = blockingCount
-          ClassifiedObligationsUnmetCount = classifiedObligationsUnmetCount dispositions
-          JourneyObligationsUnmetCount = journeyObligationsUnmetCount dispositions
-          SourceSnapshotCount = artifact.SourceSnapshots.Length
-          Readiness = readiness }
+        {
+            WorkId = workId
+            Stage = "evidence"
+            Status = readiness
+            EvidencePath = evidencePath workId
+            DeclarationIds =
+                artifact.Evidence
+                |> List.map (fun declaration -> declaration.Id.Value)
+                |> List.distinct
+                |> List.sort
+            DeclarationCount = artifact.Evidence.Length
+            ObligationCount = dispositions.Length
+            SupportedCount = count "supported"
+            DeferredCount = count "deferred"
+            MissingCount = count "missing"
+            StaleCount = count "stale"
+            SyntheticCount = count "synthetic"
+            InvalidCount = count "invalid"
+            AdvisoryCount = count "advisory"
+            BlockingCount = blockingCount
+            ClassifiedObligationsUnmetCount = classifiedObligationsUnmetCount dispositions
+            JourneyObligationsUnmetCount = journeyObligationsUnmetCount dispositions
+            SourceSnapshotCount = artifact.SourceSnapshots.Length
+            Readiness = readiness
+        }
 
     let renderEvidenceSourceSnapshot (snapshot: EvidenceSourceSnapshot) =
         // Absence is absence (FS.GG.SDD#182): an unset digest omits its line rather than
@@ -1578,9 +1636,11 @@ module internal HandlersEvidence =
         // line rather than inventing `1` for a source that declared none. Same
         // omit-when-`None` convention as `renderOptionalScalar` below.
         let optionalFields =
-            [ snapshot.Digest |> Option.map (fun digest -> $"    digest: {digest}")
-              snapshot.SchemaVersion
-              |> Option.map (fun schema -> $"    schemaVersion: {schema}") ]
+            [
+                snapshot.Digest |> Option.map (fun digest -> $"    digest: {digest}")
+                snapshot.SchemaVersion
+                |> Option.map (fun schema -> $"    schemaVersion: {schema}")
+            ]
             |> List.choose (Option.map (fun line -> "\n" + line))
             |> String.concat ""
 
@@ -1592,21 +1652,23 @@ module internal HandlersEvidence =
     // each declaration as `  - id: …`; an empty list renders `evidence: []`. The front matter and
     // `sourceSnapshots` above it stay tool-owned (canonical / recomputed), so they are hand-rendered.
     let private evidenceArtifactAuthoredFields: ArtifactCodec.FieldCodec<EvidenceArtifact> list =
-        [ ArtifactCodec.recordList
-              "evidence"
-              EvidenceCodec.declarationFields
-              EvidenceCodec.declarationSeed
-              (fun artifact -> artifact.Evidence |> List.sortBy (fun declaration -> declaration.Id.Value))
-              (fun value artifact -> { artifact with Evidence = value })
-          ArtifactCodec.scalarBlock
-              "lifecycleNotes"
-              // An empty authored list seeds the canonical next-action note (unchanged behaviour).
-              (fun artifact ->
-                  if List.isEmpty artifact.LifecycleNotes then
-                      [ defaultEvidenceLifecycleNote ]
-                  else
-                      artifact.LifecycleNotes)
-              (fun value artifact -> { artifact with LifecycleNotes = value }) ]
+        [
+            ArtifactCodec.recordList
+                "evidence"
+                EvidenceCodec.declarationFields
+                EvidenceCodec.declarationSeed
+                (fun artifact -> artifact.Evidence |> List.sortBy (fun declaration -> declaration.Id.Value))
+                (fun value artifact -> { artifact with Evidence = value })
+            ArtifactCodec.scalarBlock
+                "lifecycleNotes"
+                // An empty authored list seeds the canonical next-action note (unchanged behaviour).
+                (fun artifact ->
+                    if List.isEmpty artifact.LifecycleNotes then
+                        [ defaultEvidenceLifecycleNote ]
+                    else
+                        artifact.LifecycleNotes)
+                (fun value artifact -> { artifact with LifecycleNotes = value })
+        ]
 
     let evidenceArtifactText workId (artifact: EvidenceArtifact) (summary: EvidenceSummary) =
         let sourceSnapshots =
@@ -1773,7 +1835,8 @@ sourceAnalysis: {analysisPath workId}
                             // differ only in `SourceSnapshots`, so every other check is unaffected.
                             let artifact =
                                 { merged with
-                                    SourceSnapshots = currentSnapshots }
+                                    SourceSnapshots = currentSnapshots
+                                }
 
                             let validationDiagnostics =
                                 let performanceIntent =
@@ -1857,8 +1920,10 @@ sourceAnalysis: {analysisPath workId}
                 let evidenceEffects =
                     match evidenceText with
                     | Some text ->
-                        [ CreateDirectory($"work/{workId}")
-                          WriteFile(evidencePath workId, text, HybridArtifact MergePolicies.evidence) ]
+                        [
+                            CreateDirectory($"work/{workId}")
+                            WriteFile(evidencePath workId, text, HybridArtifact MergePolicies.evidence)
+                        ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,

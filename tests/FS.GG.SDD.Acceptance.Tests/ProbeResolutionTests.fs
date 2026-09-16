@@ -30,9 +30,11 @@ module ProbeResolutionTests =
         let root = newProductRoot ()
 
         Assert.Equal(
-            { Executable = "dotnet"
-              Arguments = [ "build" ]
-              WorkingDirectory = root },
+            {
+                Executable = "dotnet"
+                Arguments = [ "build" ]
+                WorkingDirectory = root
+            },
             resolveBuildCommand None root
         )
 
@@ -42,9 +44,11 @@ module ProbeResolutionTests =
 
         Assert.Equal(
             Some
-                { Executable = "dotnet"
-                  Arguments = [ "run"; "--project"; "App.fsproj" ]
-                  WorkingDirectory = root },
+                {
+                    Executable = "dotnet"
+                    Arguments = [ "run"; "--project"; "App.fsproj" ]
+                    WorkingDirectory = root
+                },
             resolveRunCommand None root
         )
 
@@ -74,15 +78,19 @@ module ProbeResolutionTests =
         let root = newProductRoot ()
 
         let declared: DeclaredCommand =
-            { Executable = "mybuild"
-              Arguments = [ "--fast" ] }
+            {
+                Executable = "mybuild"
+                Arguments = [ "--fast" ]
+            }
 
         let resolved = resolveBuildCommand (Some declared) root
 
         Assert.Equal(
-            { Executable = "mybuild"
-              Arguments = [ "--fast" ]
-              WorkingDirectory = root },
+            {
+                Executable = "mybuild"
+                Arguments = [ "--fast" ]
+                WorkingDirectory = root
+            },
             resolved
         )
 
@@ -93,14 +101,18 @@ module ProbeResolutionTests =
         let root = newProductRoot ()
 
         let declared: DeclaredCommand =
-            { Executable = "myrun"
-              Arguments = [ "--headless" ] }
+            {
+                Executable = "myrun"
+                Arguments = [ "--headless" ]
+            }
 
         Assert.Equal(
             Some
-                { Executable = "myrun"
-                  Arguments = [ "--headless" ]
-                  WorkingDirectory = root },
+                {
+                    Executable = "myrun"
+                    Arguments = [ "--headless" ]
+                    WorkingDirectory = root
+                },
             resolveRunCommand (Some declared) root
         )
 
@@ -113,8 +125,10 @@ module ProbeResolutionTests =
         let root = productWith [ "App.fsproj" ]
 
         let declared: DeclaredCommand =
-            { Executable = blank
-              Arguments = [ "ignored" ] }
+            {
+                Executable = blank
+                Arguments = [ "ignored" ]
+            }
 
         Assert.Equal(resolveBuildCommand None root, resolveBuildCommand (Some declared) root)
         Assert.Equal(resolveRunCommand None root, resolveRunCommand (Some declared) root)
@@ -146,8 +160,10 @@ module ProbeResolutionTests =
         let root = newProductRoot ()
 
         let declared: DeclaredCommand =
-            { Executable = "fsgg-sdd-nonexistent-binary-xyz"
-              Arguments = [] }
+            {
+                Executable = "fsgg-sdd-nonexistent-binary-xyz"
+                Arguments = []
+            }
 
         let result = buildProbe (Some declared) root
         Assert.False(result.Started)
@@ -212,8 +228,10 @@ module ProbeResolutionTests =
         let root = newProductRoot ()
 
         let declared: DeclaredCommand =
-            { Executable = "sh"
-              Arguments = childExitsGrandchildHoldsPipes }
+            {
+                Executable = "sh"
+                Arguments = childExitsGrandchildHoldsPipes
+            }
 
         let result = runProbe (Some declared) root
 
@@ -248,18 +266,20 @@ module ProbeResolutionTests =
 
     /// A SYNTHETIC canonical descriptor — no real provider; the build/run fields drive the probes.
     let private syntheticDescriptor: ProviderDescriptor =
-        { Name = "demo"
-          ContractVersion = "1.0.0"
-          TemplateId = "demo-template"
-          Source = "__FIXTURE__/ok"
-          Parameters = []
-          Build = None
-          Test = None
-          Run = None
-          Verify = None
-          NameParameter = "name"
-          IdentifierParameter = None
-          MinimumCliVersion = None }
+        {
+            Name = "demo"
+            ContractVersion = "1.0.0"
+            TemplateId = "demo-template"
+            Source = "__FIXTURE__/ok"
+            Parameters = []
+            Build = None
+            Test = None
+            Run = None
+            Verify = None
+            NameParameter = "name"
+            IdentifierParameter = None
+            MinimumCliVersion = None
+        }
 
     // T020 (SC-005 / FR-009): a descriptor declaring no build/run falls through to the `dotnet`
     // defaults — the reference-provider case, observably unchanged.
@@ -268,17 +288,21 @@ module ProbeResolutionTests =
         let root = productWith [ "App.fsproj" ]
 
         Assert.Equal(
-            { Executable = "dotnet"
-              Arguments = [ "build" ]
-              WorkingDirectory = root },
+            {
+                Executable = "dotnet"
+                Arguments = [ "build" ]
+                WorkingDirectory = root
+            },
             resolveBuildCommand syntheticDescriptor.Build root
         )
 
         Assert.Equal(
             Some
-                { Executable = "dotnet"
-                  Arguments = [ "run"; "--project"; "App.fsproj" ]
-                  WorkingDirectory = root },
+                {
+                    Executable = "dotnet"
+                    Arguments = [ "run"; "--project"; "App.fsproj" ]
+                    WorkingDirectory = root
+                },
             resolveRunCommand syntheticDescriptor.Run root
         )
 
@@ -291,7 +315,8 @@ module ProbeResolutionTests =
 
         let descriptor =
             { syntheticDescriptor with
-                Build = Some { Executable = "true"; Arguments = [] } }
+                Build = Some { Executable = "true"; Arguments = [] }
+            }
 
         let result = buildProbe descriptor.Build root
         Assert.True(result.Started)
@@ -304,7 +329,8 @@ module ProbeResolutionTests =
 
         let descriptor =
             { syntheticDescriptor with
-                Run = Some { Executable = "true"; Arguments = [] } }
+                Run = Some { Executable = "true"; Arguments = [] }
+            }
 
         let result = runProbe descriptor.Run root
         Assert.True(result.Started)

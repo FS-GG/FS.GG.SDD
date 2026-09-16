@@ -72,9 +72,11 @@ lifecycleNotes:
     let private declarationsOf label text =
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact.Evidence
         | Error diagnostics -> failwith $"Expected the {label} evidence artifact to parse, got {diagnostics}."
@@ -82,9 +84,11 @@ lifecycleNotes:
     [<Fact>]
     let ``parseEvidenceArtifact reads schema version 1 shape`` () =
         let snapshot =
-            { Path = evidencePath
-              Text = validEvidenceYaml
-              RawBytes = None }
+            {
+                Path = evidencePath
+                Text = validEvidenceYaml
+                RawBytes = None
+            }
 
         match parseEvidenceArtifact snapshot with
         | Ok artifact ->
@@ -126,9 +130,11 @@ lifecycleNotes:
         let declaration =
             match
                 parseEvidenceArtifact
-                    { Path = evidencePath
-                      Text = withBudget
-                      RawBytes = None }
+                    {
+                        Path = evidencePath
+                        Text = withBudget
+                        RawBytes = None
+                    }
             with
             | Ok artifact -> Assert.Single artifact.Evidence
             | Error diagnostics -> failwith $"Expected performance evidence to parse, got {diagnostics}."
@@ -190,7 +196,9 @@ lifecycleNotes:
                             MaxCatchUpFrames = 0
                             MeasurementScope = "normal"
                             RequiredCapability = "headless"
-                            DeferralIssue = Some "FS-GG/Game#999" } }
+                            DeferralIssue = Some "FS-GG/Game#999"
+                        }
+            }
 
         let measured =
             """{
@@ -244,7 +252,9 @@ lifecycleNotes:
                             MaxCatchUpFrames = 0
                             MeasurementScope = "normal"
                             RequiredCapability = "present-timing"
-                            LiveCompositorRequired = true } }
+                            LiveCompositorRequired = true
+                        }
+            }
 
         let sample =
             """{
@@ -319,7 +329,9 @@ lifecycleNotes:
                             MaxP99Ms = 25m
                             MaxCatchUpFrames = 0
                             MeasurementScope = "normal"
-                            RequiredCapability = "headless" } }
+                            RequiredCapability = "headless"
+                        }
+            }
 
         let stale =
             """{"contractVersion":"performance-evidence-v1","sampleSets":[{
@@ -355,12 +367,14 @@ lifecycleNotes:
                 MaxP99Ms = 25m
                 MaxCatchUpFrames = 0
                 MeasurementScope = "normal"
-                RequiredCapability = "headless" }
+                RequiredCapability = "headless"
+            }
 
         let declaration =
             { EvidenceCodec.declarationSeed with
                 Id = createEvidenceId "EV690" |> Result.defaultWith failwith
-                PerformanceBudget = Some budget }
+                PerformanceBudget = Some budget
+            }
 
         let sample workloadId digest workloadClass host captured contamination =
             $"""{{"workloadId":"{workloadId}","workloadDefinitionDigest":"{digest}",
@@ -402,12 +416,16 @@ lifecycleNotes:
                             )
                         )
                     ))
-                [ { declaration with
-                      PerformanceBudget =
-                          Some
-                              { budget with
-                                  StressWorkloadIds = []
-                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ] } } ]
+                [
+                    { declaration with
+                        PerformanceBudget =
+                            Some
+                                { budget with
+                                    StressWorkloadIds = []
+                                    WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                                }
+                    }
+                ]
             |> Assert.Single
 
         Assert.Contains(
@@ -418,12 +436,16 @@ lifecycleNotes:
         let omittedBoolean =
             evaluatePerformanceBudgets
                 (fun _ -> Some(artifact (normal.Replace(""""probeReadbackContaminated":false,""", ""))))
-                [ { declaration with
-                      PerformanceBudget =
-                          Some
-                              { budget with
-                                  StressWorkloadIds = []
-                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ] } } ]
+                [
+                    { declaration with
+                        PerformanceBudget =
+                            Some
+                                { budget with
+                                    StressWorkloadIds = []
+                                    WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                                }
+                    }
+                ]
             |> Assert.Single
 
         Assert.Contains(
@@ -434,12 +456,16 @@ lifecycleNotes:
         let nonIsoSample =
             evaluatePerformanceBudgets
                 (fun _ -> Some(artifact (normal.Replace("2026-07-26T00:00:00Z", "07/26/2026 00:00:00"))))
-                [ { declaration with
-                      PerformanceBudget =
-                          Some
-                              { budget with
-                                  StressWorkloadIds = []
-                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ] } } ]
+                [
+                    { declaration with
+                        PerformanceBudget =
+                            Some
+                                { budget with
+                                    StressWorkloadIds = []
+                                    WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                                }
+                    }
+                ]
             |> Assert.Single
 
         Assert.Contains(nonIsoSample.Reasons, fun reason -> reason.Contains("capturedAtUtc must be an ISO-8601"))
@@ -447,13 +473,17 @@ lifecycleNotes:
         let nonIsoDeclaration =
             evaluatePerformanceBudgets
                 (fun _ -> Some(artifact normal))
-                [ { declaration with
-                      PerformanceBudget =
-                          Some
-                              { budget with
-                                  StressWorkloadIds = []
-                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
-                                  CapturedAfterUtc = "07/25/2026 00:00:00" } } ]
+                [
+                    { declaration with
+                        PerformanceBudget =
+                            Some
+                                { budget with
+                                    StressWorkloadIds = []
+                                    WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                                    CapturedAfterUtc = "07/25/2026 00:00:00"
+                                }
+                    }
+                ]
             |> Assert.Single
 
         Assert.Contains(
@@ -479,7 +509,9 @@ lifecycleNotes:
                             MaxP99Ms = 25m
                             MaxCatchUpFrames = 0
                             MeasurementScope = "normal"
-                            RequiredCapability = "headless" } }
+                            RequiredCapability = "headless"
+                        }
+            }
 
         let summary = "scenario=idle-play p95-ms=10 p99-ms=12 catch-up-frames=0"
 
@@ -496,9 +528,11 @@ lifecycleNotes:
         // otherwise a re-run rewrites `null` → the quoted string `"null"` (issue #161).
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = validEvidenceYaml
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = validEvidenceYaml
+                    RawBytes = None
+                }
         with
         | Ok artifact ->
             let declaration = Assert.Single(artifact.Evidence)
@@ -518,9 +552,11 @@ lifecycleNotes:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact ->
             let declaration = Assert.Single(artifact.Evidence)
@@ -563,9 +599,11 @@ lifecycleNotes:
     let private singleDeclarationOf label text =
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> Assert.Single(artifact.Evidence)
         | Error diagnostics -> failwith $"Expected the {label} evidence artifact to parse, got {diagnostics}."
@@ -596,8 +634,10 @@ lifecycleNotes:
 
         Assert.Equal(
             Some
-                { StandsInFor = "null"
-                  Reason = "null" },
+                {
+                    StandsInFor = "null"
+                    Reason = "null"
+                },
             (singleDeclarationOf "quoted" text).SyntheticDisclosure
         )
 
@@ -635,9 +675,11 @@ lifecycleNotes:
     let private singleSnapshotOf text =
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> Assert.Single(artifact.SourceSnapshots)
         | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
@@ -690,9 +732,11 @@ lifecycleNotes:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> Assert.Contains(artifact.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
         | Error diagnostics -> failwith $"Expected duplicate ids to be artifact diagnostics, got {diagnostics}."
@@ -812,9 +856,11 @@ lifecycleNotes:
         let declarations =
             match
                 parseEvidence
-                    { Path = "docs/examples/lifecycle-artifacts/evidence.yml"
-                      Text = text
-                      RawBytes = None }
+                    {
+                        Path = "docs/examples/lifecycle-artifacts/evidence.yml"
+                        Text = text
+                        RawBytes = None
+                    }
             with
             | Ok declarations -> declarations
             | Error diagnostics -> failwith $"the shipped example does not parse: %A{diagnostics}"
@@ -838,9 +884,11 @@ lifecycleNotes:
     let private diagnosticsOf text =
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact.Diagnostics
         | Error diagnostics -> diagnostics
@@ -883,9 +931,11 @@ lifecycleNotes:
         let declarations =
             match
                 parseEvidenceArtifact
-                    { Path = evidencePath
-                      Text = citedPathYaml "sourceRefs" "../../../../../../../../etc/passwd"
-                      RawBytes = None }
+                    {
+                        Path = evidencePath
+                        Text = citedPathYaml "sourceRefs" "../../../../../../../../etc/passwd"
+                        RawBytes = None
+                    }
             with
             | Ok artifact -> artifact.Evidence
             | Error diagnostics -> failwith $"expected a parse with diagnostics, got %A{diagnostics}"
@@ -906,9 +956,11 @@ lifecycleNotes:
         let cited =
             match
                 parseEvidenceArtifact
-                    { Path = evidencePath
-                      Text = text
-                      RawBytes = None }
+                    {
+                        Path = evidencePath
+                        Text = text
+                        RawBytes = None
+                    }
             with
             | Ok artifact -> artifact.Evidence |> List.collect citedArtifactPaths
             | Error diagnostics -> failwith $"expected the contained path to parse: %A{diagnostics}"

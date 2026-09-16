@@ -76,21 +76,28 @@ module AudioSkillsTests =
     [<Fact>]
     let ``Audio package failures retain Audio ownership in operator diagnostics`` () =
         let cases =
-            [ { RenderingSkills.empty with
-                  ManifestError = Some "boom" },
-              "scaffold.audioSkillManifestMalformed"
-              { RenderingSkills.empty with
-                  NamespaceCollisionIds = [ "fs-gg-sdd-audio" ] },
-              "scaffold.audioSkillNamespaceCollision"
-              { RenderingSkills.empty with
-                  VerifyFailedIds = [ "fs-gg-browser-audio" ] },
-              "scaffold.audioSkillVerifyFailed"
-              { RenderingSkills.empty with
-                  PredicateUnevaluatedIds = [ "fs-gg-browser-audio" ] },
-              "scaffold.audioSkillPredicateUnevaluated"
-              { RenderingSkills.empty with
-                  YieldedIds = [ "fs-gg-browser-audio" ] },
-              "scaffold.ownerSkillCollision" ]
+            [
+                { RenderingSkills.empty with
+                    ManifestError = Some "boom"
+                },
+                "scaffold.audioSkillManifestMalformed"
+                { RenderingSkills.empty with
+                    NamespaceCollisionIds = [ "fs-gg-sdd-audio" ]
+                },
+                "scaffold.audioSkillNamespaceCollision"
+                { RenderingSkills.empty with
+                    VerifyFailedIds = [ "fs-gg-browser-audio" ]
+                },
+                "scaffold.audioSkillVerifyFailed"
+                { RenderingSkills.empty with
+                    PredicateUnevaluatedIds = [ "fs-gg-browser-audio" ]
+                },
+                "scaffold.audioSkillPredicateUnevaluated"
+                { RenderingSkills.empty with
+                    YieldedIds = [ "fs-gg-browser-audio" ]
+                },
+                "scaffold.ownerSkillCollision"
+            ]
 
         for outcome, expected in cases do
             let diagnostics = HandlersScaffold.audioSkillDiagnostics outcome

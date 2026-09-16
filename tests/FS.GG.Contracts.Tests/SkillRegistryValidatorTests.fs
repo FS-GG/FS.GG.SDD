@@ -10,18 +10,22 @@ open Xunit
 module SkillRegistryValidatorTests =
 
     let private row id : Registry.SkillRegistryEntry =
-        { Id = id
-          Scope = "product"
-          Owner = "fs-gg-game"
-          Source = $"FS.GG.Game/template/product-skills/{id}/SKILL.md"
-          Sha256 = String.replicate 64 "a"
-          Mirrored = Registry.MirrorUnspecified
-          MaterializesWhen = Some "profile in [game]" }
+        {
+            Id = id
+            Scope = "product"
+            Owner = "fs-gg-game"
+            Source = $"FS.GG.Game/template/product-skills/{id}/SKILL.md"
+            Sha256 = String.replicate 64 "a"
+            Mirrored = Registry.MirrorUnspecified
+            MaterializesWhen = Some "profile in [game]"
+        }
 
     let private doc (skills: Registry.SkillRegistryEntry list) : Registry.SkillRegistryDocument =
-        { SchemaVersion = 1
-          Parameters = [ "profile" ]
-          Skills = skills }
+        {
+            SchemaVersion = 1
+            Parameters = [ "profile" ]
+            Skills = skills
+        }
 
     let private diagnosticsOf result =
         match result with
@@ -51,18 +55,25 @@ module SkillRegistryValidatorTests =
     let ``an unclassified row is valid - absence is not a diagnostic`` () =
         let result =
             validateOf
-                [ { row "fs-gg-ai" with
-                      Mirrored = Registry.MirrorUnspecified } ]
+                [
+                    { row "fs-gg-ai" with
+                        Mirrored = Registry.MirrorUnspecified
+                    }
+                ]
 
         Assert.Equal(Registry.Valid, result)
 
     [<Fact>]
     let ``a declared true and a declared false are both valid, and both survive as declared`` () =
         let skills =
-            [ { row "fs-gg-game-core" with
-                  Mirrored = Registry.MirrorDeclared true }
-              { row "fs-gg-ballistics" with
-                  Mirrored = Registry.MirrorDeclared false } ]
+            [
+                { row "fs-gg-game-core" with
+                    Mirrored = Registry.MirrorDeclared true
+                }
+                { row "fs-gg-ballistics" with
+                    Mirrored = Registry.MirrorDeclared false
+                }
+            ]
 
         Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc skills))
 
@@ -73,8 +84,11 @@ module SkillRegistryValidatorTests =
         let result =
             Registry.validateSkillRegistry (
                 doc
-                    [ { row "fs-gg-ai" with
-                          Mirrored = Registry.MirrorMalformed "yes" } ]
+                    [
+                        { row "fs-gg-ai" with
+                            Mirrored = Registry.MirrorMalformed "yes"
+                        }
+                    ]
             )
 
         match diagnosticsOf result with
@@ -92,15 +106,21 @@ module SkillRegistryValidatorTests =
         let malformed =
             Registry.validateSkillRegistry (
                 doc
-                    [ { row "fs-gg-ai" with
-                          Mirrored = Registry.MirrorMalformed "" } ]
+                    [
+                        { row "fs-gg-ai" with
+                            Mirrored = Registry.MirrorMalformed ""
+                        }
+                    ]
             )
 
         let unspecified =
             Registry.validateSkillRegistry (
                 doc
-                    [ { row "fs-gg-ai" with
-                          Mirrored = Registry.MirrorUnspecified } ]
+                    [
+                        { row "fs-gg-ai" with
+                            Mirrored = Registry.MirrorUnspecified
+                        }
+                    ]
             )
 
         Assert.Equal(Registry.Valid, unspecified)
@@ -168,7 +188,8 @@ module SkillRegistryValidatorTests =
             { row "fs-gg-sdd-driver" with
                 Scope = "driver"
                 Owner = ".github"
-                MaterializesWhen = Some "has fs-gg-sdd-* and has fs-gg-feedback-*" }
+                MaterializesWhen = Some "has fs-gg-sdd-* and has fs-gg-feedback-*"
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ driverRow ]))
 
@@ -182,7 +203,8 @@ module SkillRegistryValidatorTests =
             { row "drive-board" with
                 Scope = "operator"
                 Owner = ".github"
-                MaterializesWhen = Some "false" }
+                MaterializesWhen = Some "false"
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ operatorRow ]))
 
@@ -212,8 +234,11 @@ module SkillRegistryValidatorTests =
         let result =
             Registry.validateSkillRegistry (
                 doc
-                    [ { row "x" with
-                          Sha256 = String.replicate 64 "a" + "\n" } ]
+                    [
+                        { row "x" with
+                            Sha256 = String.replicate 64 "a" + "\n"
+                        }
+                    ]
             )
 
         Assert.Contains(Registry.MalformedField "sha256", rulesOf result)
@@ -225,8 +250,11 @@ module SkillRegistryValidatorTests =
         let result =
             Registry.validateSkillRegistry (
                 doc
-                    [ { row "x" with
-                          Sha256 = String.replicate 64 "A" } ]
+                    [
+                        { row "x" with
+                            Sha256 = String.replicate 64 "A"
+                        }
+                    ]
             )
 
         Assert.Contains(Registry.MalformedField "sha256", rulesOf result)
@@ -236,8 +264,11 @@ module SkillRegistryValidatorTests =
         let result =
             Registry.validateSkillRegistry (
                 doc
-                    [ { row "x" with
-                          MaterializesWhen = Some "  " } ]
+                    [
+                        { row "x" with
+                            MaterializesWhen = Some "  "
+                        }
+                    ]
             )
 
         Assert.Contains(Registry.MalformedField "materializes-when", rulesOf result)

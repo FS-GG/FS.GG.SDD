@@ -207,7 +207,8 @@ No material ambiguities recorded.
 
         let request =
             { TestSupport.specifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
 
         let report = TestSupport.runRequest request
 
@@ -252,7 +253,8 @@ No material ambiguities recorded.
 
         let request =
             { TestSupport.specifyRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -288,7 +290,8 @@ No material ambiguities recorded.
 
         let request =
             { TestSupport.specifyRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -314,7 +317,8 @@ No material ambiguities recorded.
         let request =
             { TestSupport.specifyRequest root workId title with
                 Title = Some specifyTitle
-                InputText = Some intent }
+                InputText = Some intent
+            }
 
         TestSupport.runRequest request |> ignore
         TestSupport.readRelative root specPath
@@ -504,19 +508,21 @@ No material ambiguities recorded.
         let exitCode, stdout, _ =
             TestSupport.runCliRaw
                 30000
-                [ "specify"
-                  "--root"
-                  root
-                  "--work"
-                  workId
-                  "--title"
-                  title
-                  "--input"
-                  "value: create a native specify command"
-                  "--input"
-                  "scope: one chartered work item"
-                  "--input"
-                  "requirement: create a specification artifact with stable ids" ]
+                [
+                    "specify"
+                    "--root"
+                    root
+                    "--work"
+                    workId
+                    "--title"
+                    title
+                    "--input"
+                    "value: create a native specify command"
+                    "--input"
+                    "scope: one chartered work item"
+                    "--input"
+                    "requirement: create a specification artifact with stable ids"
+                ]
 
         // All three labeled facts were seen: the run succeeded rather than blocking on missing
         // facts, and the spec was authored. (The exit code, and the report on stdout — the

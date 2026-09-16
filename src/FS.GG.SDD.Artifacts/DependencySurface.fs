@@ -12,12 +12,14 @@ module DependencySurface =
     type CapturedSymbol = string
 
     type DependencySurfaceCapture =
-        { SchemaVersion: int
-          PackageId: string
-          Version: string
-          CapturedFrom: string
-          Sha256: string
-          Symbols: CapturedSymbol list }
+        {
+            SchemaVersion: int
+            PackageId: string
+            Version: string
+            CapturedFrom: string
+            Sha256: string
+            Symbols: CapturedSymbol list
+        }
 
     let schemaVersion = 1
 
@@ -38,12 +40,14 @@ module DependencySurface =
     let create packageId version capturedFrom symbols =
         let canonical = canonicalSymbols symbols
 
-        { SchemaVersion = schemaVersion
-          PackageId = packageId
-          Version = version
-          CapturedFrom = capturedFrom
-          Sha256 = symbolDigest canonical
-          Symbols = canonical }
+        {
+            SchemaVersion = schemaVersion
+            PackageId = packageId
+            Version = version
+            CapturedFrom = capturedFrom
+            Sha256 = symbolDigest canonical
+            Symbols = canonical
+        }
 
     let capturePath (baselineRoot: string) (packageId: string) (version: string) =
         // Structural only — no package/feed literal in generic SDD (FR-009). Kept relative
@@ -103,12 +107,14 @@ module DependencySurface =
                     Error "dependency-surface capture: missing required field 'sha256'."
                 else
                     Ok
-                        { SchemaVersion = version
-                          PackageId = packageId
-                          Version = packageVersion
-                          CapturedFrom = capturedFrom
-                          Sha256 = sha256
-                          Symbols = symbols }
+                        {
+                            SchemaVersion = version
+                            PackageId = packageId
+                            Version = packageVersion
+                            CapturedFrom = capturedFrom
+                            Sha256 = sha256
+                            Symbols = symbols
+                        }
             | None -> Error "dependency-surface capture: missing required field 'schemaVersion'."
         with :? JsonException as ex ->
             Error $"dependency-surface capture: malformed JSON ({ex.Message})."

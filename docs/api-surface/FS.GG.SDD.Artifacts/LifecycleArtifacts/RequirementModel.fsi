@@ -43,9 +43,11 @@ module RequirementModel =
         }
 
     type MarkdownRequirementMention =
-        { Id: string
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: string
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     /// The closed set of recognized functional-requirement classification facets (ADR-0048),
     /// lowercased. Initially just `gameplay`. This is the single source of truth for which class

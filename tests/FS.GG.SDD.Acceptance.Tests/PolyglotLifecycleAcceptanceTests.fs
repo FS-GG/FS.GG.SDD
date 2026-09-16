@@ -93,21 +93,25 @@ module PolyglotLifecycleAcceptanceTests =
                 let rec runBrowser candidates diagnostics =
                     match candidates with
                     | [] ->
-                        { Started = false
-                          ExitCode = -1
-                          Diagnostic =
-                            "could not start a supported browser from PATH (tried chromium and google-chrome): "
-                            + String.concat "; " (List.rev diagnostics) }
+                        {
+                            Started = false
+                            ExitCode = -1
+                            Diagnostic =
+                                "could not start a supported browser from PATH (tried chromium and google-chrome): "
+                                + String.concat "; " (List.rev diagnostics)
+                        }
                     | executable :: remaining ->
                         let result =
                             runToCompletionCapturingOutput
                                 executable
-                                [ "--headless"
-                                  "--no-sandbox"
-                                  "--disable-dev-shm-usage"
-                                  "--disable-background-networking"
-                                  "--dump-dom"
-                                  "http://127.0.0.1:51817" ]
+                                [
+                                    "--headless"
+                                    "--no-sandbox"
+                                    "--disable-dev-shm-usage"
+                                    "--disable-background-networking"
+                                    "--dump-dom"
+                                    "http://127.0.0.1:51817"
+                                ]
                                 fixtureRoot
                                 60_000
 
@@ -165,13 +169,15 @@ module PolyglotLifecycleAcceptanceTests =
         let server =
             runToCompletion
                 "dotnet"
-                [ "test"
-                  "server.tests/Polyglot.Server.Tests.fsproj"
-                  "--logger"
-                  "trx;LogFileName=server.trx"
-                  "--results-directory"
-                  "results"
-                  "--disable-build-servers" ]
+                [
+                    "test"
+                    "server.tests/Polyglot.Server.Tests.fsproj"
+                    "--logger"
+                    "trx;LogFileName=server.trx"
+                    "--results-directory"
+                    "results"
+                    "--disable-build-servers"
+                ]
                 fixtureRoot
                 300_000
 
@@ -181,10 +187,12 @@ module PolyglotLifecycleAcceptanceTests =
         let console =
             runToCompletion
                 "dotnet"
-                [ "run"
-                  "--project"
-                  "no-npm-console/NoNpm.Console.fsproj"
-                  "--disable-build-servers" ]
+                [
+                    "run"
+                    "--project"
+                    "no-npm-console/NoNpm.Console.fsproj"
+                    "--disable-build-servers"
+                ]
                 fixtureRoot
                 120_000
 
@@ -193,12 +201,14 @@ module PolyglotLifecycleAcceptanceTests =
         let consoleTests =
             runToCompletion
                 "dotnet"
-                [ "test"
-                  "no-npm-console.tests/NoNpm.Console.Tests.fsproj"
-                  "--logger"
-                  "trx;LogFileName=console.trx"
-                  "--results-directory"
-                  "results" ]
+                [
+                    "test"
+                    "no-npm-console.tests/NoNpm.Console.Tests.fsproj"
+                    "--logger"
+                    "trx;LogFileName=console.trx"
+                    "--results-directory"
+                    "results"
+                ]
                 fixtureRoot
                 120_000
 
@@ -216,11 +226,13 @@ module PolyglotLifecycleAcceptanceTests =
         let package =
             runToCompletion
                 "dotnet"
-                [ "pack"
-                  "fable-bindings/FableBindings.fsproj"
-                  "--output"
-                  "fable-bindings/packages"
-                  "--disable-build-servers" ]
+                [
+                    "pack"
+                    "fable-bindings/FableBindings.fsproj"
+                    "--output"
+                    "fable-bindings/packages"
+                    "--disable-build-servers"
+                ]
                 fixtureRoot
                 120_000
 
@@ -261,7 +273,8 @@ module PolyglotLifecycleAcceptanceTests =
 
         let importReport path =
             { TestSupport.evidenceRequest root workId "Polyglot lifecycle acceptance" with
-                FromTestReport = Some path }
+                FromTestReport = Some path
+            }
             |> TestSupport.runRequest
 
         let assertNoErrors (report: CommandReport) =
@@ -303,7 +316,8 @@ module PolyglotLifecycleAcceptanceTests =
 
         let doctor =
             { TestSupport.request Doctor root with
-                WorkId = Some workId }
+                WorkId = Some workId
+            }
             |> TestSupport.runRequest
 
         assertNoErrors verify
@@ -312,9 +326,11 @@ module PolyglotLifecycleAcceptanceTests =
 
         let parsed =
             parseEvidenceArtifact
-                { Path = $"work/{workId}/evidence.yml"
-                  Text = finalEvidence
-                  RawBytes = None }
+                {
+                    Path = $"work/{workId}/evidence.yml"
+                    Text = finalEvidence
+                    RawBytes = None
+                }
 
         match parsed with
         | Error diagnostics -> failwithf "evidence did not parse after report import: %A" diagnostics
@@ -328,9 +344,11 @@ module PolyglotLifecycleAcceptanceTests =
 
             Assert.Equal<string Set>(
                 set
-                    [ "artifacts/server.trx"
-                      "artifacts/client.junit.xml"
-                      "artifacts/fable.junit.xml"
-                      "artifacts/console.trx" ],
+                    [
+                        "artifacts/server.trx"
+                        "artifacts/client.junit.xml"
+                        "artifacts/fable.junit.xml"
+                        "artifacts/console.trx"
+                    ],
                 sources
             )

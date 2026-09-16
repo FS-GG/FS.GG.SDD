@@ -294,9 +294,11 @@ module RefreshEvidenceDeadlockTests =
         TestSupport.initializeAnalyzedProject control workId title
 
         for (label, outcome) in
-            [ "evidence", (TestSupport.runEvidence control workId title).Outcome
-              "verify", (TestSupport.runVerify control workId title).Outcome
-              "ship", (TestSupport.runShip control workId title).Outcome ] do
+            [
+                "evidence", (TestSupport.runEvidence control workId title).Outcome
+                "verify", (TestSupport.runVerify control workId title).Outcome
+                "ship", (TestSupport.runShip control workId title).Outcome
+            ] do
             Assert.True(
                 outcome <> CommandOutcome.Blocked,
                 $"Control leg '{label}' is already blocked, so the subject leg proves nothing."
@@ -343,7 +345,8 @@ module RefreshEvidenceDeadlockTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -388,7 +391,8 @@ module RefreshEvidenceDeadlockTests =
 
         TestSupport.runRequest
             { TestSupport.planRequest root workId title with
-                AcceptUpstream = true }
+                AcceptUpstream = true
+            }
         |> ignore
 
         TestSupport.authorPlanProse root workId

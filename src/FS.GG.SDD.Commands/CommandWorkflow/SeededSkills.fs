@@ -25,27 +25,29 @@ module internal SeededSkills =
     // product-internal `fs-gg-sdd-project`. This list is the single in-code source of
     // the set; iterating it sorted keeps the emitted effect order deterministic (FR-006).
     let skillNames =
-        [ "fs-gg-sdd-analyze"
-          "fs-gg-sdd-authoring-contracts"
-          "fs-gg-sdd-charter"
-          "fs-gg-sdd-checklist"
-          "fs-gg-sdd-clarify"
-          "fs-gg-sdd-evidence"
-          "fs-gg-sdd-getting-started"
-          "fs-gg-sdd-lifecycle"
-          "fs-gg-sdd-plan"
-          "fs-gg-sdd-refresh-agents"
-          "fs-gg-sdd-ship"
-          "fs-gg-sdd-specify"
-          "fs-gg-sdd-tasks"
-          "fs-gg-sdd-troubleshooting"
-          "fs-gg-sdd-typed-author"
-          "fs-gg-sdd-typed-correspond"
-          "fs-gg-sdd-typed-inspect"
-          "fs-gg-sdd-typed-migrate"
-          "fs-gg-sdd-typed-reconcile"
-          "fs-gg-sdd-validate"
-          "fs-gg-sdd-verify" ]
+        [
+            "fs-gg-sdd-analyze"
+            "fs-gg-sdd-authoring-contracts"
+            "fs-gg-sdd-charter"
+            "fs-gg-sdd-checklist"
+            "fs-gg-sdd-clarify"
+            "fs-gg-sdd-evidence"
+            "fs-gg-sdd-getting-started"
+            "fs-gg-sdd-lifecycle"
+            "fs-gg-sdd-plan"
+            "fs-gg-sdd-refresh-agents"
+            "fs-gg-sdd-ship"
+            "fs-gg-sdd-specify"
+            "fs-gg-sdd-tasks"
+            "fs-gg-sdd-troubleshooting"
+            "fs-gg-sdd-typed-author"
+            "fs-gg-sdd-typed-correspond"
+            "fs-gg-sdd-typed-inspect"
+            "fs-gg-sdd-typed-migrate"
+            "fs-gg-sdd-typed-reconcile"
+            "fs-gg-sdd-validate"
+            "fs-gg-sdd-verify"
+        ]
         |> List.sort
 
     let logicalName (name: string) = "SeededSkill." + name

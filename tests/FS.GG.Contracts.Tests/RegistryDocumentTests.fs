@@ -11,9 +11,11 @@ open Xunit
 module RegistryDocumentTests =
 
     let private repo id : Registry.RegistryRepo =
-        { Id = id
-          Name = "FS.GG." + id
-          Role = "role-" + id }
+        {
+            Id = id
+            Name = "FS.GG." + id
+            Role = "role-" + id
+        }
 
     let private contract id : Registry.ContractEntry =
         Registry.ContractEntry(
@@ -38,14 +40,20 @@ module RegistryDocumentTests =
     /// A coherent representative document (sdd/templates/governance repos), used as
     /// the base for the broken-case mutations below.
     let private baseDoc: Registry.RegistryDocument =
-        { SchemaVersion = 1
-          Repos = [ repo "sdd"; repo "templates"; repo "governance" ]
-          Contracts = [ contract "alpha" ]
-          Dependencies =
-            [ { From = "templates"
-                To = "sdd"
-                Via = "free text" } ]
-          Coherence = [ { Id = "c1"; Coherent = true } ] }
+        {
+            SchemaVersion = 1
+            Repos = [ repo "sdd"; repo "templates"; repo "governance" ]
+            Contracts = [ contract "alpha" ]
+            Dependencies =
+                [
+                    {
+                        From = "templates"
+                        To = "sdd"
+                        Via = "free text"
+                    }
+                ]
+            Coherence = [ { Id = "c1"; Coherent = true } ]
+        }
 
     let private rules result =
         match result with
@@ -63,11 +71,14 @@ module RegistryDocumentTests =
         let broken =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c ->
-                          c.Owner <- "nope"
-                          c.Version <- "abc"
-                          c.Range <- Some "??") ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c ->
+                            c.Owner <- "nope"
+                            c.Version <- "abc"
+                            c.Range <- Some "??")
+                    ]
+            }
 
         Assert.Equal(Registry.validateDocument broken, Registry.validateDocument broken)
 
@@ -78,9 +89,14 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Dependencies =
-                    [ { From = "sdd"
-                        To = "governance"
-                        Via = "via" } ] }
+                    [
+                        {
+                            From = "sdd"
+                            To = "governance"
+                            Via = "via"
+                        }
+                    ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -89,9 +105,14 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Dependencies =
-                    [ { From = "sdd"
-                        To = "nope"
-                        Via = "via" } ] }
+                    [
+                        {
+                            From = "sdd"
+                            To = "nope"
+                            Via = "via"
+                        }
+                    ]
+            }
 
         Assert.Contains(Registry.UnknownComponent, rules (Registry.validateDocument doc))
 
@@ -99,7 +120,8 @@ module RegistryDocumentTests =
     let ``US2: owner 'github' is accepted (repo ids plus github)`` () =
         let doc =
             { baseDoc with
-                Contracts = [ contract "alpha" |> editContract (fun c -> c.Owner <- "github") ] }
+                Contracts = [ contract "alpha" |> editContract (fun c -> c.Owner <- "github") ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -108,8 +130,11 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared [ "ghost" ]) ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared [ "ghost" ])
+                    ]
+            }
 
         Assert.Contains(Registry.UnknownComponent, rules (Registry.validateDocument doc))
 
@@ -126,8 +151,11 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared []) ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared [])
+                    ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -140,10 +168,13 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c ->
-                          c.Consumers <- Registry.ConsumersDeclared []
-                          c.PackageVersion <- Some "1.2.3") ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c ->
+                            c.Consumers <- Registry.ConsumersDeclared []
+                            c.PackageVersion <- Some "1.2.3")
+                    ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -156,8 +187,11 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c -> c.Consumers <- Registry.ConsumersUnspecified) ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c -> c.Consumers <- Registry.ConsumersUnspecified)
+                    ]
+            }
 
         Assert.Contains(Registry.MissingField "consumers", rules (Registry.validateDocument doc))
 
@@ -169,14 +203,20 @@ module RegistryDocumentTests =
         let withEmpty =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared []) ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared [])
+                    ]
+            }
 
         let withAbsent =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c -> c.Consumers <- Registry.ConsumersUnspecified) ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c -> c.Consumers <- Registry.ConsumersUnspecified)
+                    ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument withEmpty)
         Assert.NotEqual(Registry.validateDocument withEmpty, Registry.validateDocument withAbsent)
@@ -191,8 +231,11 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c -> c.Consumers <- Registry.ConsumersMalformed "'sdd'") ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c -> c.Consumers <- Registry.ConsumersMalformed "'sdd'")
+                    ]
+            }
 
         let reported = rules (Registry.validateDocument doc)
 
@@ -206,8 +249,11 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "alpha"
-                      |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared [ "" ]) ] }
+                    [
+                        contract "alpha"
+                        |> editContract (fun c -> c.Consumers <- Registry.ConsumersDeclared [ "" ])
+                    ]
+            }
 
         Assert.Contains(Registry.MissingField "consumers", rules (Registry.validateDocument doc))
 
@@ -215,7 +261,8 @@ module RegistryDocumentTests =
     let ``US2: dropped owner reports MissingField`` () =
         let doc =
             { baseDoc with
-                Contracts = [ contract "alpha" |> editContract (fun c -> c.Owner <- "") ] }
+                Contracts = [ contract "alpha" |> editContract (fun c -> c.Owner <- "") ]
+            }
 
         Assert.Contains(Registry.MissingField "owner", rules (Registry.validateDocument doc))
 
@@ -223,7 +270,8 @@ module RegistryDocumentTests =
     let ``US2: duplicate contract id reports DuplicateComponent`` () =
         let doc =
             { baseDoc with
-                Contracts = [ contract "dup"; contract "dup" ] }
+                Contracts = [ contract "dup"; contract "dup" ]
+            }
 
         Assert.Contains(Registry.DuplicateComponent, rules (Registry.validateDocument doc))
 
@@ -234,9 +282,12 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "a" |> editContract (fun c -> c.Version <- "1")
-                      contract "b" |> editContract (fun c -> c.Version <- "2")
-                      contract "c" |> editContract (fun c -> c.Version <- "0.1.52-preview.1") ] }
+                    [
+                        contract "a" |> editContract (fun c -> c.Version <- "1")
+                        contract "b" |> editContract (fun c -> c.Version <- "2")
+                        contract "c" |> editContract (fun c -> c.Version <- "0.1.52-preview.1")
+                    ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -244,7 +295,8 @@ module RegistryDocumentTests =
     let ``US3: shorthand range 1.x is accepted`` () =
         let doc =
             { baseDoc with
-                Contracts = [ contract "a" |> editContract (fun c -> c.Range <- Some "1.x") ] }
+                Contracts = [ contract "a" |> editContract (fun c -> c.Range <- Some "1.x") ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -256,10 +308,13 @@ module RegistryDocumentTests =
         let doc =
             { baseDoc with
                 Contracts =
-                    [ contract "a"
-                      |> editContract (fun c ->
-                          c.Version <- "1.2.1.1"
-                          c.PackageVersion <- Some "1.2.1.1") ] }
+                    [
+                        contract "a"
+                        |> editContract (fun c ->
+                            c.Version <- "1.2.1.1"
+                            c.PackageVersion <- Some "1.2.1.1")
+                    ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -267,7 +322,8 @@ module RegistryDocumentTests =
     let ``US3-045: 4-segment version composes with a prerelease tag (1.2.1.1-preview.1)`` () =
         let doc =
             { baseDoc with
-                Contracts = [ contract "a" |> editContract (fun c -> c.Version <- "1.2.1.1-preview.1") ] }
+                Contracts = [ contract "a" |> editContract (fun c -> c.Version <- "1.2.1.1-preview.1") ]
+            }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -278,7 +334,8 @@ module RegistryDocumentTests =
     let ``US3: genuinely malformed version still reports MalformedVersion`` (bad: string) =
         let doc =
             { baseDoc with
-                Contracts = [ contract "a" |> editContract (fun c -> c.Version <- bad) ] }
+                Contracts = [ contract "a" |> editContract (fun c -> c.Version <- bad) ]
+            }
 
         Assert.Contains(Registry.MalformedVersion, rules (Registry.validateDocument doc))
 
@@ -286,7 +343,8 @@ module RegistryDocumentTests =
     let ``US3: malformed range still reports MalformedVersion`` () =
         let doc =
             { baseDoc with
-                Contracts = [ contract "a" |> editContract (fun c -> c.Range <- Some "??") ] }
+                Contracts = [ contract "a" |> editContract (fun c -> c.Range <- Some "??") ]
+            }
 
         Assert.Contains(Registry.MalformedVersion, rules (Registry.validateDocument doc))
 
@@ -299,7 +357,8 @@ module RegistryDocumentTests =
 
     let private withWire wire =
         { baseDoc with
-            Contracts = [ contract "alpha" |> editContract (fun c -> c.WireContract <- wire) ] }
+            Contracts = [ contract "alpha" |> editContract (fun c -> c.WireContract <- wire) ]
+        }
 
     /// Absent wire contract: NOT a fault. Most contracts have no wire dimension.
     [<Fact>]

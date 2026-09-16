@@ -11,43 +11,55 @@ open Xunit
 /// path changes no JSON byte. Constructed reports.
 module DependencySurfaceProjectionTests =
     let private interactiveColor =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 100
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 100
+            IsInputInteractive = true
+        }
 
     let private nonInteractive =
         { interactiveColor with
-            IsInteractive = false }
+            IsInteractive = false
+        }
 
     let private summary: DependencySurfaceSummary =
-        { BaselineRoot = "docs/dependency-surface"
-          Mode = "check"
-          CheckedCount = 2
-          Entries =
-            [ { PackageId = "Some.Pkg"
-                Version = "1.2.0"
-                Status = "drifted"
-                CommittedSha256 = Some "aaaa"
-                ObservedSha256 = Some "bbbb"
-                ObservedSymbolCount = 42 }
-              { PackageId = "Other.Pkg"
-                Version = "3.0.0"
-                Status = "unavailable"
-                CommittedSha256 = Some "cccc"
-                ObservedSha256 = None
-                ObservedSymbolCount = 0 } ]
-          DriftedPackages = [ "Some.Pkg@1.2.0" ]
-          UnavailablePackages = [ "Other.Pkg@3.0.0" ]
-          UpdatedPackages = []
-          IsCoherent = false }
+        {
+            BaselineRoot = "docs/dependency-surface"
+            Mode = "check"
+            CheckedCount = 2
+            Entries =
+                [
+                    {
+                        PackageId = "Some.Pkg"
+                        Version = "1.2.0"
+                        Status = "drifted"
+                        CommittedSha256 = Some "aaaa"
+                        ObservedSha256 = Some "bbbb"
+                        ObservedSymbolCount = 42
+                    }
+                    {
+                        PackageId = "Other.Pkg"
+                        Version = "3.0.0"
+                        Status = "unavailable"
+                        CommittedSha256 = Some "cccc"
+                        ObservedSha256 = None
+                        ObservedSymbolCount = 0
+                    }
+                ]
+            DriftedPackages = [ "Some.Pkg@1.2.0" ]
+            UnavailablePackages = [ "Other.Pkg@3.0.0" ]
+            UpdatedPackages = []
+            IsCoherent = false
+        }
 
     let private report: CommandReport =
         { RichRenderingTests.sampleReport with
             Command = DependencySurface
             Outcome = CommandOutcome.Blocked
             Specification = None
-            DependencySurface = Some summary }
+            DependencySurface = Some summary
+        }
 
     [<Fact>]
     let ``dependency-surface json equals serializeReport and the rich path changes no byte`` () =

@@ -117,9 +117,11 @@ module MissingOptionValueTests =
         let stderr = proc.StandardError.ReadToEnd()
         proc.WaitForExit(30000) |> ignore
 
-        {| ExitCode = proc.ExitCode
-           StdOut = stdout
-           StdErr = stderr |}
+        {|
+            ExitCode = proc.ExitCode
+            StdOut = stdout
+            StdErr = stderr
+        |}
 
     let private withInitializedDir (body: string -> unit) =
         let root = Path.Combine(Path.GetTempPath(), $"fsgg-264-{Guid.NewGuid():N}")

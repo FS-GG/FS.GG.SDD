@@ -132,12 +132,14 @@ module ArtifactWriteKindTests =
         TestSupport.initializeProject root
 
         let reports =
-            [ TestSupport.runCharter root "demo" "Demo"
-              TestSupport.runSpecify root "demo" "Demo"
-              TestSupport.runClarify root "demo" "Demo"
-              TestSupport.runChecklist root "demo" "Demo"
-              TestSupport.runPlan root "demo" "Demo"
-              TestSupport.runTasks root "demo" "Demo" ]
+            [
+                TestSupport.runCharter root "demo" "Demo"
+                TestSupport.runSpecify root "demo" "Demo"
+                TestSupport.runClarify root "demo" "Demo"
+                TestSupport.runChecklist root "demo" "Demo"
+                TestSupport.runPlan root "demo" "Demo"
+                TestSupport.runTasks root "demo" "Demo"
+            ]
 
         let change =
             reports

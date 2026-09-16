@@ -2,53 +2,69 @@ namespace FS.GG.SDD.Artifacts.TypedSpecifications
 
 /// Canonical UTF-8 Markdown input. Text carries no BOM and uses LF line endings.
 type QuintMarkdownSource =
-    { Path: string
-      Text: string
-      Sha256: string }
+    {
+        Path: string
+        Text: string
+        Sha256: string
+    }
 
 /// One ordered literate Quint fence declared by the author.
 type QuintFence =
-    { Ordinal: int
-      Target: string
-      ModuleName: string
-      SourceRange: QuintSourceRange
-      ContentSha256: string }
+    {
+        Ordinal: int
+        Target: string
+        ModuleName: string
+        SourceRange: QuintSourceRange
+        ContentSha256: string
+    }
 
 /// Authoritative ordered binding between one Markdown source and generated modules.
 type QuintFenceManifest =
-    { Schema: string
-      SourcePath: string
-      SourceSha256: string
-      Fences: QuintFence list }
+    {
+        Schema: string
+        SourcePath: string
+        SourceSha256: string
+        Fences: QuintFence list
+    }
 
 /// Digest receipt for one generated module.
 type QuintGeneratedModule =
-    { Target: string
-      Sha256: string
-      Bytes: int64 }
+    {
+        Target: string
+        Sha256: string
+        Bytes: int64
+    }
 
 /// Two clean extraction observations. Warnings are retained and treated as errors.
 type QuintExtractionObservation =
-    { First: QuintGeneratedModule list
-      Second: QuintGeneratedModule list
-      Warnings: string list }
+    {
+        First: QuintGeneratedModule list
+        Second: QuintGeneratedModule list
+        Warnings: string list
+    }
 
 /// A stable Markdown binding for a generated range or diagnostic using the profile's inclusive range type.
 type QuintSourceBinding =
-    { FenceOrdinal: int
-      Range: QuintSourceRange }
+    {
+        FenceOrdinal: int
+        Range: QuintSourceRange
+    }
 
 /// One generated-module range mapped to canonical Markdown.
 type QuintSourceMapEntry =
-    { Target: string
-      GeneratedRange: QuintSourceRange
-      Source: QuintSourceBinding }
+    {
+        Target: string
+        GeneratedRange: QuintSourceRange
+        Source: QuintSourceBinding
+    }
 
 /// Versioned deterministic source map with no host path or compiler node identity.
 type QuintSourceMap =
-    { Schema: string
-      SourceSha256: string
-      Entries: QuintSourceMapEntry list }
+    {
+        Schema: string
+        SourceSha256: string
+        Entries: QuintSourceMapEntry list
+    }
 
 [<RequireQualifiedAccess>]
 module QuintSource =

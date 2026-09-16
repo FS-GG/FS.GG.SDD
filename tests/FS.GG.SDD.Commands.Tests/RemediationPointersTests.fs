@@ -148,14 +148,16 @@ module RemediationPointersTests =
     // --- Invariant 5: containment — a representative covered diagnostic ends with its suffix ---
 
     let private representativeCovered: Diagnostic list =
-        [ malformedCharterFrontMatter "work/x/charter.md" "bad charter front matter"
-          missingSpecificationId "work/x/spec.md" "requirement"
-          missingClarificationAnswer "work/x/clarifications.md" [ "AMB-001" ]
-          failedChecklistPrerequisite "work/x/checklist.md" "coverage failed" []
-          malformedPlanFrontMatter "work/x/plan.md" "bad plan front matter"
-          duplicateTaskId "work/x/tasks.yml" "T001"
-          undisclosedSyntheticEvidence "work/x/evidence.yml" [ "E-001" ]
-          missingRequiredTest "work/x/evidence.yml" [ "O-001" ] ]
+        [
+            malformedCharterFrontMatter "work/x/charter.md" "bad charter front matter"
+            missingSpecificationId "work/x/spec.md" "requirement"
+            missingClarificationAnswer "work/x/clarifications.md" [ "AMB-001" ]
+            failedChecklistPrerequisite "work/x/checklist.md" "coverage failed" []
+            malformedPlanFrontMatter "work/x/plan.md" "bad plan front matter"
+            duplicateTaskId "work/x/tasks.yml" "T001"
+            undisclosedSyntheticEvidence "work/x/evidence.yml" [ "E-001" ]
+            missingRequiredTest "work/x/evidence.yml" [ "O-001" ]
+        ]
 
     [<Fact>]
     let ``covered diagnostics end with their remediation pointer`` () =
@@ -175,10 +177,12 @@ module RemediationPointersTests =
     // --- Invariant 6: non-interference — non-covered corrections carry no pointer ---
 
     let private representativeNonCovered: Diagnostic list =
-        [ outsideProject ()
-          unsafeOverwrite "work/x/spec.md"
-          toolDefect None "some tool failure"
-          missingProjectConfig ".fsgg/project.yml" ]
+        [
+            outsideProject ()
+            unsafeOverwrite "work/x/spec.md"
+            toolDefect None "some tool failure"
+            missingProjectConfig ".fsgg/project.yml"
+        ]
 
     [<Fact>]
     let ``non-covered diagnostics carry no remediation pointer`` () =

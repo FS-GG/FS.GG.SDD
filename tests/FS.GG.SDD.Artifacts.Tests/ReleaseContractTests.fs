@@ -123,8 +123,12 @@ module ReleaseContractTests =
         let withoutGovernance =
             { release with
                 Compatibility =
-                    [ { entry with
-                          GovernanceContractVersionRange = None } ] }
+                    [
+                        { entry with
+                            GovernanceContractVersionRange = None
+                        }
+                    ]
+            }
 
         match parse (serialize withoutGovernance) with
         | Ok parsed -> Assert.Equal(None, (List.exactlyOne parsed.Compatibility).GovernanceContractVersionRange)
@@ -239,22 +243,23 @@ module ReleaseContractTests =
     /// asserts — so it can be run against any release that has one.
     let private noteDefects (identityVersion: string) (note: MigrationNoteRef) =
         [
-          // a note whose version drifts from identity advertises a migration that this artifact
-          // does not describe.
-          if note.Version <> identityVersion then
-              $"version {note.Version} does not match the release identity {identityVersion}"
+            // a note whose version drifts from identity advertises a migration that this artifact
+            // does not describe.
+            if note.Version <> identityVersion then
+                $"version {note.Version} does not match the release identity {identityVersion}"
 
-          if note.Path <> $"docs/release/migrations/{identityVersion}.md" then
-              $"path {note.Path} is not the note path for {identityVersion}"
+            if note.Path <> $"docs/release/migrations/{identityVersion}.md" then
+                $"path {note.Path} is not the note path for {identityVersion}"
 
-          // a note that enumerates nothing under-reports — the exact failure the obligation exists
-          // to prevent.
-          if List.isEmpty note.BreakingChanges then
-              $"note {note.Path} enumerates no breaking changes"
+            // a note that enumerates nothing under-reports — the exact failure the obligation exists
+            // to prevent.
+            if List.isEmpty note.BreakingChanges then
+                $"note {note.Path} enumerates no breaking changes"
 
-          // the obligation is a FILE, not a claim.
-          if not (File.Exists(Path.Combine(TestSupport.repoRoot, note.Path))) then
-              $"note {note.Path} is referenced by release-readiness.json but absent from disk" ]
+            // the obligation is a FILE, not a claim.
+            if not (File.Exists(Path.Combine(TestSupport.repoRoot, note.Path))) then
+                $"note {note.Path} is referenced by release-readiness.json but absent from disk"
+        ]
 
     [<Fact>]
     let ``T023 every migration note this release declares is for this release and exists on disk`` () =
@@ -268,9 +273,11 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T023 the note obligation ACCEPTS a well-formed note and NAMES each way one can be wrong`` () =
         let good: MigrationNoteRef =
-            { Version = "0.10.0"
-              Path = "docs/release/migrations/0.10.0.md"
-              BreakingChanges = [ "the seven lifecycle artifacts now report kind hybridArtifact" ] }
+            {
+                Version = "0.10.0"
+                Path = "docs/release/migrations/0.10.0.md"
+                BreakingChanges = [ "the seven lifecycle artifacts now report kind hybridArtifact" ]
+            }
 
         // the real, on-disk 0.10.0 note satisfies the obligation in full.
         Assert.Empty(noteDefects "0.10.0" good)
@@ -284,7 +291,8 @@ module ReleaseContractTests =
                 "9.9.9"
                 { good with
                     Version = "9.9.9"
-                    Path = "docs/release/migrations/9.9.9.md" } // names a file nobody wrote
+                    Path = "docs/release/migrations/9.9.9.md"
+                } // names a file nobody wrote
         )
 
     // ...and the classification of THIS release, pinned separately.
@@ -301,13 +309,16 @@ module ReleaseContractTests =
 
         // a represented breaking release must have a MigrationNoteRef enumerating the change
         let breakingNote =
-            { Version = "1.0.0"
-              Path = "docs/release/migrations/1.0.0.md"
-              BreakingChanges = [ "froze the work-model.json schema" ] }
+            {
+                Version = "1.0.0"
+                Path = "docs/release/migrations/1.0.0.md"
+                BreakingChanges = [ "froze the work-model.json schema" ]
+            }
 
         let breakingRelease =
             { release with
-                Migrations = [ breakingNote ] }
+                Migrations = [ breakingNote ]
+            }
 
         Assert.NotEmpty breakingRelease.Migrations
         Assert.All(breakingRelease.Migrations, fun note -> Assert.NotEmpty note.BreakingChanges)

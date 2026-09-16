@@ -84,17 +84,19 @@ module Identifiers =
         | Ship -> "ship"
 
     let allStages () =
-        [ Charter
-          Specify
-          Clarify
-          Checklist
-          Plan
-          Tasks
-          Analyze
-          Implement
-          Evidence
-          Verify
-          Ship ]
+        [
+            Charter
+            Specify
+            Clarify
+            Checklist
+            Plan
+            Tasks
+            Analyze
+            Implement
+            Evidence
+            Verify
+            Ship
+        ]
 
     let createScopedId (label: string) (pattern: string) (value: string) =
         let value =
@@ -110,67 +112,115 @@ module Identifiers =
 
     let createRequirementId (value: string) =
         createScopedId "Requirement id" @"^FR-\d{3,}$" value
-        |> Result.map (fun value -> { RequirementId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                RequirementId.Value = value.ToUpperInvariant()
+            })
 
     let createUserStoryId (value: string) =
         createScopedId "User story id" @"^US-\d{3,}$" value
-        |> Result.map (fun value -> { UserStoryId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                UserStoryId.Value = value.ToUpperInvariant()
+            })
 
     let createAcceptanceScenarioId (value: string) =
         createScopedId "Acceptance scenario id" @"^AC-\d{3,}$" value
-        |> Result.map (fun value -> { AcceptanceScenarioId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                AcceptanceScenarioId.Value = value.ToUpperInvariant()
+            })
 
     let createScopeBoundaryId (value: string) =
         createScopedId "Scope boundary id" @"^SB-\d{3,}$" value
-        |> Result.map (fun value -> { ScopeBoundaryId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                ScopeBoundaryId.Value = value.ToUpperInvariant()
+            })
 
     let createAmbiguityId (value: string) =
         createScopedId "Ambiguity id" @"^AMB-\d{3,}$" value
-        |> Result.map (fun value -> { AmbiguityId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                AmbiguityId.Value = value.ToUpperInvariant()
+            })
 
     let createClarificationQuestionId (value: string) =
         createScopedId "Clarification question id" @"^CQ-\d{3,}$" value
-        |> Result.map (fun value -> { ClarificationQuestionId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                ClarificationQuestionId.Value = value.ToUpperInvariant()
+            })
 
     let createDecisionId (value: string) =
         createScopedId "Decision id" @"^DEC-\d{3,}$" value
-        |> Result.map (fun value -> { DecisionId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                DecisionId.Value = value.ToUpperInvariant()
+            })
 
     let createChecklistItemId (value: string) =
         createScopedId "Checklist item id" @"^CHK-\d{3,}$" value
-        |> Result.map (fun value -> { ChecklistItemId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                ChecklistItemId.Value = value.ToUpperInvariant()
+            })
 
     let createChecklistResultId (value: string) =
         createScopedId "Checklist result id" @"^CR-\d{3,}$" value
-        |> Result.map (fun value -> { ChecklistResultId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                ChecklistResultId.Value = value.ToUpperInvariant()
+            })
 
     let createPlanDecisionId (value: string) =
         createScopedId "Plan decision id" @"^PD-\d{3,}$" value
-        |> Result.map (fun value -> { PlanDecisionId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                PlanDecisionId.Value = value.ToUpperInvariant()
+            })
 
     let createPlanContractReferenceId (value: string) =
         createScopedId "Plan contract reference id" @"^PC-\d{3,}$" value
-        |> Result.map (fun value -> { PlanContractReferenceId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                PlanContractReferenceId.Value = value.ToUpperInvariant()
+            })
 
     let createVerificationObligationId (value: string) =
         createScopedId "Verification obligation id" @"^VO-\d{3,}$" value
-        |> Result.map (fun value -> { VerificationObligationId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                VerificationObligationId.Value = value.ToUpperInvariant()
+            })
 
     let createPlanMigrationNoteId (value: string) =
         createScopedId "Plan migration note id" @"^PM-\d{3,}$" value
-        |> Result.map (fun value -> { PlanMigrationNoteId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                PlanMigrationNoteId.Value = value.ToUpperInvariant()
+            })
 
     let createGeneratedViewImpactId (value: string) =
         createScopedId "Generated-view impact id" @"^GV-\d{3,}$" value
-        |> Result.map (fun value -> { GeneratedViewImpactId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                GeneratedViewImpactId.Value = value.ToUpperInvariant()
+            })
 
     let createTaskId (value: string) =
         createScopedId "Task id" @"^T\d{3,}$" value
-        |> Result.map (fun value -> { TaskId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                TaskId.Value = value.ToUpperInvariant()
+            })
 
     let createEvidenceId (value: string) =
         createScopedId "Evidence id" @"^EV\d{3,}$" value
-        |> Result.map (fun value -> { EvidenceId.Value = value.ToUpperInvariant() })
+        |> Result.map (fun value ->
+            {
+                EvidenceId.Value = value.ToUpperInvariant()
+            })
 
     let requirementIdValue (id: RequirementId) = id.Value
     let userStoryIdValue (id: UserStoryId) = id.Value

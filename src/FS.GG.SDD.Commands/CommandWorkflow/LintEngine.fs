@@ -19,9 +19,11 @@ module LintEngine =
     let grammarPointer (cls: LintDefectClass) : GrammarPointer option =
         let pointer section tag =
             Some
-                { Skill = grammarSkill
-                  Section = section
-                  ExampleTag = tag }
+                {
+                    Skill = grammarSkill
+                    Section = section
+                    ExampleTag = tag
+                }
 
         match cls with
         | CoverageLine -> pointer RemediationPointers.coverageLine (Some "coverage:accepted")
@@ -189,9 +191,11 @@ module LintEngine =
         line, col, defect.Diagnostic.Id
 
     let private toDefect (cls: LintDefectClass) (diagnostic: Diagnostic) =
-        { Class = cls
-          Diagnostic = diagnostic
-          GrammarPointer = grammarPointer cls }
+        {
+            Class = cls
+            Diagnostic = diagnostic
+            GrammarPointer = grammarPointer cls
+        }
 
     let private missingDecisionTagDefect (count: int) =
         // A blocking remaining ambiguity means no `[AMB:AMB-###]`-tagged decision resolved it
@@ -212,10 +216,12 @@ module LintEngine =
         let kind = detectKind snapshot
 
         let summary outcome defects =
-            { ArtifactPath = snapshot.Path
-              Kind = kind
-              Defects = defects
-              Outcome = outcome }
+            {
+                ArtifactPath = snapshot.Path
+                Kind = kind
+                Defects = defects
+                Outcome = outcome
+            }
 
         match kind with
         | LintArtifactKind.Unrecognized ->

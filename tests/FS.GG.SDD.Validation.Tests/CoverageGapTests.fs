@@ -20,13 +20,15 @@ module CoverageGapTests =
             { defaultPlan with
                 LifecycleCommands = [ Init ]
                 Projections = [ Json ]
-                States = [ "fresh" ] }
+                States = [ "fresh" ]
+            }
 
         let report =
             run
                 { defaultOptions with
                     OnlyMatrix = Some lifecycleMatrixName
-                    Plan = Some plan }
+                    Plan = Some plan
+                }
 
         let gaps =
             cellsOf lifecycleMatrixName report
@@ -45,13 +47,15 @@ module CoverageGapTests =
                 LifecycleCommands = [ Init ]
                 Projections = [ Json ]
                 States = [ "fresh" ]
-                BaselineContracts = defaultPlan.BaselineContracts @ [ "ghost-contract.json" ] }
+                BaselineContracts = defaultPlan.BaselineContracts @ [ "ghost-contract.json" ]
+            }
 
         let report =
             run
                 { defaultOptions with
                     OnlyMatrix = Some lifecycleMatrixName
-                    Plan = Some plan }
+                    Plan = Some plan
+                }
 
         let staleFailures =
             cellsOf baselineMatrixName report
@@ -70,7 +74,8 @@ module CoverageGapTests =
         let report =
             run
                 { defaultOptions with
-                    OnlyMatrix = Some compatibilityMatrixName }
+                    OnlyMatrix = Some compatibilityMatrixName
+                }
 
         let allGaps =
             report.Matrices

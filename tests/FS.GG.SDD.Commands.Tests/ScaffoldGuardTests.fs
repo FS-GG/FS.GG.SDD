@@ -50,9 +50,11 @@ module ScaffoldGuardTests =
 
         // This guard file itself names the forbidden tokens (as the deny-list), so it
         // is intentionally excluded from the scan.
-        [ "FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs"
-          "FS.GG.SDD.Artifacts.Tests/ScaffoldProvenanceTests.fs"
-          "FS.GG.SDD.Cli.Tests/ScaffoldParityTests.fs" ]
+        [
+            "FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs"
+            "FS.GG.SDD.Artifacts.Tests/ScaffoldProvenanceTests.fs"
+            "FS.GG.SDD.Cli.Tests/ScaffoldParityTests.fs"
+        ]
         |> List.map (fun relative -> Path.Combine(testsRoot, relative.Replace('/', Path.DirectorySeparatorChar)))
         |> List.filter File.Exists
 
@@ -72,11 +74,13 @@ module ScaffoldGuardTests =
     /// C2 scope: the curated scaffold-source union — `HandlersScaffold.fs` plus the
     /// projection files that render the scaffold report. NOT repo-wide (research Decision 9).
     let private scaffoldSourceFiles () =
-        [ "src/FS.GG.SDD.Commands/CommandWorkflow/HandlersScaffold.fs"
-          "src/FS.GG.SDD.Commands/CommandSerialization.fs"
-          "src/FS.GG.SDD.Commands/CommandRendering.fs"
-          "src/FS.GG.SDD.Commands/CommandReports.fs"
-          "src/FS.GG.SDD.Cli/Rendering.fs" ]
+        [
+            "src/FS.GG.SDD.Commands/CommandWorkflow/HandlersScaffold.fs"
+            "src/FS.GG.SDD.Commands/CommandSerialization.fs"
+            "src/FS.GG.SDD.Commands/CommandRendering.fs"
+            "src/FS.GG.SDD.Commands/CommandReports.fs"
+            "src/FS.GG.SDD.Cli/Rendering.fs"
+        ]
         |> List.map (fun relative ->
             Path.Combine(TestSupport.repoRoot, relative.Replace('/', Path.DirectorySeparatorChar)))
         |> List.filter File.Exists

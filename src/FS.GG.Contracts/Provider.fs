@@ -3,27 +3,33 @@ namespace Fsgg
 module Provider =
 
     type DeclaredCommand =
-        { Executable: string
-          Arguments: string list }
+        {
+            Executable: string
+            Arguments: string list
+        }
 
     type ProviderParameterSpec =
-        { Key: string
-          Required: bool
-          Default: string option }
+        {
+            Key: string
+            Required: bool
+            Default: string option
+        }
 
     type ProviderDescriptor =
-        { Name: string
-          ContractVersion: string
-          TemplateId: string
-          Source: string
-          Parameters: ProviderParameterSpec list
-          Build: DeclaredCommand option
-          Test: DeclaredCommand option
-          Run: DeclaredCommand option
-          Verify: DeclaredCommand option
-          NameParameter: string
-          IdentifierParameter: string option
-          MinimumCliVersion: string option }
+        {
+            Name: string
+            ContractVersion: string
+            TemplateId: string
+            Source: string
+            Parameters: ProviderParameterSpec list
+            Build: DeclaredCommand option
+            Test: DeclaredCommand option
+            Run: DeclaredCommand option
+            Verify: DeclaredCommand option
+            NameParameter: string
+            IdentifierParameter: string option
+            MinimumCliVersion: string option
+        }
 
     let defaultNameParameter = "name"
 

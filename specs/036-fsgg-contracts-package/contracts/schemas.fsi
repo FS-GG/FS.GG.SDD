@@ -19,10 +19,12 @@ module Schemas =
     /// The unit of "one fact in one place": a schema's contract name paired with
     /// its version constant(s) and owner.
     type SchemaContractEntry =
-        { Name: string
-          SchemaVersion: int
-          ContractVersion: string option
-          Owner: SchemaOwner }
+        {
+            Name: string
+            SchemaVersion: int
+            ContractVersion: string option
+            Owner: SchemaOwner
+        }
 
     // --- Named version constants (FR-005). One authoritative value each. ---
     val providersVersion: int // = 1

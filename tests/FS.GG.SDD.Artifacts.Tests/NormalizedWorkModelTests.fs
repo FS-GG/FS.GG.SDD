@@ -67,9 +67,11 @@ module NormalizedWorkModelTests =
         let parsed =
             match
                 WorkModel.parseWorkModel
-                    { Path = result.OutputPath
-                      Text = result.Json
-                      RawBytes = None }
+                    {
+                        Path = result.OutputPath
+                        Text = result.Json
+                        RawBytes = None
+                    }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -98,9 +100,11 @@ module NormalizedWorkModelTests =
         let parsed =
             match
                 WorkModel.parseWorkModel
-                    { Path = result.OutputPath
-                      Text = result.Json
-                      RawBytes = None }
+                    {
+                        Path = result.OutputPath
+                        Text = result.Json
+                        RawBytes = None
+                    }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -156,9 +160,11 @@ module NormalizedWorkModelTests =
         let parsed =
             match
                 WorkModel.parseWorkModel
-                    { Path = result.OutputPath
-                      Text = result.Json
-                      RawBytes = None }
+                    {
+                        Path = result.OutputPath
+                        Text = result.Json
+                        RawBytes = None
+                    }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -191,11 +197,13 @@ module NormalizedWorkModelTests =
 
     [<Fact>]
     let ``NormalizedWorkModel invalid fixtures emit actionable diagnostics`` () =
-        [ "requirement-not-typed", "requirementNotTyped"
-          "work-model-inconsistent", "workModelInconsistent"
-          "prose-structured-mismatch", "proseStructuredMismatch"
-          "duplicate-logical-id", "duplicateIdentifier"
-          "selected-work-item-mismatch", "missingArtifact" ]
+        [
+            "requirement-not-typed", "requirementNotTyped"
+            "work-model-inconsistent", "workModelInconsistent"
+            "prose-structured-mismatch", "proseStructuredMismatch"
+            "duplicate-logical-id", "duplicateIdentifier"
+            "selected-work-item-mismatch", "missingArtifact"
+        ]
         |> List.iter (fun (fixture, diagnosticId) ->
             let model = TestSupport.normalizedModel fixture
             TestSupport.assertDiagnostic diagnosticId model)

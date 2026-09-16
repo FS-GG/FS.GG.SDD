@@ -85,13 +85,15 @@ module SkillRegistryDocument =
                         tryScalarAt [ key ] item |> Option.filter (String.IsNullOrWhiteSpace >> not)
 
                     Some(
-                        { Id = scalar "id"
-                          Scope = scalar "scope"
-                          Owner = scalar "owner"
-                          Source = scalar "source"
-                          Sha256 = scalar "sha256"
-                          Mirrored = parseMirrored item
-                          MaterializesWhen = optScalar "materializes-when" }
+                        {
+                            Id = scalar "id"
+                            Scope = scalar "scope"
+                            Owner = scalar "owner"
+                            Source = scalar "source"
+                            Sha256 = scalar "sha256"
+                            Mirrored = parseMirrored item
+                            MaterializesWhen = optScalar "materializes-when"
+                        }
                         : Fsgg.Registry.SkillRegistryEntry
                     ))
             |> Seq.toList
@@ -154,11 +156,13 @@ module SkillRegistryDocument =
                                 | false, _ -> err path $"Skill registry 'schemaVersion' is not an integer: '{raw}'."
                                 | true, schemaVersion ->
                                     Ok
-                                        { SchemaVersion = schemaVersion
-                                          Parameters = scalarList [ "parameters" ] root
-                                          Skills =
-                                            tryChild "skills" rootMapping
-                                            |> Option.map parseSkills
-                                            |> Option.defaultValue [] }
+                                        {
+                                            SchemaVersion = schemaVersion
+                                            Parameters = scalarList [ "parameters" ] root
+                                            Skills =
+                                                tryChild "skills" rootMapping
+                                                |> Option.map parseSkills
+                                                |> Option.defaultValue []
+                                        }
         with ex ->
             err path $"Skill registry file could not be parsed: {ex.Message}"

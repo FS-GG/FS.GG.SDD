@@ -26,13 +26,15 @@ module ExampleLifecycleContractTests =
     /// The authored artifacts the example ships. `charter.md` is the identity stage;
     /// the rest are the authored sources every later stage reads.
     let private exampleArtifacts =
-        [ "charter.md"
-          "spec.md"
-          "clarifications.md"
-          "checklist.md"
-          "plan.md"
-          "tasks.yml"
-          "evidence.yml" ]
+        [
+            "charter.md"
+            "spec.md"
+            "clarifications.md"
+            "checklist.md"
+            "plan.md"
+            "tasks.yml"
+            "evidence.yml"
+        ]
 
     /// The proving tests the example's evidence CITES. They are staged at the workspace root
     /// (`tests/ExampleApp.Tests/…`), not under `work/<id>/`, because that is where the evidence
@@ -43,12 +45,14 @@ module ExampleLifecycleContractTests =
     /// citing files that do not exist, and passed. Shipping them is what makes the example honest;
     /// staging them here is what lets the gate see them.
     let private exampleProvingTests =
-        [ "ServeRuleTests.fs"
-          "RallyScoreTests.fs"
-          "CommandReportContractTests.fs"
-          "CommandSmokeTests.fs"
-          "SchemaVersionTests.fs"
-          "WorkModelViewTests.fs" ]
+        [
+            "ServeRuleTests.fs"
+            "RallyScoreTests.fs"
+            "CommandReportContractTests.fs"
+            "CommandSmokeTests.fs"
+            "SchemaVersionTests.fs"
+            "WorkModelViewTests.fs"
+        ]
 
     /// Copy the shipped example verbatim into `work/001-example/` of a freshly initialized
     /// workspace. Verbatim matters: the point is to exercise the bytes an author would copy,

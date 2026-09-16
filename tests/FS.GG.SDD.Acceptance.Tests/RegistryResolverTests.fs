@@ -24,9 +24,11 @@ module RegistryResolverTests =
     /// into a diagnostic only on a non-zero exit. Still the real process edge (real bash, real
     /// temp files).
     type ResolverRun =
-        { ExitCode: int
-          Stdout: string
-          Stderr: string }
+        {
+            ExitCode: int
+            Stdout: string
+            Stderr: string
+        }
 
     /// The script copied beside the test assembly (fsproj `<None CopyToOutputDirectory>`).
     let private scriptPath =
@@ -76,23 +78,27 @@ module RegistryResolverTests =
         info.ArgumentList.Add scriptPath
         args |> List.iter info.ArgumentList.Add
 
-        [ "REGISTRY_PATH_INPUT"
-          "FSGG_DISPATCH_REGISTRY_CONTENT"
-          "FSGG_DISPATCH_REGISTRY_SHA256_12"
-          "REGISTRY_SECRET_CONTENT"
-          "GITHUB_EVENT_NAME"
-          "RUNNER_TEMP"
-          "GITHUB_ENV"
-          "GITHUB_STEP_SUMMARY" ]
+        [
+            "REGISTRY_PATH_INPUT"
+            "FSGG_DISPATCH_REGISTRY_CONTENT"
+            "FSGG_DISPATCH_REGISTRY_SHA256_12"
+            "REGISTRY_SECRET_CONTENT"
+            "GITHUB_EVENT_NAME"
+            "RUNNER_TEMP"
+            "GITHUB_ENV"
+            "GITHUB_STEP_SUMMARY"
+        ]
         |> List.iter (fun key -> info.Environment.Remove key |> ignore)
 
         env |> List.iter (fun (key, value) -> info.Environment[key] <- value)
 
         let completion = TestShared.ChildProcess.runBounded 30_000 info
 
-        { ExitCode = completion.ExitCode
-          Stdout = completion.StandardOutput
-          Stderr = completion.StandardError }
+        {
+            ExitCode = completion.ExitCode
+            Stdout = completion.StandardOutput
+            Stderr = completion.StandardError
+        }
 
     /// The `FSGG_SDD_ACCEPTANCE_REGISTRY=<path>` value from `--print-env` stdout, if present.
     let private exportedPath (stdout: string) =
@@ -120,10 +126,12 @@ module RegistryResolverTests =
 
         let run =
             runResolver
-                [ "GITHUB_EVENT_NAME", "repository_dispatch"
-                  "FSGG_DISPATCH_REGISTRY_CONTENT", content
-                  "FSGG_DISPATCH_REGISTRY_SHA256_12", sha
-                  "RUNNER_TEMP", runnerTemp ]
+                [
+                    "GITHUB_EVENT_NAME", "repository_dispatch"
+                    "FSGG_DISPATCH_REGISTRY_CONTENT", content
+                    "FSGG_DISPATCH_REGISTRY_SHA256_12", sha
+                    "RUNNER_TEMP", runnerTemp
+                ]
                 [ "--print-env" ]
 
         Assert.Equal(0, run.ExitCode)
@@ -149,12 +157,14 @@ module RegistryResolverTests =
         // and return before any dispatch integrity check, so the bogus sha is never evaluated.
         let run =
             runResolver
-                [ "REGISTRY_PATH_INPUT", inputPath
-                  "GITHUB_EVENT_NAME", "repository_dispatch"
-                  "FSGG_DISPATCH_REGISTRY_CONTENT", "schemaVersion: 1\n# dispatched\n"
-                  "FSGG_DISPATCH_REGISTRY_SHA256_12", "deadbeef0000"
-                  "REGISTRY_SECRET_CONTENT", "schemaVersion: 1\n# secret\n"
-                  "RUNNER_TEMP", runnerTemp ]
+                [
+                    "REGISTRY_PATH_INPUT", inputPath
+                    "GITHUB_EVENT_NAME", "repository_dispatch"
+                    "FSGG_DISPATCH_REGISTRY_CONTENT", "schemaVersion: 1\n# dispatched\n"
+                    "FSGG_DISPATCH_REGISTRY_SHA256_12", "deadbeef0000"
+                    "REGISTRY_SECRET_CONTENT", "schemaVersion: 1\n# secret\n"
+                    "RUNNER_TEMP", runnerTemp
+                ]
                 [ "--print-env" ]
 
         Assert.Equal(0, run.ExitCode)
@@ -190,9 +200,11 @@ module RegistryResolverTests =
 
         let run =
             runResolver
-                [ "GITHUB_EVENT_NAME", "repository_dispatch"
-                  "FSGG_DISPATCH_REGISTRY_CONTENT", ""
-                  "RUNNER_TEMP", runnerTemp ]
+                [
+                    "GITHUB_EVENT_NAME", "repository_dispatch"
+                    "FSGG_DISPATCH_REGISTRY_CONTENT", ""
+                    "RUNNER_TEMP", runnerTemp
+                ]
                 [ "--print-env" ]
 
         Assert.NotEqual(0, run.ExitCode)
@@ -206,10 +218,12 @@ module RegistryResolverTests =
 
         let run =
             runResolver
-                [ "GITHUB_EVENT_NAME", "repository_dispatch"
-                  "FSGG_DISPATCH_REGISTRY_CONTENT", "schemaVersion: 1\n# good content\n"
-                  "FSGG_DISPATCH_REGISTRY_SHA256_12", "000000000000" // wrong
-                  "RUNNER_TEMP", runnerTemp ]
+                [
+                    "GITHUB_EVENT_NAME", "repository_dispatch"
+                    "FSGG_DISPATCH_REGISTRY_CONTENT", "schemaVersion: 1\n# good content\n"
+                    "FSGG_DISPATCH_REGISTRY_SHA256_12", "000000000000" // wrong
+                    "RUNNER_TEMP", runnerTemp
+                ]
                 [ "--print-env" ]
 
         Assert.NotEqual(0, run.ExitCode)
@@ -240,12 +254,14 @@ module RegistryResolverTests =
 
         let run =
             runResolver
-                [ "GITHUB_EVENT_NAME", "repository_dispatch"
-                  "FSGG_DISPATCH_REGISTRY_CONTENT", content
-                  "FSGG_DISPATCH_REGISTRY_SHA256_12", sha
-                  "RUNNER_TEMP", runnerTemp
-                  "GITHUB_ENV", githubEnv
-                  "GITHUB_STEP_SUMMARY", stepSummary ]
+                [
+                    "GITHUB_EVENT_NAME", "repository_dispatch"
+                    "FSGG_DISPATCH_REGISTRY_CONTENT", content
+                    "FSGG_DISPATCH_REGISTRY_SHA256_12", sha
+                    "RUNNER_TEMP", runnerTemp
+                    "GITHUB_ENV", githubEnv
+                    "GITHUB_STEP_SUMMARY", stepSummary
+                ]
                 [] // default mode (CI path)
 
         Assert.Equal(0, run.ExitCode)

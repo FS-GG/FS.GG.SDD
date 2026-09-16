@@ -22,24 +22,28 @@ module internal SpecifyAuthoring =
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
 
     type SpecificationIntent =
-        { UserValue: string option
-          Scope: string list
-          NonGoals: string list
-          Stories: string list
-          Requirements: string list
-          AcceptanceScenarios: string list
-          Ambiguities: string list
-          Impact: string list }
+        {
+            UserValue: string option
+            Scope: string list
+            NonGoals: string list
+            Stories: string list
+            Requirements: string list
+            AcceptanceScenarios: string list
+            Ambiguities: string list
+            Impact: string list
+        }
 
     let emptySpecificationIntent =
-        { UserValue = None
-          Scope = []
-          NonGoals = []
-          Stories = []
-          Requirements = []
-          AcceptanceScenarios = []
-          Ambiguities = []
-          Impact = [] }
+        {
+            UserValue = None
+            Scope = []
+            NonGoals = []
+            Stories = []
+            Requirements = []
+            AcceptanceScenarios = []
+            Ambiguities = []
+            Impact = []
+        }
 
     let appendIntent (label: string) (value: string) (intent: SpecificationIntent) =
         let value = if String.IsNullOrEmpty value then "" else value.Trim()
@@ -56,35 +60,42 @@ module internal SpecifyAuthoring =
             | "in scope"
             | "in-scope" ->
                 { intent with
-                    Scope = intent.Scope @ [ value ] }
+                    Scope = intent.Scope @ [ value ]
+                }
             | "non-goal"
             | "non goal"
             | "out of scope"
             | "out-of-scope" ->
                 { intent with
-                    NonGoals = intent.NonGoals @ [ value ] }
+                    NonGoals = intent.NonGoals @ [ value ]
+                }
             | "story"
             | "user story" ->
                 { intent with
-                    Stories = intent.Stories @ [ value ] }
+                    Stories = intent.Stories @ [ value ]
+                }
             | "requirement"
             | "functional requirement"
             | "fr" ->
                 { intent with
-                    Requirements = intent.Requirements @ [ value ] }
+                    Requirements = intent.Requirements @ [ value ]
+                }
             | "acceptance"
             | "acceptance scenario"
             | "scenario" ->
                 { intent with
-                    AcceptanceScenarios = intent.AcceptanceScenarios @ [ value ] }
+                    AcceptanceScenarios = intent.AcceptanceScenarios @ [ value ]
+                }
             | "ambiguity"
             | "question" ->
                 { intent with
-                    Ambiguities = intent.Ambiguities @ [ value ] }
+                    Ambiguities = intent.Ambiguities @ [ value ]
+                }
             | "impact"
             | "public or tool-facing impact" ->
                 { intent with
-                    Impact = intent.Impact @ [ value ] }
+                    Impact = intent.Impact @ [ value ]
+                }
             | _ ->
                 match intent.UserValue with
                 | None -> { intent with UserValue = Some value }
@@ -111,12 +122,14 @@ module internal SpecifyAuthoring =
                 emptySpecificationIntent
 
         let missing =
-            [ if Option.isNone parsed.UserValue then
-                  "user value"
-              if List.isEmpty parsed.Scope then
-                  "scope"
-              if List.isEmpty parsed.Requirements then
-                  "measurable requirement" ]
+            [
+                if Option.isNone parsed.UserValue then
+                    "user value"
+                if List.isEmpty parsed.Scope then
+                    "scope"
+                if List.isEmpty parsed.Requirements then
+                    "measurable requirement"
+            ]
 
         parsed, missing
 
@@ -180,7 +193,9 @@ module internal SpecifyAuthoring =
 
         let nonGoals =
             if List.isEmpty intent.NonGoals then
-                [ "Do not implement later lifecycle commands or Governance enforcement in this specification." ]
+                [
+                    "Do not implement later lifecycle commands or Governance enforcement in this specification."
+                ]
             else
                 intent.NonGoals
 
@@ -204,7 +219,9 @@ module internal SpecifyAuthoring =
 
         let acceptanceScenarios =
             if List.isEmpty intent.AcceptanceScenarios then
-                [ $"Given {seedTitle} is available, when the user exercises it, then they can {capability}." ]
+                [
+                    $"Given {seedTitle} is available, when the user exercises it, then they can {capability}."
+                ]
             else
                 intent.AcceptanceScenarios
 
@@ -318,13 +335,15 @@ Prose status: specified
         ensureSections MergePolicies.specification specificationSectionText text
 
     let specificationSummary (facts: SpecificationFacts) : SpecificationSummary =
-        { WorkId = facts.FrontMatter.WorkId.Value
-          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
-          Status = facts.FrontMatter.Status
-          StoryIds = facts.UserStoryIds |> List.map _.Value |> List.sort
-          RequirementIds = facts.RequirementIds |> List.map _.Value |> List.sort
-          AcceptanceScenarioIds = facts.AcceptanceScenarioIds |> List.map _.Value |> List.sort
-          AmbiguityIds = facts.AmbiguityIds |> List.map _.Value |> List.sort }
+        {
+            WorkId = facts.FrontMatter.WorkId.Value
+            Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+            Status = facts.FrontMatter.Status
+            StoryIds = facts.UserStoryIds |> List.map _.Value |> List.sort
+            RequirementIds = facts.RequirementIds |> List.map _.Value |> List.sort
+            AcceptanceScenarioIds = facts.AcceptanceScenarioIds |> List.map _.Value |> List.sort
+            AmbiguityIds = facts.AmbiguityIds |> List.map _.Value |> List.sort
+        }
 
     let mapSpecificationDiagnostics (path: string) (diagnostics: Diagnostic list) : Diagnostic list =
         diagnostics
@@ -338,9 +357,11 @@ Prose status: specified
 
     let parseSpecificationForCommand path text : Result<SpecificationFacts * Diagnostic list, Diagnostic list> =
         let snapshot =
-            { Path = path
-              Text = text
-              RawBytes = None }
+            {
+                Path = path
+                Text = text
+                RawBytes = None
+            }
 
         match parseSpecificationFacts snapshot with
         | Error diagnostics -> Error(mapSpecificationDiagnostics path diagnostics)
@@ -429,7 +450,9 @@ Prose status: specified
 
         match snapshot path model with
         | None ->
-            [ missingSpecificationPrerequisite path $"Specification prerequisite '{path}' is missing." ],
+            [
+                missingSpecificationPrerequisite path $"Specification prerequisite '{path}' is missing."
+            ],
             None,
             None,
             None

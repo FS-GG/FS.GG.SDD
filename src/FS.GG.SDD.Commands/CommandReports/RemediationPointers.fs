@@ -34,8 +34,10 @@ module internal RemediationPointers =
     /// Where a covered diagnostic's correction sends the author. At least one field is `Some`
     /// for every registry entry (guard-enforced).
     type RemediationPointer =
-        { Skill: string option // vendored stage skill name, e.g. "fs-gg-sdd-specify"
-          Grammar: string option } // section anchor slug into the fs-gg-sdd-authoring-contracts skill
+        {
+            Skill: string option // vendored stage skill name, e.g. "fs-gg-sdd-specify"
+            Grammar: string option
+        } // section anchor slug into the fs-gg-sdd-authoring-contracts skill
 
     let skill name = Some $"fs-gg-sdd-{name}"
 
@@ -72,70 +74,71 @@ module internal RemediationPointers =
     // them.
     let registry: Map<string, RemediationPointer> =
         [ // charter
-          "malformedCharterFrontMatter", at charterSkill frontMatter
-          "charterIdentityMismatch", at charterSkill frontMatter
-          // specify
-          "missingSpecificationIntent", at specifySkill specifyFacts
-          "malformedSpecificationFrontMatter", at specifySkill frontMatter
-          "malformedSpecificationFacts", at specifySkill None
-          "duplicateSpecificationId", at specifySkill None
-          "missingSpecificationId", at specifySkill None
-          "unknownSpecificationReference", at specifySkill None
-          "specificationIdentityMismatch", at specifySkill frontMatter
-          // clarify
-          "missingClarificationAnswer", at clarifySkill decisionTag
-          "unresolvedBlockingAmbiguity", at clarifySkill decisionTag
-          "malformedClarificationFrontMatter", at clarifySkill frontMatter
-          "duplicateClarificationId", at clarifySkill None
-          "unknownClarificationReference", at clarifySkill None
-          "unsafeDecisionChange", at clarifySkill decisionTag
-          "clarificationIdentityMismatch", at clarifySkill frontMatter
-          // checklist
-          "malformedChecklistFrontMatter", at checklistSkill frontMatter
-          "missingChecklistBackReference", at checklistSkill None
-          "duplicateChecklistId", at checklistSkill None
-          "unknownChecklistSourceReference", at checklistSkill None
-          "failedChecklistPrerequisite", at checklistSkill coverageLine
-          "checklistIdentityMismatch", at checklistSkill frontMatter
-          // plan
-          "malformedPlanFrontMatter", at planSkill frontMatter
-          "duplicatePlanId", at planSkill None
-          "unknownPlanSourceReference", at planSkill None
-          "failedPlanPrerequisite", at planSkill None
-          "planIdentityMismatch", at planSkill frontMatter
-          // tasks
-          "malformedTasksArtifact", at tasksSkill frontMatter
-          "duplicateTaskId", at tasksSkill None
-          "unknownTaskSourceReference", at tasksSkill None
-          "unknownTaskDependency", at tasksSkill None
-          "taskDependencyCycle", at tasksSkill None
-          "doneTaskMissingEvidence", at tasksSkill None
-          "skippedTaskMissingRationale", at tasksSkill None
-          "failedTasksPrerequisite", at tasksSkill None
-          "tasksIdentityMismatch", at tasksSkill frontMatter
-          // evidence
-          "evidence.malformedEvidenceArtifact", at evidenceSkill evidenceDecl
-          "evidence.duplicateEvidenceId", at evidenceSkill evidenceDecl
-          "evidence.unknownReference", at evidenceSkill evidenceDecl
-          "evidence.missingRequiredEvidence", at evidenceSkill evidenceDecl
-          "evidence.undisclosedSyntheticEvidence", at evidenceSkill evidenceDecl
-          "evidence.missingDeferralRationale", at evidenceSkill evidenceDecl
-          "evidence.missingRequiredSkill", at evidenceSkill evidenceDecl
-          "evidence.artifactNotFound", at evidenceSkill evidenceDecl
-          "evidence.unsupportedResultState", at evidenceSkill evidenceDecl
-          "evidence.unsafeUpdate", at evidenceSkill evidenceDecl
-          "evidence.identityMismatch", at evidenceSkill frontMatter
-          // FS.GG.SDD#865 — the record channel's authoring faults land in the same declaration grammar
-          // as every other evidence fault, so they point at the same place.
-          "evidence.recordReceiptInvalid", at evidenceSkill evidenceDecl
-          "evidence.recordReceiptStale", at evidenceSkill evidenceDecl
-          // verify
-          "verify.missingRequiredTest", at evidenceSkill evidenceDecl
-          "verify.unobservedRequiredTest", at evidenceSkill evidenceDecl
-          "verify.unrecordedRequiredRecord", at evidenceSkill evidenceDecl
-          // ship
-          "ship.unobservedEvidence", at evidenceSkill evidenceDecl
-          "ship.unrecordedEvidence", at evidenceSkill evidenceDecl ]
+            "malformedCharterFrontMatter", at charterSkill frontMatter
+            "charterIdentityMismatch", at charterSkill frontMatter
+            // specify
+            "missingSpecificationIntent", at specifySkill specifyFacts
+            "malformedSpecificationFrontMatter", at specifySkill frontMatter
+            "malformedSpecificationFacts", at specifySkill None
+            "duplicateSpecificationId", at specifySkill None
+            "missingSpecificationId", at specifySkill None
+            "unknownSpecificationReference", at specifySkill None
+            "specificationIdentityMismatch", at specifySkill frontMatter
+            // clarify
+            "missingClarificationAnswer", at clarifySkill decisionTag
+            "unresolvedBlockingAmbiguity", at clarifySkill decisionTag
+            "malformedClarificationFrontMatter", at clarifySkill frontMatter
+            "duplicateClarificationId", at clarifySkill None
+            "unknownClarificationReference", at clarifySkill None
+            "unsafeDecisionChange", at clarifySkill decisionTag
+            "clarificationIdentityMismatch", at clarifySkill frontMatter
+            // checklist
+            "malformedChecklistFrontMatter", at checklistSkill frontMatter
+            "missingChecklistBackReference", at checklistSkill None
+            "duplicateChecklistId", at checklistSkill None
+            "unknownChecklistSourceReference", at checklistSkill None
+            "failedChecklistPrerequisite", at checklistSkill coverageLine
+            "checklistIdentityMismatch", at checklistSkill frontMatter
+            // plan
+            "malformedPlanFrontMatter", at planSkill frontMatter
+            "duplicatePlanId", at planSkill None
+            "unknownPlanSourceReference", at planSkill None
+            "failedPlanPrerequisite", at planSkill None
+            "planIdentityMismatch", at planSkill frontMatter
+            // tasks
+            "malformedTasksArtifact", at tasksSkill frontMatter
+            "duplicateTaskId", at tasksSkill None
+            "unknownTaskSourceReference", at tasksSkill None
+            "unknownTaskDependency", at tasksSkill None
+            "taskDependencyCycle", at tasksSkill None
+            "doneTaskMissingEvidence", at tasksSkill None
+            "skippedTaskMissingRationale", at tasksSkill None
+            "failedTasksPrerequisite", at tasksSkill None
+            "tasksIdentityMismatch", at tasksSkill frontMatter
+            // evidence
+            "evidence.malformedEvidenceArtifact", at evidenceSkill evidenceDecl
+            "evidence.duplicateEvidenceId", at evidenceSkill evidenceDecl
+            "evidence.unknownReference", at evidenceSkill evidenceDecl
+            "evidence.missingRequiredEvidence", at evidenceSkill evidenceDecl
+            "evidence.undisclosedSyntheticEvidence", at evidenceSkill evidenceDecl
+            "evidence.missingDeferralRationale", at evidenceSkill evidenceDecl
+            "evidence.missingRequiredSkill", at evidenceSkill evidenceDecl
+            "evidence.artifactNotFound", at evidenceSkill evidenceDecl
+            "evidence.unsupportedResultState", at evidenceSkill evidenceDecl
+            "evidence.unsafeUpdate", at evidenceSkill evidenceDecl
+            "evidence.identityMismatch", at evidenceSkill frontMatter
+            // FS.GG.SDD#865 — the record channel's authoring faults land in the same declaration grammar
+            // as every other evidence fault, so they point at the same place.
+            "evidence.recordReceiptInvalid", at evidenceSkill evidenceDecl
+            "evidence.recordReceiptStale", at evidenceSkill evidenceDecl
+            // verify
+            "verify.missingRequiredTest", at evidenceSkill evidenceDecl
+            "verify.unobservedRequiredTest", at evidenceSkill evidenceDecl
+            "verify.unrecordedRequiredRecord", at evidenceSkill evidenceDecl
+            // ship
+            "ship.unobservedEvidence", at evidenceSkill evidenceDecl
+            "ship.unrecordedEvidence", at evidenceSkill evidenceDecl
+        ]
         |> Map.ofList
 
     /// The deterministic pointer sentence appended to a covered diagnostic's Correction, or `""`

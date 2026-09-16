@@ -51,24 +51,30 @@ module ReleaseContract =
 
     /// One documented field (JSON) or section (Markdown) with its own stability.
     type InventoryItem =
-        { Name: string
-          Kind: InventoryKind
-          Stability: StabilityClass }
+        {
+            Name: string
+            Kind: InventoryKind
+            Stability: StabilityClass
+        }
 
     /// The single declared semantic version shared by every `FS.GG.SDD.*` package
     /// and the `fsgg-sdd` CLI (FR-003).
     type PackageVersionIdentity =
-        { Version: string
-          Channel: ReleaseChannel
-          PackageIds: string list
-          CliCommandName: string }
+        {
+            Version: string
+            Channel: ReleaseChannel
+            PackageIds: string list
+            CliCommandName: string
+        }
 
     /// A per-release-line compatibility record. The Governance range is an optional
     /// integration fact that MUST NOT block readiness (FR-002).
     type CompatibilityMatrixEntry =
-        { SddVersionLine: string
-          SpecKitRange: string
-          GovernanceContractVersionRange: string option }
+        {
+            SddVersionLine: string
+            SpecKitRange: string
+            GovernanceContractVersionRange: string option
+        }
 
     /// The documented shape of one public generated artifact (or sub-file) or
     /// `--json` report.
@@ -92,26 +98,32 @@ module ReleaseContract =
 
     /// A per-release record pointer for breaking changes (FR-009/FR-010).
     type MigrationNoteRef =
-        { Version: string
-          Path: string
-          BreakingChanges: string list }
+        {
+            Version: string
+            Path: string
+            BreakingChanges: string list
+        }
 
     /// The authoritative machine contract serialized to
     /// `docs/release/release-readiness.json`.
     type ReleaseReadiness =
-        { SchemaVersion: int
-          GeneratorVersion: GeneratorVersion
-          Identity: PackageVersionIdentity
-          Compatibility: CompatibilityMatrixEntry list
-          Catalog: SchemaReferenceEntry list
-          Migrations: MigrationNoteRef list }
+        {
+            SchemaVersion: int
+            GeneratorVersion: GeneratorVersion
+            Identity: PackageVersionIdentity
+            Compatibility: CompatibilityMatrixEntry list
+            Catalog: SchemaReferenceEntry list
+            Migrations: MigrationNoteRef list
+        }
 
     /// A caller-supplied snapshot of what a real lifecycle run produced, fed to the
     /// pure `evaluate` check (the caller does the file I/O — Constitution V).
     type ProducedArtifact =
-        { Contract: string
-          Source: ArtifactRef
-          Inventory: string list }
+        {
+            Contract: string
+            Source: ArtifactRef
+            Inventory: string list
+        }
 
     val releaseChannelValue: channel: ReleaseChannel -> string
     val changeClassValue: changeClass: ChangeClass -> string

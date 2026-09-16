@@ -19,33 +19,41 @@ module Core =
         }
 
     type AnalysisSourceRecord =
-        { Path: string
-          Kind: string
-          Digest: SourceDigest option
-          SchemaVersion: int option
-          SchemaStatus: string option }
+        {
+            Path: string
+            Kind: string
+            Digest: SourceDigest option
+            SchemaVersion: int option
+            SchemaStatus: string option
+        }
 
     type AnalysisGeneratedViewRecord =
-        { Path: string
-          Kind: string
-          Currency: string
-          DiagnosticIds: string list }
+        {
+            Path: string
+            Kind: string
+            Currency: string
+            DiagnosticIds: string list
+        }
 
     type AnalysisOptionalBoundaryFact =
-        { Path: string
-          Relationship: string
-          RequiredBySdd: bool
-          State: string
-          DiagnosticIds: string list }
+        {
+            Path: string
+            Relationship: string
+            RequiredBySdd: bool
+            State: string
+            DiagnosticIds: string list
+        }
 
     type LifecycleArtifactContract =
-        { Artifact: ArtifactRef
-          Purpose: string
-          SourceOfTruth: string
-          StructuredContract: string
-          GeneratedViewRelationship: string
-          StaleBehavior: string
-          DiagnosticFamily: string list }
+        {
+            Artifact: ArtifactRef
+            Purpose: string
+            SourceOfTruth: string
+            StructuredContract: string
+            GeneratedViewRelationship: string
+            StaleBehavior: string
+            DiagnosticFamily: string list
+        }
 
     val standardArtifactContracts: unit -> LifecycleArtifactContract list
     val internal frontMatter: snapshot: FileSnapshot -> (string * string) option

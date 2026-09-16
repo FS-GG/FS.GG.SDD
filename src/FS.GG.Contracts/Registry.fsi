@@ -10,14 +10,18 @@ module Registry =
     /// A dependency edge: `Consumer` depends on `Provider`, declaring the range of
     /// provider versions it is compatible with.
     type DependencyEdge =
-        { Consumer: string
-          Provider: string
-          CompatibleRange: string }
+        {
+            Consumer: string
+            Provider: string
+            CompatibleRange: string
+        }
 
     /// The typed model of `registry/dependencies.yml`.
     type RegistryModel =
-        { Components: RegistryComponent list
-          Edges: DependencyEdge list }
+        {
+            Components: RegistryComponent list
+            Edges: DependencyEdge list
+        }
 
     /// The coherence/completeness rule a diagnostic reports as violated (FR-009).
     /// `DuplicateComponent` and `MalformedDocument` were added (additively, feature
@@ -37,9 +41,11 @@ module Registry =
 
     /// A single actionable diagnostic naming the offending entry and the rule.
     type RegistryDiagnostic =
-        { Entry: string
-          Rule: RegistryRule
-          Message: string }
+        {
+            Entry: string
+            Rule: RegistryRule
+            Message: string
+        }
 
     /// Validation outcome: success has no diagnostics (SC-007).
     type ValidationResult =
@@ -59,9 +65,11 @@ module Registry =
 
     /// A repo participating in the registry (the `repos:` map). `Id` is the map key.
     type RegistryRepo =
-        { Id: string
-          Name: string
-          Role: string }
+        {
+            Id: string
+            Name: string
+            Role: string
+        }
 
     /// One owner's answer to *"which repos depend on this contract?"* — an obligation the
     /// owner DECLARES, not a fact derived from the tree.
@@ -200,20 +208,24 @@ module Registry =
     /// ids; `Via` is free-text and is NOT contract-checked (parity with the Python
     /// authority — research R4).
     type DependencyEdge2 =
-        { From: string
-          To: string
-          Via: string }
+        {
+            From: string
+            To: string
+            Via: string
+        }
 
     /// A coherence state entry (`coherence[]`).
     type CoherenceEntry = { Id: string; Coherent: bool }
 
     /// The typed model of the real `registry/dependencies.yml`.
     type RegistryDocument =
-        { SchemaVersion: int
-          Repos: RegistryRepo list
-          Contracts: ContractEntry list
-          Dependencies: DependencyEdge2 list
-          Coherence: CoherenceEntry list }
+        {
+            SchemaVersion: int
+            Repos: RegistryRepo list
+            Contracts: ContractEntry list
+            Dependencies: DependencyEdge2 list
+            Coherence: CoherenceEntry list
+        }
 
     /// Pure validator over the real-schema document. Mirrors the rule *kinds* of
     /// scripts/validate-registry.py so the two cannot disagree on the canonical file
@@ -265,19 +277,23 @@ module Registry =
     /// condition predicate; absent ⇒ `always` (the catalog's own rule), so it stays
     /// an option rather than being defaulted here.
     type SkillRegistryEntry =
-        { Id: string
-          Scope: string
-          Owner: string
-          Source: string
-          Sha256: string
-          Mirrored: MirrorDeclaration
-          MaterializesWhen: string option }
+        {
+            Id: string
+            Scope: string
+            Owner: string
+            Source: string
+            Sha256: string
+            Mirrored: MirrorDeclaration
+            MaterializesWhen: string option
+        }
 
     /// The typed model of the org skill catalog (`registry/skills.yml`).
     type SkillRegistryDocument =
-        { SchemaVersion: int
-          Parameters: string list
-          Skills: SkillRegistryEntry list }
+        {
+            SchemaVersion: int
+            Parameters: string list
+            Skills: SkillRegistryEntry list
+        }
 
     /// Pure validator over the skill-registry document — the DOCUMENT-SCHEMA tier, the
     /// same tier `validateDocument` occupies for `dependencies.yml`. Deterministic:

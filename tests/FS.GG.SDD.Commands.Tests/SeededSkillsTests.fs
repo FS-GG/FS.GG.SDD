@@ -125,21 +125,23 @@ module SeededSkillsTests =
     let ``isSddTree and isSddOwned honor the strict 056 truth table`` () =
         // (path, expected isSddTree, expected isSddOwned) — data-model.md E-table.
         let rows =
-            [ ".fsgg/constitution.md", true, true
-              "work/001/spec.md", true, true
-              "readiness/001/verify.json", true, true
-              // .claude stays WHOLE-ROOT reserved (strict — NOT narrowed).
-              ".claude/skills/anything/SKILL.md", true, true
-              // .agents reserves ONLY the fs-gg-sdd-* namespace (new clause).
-              ".agents/skills/fs-gg-sdd-plan/SKILL.md", true, true
-              ".agents/skills/fs-gg-sdd-custom/SKILL.md", true, true
-              // A provider co-tenant skill in the neutral root is product, not reserved.
-              ".agents/skills/fs-gg-elmish/SKILL.md", false, false
-              ".agents/skills/", false, false
-              ".agents/other.txt", false, false
-              // Agent-guidance skeleton: owned-but-not-a-tree.
-              "AGENTS.md", false, true
-              "CLAUDE.md", false, true ]
+            [
+                ".fsgg/constitution.md", true, true
+                "work/001/spec.md", true, true
+                "readiness/001/verify.json", true, true
+                // .claude stays WHOLE-ROOT reserved (strict — NOT narrowed).
+                ".claude/skills/anything/SKILL.md", true, true
+                // .agents reserves ONLY the fs-gg-sdd-* namespace (new clause).
+                ".agents/skills/fs-gg-sdd-plan/SKILL.md", true, true
+                ".agents/skills/fs-gg-sdd-custom/SKILL.md", true, true
+                // A provider co-tenant skill in the neutral root is product, not reserved.
+                ".agents/skills/fs-gg-elmish/SKILL.md", false, false
+                ".agents/skills/", false, false
+                ".agents/other.txt", false, false
+                // Agent-guidance skeleton: owned-but-not-a-tree.
+                "AGENTS.md", false, true
+                "CLAUDE.md", false, true
+            ]
 
         for path, expectedTree, expectedOwned in rows do
             Assert.Equal(expectedTree, isSddTree path)
@@ -212,21 +214,24 @@ module SeededSkillsTests =
 
         let request =
             { TestSupport.request Scaffold root with
-                Provider = Some "fixture" }
+                Provider = Some "fixture"
+            }
 
         let descriptor: Fsgg.Provider.ProviderDescriptor =
-            { Name = "fixture"
-              ContractVersion = "1.0.0"
-              TemplateId = "fsgg-fixture"
-              Source = "/dev/null"
-              Parameters = []
-              Build = None
-              Test = None
-              Run = None
-              Verify = None
-              NameParameter = "name"
-              IdentifierParameter = None
-              MinimumCliVersion = None }
+            {
+                Name = "fixture"
+                ContractVersion = "1.0.0"
+                TemplateId = "fsgg-fixture"
+                Source = "/dev/null"
+                Parameters = []
+                Build = None
+                Test = None
+                Run = None
+                Verify = None
+                NameParameter = "name"
+                IdentifierParameter = None
+                MinimumCliVersion = None
+            }
 
         let planned = scaffoldInvocationEffects request descriptor Map.empty |> Set.ofList
 

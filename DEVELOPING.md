@@ -162,7 +162,7 @@ configured entirely by the repo-root `.editorconfig` (Fantomas 6+ has no separat
 config file). CI runs a **non-required** `format` job (`.github/workflows/gate.yml`)
 that fails a mis-formatted PR with an advisory red X; it never blocks the merge.
 
-Use the **same pinned version CI uses (7.0.5)** so your local verdict matches the
+Use the **same pinned version CI uses (8.0.0)** so your local verdict matches the
 gate. Fantomas is installed to a repo-local path, deliberately **not** into
 `.config/dotnet-tools.json` — a spec commitment (feature 065, FR-003), and no longer
 a mechanical constraint. That manifest *used* to be an org file the kit materialized
@@ -177,7 +177,7 @@ tracked file here; just leave the formatter out of it, per FR-003:
 
 ```sh
 # Install the pinned formatter (once):
-dotnet tool install fantomas --version 7.0.5 --tool-path ./.fantomas-tool --allow-roll-forward
+dotnet tool install fantomas --version 8.0.0 --tool-path ./.fantomas-tool
 
 # Check (what CI runs) — exit 0 when clean, non-zero + a list when not:
 ./.fantomas-tool/fantomas --check .

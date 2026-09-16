@@ -28,9 +28,11 @@ module AgentGuidanceViewTests =
     let parsedModel () =
         match
             parseWorkModel
-                { Path = "readiness/014-agent-guidance/work-model.json"
-                  Text = workModelJson
-                  RawBytes = None }
+                {
+                    Path = "readiness/014-agent-guidance/work-model.json"
+                    Text = workModelJson
+                    RawBytes = None
+                }
         with
         | Ok model -> model
         | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -46,9 +48,11 @@ module AgentGuidanceViewTests =
     let ``parseWorkModel rejects malformed JSON`` () =
         match
             parseWorkModel
-                { Path = "readiness/x/work-model.json"
-                  Text = "{ not json"
-                  RawBytes = None }
+                {
+                    Path = "readiness/x/work-model.json"
+                    Text = "{ not json"
+                    RawBytes = None
+                }
         with
         | Ok _ -> failwith "Expected an error for malformed work-model JSON."
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -91,9 +95,11 @@ module AgentGuidanceViewTests =
     let private unionModel () =
         match
             parseWorkModel
-                { Path = "readiness/096-union/work-model.json"
-                  Text = unionWorkModelJson
-                  RawBytes = None }
+                {
+                    Path = "readiness/096-union/work-model.json"
+                    Text = unionWorkModelJson
+                    RawBytes = None
+                }
         with
         | Ok model -> model
         | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -151,9 +157,11 @@ module AgentGuidanceViewTests =
         let model =
             match
                 parseWorkModel
-                    { Path = "readiness/215-case/work-model.json"
-                      Text = caseCollisionWorkModelJson
-                      RawBytes = None }
+                    {
+                        Path = "readiness/215-case/work-model.json"
+                        Text = caseCollisionWorkModelJson
+                        RawBytes = None
+                    }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -184,9 +192,11 @@ module AgentGuidanceViewTests =
         let mutated =
             match
                 parseWorkModel
-                    { Path = "readiness/x/work-model.json"
-                      Text = mutatedJson
-                      RawBytes = None }
+                    {
+                        Path = "readiness/x/work-model.json"
+                        Text = mutatedJson
+                        RawBytes = None
+                    }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"{diagnostics}"
@@ -215,9 +225,11 @@ module AgentGuidanceViewTests =
     let ``parseGeneratedAgentGuidance reads a well-formed manifest`` () =
         match
             parseGeneratedAgentGuidance
-                { Path = "readiness/014-agent-guidance/agent-commands/claude/guidance.json"
-                  Text = manifestJson
-                  RawBytes = None }
+                {
+                    Path = "readiness/014-agent-guidance/agent-commands/claude/guidance.json"
+                    Text = manifestJson
+                    RawBytes = None
+                }
         with
         | Ok manifest ->
             Assert.Equal("014-agent-guidance", manifest.WorkId.Value)
@@ -239,9 +251,11 @@ module AgentGuidanceViewTests =
 
         match
             parseGeneratedAgentGuidance
-                { Path = "p"
-                  Text = bad
-                  RawBytes = None }
+                {
+                    Path = "p"
+                    Text = bad
+                    RawBytes = None
+                }
         with
         | Ok _ -> failwith "Expected a malformed-schema error."
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -250,9 +264,11 @@ module AgentGuidanceViewTests =
     let ``parseGeneratedAgentGuidance rejects malformed body`` () =
         match
             parseGeneratedAgentGuidance
-                { Path = "p"
-                  Text = "{ not json"
-                  RawBytes = None }
+                {
+                    Path = "p"
+                    Text = "{ not json"
+                    RawBytes = None
+                }
         with
         | Ok _ -> failwith "Expected a malformed-body error."
         | Error diagnostics -> Assert.NotEmpty diagnostics

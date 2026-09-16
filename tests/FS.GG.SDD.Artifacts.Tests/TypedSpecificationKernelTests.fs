@@ -12,42 +12,54 @@ module TypedSpecificationKernelTests =
         | Error message -> failwith message
 
     let private scope statement =
-        { Id = id "SB-001"
-          Statement = statement }
+        {
+            Id = id "SB-001"
+            Statement = statement
+        }
 
     let private story =
-        { Id = id "US-001"
-          Priority = "P1"
-          Statement = "An author can compile a typed requirement." }
+        {
+            Id = id "US-001"
+            Priority = "P1"
+            Statement = "An author can compile a typed requirement."
+        }
 
     let private requirement acceptance evidence =
-        { Id = id "FR-001"
-          Statement = "The compiler MUST retain stable references."
-          AcceptanceIds = acceptance
-          EvidenceObligationIds = evidence }
+        {
+            Id = id "FR-001"
+            Statement = "The compiler MUST retain stable references."
+            AcceptanceIds = acceptance
+            EvidenceObligationIds = evidence
+        }
 
     let private acceptance =
-        { Id = id "AC-001"
-          StoryIds = [ id "US-001" ]
-          RequirementIds = [ id "FR-001" ]
-          Statement = "Given a model, compilation succeeds." }
+        {
+            Id = id "AC-001"
+            StoryIds = [ id "US-001" ]
+            RequirementIds = [ id "FR-001" ]
+            Statement = "Given a model, compilation succeeds."
+        }
 
     let private ambiguity =
-        { Id = id "AMB-001"
-          Question = "Which package owns the model?"
-          State = Resolved
-          Decision = Some "FS.GG.SDD.Artifacts owns it." }
+        {
+            Id = id "AMB-001"
+            Question = "Which package owns the model?"
+            State = Resolved
+            Decision = Some "FS.GG.SDD.Artifacts owns it."
+        }
 
     let private directExtension () =
-        { UserValue = "Authors share one typed specification."
-          Scope = [ scope "Typed requirements only." ]
-          NonGoals = []
-          Stories = [ story ]
-          Requirements = [ requirement [ id "AC-001" ] [ id "EV001" ] ]
-          Acceptance = [ acceptance ]
-          Ambiguities = [ ambiguity ]
-          PublicImpact = [ "Adds a typed contract." ]
-          LifecycleNotes = [ "Publish before adoption." ] }
+        {
+            UserValue = "Authors share one typed specification."
+            Scope = [ scope "Typed requirements only." ]
+            NonGoals = []
+            Stories = [ story ]
+            Requirements = [ requirement [ id "AC-001" ] [ id "EV001" ] ]
+            Acceptance = [ acceptance ]
+            Ambiguities = [ ambiguity ]
+            PublicImpact = [ "Adds a typed contract." ]
+            LifecycleNotes = [ "Publish before adoption." ]
+        }
 
     let private draftExtension () =
         RequirementsDraft.empty
@@ -62,22 +74,28 @@ module TypedSpecificationKernelTests =
         |> RequirementsDraft.build
 
     let private obligation idText kind description =
-        { Id = id idText
-          Kind = kind
-          Description = description }
+        {
+            Id = id idText
+            Kind = kind
+            Description = description
+        }
 
     let private model extension =
-        { Identity = id "SPEC-001"
-          SchemaVersion = 1
-          Provenance =
-            { Agent = "tern-91d9"
-              Session = "session-1"
-              SourcePath = "work/example/spec.md"
-              SourceRevision = String.replicate 64 "a"
-              AuthoredAtUtc = "2026-08-24T12:00:00Z" }
-          Intent = "Prove the public contract."
-          EvidenceObligations = [ obligation "EV001" "test" "Run the semantic suite." ]
-          Extension = extension }
+        {
+            Identity = id "SPEC-001"
+            SchemaVersion = 1
+            Provenance =
+                {
+                    Agent = "tern-91d9"
+                    Session = "session-1"
+                    SourcePath = "work/example/spec.md"
+                    SourceRevision = String.replicate 64 "a"
+                    AuthoredAtUtc = "2026-08-24T12:00:00Z"
+                }
+            Intent = "Prove the public contract."
+            EvidenceObligations = [ obligation "EV001" "test" "Run the semantic suite." ]
+            Extension = extension
+        }
 
     let private diagnostics (result: Result<'value, SpecificationDiagnostic list>) =
         match result with
@@ -130,14 +148,17 @@ module TypedSpecificationKernelTests =
             { directExtension () with
                 UserValue = ""
                 Scope = [ scope "one"; scope "two" ]
-                Requirements = [ requirement [ id "AC-999" ] [ id "EV999" ] ] }
+                Requirements = [ requirement [ id "AC-999" ] [ id "EV999" ] ]
+            }
 
         let invalidModel =
             { model invalidExtension with
                 SchemaVersion = 2
                 Provenance =
                     { (model invalidExtension).Provenance with
-                        SourcePath = "" } }
+                        SourcePath = ""
+                    }
+            }
 
         let findings =
             SpecificationCompiler.validate RequirementsExtension.contract invalidModel
@@ -196,12 +217,15 @@ module TypedSpecificationKernelTests =
                     { before.Provenance with
                         Agent = "another-agent"
                         Session = "session-2"
-                        AuthoredAtUtc = "2026-08-24T13:00:00Z" } }
+                        AuthoredAtUtc = "2026-08-24T13:00:00Z"
+                    }
+            }
 
         let changed =
             model
                 { directExtension () with
-                    Scope = [ scope "A changed semantic scope." ] }
+                    Scope = [ scope "A changed semantic scope." ]
+                }
 
         Assert.Equal(
             Ok Equivalent,
@@ -280,23 +304,35 @@ module TypedSpecificationKernelTests =
     [<Fact>]
     let ``evidence validation distinguishes missing duplicate unknown and kind mismatch`` () =
         let obligations =
-            [ obligation "EV001" "test" "Semantic tests"
-              obligation "EV002" "review" "Independent review"
-              obligation "EV003" "package" "Package consumption" ]
+            [
+                obligation "EV001" "test" "Semantic tests"
+                obligation "EV002" "review" "Independent review"
+                obligation "EV003" "package" "Package consumption"
+            ]
 
         let receipts =
-            [ { ObligationId = id "EV001"
-                Kind = "test"
-                EvidenceRef = "run:1" }
-              { ObligationId = id "EV001"
-                Kind = "test"
-                EvidenceRef = "run:2" }
-              { ObligationId = id "EV002"
-                Kind = "test"
-                EvidenceRef = "run:3" }
-              { ObligationId = id "EV999"
-                Kind = "test"
-                EvidenceRef = "run:4" } ]
+            [
+                {
+                    ObligationId = id "EV001"
+                    Kind = "test"
+                    EvidenceRef = "run:1"
+                }
+                {
+                    ObligationId = id "EV001"
+                    Kind = "test"
+                    EvidenceRef = "run:2"
+                }
+                {
+                    ObligationId = id "EV002"
+                    Kind = "test"
+                    EvidenceRef = "run:3"
+                }
+                {
+                    ObligationId = id "EV999"
+                    Kind = "test"
+                    EvidenceRef = "run:4"
+                }
+            ]
 
         let result = SpecificationEvidence.validate obligations receipts
         let codes = result.Diagnostics |> List.map _.Code

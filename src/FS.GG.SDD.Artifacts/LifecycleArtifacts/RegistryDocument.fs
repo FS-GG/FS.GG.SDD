@@ -21,9 +21,11 @@ module RegistryDocument =
                 match pair.Key with
                 | :? YamlScalarNode as keyNode ->
                     Some(
-                        { Id = Option.ofObj keyNode.Value |> Option.defaultValue ""
-                          Name = tryScalarAt [ "name" ] pair.Value |> Option.defaultValue ""
-                          Role = tryScalarAt [ "role" ] pair.Value |> Option.defaultValue "" }
+                        {
+                            Id = Option.ofObj keyNode.Value |> Option.defaultValue ""
+                            Name = tryScalarAt [ "name" ] pair.Value |> Option.defaultValue ""
+                            Role = tryScalarAt [ "role" ] pair.Value |> Option.defaultValue ""
+                        }
                         : Fsgg.Registry.RegistryRepo
                     )
                 | _ -> None)
@@ -176,9 +178,11 @@ module RegistryDocument =
                 | None -> None
                 | Some _ ->
                     Some(
-                        { From = tryScalarAt [ "from" ] item |> Option.defaultValue ""
-                          To = tryScalarAt [ "to" ] item |> Option.defaultValue ""
-                          Via = tryScalarAt [ "via" ] item |> Option.defaultValue "" }
+                        {
+                            From = tryScalarAt [ "from" ] item |> Option.defaultValue ""
+                            To = tryScalarAt [ "to" ] item |> Option.defaultValue ""
+                            Via = tryScalarAt [ "via" ] item |> Option.defaultValue ""
+                        }
                         : Fsgg.Registry.DependencyEdge2
                     ))
             |> Seq.toList
@@ -193,8 +197,10 @@ module RegistryDocument =
                 | None -> None
                 | Some _ ->
                     Some(
-                        { Id = tryScalarAt [ "id" ] item |> Option.defaultValue ""
-                          Coherent = boolAt [ "coherent" ] item false }
+                        {
+                            Id = tryScalarAt [ "id" ] item |> Option.defaultValue ""
+                            Coherent = boolAt [ "coherent" ] item false
+                        }
                         : Fsgg.Registry.CoherenceEntry
                     ))
             |> Seq.toList
@@ -231,10 +237,12 @@ module RegistryDocument =
                                         tryChild key rootMapping |> Option.map parse |> Option.defaultValue []
 
                                     Ok
-                                        { SchemaVersion = schemaVersion
-                                          Repos = childList "repos" parseRepos
-                                          Contracts = childList "contracts" parseContracts
-                                          Dependencies = childList "dependencies" parseDependencies
-                                          Coherence = childList "coherence" parseCoherence }
+                                        {
+                                            SchemaVersion = schemaVersion
+                                            Repos = childList "repos" parseRepos
+                                            Contracts = childList "contracts" parseContracts
+                                            Dependencies = childList "dependencies" parseDependencies
+                                            Coherence = childList "coherence" parseCoherence
+                                        }
         with ex ->
             err path $"Registry file could not be parsed: {ex.Message}"

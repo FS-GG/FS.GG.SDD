@@ -11,12 +11,14 @@ open Xunit
 module DeterminismMatrixTests =
     let private focusedPlan =
         { defaultPlan with
-            DeterminismOutputs = [ "verify.json"; "ship.json"; "command-report (--json)" ] }
+            DeterminismOutputs = [ "verify.json"; "ship.json"; "command-report (--json)" ]
+        }
 
     let private determinismOptions =
         { defaultOptions with
             OnlyMatrix = Some determinismMatrixName
-            Plan = Some focusedPlan }
+            Plan = Some focusedPlan
+        }
 
     let private determinismMatrix (report: ValidationReport) =
         report.Matrices |> List.find (fun matrix -> matrix.Name = determinismMatrixName)

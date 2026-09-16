@@ -24,29 +24,35 @@ module GenerationManifest =
         | CurrencyMalformed
 
     type SourceIdentity =
-        { Artifact: ArtifactRef
-          Digest: SourceDigest
-          SchemaVersion: SchemaVersion option
-          SchemaStatus: SchemaCompatibilityStatus
-          RawSchemaVersion: string option }
+        {
+            Artifact: ArtifactRef
+            Digest: SourceDigest
+            SchemaVersion: SchemaVersion option
+            SchemaStatus: SchemaCompatibilityStatus
+            RawSchemaVersion: string option
+        }
 
     type GenerationManifest =
-        { View: ArtifactRef
-          Kind: GeneratedViewKind
-          SchemaVersion: SchemaVersion
-          Generator: GeneratorVersion
-          Sources: SourceIdentity list
-          OutputDigest: OutputDigest option
-          Currency: GeneratedViewCurrencyStatus
-          Diagnostics: Diagnostic list }
+        {
+            View: ArtifactRef
+            Kind: GeneratedViewKind
+            SchemaVersion: SchemaVersion
+            Generator: GeneratorVersion
+            Sources: SourceIdentity list
+            OutputDigest: OutputDigest option
+            Currency: GeneratedViewCurrencyStatus
+            Diagnostics: Diagnostic list
+        }
 
     type GeneratedWorkModelMetadata =
-        { Path: string
-          SchemaVersion: SchemaVersion option
-          ModelVersion: string option
-          Generator: GeneratorVersion option
-          Sources: SourceIdentity list
-          OutputDigest: OutputDigest option }
+        {
+            Path: string
+            SchemaVersion: SchemaVersion option
+            ModelVersion: string option
+            Generator: GeneratorVersion option
+            Sources: SourceIdentity list
+            OutputDigest: OutputDigest option
+        }
 
     let viewKindValue kind =
         match kind with
@@ -82,14 +88,16 @@ module GenerationManifest =
             | Ok value -> value
             | Error message -> invalidArg (nameof viewPath) message
 
-        { View = view
-          Kind = WorkModel
-          SchemaVersion = SchemaVersion.create 1
-          Generator = generatorVersion
-          Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
-          OutputDigest = outputDigest
-          Currency = CurrencyCurrent
-          Diagnostics = [] }
+        {
+            View = view
+            Kind = WorkModel
+            SchemaVersion = SchemaVersion.create 1
+            Generator = generatorVersion
+            Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
+            OutputDigest = outputDigest
+            Currency = CurrencyCurrent
+            Diagnostics = []
+        }
 
     let createSummaryManifest viewPath generatorVersion sources outputDigest =
         let view =
@@ -97,14 +105,16 @@ module GenerationManifest =
             | Ok value -> value
             | Error message -> invalidArg (nameof viewPath) message
 
-        { View = view
-          Kind = Summary
-          SchemaVersion = SchemaVersion.create 1
-          Generator = generatorVersion
-          Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
-          OutputDigest = outputDigest
-          Currency = CurrencyCurrent
-          Diagnostics = [] }
+        {
+            View = view
+            Kind = Summary
+            SchemaVersion = SchemaVersion.create 1
+            Generator = generatorVersion
+            Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
+            OutputDigest = outputDigest
+            Currency = CurrencyCurrent
+            Diagnostics = []
+        }
 
     let isStale (currentSources: SourceIdentity list) (manifest: GenerationManifest) =
         let expected =
@@ -174,11 +184,13 @@ module GenerationManifest =
             parseDigest digestElement
             |> Option.map (fun digest ->
                 let source: SourceIdentity =
-                    { Artifact = sourceArtifact
-                      Digest = digest
-                      SchemaVersion = compatibility.Version
-                      SchemaStatus = compatibility.Status
-                      RawSchemaVersion = rawSchema }
+                    {
+                        Artifact = sourceArtifact
+                        Digest = digest
+                        SchemaVersion = compatibility.Version
+                        SchemaStatus = compatibility.Status
+                        RawSchemaVersion = rawSchema
+                    }
 
                 source)
         | _ -> None
@@ -211,10 +223,12 @@ module GenerationManifest =
             match metadata with
             | None ->
                 Error
-                    [ Diagnostics.staleGeneratedView
-                          generatedArtifact
-                          "Generated work-model JSON does not contain work-model metadata."
-                          "Regenerate the view with a generatedViews workModel entry." ]
+                    [
+                        Diagnostics.staleGeneratedView
+                            generatedArtifact
+                            "Generated work-model JSON does not contain work-model metadata."
+                            "Regenerate the view with a generatedViews workModel entry."
+                    ]
             | Some view ->
                 let generator = tryProperty "generator" view |> Option.bind parseGenerator
 
@@ -235,15 +249,19 @@ module GenerationManifest =
                         | _ -> None)
 
                 Ok
-                    { Path = stringProperty "path" view |> Option.defaultValue path
-                      SchemaVersion = schema
-                      ModelVersion = modelVersion
-                      Generator = generator
-                      Sources = sources
-                      OutputDigest = outputDigest }
+                    {
+                        Path = stringProperty "path" view |> Option.defaultValue path
+                        SchemaVersion = schema
+                        ModelVersion = modelVersion
+                        Generator = generator
+                        Sources = sources
+                        OutputDigest = outputDigest
+                    }
         with ex ->
             Error
-                [ Diagnostics.staleGeneratedView
-                      generatedArtifact
-                      $"Generated work-model JSON could not be parsed: {ex.Message}"
-                      "Regenerate the view with valid deterministic JSON." ]
+                [
+                    Diagnostics.staleGeneratedView
+                        generatedArtifact
+                        $"Generated work-model JSON could not be parsed: {ex.Message}"
+                        "Regenerate the view with valid deterministic JSON."
+                ]

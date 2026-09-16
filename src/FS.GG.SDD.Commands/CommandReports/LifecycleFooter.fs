@@ -8,11 +8,13 @@ module LifecycleFooter =
     type FooterCell = { Label: string; State: StageState }
 
     type FooterView =
-        { Summary: string
-          Cells: FooterCell list
-          StagesPlain: string
-          Next: string option
-          Blocked: string list }
+        {
+            Summary: string
+            Cells: FooterCell list
+            StagesPlain: string
+            Next: string option
+            Blocked: string list
+        }
 
     // Delegates to the single canonical map (CommandTypes.stageStateName) — kept as a public alias
     // so callers of the footer projection have the token without reaching across modules.
@@ -43,8 +45,10 @@ module LifecycleFooter =
         let cells =
             status.Stages
             |> List.map (fun entry ->
-                { Label = commandName entry.Command
-                  State = entry.State })
+                {
+                    Label = commandName entry.Command
+                    State = entry.State
+                })
 
         let stagesPlain =
             status.Stages
@@ -89,31 +93,37 @@ module LifecycleFooter =
                     |> Option.defaultValue report.Command
                     |> fun command -> Some $"fsgg-sdd {commandName command}"
 
-                [ yield $"blocked: {commandName report.Command}"
-                  if why <> "" then
-                      yield $"why: {why}"
-                  if fix <> "" then
-                      yield $"fix: {fix}"
-                  match optionCommand with
-                  | Some option -> yield $"options: {option}"
-                  | None -> () ]
+                [
+                    yield $"blocked: {commandName report.Command}"
+                    if why <> "" then
+                        yield $"why: {why}"
+                    if fix <> "" then
+                        yield $"fix: {fix}"
+                    match optionCommand with
+                    | Some option -> yield $"options: {option}"
+                    | None -> ()
+                ]
             else
                 []
 
-        { Summary = summary
-          Cells = cells
-          StagesPlain = stagesPlain
-          Next = next
-          Blocked = blocked }
+        {
+            Summary = summary
+            Cells = cells
+            StagesPlain = stagesPlain
+            Next = next
+            Blocked = blocked
+        }
 
     let plainLines (report: CommandReport) : string list =
         let footer = view report
 
-        [ yield footer.Summary
-          yield $"stages: {footer.StagesPlain}"
-          if not (List.isEmpty footer.Blocked) then
-              yield! footer.Blocked
-          else
-              match footer.Next with
-              | Some next -> yield $"next: {next}"
-              | None -> () ]
+        [
+            yield footer.Summary
+            yield $"stages: {footer.StagesPlain}"
+            if not (List.isEmpty footer.Blocked) then
+                yield! footer.Blocked
+            else
+                match footer.Next with
+                | Some next -> yield $"next: {next}"
+                | None -> ()
+        ]

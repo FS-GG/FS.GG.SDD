@@ -37,9 +37,11 @@ tasks:
 """
 
     let private tasksSnapshot text : FileSnapshot =
-        { Path = "work/060-x/tasks.yml"
-          Text = text
-          RawBytes = None }
+        {
+            Path = "work/060-x/tasks.yml"
+            Text = text
+            RawBytes = None
+        }
 
     [<Fact>]
     let ``a malformed task dependency yields a malformedReference diagnostic`` () =
@@ -88,9 +90,11 @@ evidence:
 """
 
     let private evidenceSnapshot text : FileSnapshot =
-        { Path = "work/060-x/evidence.yml"
-          Text = text
-          RawBytes = None }
+        {
+            Path = "work/060-x/evidence.yml"
+            Text = text
+            RawBytes = None
+        }
 
     [<Fact>]
     let ``a malformed evidence requirement ref yields a malformedReference diagnostic`` () =
@@ -164,9 +168,11 @@ evidence:
     let ``parseWorkModel rejects an unsupported schemaVersion via the canonical classifier`` () =
         match
             parseWorkModel
-                { Path = "readiness/060-x/work-model.json"
-                  Text = workModelJson 3
-                  RawBytes = None }
+                {
+                    Path = "readiness/060-x/work-model.json"
+                    Text = workModelJson 3
+                    RawBytes = None
+                }
         with
         | Ok _ -> failwith "schemaVersion 3 should block (it blocks everywhere else)."
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -175,31 +181,39 @@ evidence:
     let ``parseWorkModel still accepts schemaVersion 1`` () =
         match
             parseWorkModel
-                { Path = "readiness/060-x/work-model.json"
-                  Text = workModelJson 1
-                  RawBytes = None }
+                {
+                    Path = "readiness/060-x/work-model.json"
+                    Text = workModelJson 1
+                    RawBytes = None
+                }
         with
         | Ok model -> Assert.Equal("060-x", model.WorkId)
         | Error diagnostics -> failwith $"schemaVersion 1 should parse: {diagnostics}"
 
     let private provenanceRecord =
-        { SchemaVersion = 1
-          Generator = SchemaVersion.currentGeneratorVersion ()
-          RequiredMinimumCliVersion = None
-          ProviderName = "fixture"
-          ProviderContractVersion = "1.0.0"
-          TemplateRef = "fsgg-fixture-app"
-          Outcome = "providerSucceeded"
-          ProducedPaths =
-            [ { Path = "src/Product/Program.fs"
-                Owner = GeneratedProduct
-                Sha256 = None } ]
-          MirroredPaths = []
-          SddOwnedPaths = []
-          DriverPaths = []
-          GameSkillPaths = []
-          RenderingSkillPaths = []
-          EffectiveParameters = [] }
+        {
+            SchemaVersion = 1
+            Generator = SchemaVersion.currentGeneratorVersion ()
+            RequiredMinimumCliVersion = None
+            ProviderName = "fixture"
+            ProviderContractVersion = "1.0.0"
+            TemplateRef = "fsgg-fixture-app"
+            Outcome = "providerSucceeded"
+            ProducedPaths =
+                [
+                    {
+                        Path = "src/Product/Program.fs"
+                        Owner = GeneratedProduct
+                        Sha256 = None
+                    }
+                ]
+            MirroredPaths = []
+            SddOwnedPaths = []
+            DriverPaths = []
+            GameSkillPaths = []
+            RenderingSkillPaths = []
+            EffectiveParameters = []
+        }
 
     [<Fact>]
     let ``ScaffoldProvenance.tryParse rejects an unsupported schemaVersion via the canonical classifier`` () =
@@ -208,7 +222,8 @@ evidence:
             tryParse (
                 serialize
                     { provenanceRecord with
-                        SchemaVersion = 2 }
+                        SchemaVersion = 2
+                    }
             )
         )
 

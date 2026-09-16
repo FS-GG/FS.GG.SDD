@@ -13,20 +13,22 @@ module HelpCommandTests =
     let private generator = SchemaVersionModule.currentGeneratorVersion ()
 
     let private allCommands =
-        [ Init
-          Charter
-          Specify
-          Clarify
-          Checklist
-          Plan
-          Tasks
-          Analyze
-          Evidence
-          Verify
-          Ship
-          Agents
-          Refresh
-          Scaffold ]
+        [
+            Init
+            Charter
+            Specify
+            Clarify
+            Checklist
+            Plan
+            Tasks
+            Analyze
+            Evidence
+            Verify
+            Ship
+            Agents
+            Refresh
+            Scaffold
+        ]
 
     [<Fact>]
     let ``top-level help is scoped TopLevel and lists every command plus CLI peers`` () =
@@ -78,29 +80,31 @@ module HelpCommandTests =
         let request = TestSupport.request Init "."
 
         let model =
-            { Request = request
-              PendingEffects = []
-              InterpretedEffects = []
-              Diagnostics = [ unknownCommand "frobnicate" ]
-              Specification = None
-              Clarification = None
-              Checklist = None
-              Plan = None
-              Tasks = None
-              Analysis = None
-              Evidence = None
-              Verification = None
-              Ship = None
-              AgentGuidance = None
-              Refresh = None
-              Scaffold = None
-              Doctor = None
-              Upgrade = None
-              Lint = None
-              Surface = None
-              DependencySurface = None
-              GeneratedViews = []
-              Report = None }
+            {
+                Request = request
+                PendingEffects = []
+                InterpretedEffects = []
+                Diagnostics = [ unknownCommand "frobnicate" ]
+                Specification = None
+                Clarification = None
+                Checklist = None
+                Plan = None
+                Tasks = None
+                Analysis = None
+                Evidence = None
+                Verification = None
+                Ship = None
+                AgentGuidance = None
+                Refresh = None
+                Scaffold = None
+                Doctor = None
+                Upgrade = None
+                Lint = None
+                Surface = None
+                DependencySurface = None
+                GeneratedViews = []
+                Report = None
+            }
 
         let report = buildReport model
 
@@ -117,24 +121,26 @@ module HelpCommandTests =
         let correction = (unknownCommand "frobnicate").Correction
 
         let expected =
-            [ "init"
-              "charter"
-              "specify"
-              "clarify"
-              "checklist"
-              "plan"
-              "tasks"
-              "analyze"
-              "evidence"
-              "verify"
-              "ship"
-              "agents"
-              "refresh"
-              "scaffold"
-              "doctor"
-              "upgrade"
-              "validate"
-              "registry" ]
+            [
+                "init"
+                "charter"
+                "specify"
+                "clarify"
+                "checklist"
+                "plan"
+                "tasks"
+                "analyze"
+                "evidence"
+                "verify"
+                "ship"
+                "agents"
+                "refresh"
+                "scaffold"
+                "doctor"
+                "upgrade"
+                "validate"
+                "registry"
+            ]
 
         for command in expected do
             Assert.Contains(command, correction)
@@ -144,29 +150,31 @@ module HelpCommandTests =
     [<Fact>]
     let ``reseed NextAction lists every declared seeded-skill root`` () =
         let model =
-            { Request = TestSupport.request Doctor "."
-              PendingEffects = []
-              InterpretedEffects = []
-              Diagnostics = [ FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum "0.2.1" "9.9.9" ]
-              Specification = None
-              Clarification = None
-              Checklist = None
-              Plan = None
-              Tasks = None
-              Analysis = None
-              Evidence = None
-              Verification = None
-              Ship = None
-              AgentGuidance = None
-              Refresh = None
-              Scaffold = None
-              Doctor = None
-              Upgrade = None
-              Lint = None
-              Surface = None
-              DependencySurface = None
-              GeneratedViews = []
-              Report = None }
+            {
+                Request = TestSupport.request Doctor "."
+                PendingEffects = []
+                InterpretedEffects = []
+                Diagnostics = [ FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum "0.2.1" "9.9.9" ]
+                Specification = None
+                Clarification = None
+                Checklist = None
+                Plan = None
+                Tasks = None
+                Analysis = None
+                Evidence = None
+                Verification = None
+                Ship = None
+                AgentGuidance = None
+                Refresh = None
+                Scaffold = None
+                Doctor = None
+                Upgrade = None
+                Lint = None
+                Surface = None
+                DependencySurface = None
+                GeneratedViews = []
+                Report = None
+            }
 
         let report = buildReport model
         let nextAction = Option.get report.NextAction

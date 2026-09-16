@@ -14,7 +14,8 @@ module TextProjectionTests =
         let request =
             { TestSupport.request Init root with
                 DryRun = true
-                OutputFormat = Text }
+                OutputFormat = Text
+            }
 
         let model, effects = init request
 
@@ -57,7 +58,8 @@ module TextProjectionTests =
         let request =
             { TestSupport.charterRequest root "004-charter-command" "Charter Command" with
                 DryRun = true
-                OutputFormat = Text }
+                OutputFormat = Text
+            }
 
         let report = TestSupport.runRequest request
         let text = renderText report
@@ -77,7 +79,8 @@ module TextProjectionTests =
         let request =
             { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
                 DryRun = true
-                OutputFormat = Text }
+                OutputFormat = Text
+            }
 
         let report = TestSupport.runRequest request
         let text = renderText report
@@ -100,13 +103,15 @@ module TextProjectionTests =
 
         TestSupport.runRequest
             { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with
-                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+                InputText = Some TestSupport.specifyIntentWithAmbiguity
+            }
         |> ignore
 
         let request =
             { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
                 DryRun = true
-                OutputFormat = Text }
+                OutputFormat = Text
+            }
 
         let report = TestSupport.runRequest request
         let text = renderText report
@@ -131,13 +136,15 @@ module TextProjectionTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         let request =
             { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
                 DryRun = true
-                OutputFormat = Text }
+                OutputFormat = Text
+            }
 
         let report = TestSupport.runRequest request
         let text = renderText report
@@ -158,7 +165,8 @@ module TextProjectionTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore
@@ -166,7 +174,8 @@ module TextProjectionTests =
         let request =
             { TestSupport.planRequest root "008-plan-command" "Plan Command" with
                 DryRun = true
-                OutputFormat = Text }
+                OutputFormat = Text
+            }
 
         let report = TestSupport.runRequest request
         let text = renderText report
@@ -186,7 +195,8 @@ module TextProjectionTests =
         let request =
             { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with
                 DryRun = true
-                OutputFormat = Text }
+                OutputFormat = Text
+            }
 
         let report = TestSupport.runRequest request
         let text = renderText report

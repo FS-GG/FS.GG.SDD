@@ -18,17 +18,21 @@ module RefreshSummaryViewTests =
 
         let compatibility = SchemaVersion.classifyRaw (Some "1")
 
-        { Artifact = artifact
-          Digest = SchemaVersion.sha256Text text
-          SchemaVersion = compatibility.Version
-          SchemaStatus = compatibility.Status
-          RawSchemaVersion = Some "1" }
+        {
+            Artifact = artifact
+            Digest = SchemaVersion.sha256Text text
+            SchemaVersion = compatibility.Version
+            SchemaStatus = compatibility.Status
+            RawSchemaVersion = Some "1"
+        }
 
     let sources () =
-        [ sourceIdentity $"readiness/{workId}/work-model.json" "work-model-bytes"
-          sourceIdentity $"readiness/{workId}/analysis.json" "analysis-bytes"
-          sourceIdentity $"readiness/{workId}/verify.json" "verify-bytes"
-          sourceIdentity $"readiness/{workId}/ship.json" "ship-bytes" ]
+        [
+            sourceIdentity $"readiness/{workId}/work-model.json" "work-model-bytes"
+            sourceIdentity $"readiness/{workId}/analysis.json" "analysis-bytes"
+            sourceIdentity $"readiness/{workId}/verify.json" "verify-bytes"
+            sourceIdentity $"readiness/{workId}/ship.json" "ship-bytes"
+        ]
 
     let outputDigest =
         SchemaVersion.createOutputDigest "sha256" (SchemaVersion.sha256Text "summary-body").Value
@@ -77,9 +81,11 @@ module RefreshSummaryViewTests =
             createSummaryManifest (expectedSummaryOutputPath workId) generator (sources ()) outputDigest
 
         let changed =
-            [ sourceIdentity $"readiness/{workId}/work-model.json" "work-model-bytes-CHANGED"
-              sourceIdentity $"readiness/{workId}/analysis.json" "analysis-bytes"
-              sourceIdentity $"readiness/{workId}/verify.json" "verify-bytes"
-              sourceIdentity $"readiness/{workId}/ship.json" "ship-bytes" ]
+            [
+                sourceIdentity $"readiness/{workId}/work-model.json" "work-model-bytes-CHANGED"
+                sourceIdentity $"readiness/{workId}/analysis.json" "analysis-bytes"
+                sourceIdentity $"readiness/{workId}/verify.json" "verify-bytes"
+                sourceIdentity $"readiness/{workId}/ship.json" "ship-bytes"
+            ]
 
         Assert.True(isStale changed manifest)

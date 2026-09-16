@@ -197,27 +197,32 @@ module TestReportTests =
         { EvidenceCodec.declarationSeed with
             Result = result
             Synthetic = synthetic
-            ObservedRun = receipt }
+            ObservedRun = receipt
+        }
 
     let private passingReceipt =
         Some
-            { Source = "artifacts/results.trx"
-              Digest = "sha256:" + String.replicate 64 "a"
-              DigestContract = "exact-bytes-v1"
-              Outcome = "passed"
-              Passed = 3
-              Failed = 0
-              Skipped = 0 }
+            {
+                Source = "artifacts/results.trx"
+                Digest = "sha256:" + String.replicate 64 "a"
+                DigestContract = "exact-bytes-v1"
+                Outcome = "passed"
+                Passed = 3
+                Failed = 0
+                Skipped = 0
+            }
 
     let private failingReceipt =
         Some
-            { Source = "artifacts/results.trx"
-              Digest = "sha256:" + String.replicate 64 "a"
-              DigestContract = "exact-bytes-v1"
-              Outcome = "failed"
-              Passed = 2
-              Failed = 1
-              Skipped = 0 }
+            {
+                Source = "artifacts/results.trx"
+                Digest = "sha256:" + String.replicate 64 "a"
+                DigestContract = "exact-bytes-v1"
+                Outcome = "failed"
+                Passed = 2
+                Failed = 1
+                Skipped = 0
+            }
 
     [<Fact>]
     let ``isObserved is true ONLY for a passing receipt`` () =
@@ -237,13 +242,15 @@ module TestReportTests =
         // the rule stays true when read on its own.
         let liar =
             Some
-                { Source = "artifacts/results.trx"
-                  Digest = "sha256:" + String.replicate 64 "a"
-                  DigestContract = "exact-bytes-v1"
-                  Outcome = "passed"
-                  Passed = 2
-                  Failed = 7
-                  Skipped = 0 }
+                {
+                    Source = "artifacts/results.trx"
+                    Digest = "sha256:" + String.replicate 64 "a"
+                    DigestContract = "exact-bytes-v1"
+                    Outcome = "passed"
+                    Passed = 2
+                    Failed = 7
+                    Skipped = 0
+                }
 
         Assert.False(isObserved (declarationWith "pass" false liar))
 
@@ -285,13 +292,15 @@ module TestReportTests =
             | other -> other + ":" + String.replicate 64 "a"
 
         let run =
-            { Source = "artifacts/results.trx"
-              Digest = digest
-              DigestContract = "exact-bytes-v1"
-              Outcome = outcome
-              Passed = passed
-              Failed = failed
-              Skipped = skipped }
+            {
+                Source = "artifacts/results.trx"
+                Digest = digest
+                DigestContract = "exact-bytes-v1"
+                Outcome = outcome
+                Passed = passed
+                Failed = failed
+                Skipped = skipped
+            }
 
         Assert.True(
             (observedRunInconsistency run).IsSome,
@@ -301,13 +310,15 @@ module TestReportTests =
     [<Fact>]
     let ``a receipt naming no report is refused`` () =
         let run =
-            { Source = "  "
-              Digest = "sha256:" + String.replicate 64 "a"
-              DigestContract = "exact-bytes-v1"
-              Outcome = "passed"
-              Passed = 1
-              Failed = 0
-              Skipped = 0 }
+            {
+                Source = "  "
+                Digest = "sha256:" + String.replicate 64 "a"
+                DigestContract = "exact-bytes-v1"
+                Outcome = "passed"
+                Passed = 1
+                Failed = 0
+                Skipped = 0
+            }
 
         Assert.True((observedRunInconsistency run).IsSome)
 
@@ -368,13 +379,15 @@ module TestReportTests =
         // despite carrying a receipt the tool had just told the author was fine.
         let shouty =
             Some
-                { Source = "artifacts/results.trx"
-                  Digest = "sha256:" + String.replicate 64 "a"
-                  DigestContract = "exact-bytes-v1"
-                  Outcome = "  Passed  "
-                  Passed = 3
-                  Failed = 0
-                  Skipped = 0 }
+                {
+                    Source = "artifacts/results.trx"
+                    Digest = "sha256:" + String.replicate 64 "a"
+                    DigestContract = "exact-bytes-v1"
+                    Outcome = "  Passed  "
+                    Passed = 3
+                    Failed = 0
+                    Skipped = 0
+                }
 
         Assert.True((observedRunInconsistency shouty.Value).IsNone, "the consistency rule accepts it")
         Assert.True(isObserved (declarationWith "pass" false shouty), "so isObserved must too")
@@ -384,13 +397,15 @@ module TestReportTests =
         // The authored twin of the parse guard. Left unblocked this is the cheapest possible forgery:
         // it needs no report at all, just six lines of YAML.
         let empty =
-            { Source = "artifacts/results.trx"
-              Digest = "sha256:" + String.replicate 64 "a"
-              DigestContract = "exact-bytes-v1"
-              Outcome = "passed"
-              Passed = 0
-              Failed = 0
-              Skipped = 40 }
+            {
+                Source = "artifacts/results.trx"
+                Digest = "sha256:" + String.replicate 64 "a"
+                DigestContract = "exact-bytes-v1"
+                Outcome = "passed"
+                Passed = 0
+                Failed = 0
+                Skipped = 40
+            }
 
         Assert.True((observedRunInconsistency empty).IsSome)
         Assert.False(isObserved (declarationWith "pass" false (Some empty)))

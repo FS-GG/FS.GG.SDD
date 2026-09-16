@@ -10,41 +10,45 @@ open FS.GG.SDD.Artifacts.TypedSpecifications
 
 module ScaffoldProvenance =
     type ScaffoldProducedPath =
-        { Path: string
-          Owner: ArtifactOwner
-          // Additive (contract 1.1.0, ADR-0014 §Decision 3): the per-skill/per-path
-          // content digest. `None` ⇒ no digest recorded (a 1.0.0 document, or a path
-          // not yet hashed — digest population is P1). Serialized only when `Some`.
-          Sha256: string option }
+        {
+            Path: string
+            Owner: ArtifactOwner
+            // Additive (contract 1.1.0, ADR-0014 §Decision 3): the per-skill/per-path
+            // content digest. `None` ⇒ no digest recorded (a 1.0.0 document, or a path
+            // not yet hashed — digest population is P1). Serialized only when `Some`.
+            Sha256: string option
+        }
 
     type ScaffoldProvenanceRecord =
-        { SchemaVersion: int
-          Generator: GeneratorVersion
-          RequiredMinimumCliVersion: string option
-          ProviderName: string
-          ProviderContractVersion: string
-          TemplateRef: string
-          Outcome: string
-          ProducedPaths: ScaffoldProducedPath list
-          MirroredPaths: ScaffoldProducedPath list
-          SddOwnedPaths: ScaffoldProducedPath list
-          // 108 / ADR-0054: the `.github`-authored driver skills materialized from the pinned
-          // `FS.GG.Drivers` package into the product's skill roots (owner `Driver`), each with
-          // its content `sha256`. Externally owned like `MirroredPaths`, so `refresh` excludes
-          // them. Additive; empty when no driver materialized (schema stays v1).
-          DriverPaths: ScaffoldProducedPath list
-          // ADR-0063 / FS.GG.SDD#623: the owner-authored product skills (e.g. `fs-gg-playtest`)
-          // materialized from the pinned the owner-skills package into the product's skill roots
-          // (owner `GameSkill`), each with its content `sha256`. Externally owned like `DriverPaths`,
-          // so `refresh` excludes them. Additive; empty when none materialized (schema stays v1).
-          GameSkillPaths: ScaffoldProducedPath list
-          // ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skills
-          // (e.g. `fs-gg-feedback-report`) materialized from the pinned rendering-skills package
-          // package into the product's skill roots (owner `RenderingSkill`), each with its content
-          // `sha256`. Externally owned like `GameSkillPaths`, so `refresh` excludes them. Additive;
-          // empty when none materialized (schema stays v1).
-          RenderingSkillPaths: ScaffoldProducedPath list
-          EffectiveParameters: (string * string) list }
+        {
+            SchemaVersion: int
+            Generator: GeneratorVersion
+            RequiredMinimumCliVersion: string option
+            ProviderName: string
+            ProviderContractVersion: string
+            TemplateRef: string
+            Outcome: string
+            ProducedPaths: ScaffoldProducedPath list
+            MirroredPaths: ScaffoldProducedPath list
+            SddOwnedPaths: ScaffoldProducedPath list
+            // 108 / ADR-0054: the `.github`-authored driver skills materialized from the pinned
+            // `FS.GG.Drivers` package into the product's skill roots (owner `Driver`), each with
+            // its content `sha256`. Externally owned like `MirroredPaths`, so `refresh` excludes
+            // them. Additive; empty when no driver materialized (schema stays v1).
+            DriverPaths: ScaffoldProducedPath list
+            // ADR-0063 / FS.GG.SDD#623: the owner-authored product skills (e.g. `fs-gg-playtest`)
+            // materialized from the pinned the owner-skills package into the product's skill roots
+            // (owner `GameSkill`), each with its content `sha256`. Externally owned like `DriverPaths`,
+            // so `refresh` excludes them. Additive; empty when none materialized (schema stays v1).
+            GameSkillPaths: ScaffoldProducedPath list
+            // ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skills
+            // (e.g. `fs-gg-feedback-report`) materialized from the pinned rendering-skills package
+            // package into the product's skill roots (owner `RenderingSkill`), each with its content
+            // `sha256`. Externally owned like `GameSkillPaths`, so `refresh` excludes them. Additive;
+            // empty when none materialized (schema stays v1).
+            RenderingSkillPaths: ScaffoldProducedPath list
+            EffectiveParameters: (string * string) list
+        }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
 
@@ -70,20 +74,22 @@ module ScaffoldProvenance =
         (generator: GeneratorVersion)
         (producedPaths: ScaffoldProducedPath list)
         : ScaffoldProvenanceRecord =
-        { SchemaVersion = 1
-          Generator = generator
-          RequiredMinimumCliVersion = None
-          ProviderName = ""
-          ProviderContractVersion = ""
-          TemplateRef = ""
-          Outcome = devRepoOutcome
-          ProducedPaths = producedPaths
-          MirroredPaths = []
-          SddOwnedPaths = []
-          DriverPaths = []
-          GameSkillPaths = []
-          RenderingSkillPaths = []
-          EffectiveParameters = [] }
+        {
+            SchemaVersion = 1
+            Generator = generator
+            RequiredMinimumCliVersion = None
+            ProviderName = ""
+            ProviderContractVersion = ""
+            TemplateRef = ""
+            Outcome = devRepoOutcome
+            ProducedPaths = producedPaths
+            MirroredPaths = []
+            SddOwnedPaths = []
+            DriverPaths = []
+            GameSkillPaths = []
+            RenderingSkillPaths = []
+            EffectiveParameters = []
+        }
 
     let ownerFromValue (value: string) =
         match value with
@@ -282,12 +288,14 @@ module ScaffoldProvenance =
                                 match jsonString "path" element with
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
-                                        { Path = path
-                                          Owner =
-                                            jsonString "owner" element
-                                            |> Option.map ownerFromValue
-                                            |> Option.defaultValue ArtifactOwner.GeneratedProduct
-                                          Sha256 = readSha256 element }
+                                        {
+                                            Path = path
+                                            Owner =
+                                                jsonString "owner" element
+                                                |> Option.map ownerFromValue
+                                                |> Option.defaultValue ArtifactOwner.GeneratedProduct
+                                            Sha256 = readSha256 element
+                                        }
                                 | _ -> None)
 
                         // 056: additive mirror record. Absent/null ⇒ `[]`, so provenance
@@ -298,12 +306,14 @@ module ScaffoldProvenance =
                                 match jsonString "path" element with
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
-                                        { Path = path
-                                          Owner =
-                                            jsonString "owner" element
-                                            |> Option.map ownerFromValue
-                                            |> Option.defaultValue ArtifactOwner.Mirrored
-                                          Sha256 = readSha256 element }
+                                        {
+                                            Path = path
+                                            Owner =
+                                                jsonString "owner" element
+                                                |> Option.map ownerFromValue
+                                                |> Option.defaultValue ArtifactOwner.Mirrored
+                                            Sha256 = readSha256 element
+                                        }
                                 | _ -> None)
 
                         // Additive SDD-owned record: absent/null ⇒ `[]`, so provenance written
@@ -314,12 +324,14 @@ module ScaffoldProvenance =
                                 match jsonString "path" element with
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
-                                        { Path = path
-                                          Owner =
-                                            jsonString "owner" element
-                                            |> Option.map ownerFromValue
-                                            |> Option.defaultValue ArtifactOwner.Sdd
-                                          Sha256 = readSha256 element }
+                                        {
+                                            Path = path
+                                            Owner =
+                                                jsonString "owner" element
+                                                |> Option.map ownerFromValue
+                                                |> Option.defaultValue ArtifactOwner.Sdd
+                                            Sha256 = readSha256 element
+                                        }
                                 | _ -> None)
 
                         // 108 / ADR-0054: additive driver record. Absent/null ⇒ `[]`, so
@@ -330,12 +342,14 @@ module ScaffoldProvenance =
                                 match jsonString "path" element with
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
-                                        { Path = path
-                                          Owner =
-                                            jsonString "owner" element
-                                            |> Option.map ownerFromValue
-                                            |> Option.defaultValue ArtifactOwner.Driver
-                                          Sha256 = readSha256 element }
+                                        {
+                                            Path = path
+                                            Owner =
+                                                jsonString "owner" element
+                                                |> Option.map ownerFromValue
+                                                |> Option.defaultValue ArtifactOwner.Driver
+                                            Sha256 = readSha256 element
+                                        }
                                 | _ -> None)
 
                         // ADR-0063 / FS.GG.SDD#623: additive owner-skill record. Absent/null ⇒ `[]`,
@@ -346,12 +360,14 @@ module ScaffoldProvenance =
                                 match jsonString "path" element with
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
-                                        { Path = path
-                                          Owner =
-                                            jsonString "owner" element
-                                            |> Option.map ownerFromValue
-                                            |> Option.defaultValue ArtifactOwner.GameSkill
-                                          Sha256 = readSha256 element }
+                                        {
+                                            Path = path
+                                            Owner =
+                                                jsonString "owner" element
+                                                |> Option.map ownerFromValue
+                                                |> Option.defaultValue ArtifactOwner.GameSkill
+                                            Sha256 = readSha256 element
+                                        }
                                 | _ -> None)
 
                         // ADR-0063 third instance / FS.GG.SDD#864: additive rendering-skill
@@ -363,12 +379,14 @@ module ScaffoldProvenance =
                                 match jsonString "path" element with
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
-                                        { Path = path
-                                          Owner =
-                                            jsonString "owner" element
-                                            |> Option.map ownerFromValue
-                                            |> Option.defaultValue ArtifactOwner.RenderingSkill
-                                          Sha256 = readSha256 element }
+                                        {
+                                            Path = path
+                                            Owner =
+                                                jsonString "owner" element
+                                                |> Option.map ownerFromValue
+                                                |> Option.defaultValue ArtifactOwner.RenderingSkill
+                                            Sha256 = readSha256 element
+                                        }
                                 | _ -> None)
 
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
@@ -386,22 +404,26 @@ module ScaffoldProvenance =
                         let requiredMinimumCliVersion = jsonString "requiredMinimumCliVersion" root
 
                         Some
-                            { SchemaVersion = version
-                              Generator =
-                                { Id = generatorId
-                                  Version = generatorVersion }
-                              RequiredMinimumCliVersion = requiredMinimumCliVersion
-                              ProviderName = providerName
-                              ProviderContractVersion = providerContractVersion
-                              TemplateRef = templateRef
-                              Outcome = outcome
-                              ProducedPaths = producedPaths
-                              MirroredPaths = mirroredPaths
-                              SddOwnedPaths = sddOwnedPaths
-                              DriverPaths = driverPaths
-                              GameSkillPaths = gameSkillPaths
-                              RenderingSkillPaths = renderingSkillPaths
-                              EffectiveParameters = effectiveParameters }
+                            {
+                                SchemaVersion = version
+                                Generator =
+                                    {
+                                        Id = generatorId
+                                        Version = generatorVersion
+                                    }
+                                RequiredMinimumCliVersion = requiredMinimumCliVersion
+                                ProviderName = providerName
+                                ProviderContractVersion = providerContractVersion
+                                TemplateRef = templateRef
+                                Outcome = outcome
+                                ProducedPaths = producedPaths
+                                MirroredPaths = mirroredPaths
+                                SddOwnedPaths = sddOwnedPaths
+                                DriverPaths = driverPaths
+                                GameSkillPaths = gameSkillPaths
+                                RenderingSkillPaths = renderingSkillPaths
+                                EffectiveParameters = effectiveParameters
+                            }
                     | _ -> None
                 | None -> None
             | _ -> None

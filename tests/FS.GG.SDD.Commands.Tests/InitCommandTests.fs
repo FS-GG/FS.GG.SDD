@@ -93,7 +93,8 @@ module InitCommandTests =
                 ProviderName = "rendering"
                 ProviderContractVersion = "1"
                 TemplateRef = "fsgg-ui"
-                Outcome = "succeeded" }
+                Outcome = "succeeded"
+            }
 
         let existing = ScaffoldProvenance.serialize scaffoldRecord
         File.WriteAllText(provenancePath, existing)
@@ -133,13 +134,15 @@ module InitCommandTests =
     // The forbidden token set the emitted constitution must avoid (FR-003/SC-006):
     // repo-, provider-, template-, or rendering-specific names; plus docs URLs.
     let private forbiddenTokens =
-        [ "FS.GG.SDD"
-          "FS.GG.Rendering"
-          "FS.GG.Governance"
-          "fsgg-fixture-app"
-          "dotnet new"
-          "http://"
-          "https://" ]
+        [
+            "FS.GG.SDD"
+            "FS.GG.Rendering"
+            "FS.GG.Governance"
+            "fsgg-fixture-app"
+            "dotnet new"
+            "http://"
+            "https://"
+        ]
 
     // T003 (US1-AC1 / FR-001/FR-002): init emits a non-empty, recognizable constitution.
     [<Fact>]
@@ -244,10 +247,12 @@ module InitCommandTests =
             Assert.Contains($"fsgg-sdd {stage}", content)
         // Required headings (a representative sample per stage).
         for heading in
-            [ "Identity"
-              "Functional Requirements"
-              "Clarification Questions"
-              "Checklist Items" ] do
+            [
+                "Identity"
+                "Functional Requirements"
+                "Clarification Questions"
+                "Checklist Items"
+            ] do
             Assert.Contains(heading, content)
         // Stable-id formats.
         for prefix in [ "FR"; "US"; "AC"; "SB"; "AMB"; "CQ"; "DEC"; "CHK"; "CR" ] do

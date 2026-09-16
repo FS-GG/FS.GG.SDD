@@ -83,16 +83,18 @@ module RefreshCommandTests =
         exitCodeForReport report
 
     let private matrixCells =
-        [ 1, S1_Absent, true
-          2, S1_Absent, false
-          3, S2_InvalidJson, true
-          4, S2_InvalidJson, false
-          5, S3_ValidJsonInvalidView, true
-          6, S3_ValidJsonInvalidView, false
-          7, S4_StaleValidView, true
-          8, S4_StaleValidView, false
-          9, S5_CurrentValidView, true
-          10, S5_CurrentValidView, false ]
+        [
+            1, S1_Absent, true
+            2, S1_Absent, false
+            3, S2_InvalidJson, true
+            4, S2_InvalidJson, false
+            5, S3_ValidJsonInvalidView, true
+            6, S3_ValidJsonInvalidView, false
+            7, S4_StaleValidView, true
+            8, S4_StaleValidView, false
+            9, S5_CurrentValidView, true
+            10, S5_CurrentValidView, false
+        ]
 
     [<Fact>]
     let ``the exit code distinguishes expected stage absence across the whole currency matrix`` () =
@@ -130,16 +132,18 @@ module RefreshCommandTests =
         // own bytes, and the handoff's bytes are fine. `Stale`/`Missing`/`Blocked` are all true of the
         // handoff as well as of its source, so they pass through.
         let expected =
-            [ 1, "missing" // ship absent
-              2, "missing"
-              3, "blocked" // ship not JSON            -- was "malformed" (pre-existing falsehood)
-              4, "blocked"
-              5, "blocked" // ship valid JSON, bad view -- a naive fix regresses this to "malformed"
-              6, "blocked"
-              7, "stale" // ship stale
-              8, "stale"
-              9, "current"
-              10, "current" ]
+            [
+                1, "missing" // ship absent
+                2, "missing"
+                3, "blocked" // ship not JSON            -- was "malformed" (pre-existing falsehood)
+                4, "blocked"
+                5, "blocked" // ship valid JSON, bad view -- a naive fix regresses this to "malformed"
+                6, "blocked"
+                7, "stale" // ship stale
+                8, "stale"
+                9, "current"
+                10, "current"
+            ]
 
         let actual =
             matrixCells
@@ -155,16 +159,18 @@ module RefreshCommandTests =
         // does not parse as a ship view, and `ship-verdict: malformed` about a file that is perfectly
         // well-formed -- in cell 6, about a file that does not even exist.
         let expected =
-            [ 1, "missing", "blocked" // ship absent (fresh clone), verdict survives
-              2, "missing", "missing"
-              3, "malformed", "blocked" // not JSON at all
-              4, "malformed", "missing"
-              5, "malformed", "blocked" // WAS: ship=current, verdict=malformed
-              6, "malformed", "missing" // WAS: ship=current, verdict=malformed (verdict is ABSENT)
-              7, "stale", "stale"
-              8, "stale", "missing"
-              9, "current", "current"
-              10, "current", "current" ]
+            [
+                1, "missing", "blocked" // ship absent (fresh clone), verdict survives
+                2, "missing", "missing"
+                3, "malformed", "blocked" // not JSON at all
+                4, "malformed", "missing"
+                5, "malformed", "blocked" // WAS: ship=current, verdict=malformed
+                6, "malformed", "missing" // WAS: ship=current, verdict=malformed (verdict is ABSENT)
+                7, "stale", "stale"
+                8, "stale", "missing"
+                9, "current", "current"
+                10, "current", "current"
+            ]
 
         let actual =
             matrixCells
@@ -752,13 +758,15 @@ module RefreshCommandTests =
         let root = shippedProject ()
 
         let preserved =
-            [ "CLAUDE.md"
-              "AGENTS.md"
-              ".fsgg/agents.yml"
-              ".fsgg/project.yml"
-              $"work/{workId}/spec.md"
-              $"work/{workId}/tasks.yml"
-              $"work/{workId}/evidence.yml" ]
+            [
+                "CLAUDE.md"
+                "AGENTS.md"
+                ".fsgg/agents.yml"
+                ".fsgg/project.yml"
+                $"work/{workId}/spec.md"
+                $"work/{workId}/tasks.yml"
+                $"work/{workId}/evidence.yml"
+            ]
 
         let before =
             preserved |> List.map (fun path -> path, TestSupport.readRelative root path)
@@ -775,7 +783,8 @@ module RefreshCommandTests =
         let report =
             TestSupport.runRequest
                 { TestSupport.refreshRequest root workId with
-                    DryRun = true }
+                    DryRun = true
+                }
 
         // Views that did not yet exist must not be created by a dry run.
         Assert.False(TestSupport.existsRelative root summaryPath)

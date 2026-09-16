@@ -17,12 +17,16 @@ module internal TaskGraphDomain =
     let resolveImplementSkill declared = resolveSkill "implementation" declared
 
     type DerivedSkills =
-        { TestSkill: string
-          ImplementSkill: string }
+        {
+            TestSkill: string
+            ImplementSkill: string
+        }
 
     let derivedSkills (config: ProjectLifecycleConfig option) =
-        { TestSkill = resolveTestSkill (config |> Option.bind _.TestFramework)
-          ImplementSkill = resolveImplementSkill (config |> Option.bind _.ImplementSkill) }
+        {
+            TestSkill = resolveTestSkill (config |> Option.bind _.TestFramework)
+            ImplementSkill = resolveImplementSkill (config |> Option.bind _.ImplementSkill)
+        }
 
     let derivedVisualSurface (config: ProjectLifecycleConfig option) =
         config |> Option.map _.VisualSurface |> Option.defaultValue false

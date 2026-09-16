@@ -2,23 +2,27 @@ namespace FS.GG.SDD.Artifacts.TypedSpecifications
 
 /// One content-addressed artifact owned by a manifest-v2 Quint authority.
 type QuintAuthorityArtifact =
-    { Id: string
-      Path: string
-      Sha256: string }
+    {
+        Id: string
+        Path: string
+        Sha256: string
+    }
 
 /// Additive manifest-v2 authority for the explicit Quint lifecycle backend.
 type QuintAuthorityManifest =
-    { SchemaVersion: int
-      Lifecycle: string
-      Backend: string
-      ProfileIdentity: string
-      ToolchainIdentity: string
-      PackageIdentity: string
-      Artifacts: QuintAuthorityArtifact list
-      AuthoringAgent: string
-      AuthoringSession: string
-      RollbackManifestPath: string option
-      RollbackManifestSha256: string option }
+    {
+        SchemaVersion: int
+        Lifecycle: string
+        Backend: string
+        ProfileIdentity: string
+        ToolchainIdentity: string
+        PackageIdentity: string
+        Artifacts: QuintAuthorityArtifact list
+        AuthoringAgent: string
+        AuthoringSession: string
+        RollbackManifestPath: string option
+        RollbackManifestSha256: string option
+    }
 
 /// Distinct effect-edge states for one declared authority artifact.
 type QuintAuthorityArtifactState =
@@ -28,8 +32,10 @@ type QuintAuthorityArtifactState =
 
 /// One path-bound artifact observation; duplicate paths fail closed.
 type QuintAuthorityArtifactObservation =
-    { Path: string
-      State: QuintAuthorityArtifactState }
+    {
+        Path: string
+        State: QuintAuthorityArtifactState
+    }
 
 /// Explicitly decoded authority. File presence never selects a backend.
 type TypedAuthority =
@@ -46,8 +52,10 @@ type QuintVerificationRung =
 
 /// Stable selector input from changed authority surfaces and compiled-contract impacts.
 type QuintVerificationSelection =
-    { ChangedPaths: string list
-      Impacts: QuintImpact list }
+    {
+        ChangedPaths: string list
+        Impacts: QuintImpact list
+    }
 
 [<RequireQualifiedAccess>]
 module QuintSandbox =

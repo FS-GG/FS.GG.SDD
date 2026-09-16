@@ -9,13 +9,15 @@ module ProductSkillManifest =
     type ProductManifestFile = { Path: string; Sha256: string }
 
     type ProductManifestEntry =
-        { Id: string
-          Scope: string
-          Sha256: string
-          ResolvablePath: string option
-          MaterializesWhen: string
-          SuppliedBy: string option
-          Files: ProductManifestFile list }
+        {
+            Id: string
+            Scope: string
+            Sha256: string
+            ResolvablePath: string option
+            MaterializesWhen: string
+            SuppliedBy: string option
+            Files: ProductManifestFile list
+        }
 
     type AmendRefusal =
         | ManifestUnparseable of message: string
@@ -75,25 +77,33 @@ module ProductSkillManifest =
                             |> Result.mapError (fun message -> $"skill-manifest.json: skill '{id.Trim()}': {message}.")
                             |> Result.map (fun files ->
                                 entries
-                                @ [ { Id = id.Trim()
-                                      Scope =
-                                        jsonString "scope" element |> Option.defaultValue "" |> (fun s -> s.Trim())
-                                      Sha256 =
-                                        jsonString "sha256" element |> Option.defaultValue "" |> (fun s -> s.Trim())
-                                      ResolvablePath =
-                                        jsonString "resolvablePath" element
-                                        |> Option.map (fun s -> s.Trim())
-                                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                                      MaterializesWhen =
-                                        jsonString "materializes-when" element
-                                        |> Option.map (fun s -> s.Trim())
-                                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                                        |> Option.defaultValue "always"
-                                      SuppliedBy =
-                                        jsonString "supplied-by" element
-                                        |> Option.map (fun s -> s.Trim())
-                                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                                      Files = files } ])
+                                @ [
+                                    {
+                                        Id = id.Trim()
+                                        Scope =
+                                            jsonString "scope" element
+                                            |> Option.defaultValue ""
+                                            |> (fun s -> s.Trim())
+                                        Sha256 =
+                                            jsonString "sha256" element
+                                            |> Option.defaultValue ""
+                                            |> (fun s -> s.Trim())
+                                        ResolvablePath =
+                                            jsonString "resolvablePath" element
+                                            |> Option.map (fun s -> s.Trim())
+                                            |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                        MaterializesWhen =
+                                            jsonString "materializes-when" element
+                                            |> Option.map (fun s -> s.Trim())
+                                            |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                            |> Option.defaultValue "always"
+                                        SuppliedBy =
+                                            jsonString "supplied-by" element
+                                            |> Option.map (fun s -> s.Trim())
+                                            |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                        Files = files
+                                    }
+                                ])
                         | _ -> Ok entries)
 
                 (Ok [], jsonArray "skills" root)

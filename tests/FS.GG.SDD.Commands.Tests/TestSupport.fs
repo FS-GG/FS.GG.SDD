@@ -51,35 +51,37 @@ module TestSupport =
     let tempDirectory = TestShared.tempDirectory
 
     let request (command: SddCommand) (root: string) =
-        { Command = command
-          ProjectRoot = root
-          WorkId = None
-          Title = None
-          InputText = None
-          OutputFormat = Json
-          DryRun = false
-          GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
-          Provider = None
-          Parameters = []
-          Force = false
-          TemplateUpdate = true
-          AssumeYes = false
-          IsInteractive = false
-          Artifact = None
-          Explain = false
-          FromTests = None
-          FromTestReport = None
-          SyncObservedRun = None
-          SurfaceUpdate = false
-          AcceptUpstream = false
-          // ADR-0035 stage 3b flipped the PRODUCT default (`fsgg-sdd verify`) to require an
-          // observed run (FS.GG.SDD#497). This in-process harness default is DELIBERATELY the
-          // opposite — the pre-flip opt-out — so the ~97 orthogonal `runVerify`/`runShip` fixtures
-          // that assert release/golden/refresh/agents behavior stay isolated from the receipt gate
-          // and do not each have to fabricate an observed run. The observation axis is exercised
-          // explicitly by the `RequireObserved = true` helpers in ObservedRunCommandTests, and the
-          // flipped default itself is pinned at the CLI boundary (see the tripwire there).
-          RequireObserved = false }
+        {
+            Command = command
+            ProjectRoot = root
+            WorkId = None
+            Title = None
+            InputText = None
+            OutputFormat = Json
+            DryRun = false
+            GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
+            Provider = None
+            Parameters = []
+            Force = false
+            TemplateUpdate = true
+            AssumeYes = false
+            IsInteractive = false
+            Artifact = None
+            Explain = false
+            FromTests = None
+            FromTestReport = None
+            SyncObservedRun = None
+            SurfaceUpdate = false
+            AcceptUpstream = false
+            // ADR-0035 stage 3b flipped the PRODUCT default (`fsgg-sdd verify`) to require an
+            // observed run (FS.GG.SDD#497). This in-process harness default is DELIBERATELY the
+            // opposite — the pre-flip opt-out — so the ~97 orthogonal `runVerify`/`runShip` fixtures
+            // that assert release/golden/refresh/agents behavior stay isolated from the receipt gate
+            // and do not each have to fabricate an observed run. The observation axis is exercised
+            // explicitly by the `RequireObserved = true` helpers in ObservedRunCommandTests, and the
+            // flipped default itself is pinned at the CLI boundary (see the tripwire there).
+            RequireObserved = false
+        }
 
     let readRelative (root: string) (path: string) =
         File.ReadAllText(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))
@@ -160,7 +162,8 @@ module TestSupport =
     let charterRequest root workId title =
         { request Charter root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runCharter root workId title =
         charterRequest root workId title |> runRequest
@@ -172,7 +175,8 @@ module TestSupport =
         { request Specify root with
             WorkId = Some workId
             Title = Some title
-            InputText = Some specifyIntent }
+            InputText = Some specifyIntent
+        }
 
     let runSpecify root workId title =
         specifyRequest root workId title |> runRequest
@@ -186,7 +190,8 @@ module TestSupport =
         { request Clarify root with
             WorkId = Some workId
             Title = Some title
-            InputText = Some clarifyIntent }
+            InputText = Some clarifyIntent
+        }
 
     let runClarify root workId title =
         clarifyRequest root workId title |> runRequest
@@ -194,7 +199,8 @@ module TestSupport =
     let checklistRequest root workId title =
         { request Checklist root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runChecklist root workId title =
         checklistRequest root workId title |> runRequest
@@ -202,7 +208,8 @@ module TestSupport =
     let planRequest root workId title =
         { request Plan root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runPlan root workId title =
         planRequest root workId title |> runRequest
@@ -210,7 +217,8 @@ module TestSupport =
     let tasksRequest root workId title =
         { request Tasks root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runTasks root workId title =
         tasksRequest root workId title |> runRequest
@@ -218,7 +226,8 @@ module TestSupport =
     let analyzeRequest root workId title =
         { request Analyze root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runAnalyze root workId title =
         analyzeRequest root workId title |> runRequest
@@ -226,7 +235,8 @@ module TestSupport =
     let evidenceRequest root workId title =
         { request Evidence root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runEvidence root workId title =
         evidenceRequest root workId title |> runRequest
@@ -234,7 +244,8 @@ module TestSupport =
     let verifyRequest root workId title =
         { request Verify root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runVerify root workId title =
         verifyRequest root workId title |> runRequest
@@ -242,20 +253,23 @@ module TestSupport =
     let shipRequest root workId title =
         { request Ship root with
             WorkId = Some workId
-            Title = Some title }
+            Title = Some title
+        }
 
     let runShip root workId title =
         shipRequest root workId title |> runRequest
 
     let agentsRequest root workId =
         { request Agents root with
-            WorkId = Some workId }
+            WorkId = Some workId
+        }
 
     let runAgents root workId = agentsRequest root workId |> runRequest
 
     let refreshRequest root workId =
         { request Refresh root with
-            WorkId = Some workId }
+            WorkId = Some workId
+        }
 
     let runRefresh root workId =
         refreshRequest root workId |> runRequest
@@ -341,7 +355,8 @@ module TestSupport =
 
         runRequest
             { clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         runChecklist root workId title |> ignore

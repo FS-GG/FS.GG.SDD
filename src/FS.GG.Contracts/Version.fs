@@ -28,9 +28,11 @@ module Version =
             match tryInt a, tryInt b, tryInt c with
             | Some major, Some minor, Some patch when major >= 0 && minor >= 0 && patch >= 0 ->
                 Some
-                    { Major = major
-                      Minor = minor
-                      Patch = patch }
+                    {
+                        Major = major
+                        Minor = minor
+                        Patch = patch
+                    }
             | _ -> None
         | _ -> None
 

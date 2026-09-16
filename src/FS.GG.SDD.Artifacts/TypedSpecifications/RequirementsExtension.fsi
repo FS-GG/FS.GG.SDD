@@ -7,43 +7,55 @@ type AmbiguityState =
     | Deferred
 
 type ScopeBoundary =
-    { Id: SpecificationId
-      Statement: string }
+    {
+        Id: SpecificationId
+        Statement: string
+    }
 
 type RequirementStory =
-    { Id: SpecificationId
-      Priority: string
-      Statement: string }
+    {
+        Id: SpecificationId
+        Priority: string
+        Statement: string
+    }
 
 type Requirement =
-    { Id: SpecificationId
-      Statement: string
-      AcceptanceIds: SpecificationId list
-      EvidenceObligationIds: SpecificationId list }
+    {
+        Id: SpecificationId
+        Statement: string
+        AcceptanceIds: SpecificationId list
+        EvidenceObligationIds: SpecificationId list
+    }
 
 type AcceptanceCriterion =
-    { Id: SpecificationId
-      StoryIds: SpecificationId list
-      RequirementIds: SpecificationId list
-      Statement: string }
+    {
+        Id: SpecificationId
+        StoryIds: SpecificationId list
+        RequirementIds: SpecificationId list
+        Statement: string
+    }
 
 type RequirementAmbiguity =
-    { Id: SpecificationId
-      Question: string
-      State: AmbiguityState
-      Decision: string option }
+    {
+        Id: SpecificationId
+        Question: string
+        State: AmbiguityState
+        Decision: string option
+    }
 
 /// First SDD-owned domain extension over the reusable specification kernel.
 type RequirementsExtension =
-    { UserValue: string
-      Scope: ScopeBoundary list
-      NonGoals: ScopeBoundary list
-      Stories: RequirementStory list
-      Requirements: Requirement list
-      Acceptance: AcceptanceCriterion list
-      Ambiguities: RequirementAmbiguity list
-      PublicImpact: string list
-      LifecycleNotes: string list }
+    {
+        UserValue: string
+        Scope: ScopeBoundary list
+        NonGoals: ScopeBoundary list
+        Stories: RequirementStory list
+        Requirements: Requirement list
+        Acceptance: AcceptanceCriterion list
+        Ambiguities: RequirementAmbiguity list
+        PublicImpact: string list
+        LifecycleNotes: string list
+    }
 
 /// Functional authoring surface whose result is semantically identical to direct record construction.
 type RequirementsDraft

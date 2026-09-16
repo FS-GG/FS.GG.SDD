@@ -81,12 +81,14 @@ module internal HandlersShip =
         let pointer path =
             if present path then Some path else None
 
-        { PolicyPresent = present ".fsgg/policy.yml"
-          PolicyPointer = pointer ".fsgg/policy.yml"
-          CapabilitiesPresent = present ".fsgg/capabilities.yml"
-          CapabilitiesPointer = pointer ".fsgg/capabilities.yml"
-          ToolingPresent = present ".fsgg/tooling.yml"
-          ToolingPointer = pointer ".fsgg/tooling.yml" }
+        {
+            PolicyPresent = present ".fsgg/policy.yml"
+            PolicyPointer = pointer ".fsgg/policy.yml"
+            CapabilitiesPresent = present ".fsgg/capabilities.yml"
+            CapabilitiesPointer = pointer ".fsgg/capabilities.yml"
+            ToolingPresent = present ".fsgg/tooling.yml"
+            ToolingPointer = pointer ".fsgg/tooling.yml"
+        }
 
     /// Derive the handoff's advisory readiness facts from the SDD-owned ship.json text.
     /// Both ship (emission) and refresh (regeneration) parse the same ship.json, so the
@@ -118,9 +120,11 @@ module internal HandlersShip =
                 | Some e ->
                     match e.TryGetProperty name with
                     | true, value when value.ValueKind = System.Text.Json.JsonValueKind.Array ->
-                        [ for item in value.EnumerateArray() do
-                              if item.ValueKind = System.Text.Json.JsonValueKind.String then
-                                  yield (item.GetString() |> Option.ofObj |> Option.defaultValue "") ]
+                        [
+                            for item in value.EnumerateArray() do
+                                if item.ValueKind = System.Text.Json.JsonValueKind.String then
+                                    yield (item.GetString() |> Option.ofObj |> Option.defaultValue "")
+                        ]
                     | _ -> []
                 | None -> []
 
@@ -136,26 +140,30 @@ module internal HandlersShip =
             let verificationEl = tryObj root "verificationReadiness"
             let blocking = idsField dispositionEl "blockingFindingIds"
 
-            { ShipDisposition = strField dispositionEl "state"
-              VerificationReadiness = strField verificationEl "status"
-              AdvisoryCount = (idsField dispositionEl "advisoryFindingIds").Length
-              WarningCount = (idsField dispositionEl "warningFindingIds").Length
-              BlockingCount = blocking.Length
-              // WI-4: absent in a pre-WI-4 ship.json ⇒ 0 (no FR was classified). Degrade, don't throw.
-              ClassifiedObligationsUnmet = intField dispositionEl "classifiedObligationsUnmetCount"
-              JourneyObligationsUnmet = intField dispositionEl "journeyObligationsUnmetCount"
-              BlockingDiagnosticIds = blocking |> List.sort
-              PerViewState = perViewState }
+            {
+                ShipDisposition = strField dispositionEl "state"
+                VerificationReadiness = strField verificationEl "status"
+                AdvisoryCount = (idsField dispositionEl "advisoryFindingIds").Length
+                WarningCount = (idsField dispositionEl "warningFindingIds").Length
+                BlockingCount = blocking.Length
+                // WI-4: absent in a pre-WI-4 ship.json ⇒ 0 (no FR was classified). Degrade, don't throw.
+                ClassifiedObligationsUnmet = intField dispositionEl "classifiedObligationsUnmetCount"
+                JourneyObligationsUnmet = intField dispositionEl "journeyObligationsUnmetCount"
+                BlockingDiagnosticIds = blocking |> List.sort
+                PerViewState = perViewState
+            }
         with _ ->
-            { ShipDisposition = ""
-              VerificationReadiness = ""
-              AdvisoryCount = 0
-              WarningCount = 0
-              BlockingCount = 0
-              ClassifiedObligationsUnmet = 0
-              JourneyObligationsUnmet = 0
-              BlockingDiagnosticIds = []
-              PerViewState = perViewState }
+            {
+                ShipDisposition = ""
+                VerificationReadiness = ""
+                AdvisoryCount = 0
+                WarningCount = 0
+                BlockingCount = 0
+                ClassifiedObligationsUnmet = 0
+                JourneyObligationsUnmet = 0
+                BlockingDiagnosticIds = []
+                PerViewState = perViewState
+            }
 
     /// Project the handoff and produce (generated-view state, write effect, json text). Pure over
     /// the work-model JSON, verify/ship texts, and config presence; readiness is parsed from ship.json.
@@ -171,34 +179,42 @@ module internal HandlersShip =
         | Some wmJson ->
             match
                 WorkModelModule.parseWorkModel
-                    { Path = workModelPath workId
-                      Text = wmJson
-                      RawBytes = None }
+                    {
+                        Path = workModelPath workId
+                        Text = wmJson
+                        RawBytes = None
+                    }
             with
             | Ok workModel ->
                 // The handoff's own three-source currency (identical for ship and a clean refresh).
                 let perViewState =
-                    [ "ship.json", "current"
-                      "verify.json",
-                      (match verifyText with
-                       | Some _ -> "current"
-                       | None -> "missing")
-                      "work-model.json", "current" ]
+                    [
+                        "ship.json", "current"
+                        "verify.json",
+                        (match verifyText with
+                         | Some _ -> "current"
+                         | None -> "missing")
+                        "work-model.json", "current"
+                    ]
                     |> List.sortBy fst
 
                 let readiness = parseShipReadinessFacts shipText perViewState
 
                 let handoffSources =
-                    [ Some(GovernanceHandoffModule.sourceIdentity (workModelPath workId) wmJson)
-                      verifyText
-                      |> Option.map (GovernanceHandoffModule.sourceIdentity (verifyPath workId))
-                      Some(GovernanceHandoffModule.sourceIdentity (shipPath workId) shipText) ]
+                    [
+                        Some(GovernanceHandoffModule.sourceIdentity (workModelPath workId) wmJson)
+                        verifyText
+                        |> Option.map (GovernanceHandoffModule.sourceIdentity (verifyPath workId))
+                        Some(GovernanceHandoffModule.sourceIdentity (shipPath workId) shipText)
+                    ]
                     |> List.choose id
 
                 let viewSources =
-                    [ Some(analysisSourceFromSnapshot (workModelPath workId) wmJson)
-                      verifyText |> Option.map (analysisSourceFromSnapshot (verifyPath workId))
-                      Some(analysisSourceFromSnapshot (shipPath workId) shipText) ]
+                    [
+                        Some(analysisSourceFromSnapshot (workModelPath workId) wmJson)
+                        verifyText |> Option.map (analysisSourceFromSnapshot (verifyPath workId))
+                        Some(analysisSourceFromSnapshot (shipPath workId) shipText)
+                    ]
                     |> List.choose id
 
                 let handoff =
@@ -238,9 +254,11 @@ module internal HandlersShip =
         : GeneratedViewState option * CommandEffect list * string option =
         match
             ShipModule.parseShipView
-                { Path = shipPath workId
-                  Text = shipText
-                  RawBytes = None }
+                {
+                    Path = shipPath workId
+                    Text = shipText
+                    RawBytes = None
+                }
         with
         | Ok view ->
             let verdictJson = ShipVerdictModule.toJson (ShipVerdictModule.fromShipView view)
@@ -279,7 +297,11 @@ module internal HandlersShip =
         let path = verifyPath workId
 
         match snapshot path model with
-        | None -> [ missingVerificationPrerequisite path $"Verification prerequisite '{path}' is missing." ], None
+        | None ->
+            [
+                missingVerificationPrerequisite path $"Verification prerequisite '{path}' is missing."
+            ],
+            None
         | Some existing ->
             match parseVerificationView existing with
             | Error diagnostics ->
@@ -367,10 +389,12 @@ module internal HandlersShip =
                     supportedButUndischarged |> List.filter _.RecordRequirement |> obligationIdsOf
 
                 let unobserved =
-                    [ if not (List.isEmpty unobservedIds) then
-                          unobservedShipEvidence path unobservedIds
-                      if not (List.isEmpty unrecordedIds) then
-                          unrecordedShipEvidence path unrecordedIds ]
+                    [
+                        if not (List.isEmpty unobservedIds) then
+                            unobservedShipEvidence path unobservedIds
+                        if not (List.isEmpty unrecordedIds) then
+                            unrecordedShipEvidence path unrecordedIds
+                    ]
 
                 notReady @ failed @ unobserved, Some view
 
@@ -620,9 +644,11 @@ module internal HandlersShip =
                 let evidencePresenceDiagnostics =
                     match existingEvidenceArtifact, snapshot (evidencePath workId) model with
                     | None, None ->
-                        [ missingEvidencePrerequisite
-                              (evidencePath workId)
-                              $"Evidence prerequisite '{evidencePath workId}' is missing." ]
+                        [
+                            missingEvidencePrerequisite
+                                (evidencePath workId)
+                                $"Evidence prerequisite '{evidencePath workId}' is missing."
+                        ]
                     | _ -> []
 
                 let verificationPrereqDiagnostics, verificationView =
@@ -735,25 +761,27 @@ module internal HandlersShip =
                     let stageStatus present = if present then "ready" else "missing"
 
                     let lifecycleStages =
-                        [ "specify", stageStatus (Option.isSome specFacts)
-                          "clarify", stageStatus (Option.isSome clarificationFacts)
-                          "checklist", stageStatus (Option.isSome checklistFacts)
-                          "plan", stageStatus (Option.isSome planFacts)
-                          "tasks", stageStatus (Option.isSome taskFacts)
-                          "analyze",
-                          (match analysis with
-                           | Some summary ->
-                               (if summary.Readiness = "implementationReady" then
-                                    "ready"
-                                else
-                                    "blocked")
-                           | None -> "missing")
-                          "evidence", stageStatus (Option.isSome existingEvidenceArtifact)
-                          "verify",
-                          (if verificationStatus = "verificationReady" then
-                               "ready"
-                           else
-                               "blocked") ]
+                        [
+                            "specify", stageStatus (Option.isSome specFacts)
+                            "clarify", stageStatus (Option.isSome clarificationFacts)
+                            "checklist", stageStatus (Option.isSome checklistFacts)
+                            "plan", stageStatus (Option.isSome planFacts)
+                            "tasks", stageStatus (Option.isSome taskFacts)
+                            "analyze",
+                            (match analysis with
+                             | Some summary ->
+                                 (if summary.Readiness = "implementationReady" then
+                                      "ready"
+                                  else
+                                      "blocked")
+                             | None -> "missing")
+                            "evidence", stageStatus (Option.isSome existingEvidenceArtifact)
+                            "verify",
+                            (if verificationStatus = "verificationReady" then
+                                 "ready"
+                             else
+                                 "blocked")
+                        ]
 
                     let shipSummaryOpt, shipView, shipHandoffView, shipVerdictView, shipEffects =
                         match specText, clarificationText, checklistText, planText, taskText, analysisText with
@@ -854,31 +882,33 @@ module internal HandlersShip =
                                 shipEvidenceAttestationCounts verificationView
 
                             let summary: ShipSummary =
-                                { WorkId = workId
-                                  Stage = "ship"
-                                  Status = readiness
-                                  ShipPath = shipPath workId
-                                  FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                                  ReadyFindingCount = findingCount "ready"
-                                  AdvisoryCount = findingCount "advisory"
-                                  WarningCount = findingCount "warning"
-                                  BlockingCount = findingCount "blocking"
-                                  Disposition = disposition
-                                  LifecycleStageReadiness = lifecycleStages
-                                  VerificationReadiness = verificationStatus
-                                  EvidenceSupportedCount = evidenceCount EvidenceSupported
-                                  EvidenceSelfAttestedCount = evidenceSelfAttestedCount
-                                  EvidenceObservedCount = evidenceObservedCount
-                                  EvidenceDeferredCount = evidenceCount EvidenceDeferred
-                                  EvidenceMissingCount = evidenceCount EvidenceMissingDisposition
-                                  EvidenceStaleCount = evidenceCount EvidenceStale
-                                  EvidenceSyntheticCount = evidenceCount EvidenceSyntheticDisposition
-                                  EvidenceInvalidCount = evidenceCount EvidenceInvalid
-                                  ClassifiedObligationsUnmetCount = classifiedObligationsUnmet
-                                  JourneyObligationsUnmetCount = journeyObligationsUnmet
-                                  GeneratedViewState = (if hasBlocking then "blocked" else "current")
-                                  SourceSnapshotCount = sources.Length
-                                  Readiness = readiness }
+                                {
+                                    WorkId = workId
+                                    Stage = "ship"
+                                    Status = readiness
+                                    ShipPath = shipPath workId
+                                    FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
+                                    ReadyFindingCount = findingCount "ready"
+                                    AdvisoryCount = findingCount "advisory"
+                                    WarningCount = findingCount "warning"
+                                    BlockingCount = findingCount "blocking"
+                                    Disposition = disposition
+                                    LifecycleStageReadiness = lifecycleStages
+                                    VerificationReadiness = verificationStatus
+                                    EvidenceSupportedCount = evidenceCount EvidenceSupported
+                                    EvidenceSelfAttestedCount = evidenceSelfAttestedCount
+                                    EvidenceObservedCount = evidenceObservedCount
+                                    EvidenceDeferredCount = evidenceCount EvidenceDeferred
+                                    EvidenceMissingCount = evidenceCount EvidenceMissingDisposition
+                                    EvidenceStaleCount = evidenceCount EvidenceStale
+                                    EvidenceSyntheticCount = evidenceCount EvidenceSyntheticDisposition
+                                    EvidenceInvalidCount = evidenceCount EvidenceInvalid
+                                    ClassifiedObligationsUnmetCount = classifiedObligationsUnmet
+                                    JourneyObligationsUnmetCount = journeyObligationsUnmet
+                                    GeneratedViewState = (if hasBlocking then "blocked" else "current")
+                                    SourceSnapshotCount = sources.Length
+                                    Readiness = readiness
+                                }
 
                             // --- Governance handoff: additive, emitted alongside ship.json ---
                             let handoffView, handoffEffects, _ =
@@ -906,8 +936,10 @@ module internal HandlersShip =
                                 if hasBlocking then
                                     []
                                 else
-                                    [ CreateDirectory(readinessDirectory workId)
-                                      WriteFile(shipPath workId, text, GeneratedView) ]
+                                    [
+                                        CreateDirectory(readinessDirectory workId)
+                                        WriteFile(shipPath workId, text, GeneratedView)
+                                    ]
                                     @ verdictEffects
                                     @ handoffEffects
 
@@ -915,12 +947,14 @@ module internal HandlersShip =
                         | _ -> None, None, None, None, []
 
                     let generatedViews =
-                        [ Some workModelView
-                          Some analysisViewState
-                          Some verifyViewState
-                          shipView
-                          shipVerdictView
-                          shipHandoffView ]
+                        [
+                            Some workModelView
+                            Some analysisViewState
+                            Some verifyViewState
+                            shipView
+                            shipVerdictView
+                            shipHandoffView
+                        ]
                         |> List.choose id
 
                     (specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt),

@@ -1471,22 +1471,24 @@ module internal DiagnosticConstructors =
                     ArtifactOperation.Refuse
 
             Some
-                { Path = path
-                  Kind = "directory"
-                  Ownership = "sdd"
-                  Operation = operation
-                  BeforeDigest = None
-                  AfterDigest = None
-                  SafeWriteDecision =
-                    if not result.Succeeded then
-                        "refused"
-                    elif request.DryRun && operation <> ArtifactOperation.NoChange then
-                        "dryRunOnly"
-                    elif operation = ArtifactOperation.NoChange then
-                        "preserveExisting"
-                    else
-                        "safe"
-                  DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
+                {
+                    Path = path
+                    Kind = "directory"
+                    Ownership = "sdd"
+                    Operation = operation
+                    BeforeDigest = None
+                    AfterDigest = None
+                    SafeWriteDecision =
+                        if not result.Succeeded then
+                            "refused"
+                        elif request.DryRun && operation <> ArtifactOperation.NoChange then
+                            "dryRunOnly"
+                        elif operation = ArtifactOperation.NoChange then
+                            "preserveExisting"
+                        else
+                            "safe"
+                    DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue []
+                }
         | WriteFile(path, text, kind) ->
             let operation =
                 if result.Succeeded then
@@ -1508,28 +1510,30 @@ module internal DiagnosticConstructors =
                     None
 
             Some
-                { Path = path
-                  Kind = writeKindValue kind
-                  Ownership =
-                    match kind with
-                    | GeneratedView -> "generated"
-                    | HybridArtifact _ -> "hybrid"
-                    | _ -> "authored"
-                  Operation = operation
-                  BeforeDigest = beforeDigest
-                  AfterDigest = afterDigest
-                  SafeWriteDecision =
-                    if not result.Succeeded then
-                        "refused"
-                    elif request.DryRun && operation <> ArtifactOperation.NoChange then
-                        "dryRunOnly"
-                    elif operation = ArtifactOperation.NoChange then
-                        "preserveExisting"
-                    elif kind = GeneratedView then
-                        "refreshGeneratedView"
-                    else
-                        "safe"
-                  DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
+                {
+                    Path = path
+                    Kind = writeKindValue kind
+                    Ownership =
+                        match kind with
+                        | GeneratedView -> "generated"
+                        | HybridArtifact _ -> "hybrid"
+                        | _ -> "authored"
+                    Operation = operation
+                    BeforeDigest = beforeDigest
+                    AfterDigest = afterDigest
+                    SafeWriteDecision =
+                        if not result.Succeeded then
+                            "refused"
+                        elif request.DryRun && operation <> ArtifactOperation.NoChange then
+                            "dryRunOnly"
+                        elif operation = ArtifactOperation.NoChange then
+                            "preserveExisting"
+                        elif kind = GeneratedView then
+                            "refreshGeneratedView"
+                        else
+                            "safe"
+                    DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue []
+                }
         | ReadFile _
         | EnumerateDirectory _
         | RunProcess _
@@ -1538,21 +1542,29 @@ module internal DiagnosticConstructors =
         | Confirm _ -> None
 
     let governanceCompatibility: GovernanceCompatibilityFact list =
-        [ { Path = ".fsgg/policy.yml"
-            Relationship = "optionalGovernancePolicy"
-            RequiredBySdd = false
-            State = "notEvaluated"
-            DiagnosticIds = [] }
-          { Path = ".fsgg/capabilities.yml"
-            Relationship = "optionalGovernanceCapabilities"
-            RequiredBySdd = false
-            State = "notEvaluated"
-            DiagnosticIds = [] }
-          { Path = ".fsgg/tooling.yml"
-            Relationship = "optionalGovernanceTooling"
-            RequiredBySdd = false
-            State = "notEvaluated"
-            DiagnosticIds = [] } ]
+        [
+            {
+                Path = ".fsgg/policy.yml"
+                Relationship = "optionalGovernancePolicy"
+                RequiredBySdd = false
+                State = "notEvaluated"
+                DiagnosticIds = []
+            }
+            {
+                Path = ".fsgg/capabilities.yml"
+                Relationship = "optionalGovernanceCapabilities"
+                RequiredBySdd = false
+                State = "notEvaluated"
+                DiagnosticIds = []
+            }
+            {
+                Path = ".fsgg/tooling.yml"
+                Relationship = "optionalGovernanceTooling"
+                RequiredBySdd = false
+                State = "notEvaluated"
+                DiagnosticIds = []
+            }
+        ]
 
     let planCorrectionCommand diagnostics =
         DiagnosticRouting.planCorrection diagnostics

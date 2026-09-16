@@ -14,13 +14,15 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module Ship =
     type ShipReadinessFinding =
-        { Id: string
-          Severity: string
-          Category: string
-          Path: string
-          RelatedIds: string list
-          Message: string
-          Correction: string }
+        {
+            Id: string
+            Severity: string
+            Category: string
+            Path: string
+            RelatedIds: string list
+            Message: string
+            Correction: string
+        }
 
     type ShipLifecycleStageReadiness = { Stage: string; Status: string }
 
@@ -46,49 +48,57 @@ module Ship =
         }
 
     type ShipView =
-        { SchemaVersion: SchemaVersion
-          ViewVersion: string
-          WorkId: WorkId
-          Stage: LifecycleStage
-          Status: string
-          Generator: string
-          Sources: AnalysisSourceRecord list
-          LifecycleReadiness: ShipLifecycleStageReadiness list
-          VerificationReadiness: ShipVerificationReadinessSummary
-          Disposition: string
-          DispositionBlockingFindingIds: string list
-          GeneratedViews: AnalysisGeneratedViewRecord list
-          Findings: ShipReadinessFinding list
-          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
-          Diagnostics: Diagnostic list
-          Readiness: string }
+        {
+            SchemaVersion: SchemaVersion
+            ViewVersion: string
+            WorkId: WorkId
+            Stage: LifecycleStage
+            Status: string
+            Generator: string
+            Sources: AnalysisSourceRecord list
+            LifecycleReadiness: ShipLifecycleStageReadiness list
+            VerificationReadiness: ShipVerificationReadinessSummary
+            Disposition: string
+            DispositionBlockingFindingIds: string list
+            GeneratedViews: AnalysisGeneratedViewRecord list
+            Findings: ShipReadinessFinding list
+            OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+            Diagnostics: Diagnostic list
+            Readiness: string
+        }
 
     let parseShipFinding (element: JsonElement) : ShipReadinessFinding =
-        { Id = jsonRequiredString "id" element
-          Severity = jsonRequiredString "severity" element
-          Category = jsonRequiredString "category" element
-          Path = normalizePath (jsonRequiredString "path" element)
-          RelatedIds = jsonStringList "relatedIds" element
-          Message = jsonRequiredString "message" element
-          Correction = jsonRequiredString "correction" element }
+        {
+            Id = jsonRequiredString "id" element
+            Severity = jsonRequiredString "severity" element
+            Category = jsonRequiredString "category" element
+            Path = normalizePath (jsonRequiredString "path" element)
+            RelatedIds = jsonStringList "relatedIds" element
+            Message = jsonRequiredString "message" element
+            Correction = jsonRequiredString "correction" element
+        }
 
     let parseShipLifecycleStage (element: JsonElement) : ShipLifecycleStageReadiness =
-        { Stage = jsonRequiredString "stage" element
-          Status = jsonRequiredString "status" element }
+        {
+            Stage = jsonRequiredString "stage" element
+            Status = jsonRequiredString "status" element
+        }
 
     let parseShipVerificationReadiness (element: JsonElement) : ShipVerificationReadinessSummary =
-        { Status = jsonString "status" element |> Option.defaultValue "needsVerificationCorrection"
-          BlockingFindingIds = jsonStringList "blockingFindingIds" element
-          EvidenceSupportedCount = jsonInt "evidenceSupportedCount" element |> Option.defaultValue 0
-          // #398: absent in a view written before this feature — and `0` is what it meant, since
-          // nothing was ever observed. Tolerant parse, so no `schemaVersion` bump.
-          EvidenceSelfAttestedCount = jsonInt "evidenceSelfAttestedCount" element |> Option.defaultValue 0
-          EvidenceObservedCount = jsonInt "evidenceObservedCount" element |> Option.defaultValue 0
-          EvidenceDeferredCount = jsonInt "evidenceDeferredCount" element |> Option.defaultValue 0
-          EvidenceMissingCount = jsonInt "evidenceMissingCount" element |> Option.defaultValue 0
-          EvidenceStaleCount = jsonInt "evidenceStaleCount" element |> Option.defaultValue 0
-          EvidenceSyntheticCount = jsonInt "evidenceSyntheticCount" element |> Option.defaultValue 0
-          EvidenceInvalidCount = jsonInt "evidenceInvalidCount" element |> Option.defaultValue 0 }
+        {
+            Status = jsonString "status" element |> Option.defaultValue "needsVerificationCorrection"
+            BlockingFindingIds = jsonStringList "blockingFindingIds" element
+            EvidenceSupportedCount = jsonInt "evidenceSupportedCount" element |> Option.defaultValue 0
+            // #398: absent in a view written before this feature — and `0` is what it meant, since
+            // nothing was ever observed. Tolerant parse, so no `schemaVersion` bump.
+            EvidenceSelfAttestedCount = jsonInt "evidenceSelfAttestedCount" element |> Option.defaultValue 0
+            EvidenceObservedCount = jsonInt "evidenceObservedCount" element |> Option.defaultValue 0
+            EvidenceDeferredCount = jsonInt "evidenceDeferredCount" element |> Option.defaultValue 0
+            EvidenceMissingCount = jsonInt "evidenceMissingCount" element |> Option.defaultValue 0
+            EvidenceStaleCount = jsonInt "evidenceStaleCount" element |> Option.defaultValue 0
+            EvidenceSyntheticCount = jsonInt "evidenceSyntheticCount" element |> Option.defaultValue 0
+            EvidenceInvalidCount = jsonInt "evidenceInvalidCount" element |> Option.defaultValue 0
+        }
 
     let parseShipView (snapshot: FileSnapshot) =
         parseJsonView
@@ -110,16 +120,18 @@ module Ship =
                         tryJsonProperty "verificationReadiness" root
                         |> Option.map parseShipVerificationReadiness
                         |> Option.defaultValue
-                            { Status = "needsVerificationCorrection"
-                              BlockingFindingIds = []
-                              EvidenceSupportedCount = 0
-                              EvidenceSelfAttestedCount = 0
-                              EvidenceObservedCount = 0
-                              EvidenceDeferredCount = 0
-                              EvidenceMissingCount = 0
-                              EvidenceStaleCount = 0
-                              EvidenceSyntheticCount = 0
-                              EvidenceInvalidCount = 0 }
+                            {
+                                Status = "needsVerificationCorrection"
+                                BlockingFindingIds = []
+                                EvidenceSupportedCount = 0
+                                EvidenceSelfAttestedCount = 0
+                                EvidenceObservedCount = 0
+                                EvidenceDeferredCount = 0
+                                EvidenceMissingCount = 0
+                                EvidenceStaleCount = 0
+                                EvidenceSyntheticCount = 0
+                                EvidenceInvalidCount = 0
+                            }
 
                     let dispositionElement = tryJsonProperty "disposition" root
 
@@ -137,43 +149,47 @@ module Ship =
                         |> List.sort
 
                     Ok
-                        { SchemaVersion = schema
-                          ViewVersion = jsonString "viewVersion" root |> Option.defaultValue "1.0"
-                          WorkId = workId
-                          Stage = stage
-                          Status = jsonString "status" root |> Option.defaultValue "needsShipCorrection"
-                          Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
-                          Sources =
-                            jsonArray "sources" root
-                            |> List.map parseAnalysisSource
-                            |> List.sortBy (fun source -> source.Path)
-                          LifecycleReadiness = lifecycleReadiness
-                          VerificationReadiness = verificationReadiness
-                          Disposition = disposition
-                          DispositionBlockingFindingIds = dispositionBlockingFindingIds
-                          GeneratedViews =
-                            jsonArray "generatedViews" root
-                            |> List.map parseAnalysisGeneratedView
-                            |> List.sortBy (fun view -> view.Path)
-                          Findings =
-                            jsonArray "findings" root
-                            |> List.map parseShipFinding
-                            |> List.sortBy (fun finding -> finding.Id)
-                          OptionalBoundaryFacts =
-                            jsonArray "governanceCompatibility" root
-                            |> List.map parseAnalysisBoundaryFact
-                            |> List.sortBy (fun fact -> fact.Path)
-                          Diagnostics =
-                            jsonArray "diagnostics" root
-                            |> List.map parseAnalysisDiagnostic
-                            |> Diagnostics.sort
-                          Readiness = jsonString "readiness" root |> Option.defaultValue "needsShipCorrection" }
+                        {
+                            SchemaVersion = schema
+                            ViewVersion = jsonString "viewVersion" root |> Option.defaultValue "1.0"
+                            WorkId = workId
+                            Stage = stage
+                            Status = jsonString "status" root |> Option.defaultValue "needsShipCorrection"
+                            Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
+                            Sources =
+                                jsonArray "sources" root
+                                |> List.map parseAnalysisSource
+                                |> List.sortBy (fun source -> source.Path)
+                            LifecycleReadiness = lifecycleReadiness
+                            VerificationReadiness = verificationReadiness
+                            Disposition = disposition
+                            DispositionBlockingFindingIds = dispositionBlockingFindingIds
+                            GeneratedViews =
+                                jsonArray "generatedViews" root
+                                |> List.map parseAnalysisGeneratedView
+                                |> List.sortBy (fun view -> view.Path)
+                            Findings =
+                                jsonArray "findings" root
+                                |> List.map parseShipFinding
+                                |> List.sortBy (fun finding -> finding.Id)
+                            OptionalBoundaryFacts =
+                                jsonArray "governanceCompatibility" root
+                                |> List.map parseAnalysisBoundaryFact
+                                |> List.sortBy (fun fact -> fact.Path)
+                            Diagnostics =
+                                jsonArray "diagnostics" root
+                                |> List.map parseAnalysisDiagnostic
+                                |> Diagnostics.sort
+                            Readiness = jsonString "readiness" root |> Option.defaultValue "needsShipCorrection"
+                        }
                 | _ ->
                     Error
-                        [ Diagnostics.workModelInconsistent
-                              artifact
-                              "Ship view identity fields are malformed."
-                              "Regenerate ship.json with a valid workId and stage: ship."
-                              [ workIdText; stageText ] ])
+                        [
+                            Diagnostics.workModelInconsistent
+                                artifact
+                                "Ship view identity fields are malformed."
+                                "Regenerate ship.json with a valid workId and stage: ship."
+                                [ workIdText; stageText ]
+                        ])
             snapshot.Path
             snapshot.Text

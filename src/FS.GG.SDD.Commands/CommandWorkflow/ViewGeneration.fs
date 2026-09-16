@@ -132,23 +132,30 @@ module internal ViewGeneration =
             let version, symbols = resolve reference
 
             match symbols with
-            | None -> [ frameworkApiSurfaceUnavailable planPath reference.PackageId version reference.Symbol ]
+            | None ->
+                [
+                    frameworkApiSurfaceUnavailable planPath reference.PackageId version reference.Symbol
+                ]
             | Some available ->
                 match reference.Kind, Set.contains reference.Symbol available with
                 | FrameworkUse, true -> []
                 | FrameworkUse, false -> [ frameworkApiDangling planPath reference.PackageId version reference.Symbol ]
                 | FrameworkBlockedOn, true ->
-                    [ frameworkApiDeferralContradicted planPath reference.PackageId version reference.Symbol ]
+                    [
+                        frameworkApiDeferralContradicted planPath reference.PackageId version reference.Symbol
+                    ]
                 | FrameworkBlockedOn, false -> [])
 
     type AnalysisRelationshipDraft =
-        { SourcePath: string
-          TargetPath: string
-          SourceId: string option
-          TargetId: string option
-          Relationship: string
-          State: string
-          DiagnosticIds: string list }
+        {
+            SourcePath: string
+            TargetPath: string
+            SourceId: string option
+            TargetId: string option
+            Relationship: string
+            State: string
+            DiagnosticIds: string list
+        }
 
     let relationship
         (sourcePath: string)
@@ -159,13 +166,15 @@ module internal ViewGeneration =
         (state: string)
         (diagnosticIds: string list)
         : AnalysisRelationshipDraft =
-        { SourcePath = sourcePath
-          TargetPath = targetPath
-          SourceId = sourceId
-          TargetId = targetId
-          Relationship = relationship
-          State = state
-          DiagnosticIds = diagnosticIds }
+        {
+            SourcePath = sourcePath
+            TargetPath = targetPath
+            SourceId = sourceId
+            TargetId = targetId
+            Relationship = relationship
+            State = state
+            DiagnosticIds = diagnosticIds
+        }
 
     let analysisRelationships
         workId
@@ -191,85 +200,105 @@ module internal ViewGeneration =
                     (if current then "current" else "missing")
                     (if current then [] else [ "missingDisposition" ]))
 
-        [ [ relationship (specPath workId) (clarificationPath workId) None None "sourceSpec" "current" []
-            relationship (specPath workId) (checklistPath workId) None None "checklistSourceSpec" "current" []
-            relationship
+        [
+            [
+                relationship (specPath workId) (clarificationPath workId) None None "sourceSpec" "current" []
+                relationship (specPath workId) (checklistPath workId) None None "checklistSourceSpec" "current" []
+                relationship
+                    (clarificationPath workId)
+                    (checklistPath workId)
+                    None
+                    None
+                    "checklistSourceClarifications"
+                    "current"
+                    []
+                relationship (specPath workId) (planPath workId) None None "planSourceSpec" "current" []
+                relationship
+                    (clarificationPath workId)
+                    (planPath workId)
+                    None
+                    None
+                    "planSourceClarifications"
+                    "current"
+                    []
+                relationship (checklistPath workId) (planPath workId) None None "planSourceChecklist" "current" []
+                relationship (specPath workId) (tasksPath workId) None None "taskSourceSpec" "current" []
+                relationship
+                    (clarificationPath workId)
+                    (tasksPath workId)
+                    None
+                    None
+                    "taskSourceClarifications"
+                    "current"
+                    []
+                relationship (checklistPath workId) (tasksPath workId) None None "taskSourceChecklist" "current" []
+                relationship (planPath workId) (tasksPath workId) None None "taskSourcePlan" "current" []
+            ]
+            dispositionRelationships
+                (specPath workId)
+                "requirementDisposition"
+                (specFacts.RequirementIds |> List.map _.Value)
+            dispositionRelationships
+                (specPath workId)
+                "acceptanceDisposition"
+                (specFacts.AcceptanceScenarioIds |> List.map _.Value)
+            dispositionRelationships
                 (clarificationPath workId)
+                "clarificationDisposition"
+                (clarificationFacts.Decisions
+                 |> List.map (fun decision -> decision.DecisionId.Value))
+            dispositionRelationships
                 (checklistPath workId)
-                None
-                None
-                "checklistSourceClarifications"
-                "current"
-                []
-            relationship (specPath workId) (planPath workId) None None "planSourceSpec" "current" []
-            relationship (clarificationPath workId) (planPath workId) None None "planSourceClarifications" "current" []
-            relationship (checklistPath workId) (planPath workId) None None "planSourceChecklist" "current" []
-            relationship (specPath workId) (tasksPath workId) None None "taskSourceSpec" "current" []
-            relationship (clarificationPath workId) (tasksPath workId) None None "taskSourceClarifications" "current" []
-            relationship (checklistPath workId) (tasksPath workId) None None "taskSourceChecklist" "current" []
-            relationship (planPath workId) (tasksPath workId) None None "taskSourcePlan" "current" [] ]
-          dispositionRelationships
-              (specPath workId)
-              "requirementDisposition"
-              (specFacts.RequirementIds |> List.map _.Value)
-          dispositionRelationships
-              (specPath workId)
-              "acceptanceDisposition"
-              (specFacts.AcceptanceScenarioIds |> List.map _.Value)
-          dispositionRelationships
-              (clarificationPath workId)
-              "clarificationDisposition"
-              (clarificationFacts.Decisions
-               |> List.map (fun decision -> decision.DecisionId.Value))
-          dispositionRelationships
-              (checklistPath workId)
-              "checklistDeferralDisposition"
-              (checklistFacts.AcceptedDeferrals
-               |> List.map (fun result -> result.ResultId.Value))
-          dispositionRelationships
-              (planPath workId)
-              "planDecisionDisposition"
-              (planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value))
-          dispositionRelationships
-              (planPath workId)
-              "contractDisposition"
-              (planFacts.ContractReferences
-               |> List.map (fun contract -> contract.ContractId.Value))
-          dispositionRelationships
-              (planPath workId)
-              "verificationDisposition"
-              (planFacts.VerificationObligations
-               |> List.map (fun obligation -> obligation.ObligationId.Value))
-          dispositionRelationships
-              (planPath workId)
-              "migrationDisposition"
-              (planFacts.MigrationNotes
-               |> List.map (fun migration -> migration.MigrationId.Value))
-          dispositionRelationships
-              (planPath workId)
-              "generatedViewDisposition"
-              (planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value))
-          taskFacts.Tasks
-          |> List.collect (fun task ->
-              task.Dependencies
-              |> List.map (fun dependency ->
-                  relationship
-                      (tasksPath workId)
-                      (tasksPath workId)
-                      (Some task.Id.Value)
-                      (Some dependency.Value)
-                      "taskDependency"
-                      "current"
-                      [])) ]
+                "checklistDeferralDisposition"
+                (checklistFacts.AcceptedDeferrals
+                 |> List.map (fun result -> result.ResultId.Value))
+            dispositionRelationships
+                (planPath workId)
+                "planDecisionDisposition"
+                (planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value))
+            dispositionRelationships
+                (planPath workId)
+                "contractDisposition"
+                (planFacts.ContractReferences
+                 |> List.map (fun contract -> contract.ContractId.Value))
+            dispositionRelationships
+                (planPath workId)
+                "verificationDisposition"
+                (planFacts.VerificationObligations
+                 |> List.map (fun obligation -> obligation.ObligationId.Value))
+            dispositionRelationships
+                (planPath workId)
+                "migrationDisposition"
+                (planFacts.MigrationNotes
+                 |> List.map (fun migration -> migration.MigrationId.Value))
+            dispositionRelationships
+                (planPath workId)
+                "generatedViewDisposition"
+                (planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value))
+            taskFacts.Tasks
+            |> List.collect (fun task ->
+                task.Dependencies
+                |> List.map (fun dependency ->
+                    relationship
+                        (tasksPath workId)
+                        (tasksPath workId)
+                        (Some task.Id.Value)
+                        (Some dependency.Value)
+                        "taskDependency"
+                        "current"
+                        []))
+        ]
         |> List.concat
         |> List.sortBy (fun relationship ->
             relationship.SourcePath, relationship.Relationship, relationship.SourceId, relationship.TargetId)
 
     let analysisSourceFromSnapshot (path: string) (text: string) : GeneratedViewSource =
-        { Path = path
-          Digest = Some(SchemaVersionModule.sha256Text text)
-          SchemaVersion = Some 1
-          SchemaStatus = Some "current" }
+        {
+            Path = path
+            Digest = Some(SchemaVersionModule.sha256Text text)
+            SchemaVersion = Some 1
+            SchemaStatus = Some "current"
+        }
 
     let analysisSources
         workId
@@ -281,18 +310,20 @@ module internal ViewGeneration =
         tasksText
         model
         : GeneratedViewSource list =
-        [ snapshot ".fsgg/project.yml" model
-          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          snapshot ".fsgg/sdd.yml" model
-          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          snapshot ".fsgg/agents.yml" model
-          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          Some(analysisSourceFromSnapshot (specPath workId) specText)
-          Some(analysisSourceFromSnapshot (clarificationPath workId) clarificationText)
-          Some(analysisSourceFromSnapshot (checklistPath workId) checklistText)
-          Some(analysisSourceFromSnapshot (planPath workId) planText)
-          Some(analysisSourceFromSnapshot (tasksPath workId) tasksText)
-          workModelJson |> Option.map (analysisSourceFromSnapshot (workModelPath workId)) ]
+        [
+            snapshot ".fsgg/project.yml" model
+            |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+            snapshot ".fsgg/sdd.yml" model
+            |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+            snapshot ".fsgg/agents.yml" model
+            |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+            Some(analysisSourceFromSnapshot (specPath workId) specText)
+            Some(analysisSourceFromSnapshot (clarificationPath workId) clarificationText)
+            Some(analysisSourceFromSnapshot (checklistPath workId) checklistText)
+            Some(analysisSourceFromSnapshot (planPath workId) planText)
+            Some(analysisSourceFromSnapshot (tasksPath workId) tasksText)
+            workModelJson |> Option.map (analysisSourceFromSnapshot (workModelPath workId))
+        ]
         |> List.choose id
         |> List.sortBy (fun source -> source.Path)
 
@@ -426,43 +457,53 @@ module internal ViewGeneration =
             else
                 "implementationReady"
 
-        { WorkId = ""
-          Stage = "analyze"
-          Status = status
-          AnalysisPath = ""
-          SourceCount = 0
-          SourceRelationshipCount = List.length relationships
-          ReadyFindingCount =
-            if status = "implementationReady" then
-                List.length relationships
-            else
-                0
-          AdvisoryCount = advisoryCount
-          WarningCount = warningCount
-          BlockingCount = blockingCount
-          StaleSourceCount = staleSourceCount
-          MissingDispositionCount = missingDispositionCount
-          MalformedSourceCount = malformedSourceCount
-          GeneratedViewFindingCount = generatedViewFindingCount
-          AcceptedDeferralCount = acceptedDeferralCount
-          Readiness = status }
+        {
+            WorkId = ""
+            Stage = "analyze"
+            Status = status
+            AnalysisPath = ""
+            SourceCount = 0
+            SourceRelationshipCount = List.length relationships
+            ReadyFindingCount =
+                if status = "implementationReady" then
+                    List.length relationships
+                else
+                    0
+            AdvisoryCount = advisoryCount
+            WarningCount = warningCount
+            BlockingCount = blockingCount
+            StaleSourceCount = staleSourceCount
+            MissingDispositionCount = missingDispositionCount
+            MalformedSourceCount = malformedSourceCount
+            GeneratedViewFindingCount = generatedViewFindingCount
+            AcceptedDeferralCount = acceptedDeferralCount
+            Readiness = status
+        }
 
     let analysisBoundaryFacts () : GovernanceCompatibilityFact list =
-        [ { Path = ".fsgg/policy.yml"
-            Relationship = "optionalGovernancePolicy"
-            RequiredBySdd = false
-            State = "notEvaluated"
-            DiagnosticIds = [] }
-          { Path = ".fsgg/capabilities.yml"
-            Relationship = "optionalGovernanceCapabilities"
-            RequiredBySdd = false
-            State = "notEvaluated"
-            DiagnosticIds = [] }
-          { Path = ".fsgg/tooling.yml"
-            Relationship = "optionalGovernanceTooling"
-            RequiredBySdd = false
-            State = "notEvaluated"
-            DiagnosticIds = [] } ]
+        [
+            {
+                Path = ".fsgg/policy.yml"
+                Relationship = "optionalGovernancePolicy"
+                RequiredBySdd = false
+                State = "notEvaluated"
+                DiagnosticIds = []
+            }
+            {
+                Path = ".fsgg/capabilities.yml"
+                Relationship = "optionalGovernanceCapabilities"
+                RequiredBySdd = false
+                State = "notEvaluated"
+                DiagnosticIds = []
+            }
+            {
+                Path = ".fsgg/tooling.yml"
+                Relationship = "optionalGovernanceTooling"
+                RequiredBySdd = false
+                State = "notEvaluated"
+                DiagnosticIds = []
+            }
+        ]
 
     // --- Shared readiness-view writers (feature 061 / issue #71) ---
     // analysis/verify/ship emit a structurally identical envelope: a common preamble
@@ -760,7 +801,8 @@ module internal ViewGeneration =
             { readiness with
                 WorkId = workId
                 AnalysisPath = path
-                SourceCount = List.length sources }
+                SourceCount = List.length sources
+            }
 
         let text =
             analysisJson workId model.Request.GeneratorVersion sources relationships summary diagnostics generatedViews
@@ -771,20 +813,24 @@ module internal ViewGeneration =
         summary, text, view
 
     let sourceFromEntry (entry: SourceEntry) =
-        { Path = entry.Path
-          Digest = Some entry.SourceDigest
-          SchemaVersion =
-            if entry.SchemaVersion <= 0 then
-                None
-            else
-                Some entry.SchemaVersion
-          SchemaStatus = Some entry.SchemaStatus }
+        {
+            Path = entry.Path
+            Digest = Some entry.SourceDigest
+            SchemaVersion =
+                if entry.SchemaVersion <= 0 then
+                    None
+                else
+                    Some entry.SchemaVersion
+            SchemaStatus = Some entry.SchemaStatus
+        }
 
     let charterSource path text =
-        { Path = path
-          Digest = Some(SchemaVersionModule.sha256Text text)
-          SchemaVersion = Some 1
-          SchemaStatus = Some "current" }
+        {
+            Path = path
+            Digest = Some(SchemaVersionModule.sha256Text text)
+            SchemaVersion = Some 1
+            SchemaStatus = Some "current"
+        }
 
     /// Evidence snapshots are provenance for the evidence gate, not evidence meaning.  The
     /// snapshot includes `analysis.json`, which itself cites the work model; hashing it into that
@@ -798,7 +844,8 @@ module internal ViewGeneration =
     let private evidenceSnapshotForWorkModel workId (snapshot: FileSnapshot) =
         if normalizeRelativePath snapshot.Path = evidencePath workId then
             { snapshot with
-                Text = evidenceTextForWorkModel snapshot.Text }
+                Text = evidenceTextForWorkModel snapshot.Text
+            }
         else
             snapshot
 
@@ -807,9 +854,11 @@ module internal ViewGeneration =
         |> Option.bind (fun text ->
             match
                 parseEvidence
-                    { Path = evidencePath workId
-                      Text = text
-                      RawBytes = None }
+                    {
+                        Path = evidencePath workId
+                        Text = text
+                        RawBytes = None
+                    }
             with
             | Ok declarations -> Some declarations
             | Error _ -> None)
@@ -838,17 +887,19 @@ module internal ViewGeneration =
                 // the model resolves, `plan` recorded a charter-bearing source set that `analyze`/
                 // `verify`/`ship`/`refresh` then re-derived without, spuriously staling the view.
                 let currentSnapshots =
-                    [ snapshot ".fsgg/project.yml" model
-                      snapshot ".fsgg/sdd.yml" model
-                      snapshot ".fsgg/agents.yml" model
-                      snapshot (specPath workId) model
-                      snapshot (clarificationPath workId) model
-                      snapshot (checklistPath workId) model
-                      snapshot (planPath workId) model
-                      snapshot (tasksPath workId) model
-                      snapshot (evidencePath workId) model
-                      |> Option.map (evidenceSnapshotForWorkModel workId)
-                      Some generated ]
+                    [
+                        snapshot ".fsgg/project.yml" model
+                        snapshot ".fsgg/sdd.yml" model
+                        snapshot ".fsgg/agents.yml" model
+                        snapshot (specPath workId) model
+                        snapshot (clarificationPath workId) model
+                        snapshot (checklistPath workId) model
+                        snapshot (planPath workId) model
+                        snapshot (tasksPath workId) model
+                        snapshot (evidencePath workId) model
+                        |> Option.map (evidenceSnapshotForWorkModel workId)
+                        Some generated
+                    ]
                     |> List.choose id
                     |> fun snapshots ->
                         let evidenceText =
@@ -895,47 +946,61 @@ module internal ViewGeneration =
         // stability across callers.
         ignore charterText
 
-        [ snapshot ".fsgg/project.yml" model
-          snapshot ".fsgg/sdd.yml" model
-          snapshot ".fsgg/agents.yml" model
-          specText
-          |> Option.map (fun text ->
-              { Path = specPath workId
-                Text = text
-                RawBytes = None })
-          |> Option.orElseWith (fun () -> snapshot (specPath workId) model)
-          clarificationText
-          |> Option.map (fun text ->
-              { Path = clarificationPath workId
-                Text = text
-                RawBytes = None })
-          |> Option.orElseWith (fun () -> snapshot (clarificationPath workId) model)
-          checklistText
-          |> Option.map (fun text ->
-              { Path = checklistPath workId
-                Text = text
-                RawBytes = None })
-          |> Option.orElseWith (fun () -> snapshot (checklistPath workId) model)
-          planText
-          |> Option.map (fun text ->
-              { Path = planPath workId
-                Text = text
-                RawBytes = None })
-          |> Option.orElseWith (fun () -> snapshot (planPath workId) model)
-          tasksText
-          |> Option.map (fun text ->
-              { Path = tasksPath workId
-                Text = text
-                RawBytes = None })
-          |> Option.orElseWith (fun () -> snapshot (tasksPath workId) model)
-          evidenceText
-          |> Option.map (fun text ->
-              { Path = evidencePath workId
-                Text = evidenceTextForWorkModel text
-                RawBytes = None })
-          |> Option.orElseWith (fun () ->
-              snapshot (evidencePath workId) model
-              |> Option.map (evidenceSnapshotForWorkModel workId)) ]
+        [
+            snapshot ".fsgg/project.yml" model
+            snapshot ".fsgg/sdd.yml" model
+            snapshot ".fsgg/agents.yml" model
+            specText
+            |> Option.map (fun text ->
+                {
+                    Path = specPath workId
+                    Text = text
+                    RawBytes = None
+                })
+            |> Option.orElseWith (fun () -> snapshot (specPath workId) model)
+            clarificationText
+            |> Option.map (fun text ->
+                {
+                    Path = clarificationPath workId
+                    Text = text
+                    RawBytes = None
+                })
+            |> Option.orElseWith (fun () -> snapshot (clarificationPath workId) model)
+            checklistText
+            |> Option.map (fun text ->
+                {
+                    Path = checklistPath workId
+                    Text = text
+                    RawBytes = None
+                })
+            |> Option.orElseWith (fun () -> snapshot (checklistPath workId) model)
+            planText
+            |> Option.map (fun text ->
+                {
+                    Path = planPath workId
+                    Text = text
+                    RawBytes = None
+                })
+            |> Option.orElseWith (fun () -> snapshot (planPath workId) model)
+            tasksText
+            |> Option.map (fun text ->
+                {
+                    Path = tasksPath workId
+                    Text = text
+                    RawBytes = None
+                })
+            |> Option.orElseWith (fun () -> snapshot (tasksPath workId) model)
+            evidenceText
+            |> Option.map (fun text ->
+                {
+                    Path = evidencePath workId
+                    Text = evidenceTextForWorkModel text
+                    RawBytes = None
+                })
+            |> Option.orElseWith (fun () ->
+                snapshot (evidencePath workId) model
+                |> Option.map (evidenceSnapshotForWorkModel workId))
+        ]
         |> List.choose id
         |> fun snapshots ->
             // `analyze` intentionally arrives without an explicit evidence argument before
@@ -956,7 +1021,8 @@ module internal ViewGeneration =
             | None -> snapshots @ performanceEvidenceSnapshots workId performanceEvidenceText model
         |> List.map (fun snapshot ->
             { snapshot with
-                Path = normalizeRelativePath snapshot.Path })
+                Path = normalizeRelativePath snapshot.Path
+            })
 
     let generatedViewPlan
         (request: CommandRequest)
@@ -977,14 +1043,16 @@ module internal ViewGeneration =
 
         if not (List.isEmpty blockingCommandIds) then
             let sources =
-                [ charterText |> Option.map (fun text -> charterSource (charterPath workId) text)
-                  specText |> Option.map (fun text -> charterSource (specPath workId) text)
-                  clarificationText
-                  |> Option.map (fun text -> charterSource (clarificationPath workId) text)
-                  checklistText
-                  |> Option.map (fun text -> charterSource (checklistPath workId) text)
-                  planText |> Option.map (fun text -> charterSource (planPath workId) text)
-                  tasksText |> Option.map (fun text -> charterSource (tasksPath workId) text) ]
+                [
+                    charterText |> Option.map (fun text -> charterSource (charterPath workId) text)
+                    specText |> Option.map (fun text -> charterSource (specPath workId) text)
+                    clarificationText
+                    |> Option.map (fun text -> charterSource (clarificationPath workId) text)
+                    checklistText
+                    |> Option.map (fun text -> charterSource (checklistPath workId) text)
+                    planText |> Option.map (fun text -> charterSource (planPath workId) text)
+                    tasksText |> Option.map (fun text -> charterSource (tasksPath workId) text)
+                ]
                 |> List.choose id
 
             let view =
@@ -1012,10 +1080,12 @@ module internal ViewGeneration =
 
             let result =
                 SerializationModule.generateWorkModel
-                    { WorkId = workId
-                      Snapshots = snapshots
-                      GeneratorVersion = request.GeneratorVersion
-                      ExpectedOutputPath = Some path }
+                    {
+                        WorkId = workId
+                        Snapshots = snapshots
+                        GeneratorVersion = request.GeneratorVersion
+                        ExpectedOutputPath = Some path
+                    }
 
             let blockingModelDiagnostics = WorkModelModule.blockingDiagnostics result.Model
 
@@ -1037,8 +1107,10 @@ module internal ViewGeneration =
                         diagnosticIds
 
                 let effects =
-                    [ CreateDirectory(readinessDirectory workId)
-                      WriteFile(path, result.Json, GeneratedView) ]
+                    [
+                        CreateDirectory(readinessDirectory workId)
+                        WriteFile(path, result.Json, GeneratedView)
+                    ]
 
                 currentDiagnostic |> Option.toList, view, effects, []
             else
@@ -1097,14 +1169,16 @@ module internal ViewGeneration =
                 let diagnosticIds = diagnostics |> List.map _.Id
 
                 let sources =
-                    [ charterText |> Option.map (fun text -> charterSource (charterPath workId) text)
-                      specText |> Option.map (fun text -> charterSource (specPath workId) text)
-                      clarificationText
-                      |> Option.map (fun text -> charterSource (clarificationPath workId) text)
-                      checklistText
-                      |> Option.map (fun text -> charterSource (checklistPath workId) text)
-                      planText |> Option.map (fun text -> charterSource (planPath workId) text)
-                      tasksText |> Option.map (fun text -> charterSource (tasksPath workId) text) ]
+                    [
+                        charterText |> Option.map (fun text -> charterSource (charterPath workId) text)
+                        specText |> Option.map (fun text -> charterSource (specPath workId) text)
+                        clarificationText
+                        |> Option.map (fun text -> charterSource (clarificationPath workId) text)
+                        checklistText
+                        |> Option.map (fun text -> charterSource (checklistPath workId) text)
+                        planText |> Option.map (fun text -> charterSource (planPath workId) text)
+                        tasksText |> Option.map (fun text -> charterSource (tasksPath workId) text)
+                    ]
                     |> List.choose id
 
                 let view =
@@ -1127,5 +1201,7 @@ module internal ViewGeneration =
                 diagnostics, view, [], blockingSources
 
     let charterWriteEffects workId text =
-        [ CreateDirectory($"work/{workId}")
-          WriteFile(charterPath workId, text, HybridArtifact MergePolicies.charter) ]
+        [
+            CreateDirectory($"work/{workId}")
+            WriteFile(charterPath workId, text, HybridArtifact MergePolicies.charter)
+        ]

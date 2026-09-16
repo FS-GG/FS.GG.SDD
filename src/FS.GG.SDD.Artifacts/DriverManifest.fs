@@ -32,17 +32,21 @@ module DriverManifest =
         }
 
     type DriverManifestEntry =
-        { Id: string
-          Scope: string
-          Sha256: string
-          TreeSha256: string option
-          Files: DriverManifestFile list
-          SuppliedBy: string option
-          MaterializesWhen: string }
+        {
+            Id: string
+            Scope: string
+            Sha256: string
+            TreeSha256: string option
+            Files: DriverManifestFile list
+            SuppliedBy: string option
+            MaterializesWhen: string
+        }
 
     type DriverManifest =
-        { SchemaVersion: int
-          Skills: DriverManifestEntry list }
+        {
+            SchemaVersion: int
+            Skills: DriverManifestEntry list
+        }
 
     let private isSha256 (value: string) =
         value.Length = 64
@@ -115,10 +119,14 @@ module DriverManifest =
                         else
                             Ok(
                                 files
-                                @ [ { Path = path
-                                      Sha256 = sha256
-                                      DigestDomain = RawBytes
-                                      Executable = executable.GetBoolean() } ]
+                                @ [
+                                    {
+                                        Path = path
+                                        Sha256 = sha256
+                                        DigestDomain = RawBytes
+                                        Executable = executable.GetBoolean()
+                                    }
+                                ]
                             )
                     | Error message, _, _ -> Error $"driver '{id}': {message}."
                     | _, Error message, _ -> Error $"driver '{id}': {message}."
@@ -155,46 +163,54 @@ module DriverManifest =
                             Error $"driver '{id}': files manifest digest {computed} != tree-sha256 {treeSha256}."
                         else
                             Ok
-                                { Id = id
-                                  Scope =
-                                    jsonString "scope" element
-                                    |> Option.defaultValue ""
-                                    |> fun value -> value.Trim()
-                                  Sha256 = sha256
-                                  TreeSha256 = Some treeSha256
-                                  Files = files
-                                  SuppliedBy =
-                                    jsonString "supplied-by" element
-                                    |> Option.map (fun value -> value.Trim())
-                                    |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                                  MaterializesWhen = materializesWhen }
+                                {
+                                    Id = id
+                                    Scope =
+                                        jsonString "scope" element
+                                        |> Option.defaultValue ""
+                                        |> fun value -> value.Trim()
+                                    Sha256 = sha256
+                                    TreeSha256 = Some treeSha256
+                                    Files = files
+                                    SuppliedBy =
+                                        jsonString "supplied-by" element
+                                        |> Option.map (fun value -> value.Trim())
+                                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                    MaterializesWhen = materializesWhen
+                                }
                     | Error message, _ -> Error $"driver '{id}': {message}."
                     | _, Error message -> Error message
             else
                 Ok
-                    { Id = id
-                      Scope =
-                        jsonString "scope" element
-                        |> Option.defaultValue ""
-                        |> fun value -> value.Trim()
-                      Sha256 = sha256
-                      TreeSha256 = None
-                      Files =
-                        // SYNTHESIZED, not read: schema v1 has no `files[]` and no per-file digest.
-                        // The only digest a v1 row carries is the row's canonical-body `sha256`, so
-                        // the projected `SKILL.md` row sits in `CanonicalText` — a DIFFERENT domain
-                        // from a v2 `files[]` row, deliberately, because there is no raw digest here
-                        // to use and inventing one from the bytes being verified would verify
-                        // nothing (FS-GG/FS.GG.SDD#752 AC2).
-                        [ { Path = "SKILL.md"
-                            Sha256 = sha256
-                            DigestDomain = CanonicalText
-                            Executable = false } ]
-                      SuppliedBy =
-                        jsonString "supplied-by" element
-                        |> Option.map (fun value -> value.Trim())
-                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-                      MaterializesWhen = materializesWhen }
+                    {
+                        Id = id
+                        Scope =
+                            jsonString "scope" element
+                            |> Option.defaultValue ""
+                            |> fun value -> value.Trim()
+                        Sha256 = sha256
+                        TreeSha256 = None
+                        Files =
+                            // SYNTHESIZED, not read: schema v1 has no `files[]` and no per-file digest.
+                            // The only digest a v1 row carries is the row's canonical-body `sha256`, so
+                            // the projected `SKILL.md` row sits in `CanonicalText` — a DIFFERENT domain
+                            // from a v2 `files[]` row, deliberately, because there is no raw digest here
+                            // to use and inventing one from the bytes being verified would verify
+                            // nothing (FS-GG/FS.GG.SDD#752 AC2).
+                            [
+                                {
+                                    Path = "SKILL.md"
+                                    Sha256 = sha256
+                                    DigestDomain = CanonicalText
+                                    Executable = false
+                                }
+                            ]
+                        SuppliedBy =
+                            jsonString "supplied-by" element
+                            |> Option.map (fun value -> value.Trim())
+                            |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                        MaterializesWhen = materializesWhen
+                    }
         | Error message, _, _ -> Error message
         | _, Error message, _ -> Error message
         | _, _, Error message -> Error message
@@ -228,8 +244,10 @@ module DriverManifest =
 
                     parsed
                     |> Result.map (fun skills ->
-                        { SchemaVersion = version
-                          Skills = skills })
+                        {
+                            SchemaVersion = version
+                            Skills = skills
+                        })
         with ex ->
             Error(sprintf "driver-skill-manifest.json: %s" ex.Message)
 

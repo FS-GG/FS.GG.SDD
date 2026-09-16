@@ -12,21 +12,25 @@ module DependencySurfaceGuardTests =
     // Tokens that would only appear if a specific framework package leaked into generic SDD: the
     // RM2 incident's package/symbols, and the family it belongs to.
     let private forbiddenTokens =
-        [ "SkiaViewer"
-          "FS.GG.UI"
-          "fs-gg-ui"
-          "runAppWithPersistence"
-          "runAppWithAudioAndPersistence" ]
+        [
+            "SkiaViewer"
+            "FS.GG.UI"
+            "fs-gg-ui"
+            "runAppWithPersistence"
+            "runAppWithAudioAndPersistence"
+        ]
 
     // The curated dependency-surface source union: the capture model + surface-read, the edge that
     // reflects a restored package, the handler, and the two projection files.
     let private dependencySurfaceSourceFiles () =
-        [ "src/FS.GG.SDD.Artifacts/DependencySurface.fs"
-          "src/FS.GG.SDD.Artifacts/DependencySurface.fsi"
-          "src/FS.GG.SDD.Commands/CommandEffects.fs"
-          "src/FS.GG.SDD.Commands/CommandWorkflow/HandlersDependencySurface.fs"
-          "src/FS.GG.SDD.Commands/CommandSerialization.fs"
-          "src/FS.GG.SDD.Commands/CommandRendering.fs" ]
+        [
+            "src/FS.GG.SDD.Artifacts/DependencySurface.fs"
+            "src/FS.GG.SDD.Artifacts/DependencySurface.fsi"
+            "src/FS.GG.SDD.Commands/CommandEffects.fs"
+            "src/FS.GG.SDD.Commands/CommandWorkflow/HandlersDependencySurface.fs"
+            "src/FS.GG.SDD.Commands/CommandSerialization.fs"
+            "src/FS.GG.SDD.Commands/CommandRendering.fs"
+        ]
         |> List.map (fun relative ->
             Path.Combine(TestSupport.repoRoot, relative.Replace('/', Path.DirectorySeparatorChar)))
         |> List.filter File.Exists

@@ -268,8 +268,10 @@ module internal HandlersAnalyze =
                                 if hasBlocking then
                                     []
                                 else
-                                    [ CreateDirectory(readinessDirectory workId)
-                                      WriteFile(analysisPath workId, text, GeneratedView) ]
+                                    [
+                                        CreateDirectory(readinessDirectory workId)
+                                        WriteFile(analysisPath workId, text, GeneratedView)
+                                    ]
 
                             Some summary, Some view, effects
                         | _ -> None, None, []

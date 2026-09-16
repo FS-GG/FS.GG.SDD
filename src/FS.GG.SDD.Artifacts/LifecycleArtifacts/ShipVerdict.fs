@@ -49,20 +49,22 @@ module ShipVerdict =
         |> sha256Text
 
     let fromShipView (view: ShipView) : ShipVerdict =
-        { SchemaVersion = view.SchemaVersion
-          ViewVersion = view.ViewVersion
-          WorkId = workIdValue view.WorkId
-          Stage = stageValue view.Stage
-          Status = view.Status
-          Generator = view.Generator
-          SourcesDigest = sourcesDigest view.Sources
-          VerificationReadinessStatus = view.VerificationReadiness.Status
-          EvidenceSupportedCount = view.VerificationReadiness.EvidenceSupportedCount
-          EvidenceSelfAttestedCount = view.VerificationReadiness.EvidenceSelfAttestedCount
-          EvidenceObservedCount = view.VerificationReadiness.EvidenceObservedCount
-          DispositionState = view.Disposition
-          DispositionBlockingFindingIds = view.DispositionBlockingFindingIds
-          Readiness = view.Readiness }
+        {
+            SchemaVersion = view.SchemaVersion
+            ViewVersion = view.ViewVersion
+            WorkId = workIdValue view.WorkId
+            Stage = stageValue view.Stage
+            Status = view.Status
+            Generator = view.Generator
+            SourcesDigest = sourcesDigest view.Sources
+            VerificationReadinessStatus = view.VerificationReadiness.Status
+            EvidenceSupportedCount = view.VerificationReadiness.EvidenceSupportedCount
+            EvidenceSelfAttestedCount = view.VerificationReadiness.EvidenceSelfAttestedCount
+            EvidenceObservedCount = view.VerificationReadiness.EvidenceObservedCount
+            DispositionState = view.Disposition
+            DispositionBlockingFindingIds = view.DispositionBlockingFindingIds
+            Readiness = view.Readiness
+        }
 
     let toJson (verdict: ShipVerdict) : string =
         use stream = new MemoryStream()

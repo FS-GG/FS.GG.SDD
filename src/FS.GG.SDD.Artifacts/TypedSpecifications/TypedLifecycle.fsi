@@ -8,26 +8,30 @@ type LifecycleLane =
     | LegacySpecKit
 
 type TypedAuthorityManifest =
-    { SchemaVersion: int
-      Lifecycle: string
-      Backend: string
-      CompilerIdentity: string
-      PackageIdentity: string
-      ExtensionIdentity: string
-      CanonicalPath: string
-      CanonicalSha256: string
-      NormalizedPath: string
-      NormalizedSha256: string
-      MarkdownPath: string
-      MarkdownSha256: string
-      AuthoringAgent: string
-      AuthoringSession: string
-      RollbackSourceSha256: string option }
+    {
+        SchemaVersion: int
+        Lifecycle: string
+        Backend: string
+        CompilerIdentity: string
+        PackageIdentity: string
+        ExtensionIdentity: string
+        CanonicalPath: string
+        CanonicalSha256: string
+        NormalizedPath: string
+        NormalizedSha256: string
+        MarkdownPath: string
+        MarkdownSha256: string
+        AuthoringAgent: string
+        AuthoringSession: string
+        RollbackSourceSha256: string option
+    }
 
 type TypedLifecycleDiagnostic =
-    { Id: string
-      Message: string
-      Correction: string }
+    {
+        Id: string
+        Message: string
+        Correction: string
+    }
 
 [<RequireQualifiedAccess>]
 module LifecycleLane =

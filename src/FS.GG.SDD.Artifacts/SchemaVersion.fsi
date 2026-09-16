@@ -2,9 +2,11 @@ namespace FS.GG.SDD.Artifacts
 
 module SchemaVersion =
     type SchemaVersion =
-        { Major: int
-          Minor: int option
-          Raw: string }
+        {
+            Major: int
+            Minor: int option
+            Raw: string
+        }
 
     type SourceDigest = { Algorithm: string; Value: string }
     type OutputDigest = { Algorithm: string; Value: string }
@@ -18,11 +20,13 @@ module SchemaVersion =
         | Future
 
     type SchemaCompatibility =
-        { RawValue: string
-          Version: SchemaVersion option
-          Status: SchemaCompatibilityStatus
-          SupportedRange: string
-          MigrationHint: string option }
+        {
+            RawValue: string
+            Version: SchemaVersion option
+            Status: SchemaCompatibilityStatus
+            SupportedRange: string
+            MigrationHint: string option
+        }
 
     val create: major: int -> SchemaVersion
     val parse: value: string -> Result<SchemaVersion, string>

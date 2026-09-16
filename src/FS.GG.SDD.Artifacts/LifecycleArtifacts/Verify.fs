@@ -98,54 +98,64 @@ module Verify =
         | SkillMissing
 
     type SkillVisibilityFact =
-        { Skill: string
-          RequiringTaskIds: TaskId list
-          Visibility: SkillVisibilityState
-          SourceArtifactPath: string
-          Severity: string
-          DiagnosticIds: string list
-          Correction: string }
+        {
+            Skill: string
+            RequiringTaskIds: TaskId list
+            Visibility: SkillVisibilityState
+            SourceArtifactPath: string
+            Severity: string
+            DiagnosticIds: string list
+            Correction: string
+        }
 
     type VerificationFinding =
-        { Id: string
-          Severity: string
-          Category: string
-          Path: string
-          RelatedIds: string list
-          Message: string
-          Correction: string }
+        {
+            Id: string
+            Severity: string
+            Category: string
+            Path: string
+            RelatedIds: string list
+            Message: string
+            Correction: string
+        }
 
     type VerificationStageReadiness = { Stage: string; Status: string }
 
     type VerificationLifecycleReadiness =
-        { Stages: VerificationStageReadiness list
-          Status: string }
+        {
+            Stages: VerificationStageReadiness list
+            Status: string
+        }
 
     type VerificationTaskGraphReadiness =
-        { TaskCount: int
-          DependencyCount: int
-          DependenciesValid: bool
-          StatusesValid: bool
-          FindingIds: string list }
+        {
+            TaskCount: int
+            DependencyCount: int
+            DependenciesValid: bool
+            StatusesValid: bool
+            FindingIds: string list
+        }
 
     type VerificationView =
-        { SchemaVersion: SchemaVersion
-          ViewVersion: string
-          WorkId: WorkId
-          Stage: LifecycleStage
-          Status: string
-          Generator: string
-          Sources: AnalysisSourceRecord list
-          LifecycleReadiness: VerificationLifecycleReadiness
-          TaskGraph: VerificationTaskGraphReadiness
-          EvidenceDispositions: EvidenceDisposition list
-          TestDispositions: RequiredTestDisposition list
-          SkillVisibility: SkillVisibilityFact list
-          GeneratedViews: AnalysisGeneratedViewRecord list
-          Findings: VerificationFinding list
-          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
-          Diagnostics: Diagnostic list
-          Readiness: string }
+        {
+            SchemaVersion: SchemaVersion
+            ViewVersion: string
+            WorkId: WorkId
+            Stage: LifecycleStage
+            Status: string
+            Generator: string
+            Sources: AnalysisSourceRecord list
+            LifecycleReadiness: VerificationLifecycleReadiness
+            TaskGraph: VerificationTaskGraphReadiness
+            EvidenceDispositions: EvidenceDisposition list
+            TestDispositions: RequiredTestDisposition list
+            SkillVisibility: SkillVisibilityFact list
+            GeneratedViews: AnalysisGeneratedViewRecord list
+            Findings: VerificationFinding list
+            OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+            Diagnostics: Diagnostic list
+            Readiness: string
+        }
 
     let evidenceDispositionStateFromString (value: string) =
         match (if String.IsNullOrEmpty value then "" else value).Trim().ToLowerInvariant() with
@@ -187,76 +197,90 @@ module Verify =
         |> List.choose (Identifiers.createRequirementId >> Result.toOption)
 
     let parseVerificationEvidenceDisposition (element: JsonElement) : EvidenceDisposition =
-        { DispositionId = jsonRequiredString "id" element
-          ObligationId = jsonRequiredString "obligationId" element
-          State = jsonRequiredString "state" element |> evidenceDispositionStateFromString
-          // #398: a view written before this field existed parses to `false` — which is exactly what
-          // it meant, since nothing has ever been observed. Degrade, don't throw (Principle VIII),
-          // and no `schemaVersion` bump.
-          Observed = jsonBool "observed" element |> Option.defaultValue false
-          // WI-4: absent in a pre-WI-4 view parses to `false` (no FR was classified). Degrade, don't
-          // throw (Principle VIII), and no `schemaVersion` bump.
-          ClassifiedRequirement = jsonBool "classifiedRequirement" element |> Option.defaultValue false
-          JourneyRequirement = jsonBool "journeyRequirement" element |> Option.defaultValue false
-          // FS.GG.SDD#865: absent in a pre-#865 view parses to `false` — which is exactly what it
-          // meant, since no obligation could be record-discharged then. Degrade, don't throw
-          // (Principle VIII), and no `schemaVersion` bump.
-          RecordRequirement = jsonBool "recordRequirement" element |> Option.defaultValue false
-          EvidenceIds = evidenceIdsFromJson "evidenceIds" element
-          AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
-          AffectedSourceIds = jsonStringList "affectedSourceIds" element
-          Severity = jsonRequiredString "severity" element
-          DiagnosticIds = jsonStringList "diagnosticIds" element
-          Correction = jsonRequiredString "correction" element }
+        {
+            DispositionId = jsonRequiredString "id" element
+            ObligationId = jsonRequiredString "obligationId" element
+            State = jsonRequiredString "state" element |> evidenceDispositionStateFromString
+            // #398: a view written before this field existed parses to `false` — which is exactly what
+            // it meant, since nothing has ever been observed. Degrade, don't throw (Principle VIII),
+            // and no `schemaVersion` bump.
+            Observed = jsonBool "observed" element |> Option.defaultValue false
+            // WI-4: absent in a pre-WI-4 view parses to `false` (no FR was classified). Degrade, don't
+            // throw (Principle VIII), and no `schemaVersion` bump.
+            ClassifiedRequirement = jsonBool "classifiedRequirement" element |> Option.defaultValue false
+            JourneyRequirement = jsonBool "journeyRequirement" element |> Option.defaultValue false
+            // FS.GG.SDD#865: absent in a pre-#865 view parses to `false` — which is exactly what it
+            // meant, since no obligation could be record-discharged then. Degrade, don't throw
+            // (Principle VIII), and no `schemaVersion` bump.
+            RecordRequirement = jsonBool "recordRequirement" element |> Option.defaultValue false
+            EvidenceIds = evidenceIdsFromJson "evidenceIds" element
+            AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
+            AffectedSourceIds = jsonStringList "affectedSourceIds" element
+            Severity = jsonRequiredString "severity" element
+            DiagnosticIds = jsonStringList "diagnosticIds" element
+            Correction = jsonRequiredString "correction" element
+        }
 
     let parseVerificationTestDisposition (element: JsonElement) : RequiredTestDisposition =
-        { DispositionId = jsonRequiredString "id" element
-          ObligationId = jsonRequiredString "obligationId" element
-          State = jsonRequiredString "state" element |> requiredTestDispositionStateFromString
-          // #398: absent in a pre-feature view, and `false` is what it meant. Tolerant, no bump.
-          Observed = jsonBool "observed" element |> Option.defaultValue false
-          // #865: likewise absent in a pre-#865 view, and `false` is what it meant.
-          RecordRequirement = jsonBool "recordRequirement" element |> Option.defaultValue false
-          EvidenceIds = evidenceIdsFromJson "evidenceIds" element
-          AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
-          AffectedRequirementIds = requirementIdsFromJson "affectedRequirementIds" element
-          Severity = jsonRequiredString "severity" element
-          DiagnosticIds = jsonStringList "diagnosticIds" element
-          Correction = jsonRequiredString "correction" element }
+        {
+            DispositionId = jsonRequiredString "id" element
+            ObligationId = jsonRequiredString "obligationId" element
+            State = jsonRequiredString "state" element |> requiredTestDispositionStateFromString
+            // #398: absent in a pre-feature view, and `false` is what it meant. Tolerant, no bump.
+            Observed = jsonBool "observed" element |> Option.defaultValue false
+            // #865: likewise absent in a pre-#865 view, and `false` is what it meant.
+            RecordRequirement = jsonBool "recordRequirement" element |> Option.defaultValue false
+            EvidenceIds = evidenceIdsFromJson "evidenceIds" element
+            AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
+            AffectedRequirementIds = requirementIdsFromJson "affectedRequirementIds" element
+            Severity = jsonRequiredString "severity" element
+            DiagnosticIds = jsonStringList "diagnosticIds" element
+            Correction = jsonRequiredString "correction" element
+        }
 
     let parseVerificationSkillVisibility (element: JsonElement) : SkillVisibilityFact =
-        { Skill = jsonRequiredString "skill" element
-          RequiringTaskIds = taskIdsFromJson "requiringTaskIds" element
-          Visibility = jsonRequiredString "visibility" element |> skillVisibilityStateFromString
-          SourceArtifactPath = normalizePath (jsonRequiredString "sourceArtifactPath" element)
-          Severity = jsonRequiredString "severity" element
-          DiagnosticIds = jsonStringList "diagnosticIds" element
-          Correction = jsonRequiredString "correction" element }
+        {
+            Skill = jsonRequiredString "skill" element
+            RequiringTaskIds = taskIdsFromJson "requiringTaskIds" element
+            Visibility = jsonRequiredString "visibility" element |> skillVisibilityStateFromString
+            SourceArtifactPath = normalizePath (jsonRequiredString "sourceArtifactPath" element)
+            Severity = jsonRequiredString "severity" element
+            DiagnosticIds = jsonStringList "diagnosticIds" element
+            Correction = jsonRequiredString "correction" element
+        }
 
     let parseVerificationFinding (element: JsonElement) : VerificationFinding =
-        { Id = jsonRequiredString "id" element
-          Severity = jsonRequiredString "severity" element
-          Category = jsonRequiredString "category" element
-          Path = normalizePath (jsonRequiredString "path" element)
-          RelatedIds = jsonStringList "relatedIds" element
-          Message = jsonRequiredString "message" element
-          Correction = jsonRequiredString "correction" element }
+        {
+            Id = jsonRequiredString "id" element
+            Severity = jsonRequiredString "severity" element
+            Category = jsonRequiredString "category" element
+            Path = normalizePath (jsonRequiredString "path" element)
+            RelatedIds = jsonStringList "relatedIds" element
+            Message = jsonRequiredString "message" element
+            Correction = jsonRequiredString "correction" element
+        }
 
     let parseVerificationLifecycleReadiness (element: JsonElement) : VerificationLifecycleReadiness =
-        { Stages =
-            jsonArray "stages" element
-            |> List.map (fun stage ->
-                { VerificationStageReadiness.Stage = jsonRequiredString "stage" stage
-                  Status = jsonRequiredString "status" stage })
-            |> List.sortBy (fun stage -> stage.Stage)
-          Status = jsonString "status" element |> Option.defaultValue "blocked" }
+        {
+            Stages =
+                jsonArray "stages" element
+                |> List.map (fun stage ->
+                    {
+                        VerificationStageReadiness.Stage = jsonRequiredString "stage" stage
+                        Status = jsonRequiredString "status" stage
+                    })
+                |> List.sortBy (fun stage -> stage.Stage)
+            Status = jsonString "status" element |> Option.defaultValue "blocked"
+        }
 
     let parseVerificationTaskGraph (element: JsonElement) : VerificationTaskGraphReadiness =
-        { TaskCount = jsonInt "taskCount" element |> Option.defaultValue 0
-          DependencyCount = jsonInt "dependencyCount" element |> Option.defaultValue 0
-          DependenciesValid = jsonBool "dependenciesValid" element |> Option.defaultValue false
-          StatusesValid = jsonBool "statusesValid" element |> Option.defaultValue false
-          FindingIds = jsonStringList "findingIds" element }
+        {
+            TaskCount = jsonInt "taskCount" element |> Option.defaultValue 0
+            DependencyCount = jsonInt "dependencyCount" element |> Option.defaultValue 0
+            DependenciesValid = jsonBool "dependenciesValid" element |> Option.defaultValue false
+            StatusesValid = jsonBool "statusesValid" element |> Option.defaultValue false
+            FindingIds = jsonStringList "findingIds" element
+        }
 
     let parseVerificationView (snapshot: FileSnapshot) =
         parseJsonView
@@ -277,60 +301,67 @@ module Verify =
                         tryJsonProperty "taskGraph" root
                         |> Option.map parseVerificationTaskGraph
                         |> Option.defaultValue
-                            { TaskCount = 0
-                              DependencyCount = 0
-                              DependenciesValid = false
-                              StatusesValid = false
-                              FindingIds = [] }
+                            {
+                                TaskCount = 0
+                                DependencyCount = 0
+                                DependenciesValid = false
+                                StatusesValid = false
+                                FindingIds = []
+                            }
 
                     Ok
-                        { SchemaVersion = schema
-                          ViewVersion = jsonString "viewVersion" root |> Option.defaultValue "1.0"
-                          WorkId = workId
-                          Stage = stage
-                          Status = jsonString "status" root |> Option.defaultValue "needsVerificationCorrection"
-                          Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
-                          Sources =
-                            jsonArray "sources" root
-                            |> List.map parseAnalysisSource
-                            |> List.sortBy (fun source -> source.Path)
-                          LifecycleReadiness = lifecycleReadiness
-                          TaskGraph = taskGraph
-                          EvidenceDispositions =
-                            jsonArray "evidenceDispositions" root
-                            |> List.map parseVerificationEvidenceDisposition
-                            |> List.sortBy (fun disposition -> disposition.DispositionId)
-                          TestDispositions =
-                            jsonArray "testDispositions" root
-                            |> List.map parseVerificationTestDisposition
-                            |> List.sortBy (fun disposition -> disposition.DispositionId)
-                          SkillVisibility =
-                            jsonArray "skillVisibility" root
-                            |> List.map parseVerificationSkillVisibility
-                            |> List.sortBy (fun fact -> fact.Skill)
-                          GeneratedViews =
-                            jsonArray "generatedViews" root
-                            |> List.map parseAnalysisGeneratedView
-                            |> List.sortBy (fun view -> view.Path)
-                          Findings =
-                            jsonArray "findings" root
-                            |> List.map parseVerificationFinding
-                            |> List.sortBy (fun finding -> finding.Id)
-                          OptionalBoundaryFacts =
-                            jsonArray "governanceCompatibility" root
-                            |> List.map parseAnalysisBoundaryFact
-                            |> List.sortBy (fun fact -> fact.Path)
-                          Diagnostics =
-                            jsonArray "diagnostics" root
-                            |> List.map parseAnalysisDiagnostic
-                            |> Diagnostics.sort
-                          Readiness = jsonString "readiness" root |> Option.defaultValue "needsVerificationCorrection" }
+                        {
+                            SchemaVersion = schema
+                            ViewVersion = jsonString "viewVersion" root |> Option.defaultValue "1.0"
+                            WorkId = workId
+                            Stage = stage
+                            Status = jsonString "status" root |> Option.defaultValue "needsVerificationCorrection"
+                            Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
+                            Sources =
+                                jsonArray "sources" root
+                                |> List.map parseAnalysisSource
+                                |> List.sortBy (fun source -> source.Path)
+                            LifecycleReadiness = lifecycleReadiness
+                            TaskGraph = taskGraph
+                            EvidenceDispositions =
+                                jsonArray "evidenceDispositions" root
+                                |> List.map parseVerificationEvidenceDisposition
+                                |> List.sortBy (fun disposition -> disposition.DispositionId)
+                            TestDispositions =
+                                jsonArray "testDispositions" root
+                                |> List.map parseVerificationTestDisposition
+                                |> List.sortBy (fun disposition -> disposition.DispositionId)
+                            SkillVisibility =
+                                jsonArray "skillVisibility" root
+                                |> List.map parseVerificationSkillVisibility
+                                |> List.sortBy (fun fact -> fact.Skill)
+                            GeneratedViews =
+                                jsonArray "generatedViews" root
+                                |> List.map parseAnalysisGeneratedView
+                                |> List.sortBy (fun view -> view.Path)
+                            Findings =
+                                jsonArray "findings" root
+                                |> List.map parseVerificationFinding
+                                |> List.sortBy (fun finding -> finding.Id)
+                            OptionalBoundaryFacts =
+                                jsonArray "governanceCompatibility" root
+                                |> List.map parseAnalysisBoundaryFact
+                                |> List.sortBy (fun fact -> fact.Path)
+                            Diagnostics =
+                                jsonArray "diagnostics" root
+                                |> List.map parseAnalysisDiagnostic
+                                |> Diagnostics.sort
+                            Readiness =
+                                jsonString "readiness" root |> Option.defaultValue "needsVerificationCorrection"
+                        }
                 | _ ->
                     Error
-                        [ Diagnostics.workModelInconsistent
-                              artifact
-                              "Verification view identity fields are malformed."
-                              "Regenerate verify.json with a valid workId and stage: verify."
-                              [ workIdText; stageText ] ])
+                        [
+                            Diagnostics.workModelInconsistent
+                                artifact
+                                "Verification view identity fields are malformed."
+                                "Regenerate verify.json with a valid workId and stage: verify."
+                                [ workIdText; stageText ]
+                        ])
             snapshot.Path
             snapshot.Text

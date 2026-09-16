@@ -10,13 +10,15 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 [<AutoOpen>]
 module Ship =
     type ShipReadinessFinding =
-        { Id: string
-          Severity: string
-          Category: string
-          Path: string
-          RelatedIds: string list
-          Message: string
-          Correction: string }
+        {
+            Id: string
+            Severity: string
+            Category: string
+            Path: string
+            RelatedIds: string list
+            Message: string
+            Correction: string
+        }
 
     type ShipLifecycleStageReadiness = { Stage: string; Status: string }
 

@@ -24,68 +24,82 @@ module Clarification =
         | NoteAnswer
 
     type ClarificationFrontMatter =
-        { SchemaVersion: SchemaVersion
-          WorkId: WorkId
-          Title: string
-          Stage: LifecycleStage
-          ChangeTier: string
-          Status: string
-          SourceSpec: string
-          PublicOrToolFacingImpact: bool option }
+        {
+            SchemaVersion: SchemaVersion
+            WorkId: WorkId
+            Title: string
+            Stage: LifecycleStage
+            ChangeTier: string
+            Status: string
+            SourceSpec: string
+            PublicOrToolFacingImpact: bool option
+        }
 
     type ClarificationQuestion =
-        { QuestionId: ClarificationQuestionId
-          Prompt: string
-          SourceAmbiguityIds: AmbiguityId list
-          Blocking: bool
-          State: string
-          SourceLocation: SourceLocation option }
+        {
+            QuestionId: ClarificationQuestionId
+            Prompt: string
+            SourceAmbiguityIds: AmbiguityId list
+            Blocking: bool
+            State: string
+            SourceLocation: SourceLocation option
+        }
 
     type ClarificationAnswer =
-        { QuestionId: ClarificationQuestionId option
-          AmbiguityIds: AmbiguityId list
-          Text: string
-          Kind: ClarificationAnswerKind
-          SourceLocation: SourceLocation option }
+        {
+            QuestionId: ClarificationQuestionId option
+            AmbiguityIds: AmbiguityId list
+            Text: string
+            Kind: ClarificationAnswerKind
+            SourceLocation: SourceLocation option
+        }
 
     type ClarificationDecisionFact =
-        { DecisionId: DecisionId
-          Title: string
-          Kind: ClarificationDecisionKind
-          Text: string
-          Rationale: string option
-          SourceQuestionIds: ClarificationQuestionId list
-          SourceAmbiguityIds: AmbiguityId list
-          SourceLocation: SourceLocation option }
+        {
+            DecisionId: DecisionId
+            Title: string
+            Kind: ClarificationDecisionKind
+            Text: string
+            Rationale: string option
+            SourceQuestionIds: ClarificationQuestionId list
+            SourceAmbiguityIds: AmbiguityId list
+            SourceLocation: SourceLocation option
+        }
 
     type RemainingAmbiguity =
-        { AmbiguityId: AmbiguityId option
-          QuestionId: ClarificationQuestionId option
-          State: string
-          Explanation: string
-          RequiredCorrection: string
-          SourceLocation: SourceLocation option }
+        {
+            AmbiguityId: AmbiguityId option
+            QuestionId: ClarificationQuestionId option
+            State: string
+            Explanation: string
+            RequiredCorrection: string
+            SourceLocation: SourceLocation option
+        }
 
     type ClarificationFacts =
-        { FrontMatter: ClarificationFrontMatter
-          StandardSections: string list
-          MissingStandardSections: string list
-          Questions: ClarificationQuestion list
-          Answers: ClarificationAnswer list
-          Decisions: ClarificationDecisionFact list
-          AcceptedDeferrals: ClarificationDecisionFact list
-          RemainingAmbiguity: RemainingAmbiguity list
-          BlockingAmbiguityCount: int
-          Diagnostics: Diagnostic list }
+        {
+            FrontMatter: ClarificationFrontMatter
+            StandardSections: string list
+            MissingStandardSections: string list
+            Questions: ClarificationQuestion list
+            Answers: ClarificationAnswer list
+            Decisions: ClarificationDecisionFact list
+            AcceptedDeferrals: ClarificationDecisionFact list
+            RemainingAmbiguity: RemainingAmbiguity list
+            BlockingAmbiguityCount: int
+            Diagnostics: Diagnostic list
+        }
 
     let clarificationStandardSections () =
-        [ "Source Specification"
-          "Clarification Questions"
-          "Answers"
-          "Decisions"
-          "Accepted Deferrals"
-          "Remaining Ambiguity"
-          "Lifecycle Notes" ]
+        [
+            "Source Specification"
+            "Clarification Questions"
+            "Answers"
+            "Decisions"
+            "Accepted Deferrals"
+            "Remaining Ambiguity"
+            "Lifecycle Notes"
+        ]
 
     let parseClarificationFrontMatter (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Clarifications
@@ -93,9 +107,11 @@ module Clarification =
         match frontMatter snapshot with
         | None ->
             Error
-                [ Diagnostics.malformedSchemaVersion
-                      artifact
-                      "Clarification artifact is missing structured front matter." ]
+                [
+                    Diagnostics.malformedSchemaVersion
+                        artifact
+                        "Clarification artifact is missing structured front matter."
+                ]
         | Some(yaml, body) ->
             match yamlRoot artifact "Clarification front matter is empty." 1 yaml with
             | Error diagnostics -> Error diagnostics
@@ -115,27 +131,31 @@ module Clarification =
                 match version, workId, stage, sourceSpec, versionDiagnostics with
                 | Some schema, Some workId, Some stage, Some sourceSpec, [] ->
                     Ok(
-                        { SchemaVersion = schema
-                          WorkId = workId
-                          Title =
-                            tryScalarAt [ "title" ] root
-                            |> Option.defaultValue (Identifiers.workIdValue workId)
-                          Stage = stage
-                          ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
-                          Status = tryScalarAt [ "status" ] root |> Option.defaultValue "needsAnswers"
-                          SourceSpec = sourceSpec
-                          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
+                        {
+                            SchemaVersion = schema
+                            WorkId = workId
+                            Title =
+                                tryScalarAt [ "title" ] root
+                                |> Option.defaultValue (Identifiers.workIdValue workId)
+                            Stage = stage
+                            ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
+                            Status = tryScalarAt [ "status" ] root |> Option.defaultValue "needsAnswers"
+                            SourceSpec = sourceSpec
+                            PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root
+                        },
                         body
                     )
                 | _ ->
                     Error(
                         versionDiagnostics
-                        @ [ Diagnostics.workModelInconsistent
+                        @ [
+                            Diagnostics.workModelInconsistent
                                 artifact
                                 "Clarification front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage: clarify, changeTier, status, and sourceSpec to clarifications.md."
                                 []
-                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete
+                        ]
                     )
 
     let questionIdsInLine line =
@@ -168,15 +188,17 @@ module Clarification =
                 let lowered = line.ToLowerInvariant()
 
                 Some
-                    { QuestionId = questionId
-                      Prompt = cleanAfterId questionId.Value line
-                      SourceAmbiguityIds = ambiguityIdsInLine line
-                      Blocking = not (Regex.IsMatch(lowered, @"\bnon-?blocking\b"))
-                      State =
-                        if containsWord "answered" lowered then "answered"
-                        elif containsWord "deferred" lowered then "deferred"
-                        else "open"
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        QuestionId = questionId
+                        Prompt = cleanAfterId questionId.Value line
+                        SourceAmbiguityIds = ambiguityIdsInLine line
+                        Blocking = not (Regex.IsMatch(lowered, @"\bnon-?blocking\b"))
+                        State =
+                            if containsWord "answered" lowered then "answered"
+                            elif containsWord "deferred" lowered then "deferred"
+                            else "open"
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let answerKind (line: string) =
@@ -201,11 +223,13 @@ module Clarification =
                 None
             else
                 Some
-                    { QuestionId = question
-                      AmbiguityIds = ambiguities
-                      Text = line.Trim().TrimStart('-', '*').Trim()
-                      Kind = answerKind line
-                      SourceLocation = sourceLocation lineNumber })
+                    {
+                        QuestionId = question
+                        AmbiguityIds = ambiguities
+                        Text = line.Trim().TrimStart('-', '*').Trim()
+                        Kind = answerKind line
+                        SourceLocation = sourceLocation lineNumber
+                    })
 
     let parseClarificationDecisionsInSection heading kind text =
         sectionLines heading text
@@ -224,14 +248,16 @@ module Clarification =
                 let decisionText = cleanAfterId decisionId.Value line |> cleanDecisionText
 
                 Some
-                    { DecisionId = decisionId
-                      Title = decisionText
-                      Kind = kind
-                      Text = decisionText
-                      Rationale = None
-                      SourceQuestionIds = questionIdsInLine line
-                      SourceAmbiguityIds = ambiguityIdsInLine line
-                      SourceLocation = sourceLocation lineNumber }
+                    {
+                        DecisionId = decisionId
+                        Title = decisionText
+                        Kind = kind
+                        Text = decisionText
+                        Rationale = None
+                        SourceQuestionIds = questionIdsInLine line
+                        SourceAmbiguityIds = ambiguityIdsInLine line
+                        SourceLocation = sourceLocation lineNumber
+                    }
             | None -> None)
 
     let parseRemainingAmbiguity text =
@@ -266,16 +292,18 @@ module Clarification =
                         "blocking"
 
                 Some
-                    { AmbiguityId = ambiguity
-                      QuestionId = question
-                      State = state
-                      Explanation = line.Trim().TrimStart('-', '*').Trim()
-                      RequiredCorrection =
-                        if state = "blocking" then
-                            "Provide a concrete decision, accepted deferral, or mark the ambiguity non-blocking."
-                        else
-                            "Keep the ambiguity visible to later lifecycle stages."
-                      SourceLocation = sourceLocation lineNumber })
+                    {
+                        AmbiguityId = ambiguity
+                        QuestionId = question
+                        State = state
+                        Explanation = line.Trim().TrimStart('-', '*').Trim()
+                        RequiredCorrection =
+                            if state = "blocking" then
+                                "Provide a concrete decision, accepted deferral, or mark the ambiguity non-blocking."
+                            else
+                                "Keep the ambiguity visible to later lifecycle stages."
+                        SourceLocation = sourceLocation lineNumber
+                    })
 
     let parseClarificationFacts (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Clarifications
@@ -307,33 +335,38 @@ module Clarification =
             let remaining = parseRemainingAmbiguity text
 
             let diagnostics =
-                [ duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: ClarificationQuestionId) -> id.Value)
-                      (questions |> List.map (fun q -> q.QuestionId, q.SourceLocation))
-                  duplicateScopedDiagnostics
-                      artifact
-                      (fun (id: DecisionId) -> id.Value)
-                      ((decisions @ deferrals)
-                       |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
-                  missingStandardSections
-                  |> List.map (fun heading ->
-                      Diagnostics.workModelInconsistent
-                          artifact
-                          $"Clarification artifact is missing the '{heading}' section."
-                          $"Add a '## {heading}' section to clarifications.md before relying on the parsed facts."
-                          [ heading ]) ]
+                [
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: ClarificationQuestionId) -> id.Value)
+                        (questions |> List.map (fun q -> q.QuestionId, q.SourceLocation))
+                    duplicateScopedDiagnostics
+                        artifact
+                        (fun (id: DecisionId) -> id.Value)
+                        ((decisions @ deferrals)
+                         |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
+                    missingStandardSections
+                    |> List.map (fun heading ->
+                        Diagnostics.workModelInconsistent
+                            artifact
+                            $"Clarification artifact is missing the '{heading}' section."
+                            $"Add a '## {heading}' section to clarifications.md before relying on the parsed facts."
+                            [ heading ])
+                ]
                 |> List.concat
                 |> Diagnostics.sort
 
             Ok
-                { FrontMatter = frontMatter
-                  StandardSections = standardSections
-                  MissingStandardSections = missingStandardSections
-                  Questions = questions |> List.sortBy (fun question -> question.QuestionId.Value)
-                  Answers = answers
-                  Decisions = decisions |> List.sortBy (fun decision -> decision.DecisionId.Value)
-                  AcceptedDeferrals = deferrals |> List.sortBy (fun decision -> decision.DecisionId.Value)
-                  RemainingAmbiguity = remaining
-                  BlockingAmbiguityCount = remaining |> List.filter (fun item -> item.State = "blocking") |> List.length
-                  Diagnostics = diagnostics }
+                {
+                    FrontMatter = frontMatter
+                    StandardSections = standardSections
+                    MissingStandardSections = missingStandardSections
+                    Questions = questions |> List.sortBy (fun question -> question.QuestionId.Value)
+                    Answers = answers
+                    Decisions = decisions |> List.sortBy (fun decision -> decision.DecisionId.Value)
+                    AcceptedDeferrals = deferrals |> List.sortBy (fun decision -> decision.DecisionId.Value)
+                    RemainingAmbiguity = remaining
+                    BlockingAmbiguityCount =
+                        remaining |> List.filter (fun item -> item.State = "blocking") |> List.length
+                    Diagnostics = diagnostics
+                }

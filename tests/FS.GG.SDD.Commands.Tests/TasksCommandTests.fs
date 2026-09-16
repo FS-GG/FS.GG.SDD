@@ -75,17 +75,21 @@ module TasksCommandTests =
         let snapshots =
             Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
             |> Seq.map (fun path ->
-                { Path = Path.GetRelativePath(root, path).Replace('\\', '/')
-                  Text = File.ReadAllText(path)
-                  RawBytes = None })
+                {
+                    Path = Path.GetRelativePath(root, path).Replace('\\', '/')
+                    Text = File.ReadAllText(path)
+                    RawBytes = None
+                })
             |> Seq.toList
 
         let generated =
             Serialization.generateWorkModel
-                { WorkId = workId
-                  Snapshots = snapshots
-                  GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
-                  ExpectedOutputPath = None }
+                {
+                    WorkId = workId
+                    Snapshots = snapshots
+                    GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+                    ExpectedOutputPath = None
+                }
 
         let guidance = WorkModel.deriveGuidanceModel generated.Model
         Assert.Contains(guidance.Commands, fun command -> command.Title = "Measure performance intent PI-001")
@@ -149,7 +153,8 @@ module TasksCommandTests =
     let private acceptUpstream root =
         TestSupport.runRequest
             { TestSupport.planRequest root workId title with
-                AcceptUpstream = true }
+                AcceptUpstream = true
+            }
         |> ignore
 
     let initializedPlanReadyProject () =
@@ -160,7 +165,8 @@ module TasksCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -196,7 +202,8 @@ module TasksCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -251,7 +258,8 @@ module TasksCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -437,7 +445,8 @@ module TasksCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -587,7 +596,9 @@ module TasksCommandTests =
         let tasks = TestSupport.readRelative root tasksPath
 
         let numbers pattern =
-            [ for m in System.Text.RegularExpressions.Regex.Matches(tasks, pattern) -> m.Groups.[1].Value ]
+            [
+                for m in System.Text.RegularExpressions.Regex.Matches(tasks, pattern) -> m.Groups.[1].Value
+            ]
             |> List.sort
 
         let idNumbers = numbers @"id: T0*(\d+)"
@@ -637,7 +648,8 @@ module TasksCommandTests =
 
         let request =
             { TestSupport.tasksRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -677,7 +689,8 @@ module TasksCommandTests =
 
         let request =
             { TestSupport.tasksRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -849,7 +862,8 @@ module TasksCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -939,7 +953,8 @@ module TasksCommandTests =
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore

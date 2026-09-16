@@ -12,25 +12,27 @@ module Diagnostics =
         { Line: int option; Column: int option }
 
     type Diagnostic =
-        { Id: string
-          Severity: DiagnosticSeverity
-          Artifact: ArtifactRef option
-          Location: SourceLocation option
-          Message: string
-          Correction: string
-          RelatedIds: string list
-          // A tool/provider defect (as opposed to malformed user input). When a command
-          // is blocked and any diagnostic carries this bit, the exit code escalates to 2
-          // (the tool-defect class). Set at construction by the defect-producing
-          // constructors via `markToolDefect`; replaces the old hand-maintained
-          // `providerDefectIds` id set. Not serialized (round-tripped diagnostics carry
-          // `false`); the exit-code decision only ever reads freshly-built diagnostics.
-          IsToolDefect: bool
-          // A stable, machine-readable defect sub-classifier owned by the producing parser (see
-          // `DefectTags`), used to disambiguate a generic diagnostic id without prose-matching the
-          // human `Message` across an assembly boundary. Set via `withDefectTag`; keyed on by
-          // `LintEngine.classify`. NOT serialized (round-tripped diagnostics carry `None`).
-          DefectTag: string option }
+        {
+            Id: string
+            Severity: DiagnosticSeverity
+            Artifact: ArtifactRef option
+            Location: SourceLocation option
+            Message: string
+            Correction: string
+            RelatedIds: string list
+            // A tool/provider defect (as opposed to malformed user input). When a command
+            // is blocked and any diagnostic carries this bit, the exit code escalates to 2
+            // (the tool-defect class). Set at construction by the defect-producing
+            // constructors via `markToolDefect`; replaces the old hand-maintained
+            // `providerDefectIds` id set. Not serialized (round-tripped diagnostics carry
+            // `false`); the exit-code decision only ever reads freshly-built diagnostics.
+            IsToolDefect: bool
+            // A stable, machine-readable defect sub-classifier owned by the producing parser (see
+            // `DefectTags`), used to disambiguate a generic diagnostic id without prose-matching the
+            // human `Message` across an assembly boundary. Set via `withDefectTag`; keyed on by
+            // `LintEngine.classify`. NOT serialized (round-tripped diagnostics carry `None`).
+            DefectTag: string option
+        }
 
     /// Stable defect sub-classifier tags — the contract between the lifecycle parsers that stamp
     /// them (via `withDefectTag`) and `LintEngine.classify` that keys on them. Reword a diagnostic

@@ -19,8 +19,10 @@ module Rendering =
 
     /// Result of choosing and producing a rendering for one report.
     type RichRenderResult =
-        { Text: string
-          UsedRichRendering: bool }
+        {
+            Text: string
+            UsedRichRendering: bool
+        }
 
     /// Feature 084: the presentation-only Spectre style for a lifecycle stage state in the rich
     /// footer. Each of the five states maps to a distinct style; `Blocked` carries the emphasis.

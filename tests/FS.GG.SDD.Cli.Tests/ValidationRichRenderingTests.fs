@@ -42,44 +42,58 @@ module ValidationRichRenderingTests =
     let private generator: GeneratorVersion = { Id = "fsgg-sdd"; Version = "1.0.0" }
 
     let private failDiagnostic (message: string) : Diagnostic =
-        { Id = "VALIDATION-CELL-DIVERGENCE"
-          Severity = DiagnosticError
-          Artifact = None
-          Location = None
-          Message = message
-          Correction = "re-run the cell"
-          RelatedIds = []
-          IsToolDefect = false
-          DefectTag = None }
+        {
+            Id = "VALIDATION-CELL-DIVERGENCE"
+            Severity = DiagnosticError
+            Artifact = None
+            Location = None
+            Message = message
+            Correction = "re-run the cell"
+            RelatedIds = []
+            IsToolDefect = false
+            DefectTag = None
+        }
 
     let private cell coordinates status : MatrixCell =
-        { Coordinates = coordinates
-          Status = status }
+        {
+            Coordinates = coordinates
+            Status = status
+        }
 
     let private report (matrices: Matrix list) : ValidationReport =
-        { SchemaVersion = 1
-          GeneratorVersion = generator
-          Matrices = matrices
-          Summary = summarize matrices
-          Sensed = emptySensed }
+        {
+            SchemaVersion = 1
+            GeneratorVersion = generator
+            Matrices = matrices
+            Summary = summarize matrices
+            Sensed = emptySensed
+        }
 
     /// A mix of all five statuses across two matrices (short coordinate values so
     /// nothing wraps at width 200).
     let private lifecycleMatrix: Matrix =
-        { Name = "lifecycle-output"
-          Dimensions = [ "command"; "projection" ]
-          Cells =
-            [ cell [ "command", "specify"; "projection", "json" ] Pass
-              cell [ "command", "verify"; "projection", "text" ] (Fail(failDiagnostic "verify text diverged"))
-              cell [ "command", "ship"; "projection", "rich" ] (SkippedWithReason "rich deferred") ] }
+        {
+            Name = "lifecycle-output"
+            Dimensions = [ "command"; "projection" ]
+            Cells =
+                [
+                    cell [ "command", "specify"; "projection", "json" ] Pass
+                    cell [ "command", "verify"; "projection", "text" ] (Fail(failDiagnostic "verify text diverged"))
+                    cell [ "command", "ship"; "projection", "rich" ] (SkippedWithReason "rich deferred")
+                ]
+        }
 
     let private determinismMatrix: Matrix =
-        { Name = "determinism"
-          Dimensions = [ "output"; "environment" ]
-          Cells =
-            [ cell [ "output", "workmodel"; "environment", "colorDisabled" ] Pass
-              cell [ "output", "summary"; "environment", "termDumb" ] (CoverageGap "summary surface")
-              cell [ "output", "audit"; "environment", "interactive" ] (NotValidated "not run") ] }
+        {
+            Name = "determinism"
+            Dimensions = [ "output"; "environment" ]
+            Cells =
+                [
+                    cell [ "output", "workmodel"; "environment", "colorDisabled" ] Pass
+                    cell [ "output", "summary"; "environment", "termDumb" ] (CoverageGap "summary surface")
+                    cell [ "output", "audit"; "environment", "interactive" ] (NotValidated "not run")
+                ]
+        }
 
     let private mixedReport = report [ lifecycleMatrix; determinismMatrix ]
 
@@ -148,10 +162,15 @@ module ValidationRichRenderingTests =
     let ``T006 an all-pass report renders a passed verdict with no invented diagnostics`` () =
         let allPass =
             report
-                [ { lifecycleMatrix with
-                      Cells =
-                          [ cell [ "command", "specify"; "projection", "json" ] Pass
-                            cell [ "command", "verify"; "projection", "text" ] Pass ] } ]
+                [
+                    { lifecycleMatrix with
+                        Cells =
+                            [
+                                cell [ "command", "specify"; "projection", "json" ] Pass
+                                cell [ "command", "verify"; "projection", "text" ] Pass
+                            ]
+                    }
+                ]
 
         let text = render allPass
         Assert.Contains("passed", text)
@@ -168,13 +187,19 @@ module ValidationRichRenderingTests =
     let ``T006 coverageGap and notValidated render a not-passed verdict, distinct from skipped`` () =
         let gapsOnly =
             report
-                [ { Name = "determinism"
-                    Dimensions = [ "output"; "environment" ]
-                    Cells =
-                      [ cell [ "output", "workmodel"; "environment", "interactive" ] Pass
-                        cell [ "output", "summary"; "environment", "termDumb" ] (CoverageGap "summary surface")
-                        cell [ "output", "audit"; "environment", "colorDisabled" ] (NotValidated "not run")
-                        cell [ "output", "ship"; "environment", "interactive" ] (SkippedWithReason "deferred") ] } ]
+                [
+                    {
+                        Name = "determinism"
+                        Dimensions = [ "output"; "environment" ]
+                        Cells =
+                            [
+                                cell [ "output", "workmodel"; "environment", "interactive" ] Pass
+                                cell [ "output", "summary"; "environment", "termDumb" ] (CoverageGap "summary surface")
+                                cell [ "output", "audit"; "environment", "colorDisabled" ] (NotValidated "not run")
+                                cell [ "output", "ship"; "environment", "interactive" ] (SkippedWithReason "deferred")
+                            ]
+                    }
+                ]
 
         let text = render gapsOnly
         // The only non-passing cells fail the run despite there being no `Fail`.
@@ -190,12 +215,20 @@ module ValidationRichRenderingTests =
     let ``T007 a single failing cell is isolated; passing siblings are not listed`` () =
         let oneFail =
             report
-                [ { Name = "lifecycle-output"
-                    Dimensions = [ "command"; "projection" ]
-                    Cells =
-                      [ cell [ "command", "specify"; "projection", "json" ] Pass
-                        cell [ "command", "verify"; "projection", "text" ] (Fail(failDiagnostic "only this diverged"))
-                        cell [ "command", "ship"; "projection", "rich" ] Pass ] } ]
+                [
+                    {
+                        Name = "lifecycle-output"
+                        Dimensions = [ "command"; "projection" ]
+                        Cells =
+                            [
+                                cell [ "command", "specify"; "projection", "json" ] Pass
+                                cell
+                                    [ "command", "verify"; "projection", "text" ]
+                                    (Fail(failDiagnostic "only this diverged"))
+                                cell [ "command", "ship"; "projection", "rich" ] Pass
+                            ]
+                    }
+                ]
 
         let text = render oneFail
         Assert.Contains("not passed", text)
@@ -208,10 +241,12 @@ module ValidationRichRenderingTests =
     // ----- T009: degradation + parity (INV-2 / C-4) -----
 
     let private interactive: TerminalCapabilities =
-        { IsInteractive = true
-          ColorEnabled = true
-          Width = Some 200
-          IsInputInteractive = true }
+        {
+            IsInteractive = true
+            ColorEnabled = true
+            Width = Some 200
+            IsInputInteractive = true
+        }
 
     let private hasEsc (value: string) =
         value |> Seq.exists (fun c -> int c = 27)
@@ -220,7 +255,8 @@ module ValidationRichRenderingTests =
     let ``T009 Rich degrades to exact plain text when non-interactive`` () =
         let caps =
             { interactive with
-                IsInteractive = false }
+                IsInteractive = false
+            }
 
         let result = resolveValidation Rich caps mixedReport
         Assert.False(result.UsedRichRendering)
@@ -231,7 +267,8 @@ module ValidationRichRenderingTests =
     let ``T009 Rich degrades to exact plain text when color disabled`` () =
         let caps =
             { interactive with
-                ColorEnabled = false }
+                ColorEnabled = false
+            }
 
         let result = resolveValidation Rich caps mixedReport
         Assert.False(result.UsedRichRendering)

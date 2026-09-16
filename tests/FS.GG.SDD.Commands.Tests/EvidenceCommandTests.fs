@@ -19,9 +19,11 @@ module EvidenceCommandTests =
     let workModelPath = $"readiness/{workId}/work-model.json"
 
     type CliResult =
-        { ExitCode: int
-          StdOut: string
-          StdErr: string }
+        {
+            ExitCode: int
+            StdOut: string
+            StdErr: string
+        }
 
     let initializedAnalyzedProject () =
         let root = TestSupport.tempDirectory ()
@@ -33,9 +35,11 @@ module EvidenceCommandTests =
             [ "evidence"; "--root"; root; "--work"; workId ] @ extraArgs
             |> TestSupport.runCliRaw 30000
 
-        { ExitCode = exitCode
-          StdOut = stdout
-          StdErr = stderr }
+        {
+            ExitCode = exitCode
+            StdOut = stdout
+            StdErr = stderr
+        }
 
     let private passingTrx count =
         $"""<?xml version="1.0" encoding="UTF-8"?>
@@ -103,9 +107,11 @@ evidence:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = evidence
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = evidence
+                    RawBytes = None
+                }
         with
         | Ok artifact -> Assert.Equal("evidenceReady", artifact.Status)
         | Error diagnostics -> failwith $"Generated evidence artifact did not parse: {diagnostics}."
@@ -132,7 +138,8 @@ evidence:
 
         let bootstrap =
             { TestSupport.evidenceRequest root workId title with
-                FromTests = Some provingTest }
+                FromTests = Some provingTest
+            }
             |> TestSupport.runRequest
 
         Assert.NotEqual(CommandOutcome.Blocked, bootstrap.Outcome)
@@ -161,7 +168,8 @@ evidence:
 
         let beforeReceipt =
             { TestSupport.verifyRequest root workId title with
-                RequireObserved = true }
+                RequireObserved = true
+            }
             |> TestSupport.runRequest
 
         Assert.Equal(CommandOutcome.Blocked, beforeReceipt.Outcome)
@@ -171,7 +179,8 @@ evidence:
 
         let receiptReport =
             { TestSupport.evidenceRequest root workId title with
-                FromTestReport = Some testReport }
+                FromTestReport = Some testReport
+            }
             |> TestSupport.runRequest
 
         Assert.DoesNotContain(
@@ -185,7 +194,8 @@ evidence:
 
         let afterReceipt =
             { TestSupport.verifyRequest root workId title with
-                RequireObserved = true }
+                RequireObserved = true
+            }
             |> TestSupport.runRequest
 
         Assert.NotEqual(CommandOutcome.Blocked, afterReceipt.Outcome)
@@ -193,7 +203,8 @@ evidence:
         // Repeating the same bootstrap/receipt operation is byte-idempotent and no-clobber.
         let repeat =
             { TestSupport.evidenceRequest root workId title with
-                FromTestReport = Some testReport }
+                FromTestReport = Some testReport
+            }
             |> TestSupport.runRequest
 
         Assert.DoesNotContain(repeat.Diagnostics, fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticError)
@@ -239,7 +250,8 @@ evidence:
 
         let request =
             { TestSupport.evidenceRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let report = TestSupport.runRequest request
 
@@ -259,7 +271,8 @@ evidence:
 
         let request =
             { TestSupport.evidenceRequest root workId title with
-                InputText = Some undisclosedSyntheticInput }
+                InputText = Some undisclosedSyntheticInput
+            }
 
         let report = TestSupport.runRequest request
 
@@ -273,7 +286,8 @@ evidence:
 
         let request =
             { TestSupport.evidenceRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -349,9 +363,11 @@ evidence:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = evidence
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = evidence
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"Scaffolded evidence artifact did not parse: {diagnostics}."
@@ -430,9 +446,11 @@ evidence:
         let declarations () =
             match
                 parseEvidenceArtifact
-                    { Path = evidencePath
-                      Text = TestSupport.readRelative root evidencePath
-                      RawBytes = None }
+                    {
+                        Path = evidencePath
+                        Text = TestSupport.readRelative root evidencePath
+                        RawBytes = None
+                    }
             with
             | Ok artifact -> artifact.Evidence
             | Error diagnostics -> failwith $"Evidence did not parse: {diagnostics}."
@@ -460,11 +478,13 @@ evidence:
     // would also match a task title or note value that happens to contain the word, failing this
     // test for a reason that has nothing to do with optional-field omission.
     let private slimmedOptionalKeys =
-        [ "\n    syntheticDisclosure:"
-          "\n    rationale:"
-          "\n    owner:"
-          "\n    scope:"
-          "\n    laterLifecycleVisibility:" ]
+        [
+            "\n    syntheticDisclosure:"
+            "\n    rationale:"
+            "\n    owner:"
+            "\n    scope:"
+            "\n    laterLifecycleVisibility:"
+        ]
 
     [<Fact>]
     let ``evidence re-run over a scaffolded file is byte-idempotent`` () =
@@ -607,9 +627,11 @@ evidence:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = evidence
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = evidence
+                    RawBytes = None
+                }
         with
         | Ok _ -> ()
         | Error diagnostics -> failwith $"Slimmed evidence artifact did not parse: {diagnostics}."
@@ -624,9 +646,11 @@ evidence:
         let root = initializedAnalyzedProject ()
 
         let injected =
-            [ "    syntheticDisclosure:"
-              "      standsInFor: a real headless render"
-              "      reason: no GPU on the CI runner" ]
+            [
+                "    syntheticDisclosure:"
+                "      standsInFor: a real headless render"
+                "      reason: no GPU on the CI runner"
+            ]
 
         let report, evidence = authorAfterSynthetic root "synthetic: true" injected
 
@@ -641,10 +665,12 @@ evidence:
         let root = initializedAnalyzedProject ()
 
         let injected =
-            [ "    rationale: accepted deferral see DEC-004"
-              "    owner: platform"
-              "    scope: workspace"
-              "    laterLifecycleVisibility: verify" ]
+            [
+                "    rationale: accepted deferral see DEC-004"
+                "    owner: platform"
+                "    scope: workspace"
+                "    laterLifecycleVisibility: verify"
+            ]
 
         let report, evidence = authorAfterSynthetic root "synthetic: false" injected
 
@@ -687,9 +713,11 @@ evidence:
         let seededArtifact =
             match
                 parseEvidenceArtifact
-                    { Path = evidencePath
-                      Text = seed
-                      RawBytes = None }
+                    {
+                        Path = evidencePath
+                        Text = seed
+                        RawBytes = None
+                    }
             with
             | Ok artifact -> artifact
             | Error diagnostics -> failwith $"Seed evidence did not parse: {diagnostics}."
@@ -712,9 +740,11 @@ evidence:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = reRendered
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = reRendered
+                    RawBytes = None
+                }
         with
         | Ok artifact ->
             let reference = Assert.Single((Assert.Single(artifact.Evidence)).SourceRefs)
@@ -762,7 +792,8 @@ evidence:
 
         let request =
             { TestSupport.evidenceRequest root workId title with
-                InputText = Some bareNullDisclosureInput }
+                InputText = Some bareNullDisclosureInput
+            }
 
         let report = TestSupport.runRequest request
 
@@ -825,10 +856,12 @@ evidence:
         let root = initializedAnalyzedProject ()
 
         let injected =
-            [ "    rationale: no GPU on the CI runner"
-              "    owner: platform"
-              "    scope: the headless render check"
-              "    laterLifecycleVisibility: verify" ]
+            [
+                "    rationale: no GPU on the CI runner"
+                "    owner: platform"
+                "    scope: the headless render check"
+                "    laterLifecycleVisibility: verify"
+            ]
 
         TestSupport.runEvidence root workId title |> ignore
 
@@ -864,11 +897,13 @@ evidence:
         let root = initializedAnalyzedProject ()
 
         let nested =
-            [ "    deferral:"
-              "      rationale: no GPU on the CI runner"
-              "      owner: platform"
-              "      scope: the headless render check"
-              "      laterLifecycleVisibility: verify" ]
+            [
+                "    deferral:"
+                "      rationale: no GPU on the CI runner"
+                "      owner: platform"
+                "      scope: the headless render check"
+                "      laterLifecycleVisibility: verify"
+            ]
 
         TestSupport.runEvidence root workId title |> ignore
 
@@ -901,11 +936,13 @@ evidence:
         let root = initializedAnalyzedProject ()
 
         let injected =
-            [ "    syntheticDisclosure: null"
-              "    rationale: null"
-              "    owner: null"
-              "    scope: null"
-              "    laterLifecycleVisibility: null" ]
+            [
+                "    syntheticDisclosure: null"
+                "    rationale: null"
+                "    owner: null"
+                "    scope: null"
+                "    laterLifecycleVisibility: null"
+            ]
 
         let report, normalized = authorAfterSynthetic root "synthetic: false" injected
 
@@ -924,7 +961,8 @@ evidence:
         System.IO.File.Delete(System.IO.Path.Combine(root, "work", workId, "evidence.yml"))
 
         { TestSupport.evidenceRequest root workId title with
-            FromTests = fromTests }
+            FromTests = fromTests
+        }
         |> TestSupport.runRequest
         |> ignore
 
@@ -932,9 +970,11 @@ evidence:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = evidence
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = evidence
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"Scaffolded evidence artifact did not parse: {diagnostics}."
@@ -987,11 +1027,13 @@ evidence:
     // author's block). These tests pin the convention against that day, directly on the renderer.
 
     let private snapshotOf digest schemaVersion : EvidenceSourceSnapshot =
-        { Label = "tasks"
-          Path = $"work/{workId}/tasks.yml"
-          Digest = digest
-          SchemaVersion = schemaVersion
-          SourceLocation = None }
+        {
+            Label = "tasks"
+            Path = $"work/{workId}/tasks.yml"
+            Digest = digest
+            SchemaVersion = schemaVersion
+            SourceLocation = None
+        }
 
     [<Fact>]
     let ``renderEvidenceSourceSnapshot omits an absent digest and schemaVersion`` () =
@@ -1060,9 +1102,11 @@ evidence:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = spliced
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = spliced
+                    RawBytes = None
+                }
         with
         | Error diagnostics -> failwith $"Digest-less evidence artifact did not parse: {diagnostics}."
         | Ok artifact ->
@@ -1106,9 +1150,11 @@ tasks:
 
         match
             Task.parseTaskFacts
-                { Path = $"work/{workId}/tasks.yml"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = $"work/{workId}/tasks.yml"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Two-task fixture did not parse: {diagnostics}."
@@ -1162,9 +1208,11 @@ evidence:
 
         match
             parseEvidenceArtifact
-                { Path = evidencePath
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"Task-ref-only evidence fixture did not parse: {diagnostics}."
@@ -1251,9 +1299,11 @@ tasks:
 
         match
             Task.parseTaskFacts
-                { Path = $"work/{workId}/tasks.yml"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = $"work/{workId}/tasks.yml"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Done-task fixture did not parse: {diagnostics}."
@@ -1301,7 +1351,8 @@ tasks:
 
         TestSupport.runRequest
             { TestSupport.clarifyRequest root workId title with
-                InputText = None }
+                InputText = None
+            }
         |> ignore
 
         TestSupport.runChecklist root workId title |> ignore
@@ -1586,9 +1637,11 @@ tasks:
         commitAll root "candidate without ignored proof"
 
         for report in
-            [ TestSupport.runEvidence root workId title
-              TestSupport.runVerify root workId title
-              TestSupport.runShip root workId title ] do
+            [
+                TestSupport.runEvidence root workId title
+                TestSupport.runVerify root workId title
+                TestSupport.runShip root workId title
+            ] do
             Assert.Equal(CommandOutcome.Blocked, report.Outcome)
             Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.localArtifactNotTracked")
 
@@ -1697,9 +1750,11 @@ tasks:
         TestSupport.writeRelative projectionRoot ".fsgg-test-no-source-authority" "negative authority control\n"
 
         for report in
-            [ TestSupport.runEvidence projectionRoot workId title
-              TestSupport.runVerify projectionRoot workId title
-              TestSupport.runShip projectionRoot workId title ] do
+            [
+                TestSupport.runEvidence projectionRoot workId title
+                TestSupport.runVerify projectionRoot workId title
+                TestSupport.runShip projectionRoot workId title
+            ] do
             Assert.Equal(CommandOutcome.Blocked, report.Outcome)
 
             Assert.Contains(
@@ -1755,7 +1810,8 @@ tasks:
 
         let report =
             { TestSupport.evidenceRequest root workId title with
-                DryRun = true }
+                DryRun = true
+            }
             |> TestSupport.runRequest
 
         Assert.DoesNotContain(
@@ -1819,7 +1875,8 @@ evidence:
         let report =
             TestSupport.runRequest
                 { TestSupport.evidenceRequest root workId title with
-                    InputText = Some phantomArtifactInput }
+                    InputText = Some phantomArtifactInput
+                }
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
@@ -1994,16 +2051,19 @@ evidence:
         System.IO.File.Delete(System.IO.Path.Combine(root, "work", workId, "evidence.yml"))
 
         { TestSupport.evidenceRequest root workId title with
-            FromTests = Some "tests/Product.Tests/PhysicsTests.fs" }
+            FromTests = Some "tests/Product.Tests/PhysicsTests.fs"
+        }
         |> TestSupport.runRequest
         |> ignore
 
         let artifact =
             match
                 parseEvidenceArtifact
-                    { Path = evidencePath
-                      Text = TestSupport.readRelative root evidencePath
-                      RawBytes = None }
+                    {
+                        Path = evidencePath
+                        Text = TestSupport.readRelative root evidencePath
+                        RawBytes = None
+                    }
             with
             | Ok artifact -> artifact
             | Error diagnostics -> failwith $"Scaffolded evidence artifact did not parse: {diagnostics}."
@@ -2068,20 +2128,22 @@ evidence:
     // report rather than a crash. `workIdDiagnostics` (Foundation) makes the guard unreachable in
     // production, so these unit tests bypass planning and call the internal helper directly.
     let private evidenceObligation id : Evidence.EvidenceObligation =
-        { ObligationId = id
-          Kind = "test"
-          SourceArtifactPath = $"work/{workId}/tasks.yml"
-          SourceId = None
-          LinkedTaskIds = []
-          LinkedRequirementIds = []
-          LinkedDecisionIds = []
-          LinkedSourceIds = []
-          ExpectedEvidenceKinds = []
-          RequiredEvidenceKinds = []
-          DischargeClass = Evidence.testDischargeClass
-          RequiredSkillOrCapabilityTags = []
-          Blocking = true
-          Correction = "" }
+        {
+            ObligationId = id
+            Kind = "test"
+            SourceArtifactPath = $"work/{workId}/tasks.yml"
+            SourceId = None
+            LinkedTaskIds = []
+            LinkedRequirementIds = []
+            LinkedDecisionIds = []
+            LinkedSourceIds = []
+            ExpectedEvidenceKinds = []
+            RequiredEvidenceKinds = []
+            DischargeClass = Evidence.testDischargeClass
+            RequiredSkillOrCapabilityTags = []
+            Blocking = true
+            Correction = ""
+        }
 
     [<Fact>]
     let ``mergeEvidenceArtifacts seeds a fresh evidence skeleton for a valid work id`` () =
@@ -2119,7 +2181,8 @@ evidence:
     let private gameplayObligation id : Evidence.EvidenceObligation =
         { evidenceObligation id with
             RequiredEvidenceKinds = Evidence.realTestEvidenceKinds
-            RequiredSkillOrCapabilityTags = [ Evidence.gameplayTestCapability ] }
+            RequiredSkillOrCapabilityTags = [ Evidence.gameplayTestCapability ]
+        }
 
     let private gameplayDisposition (declaration: string) =
         let artifact = evidenceArtifactWith declaration
@@ -2131,7 +2194,8 @@ evidence:
         let obligation =
             { evidenceObligation "EV001" with
                 RequiredEvidenceKinds = Evidence.realTestEvidenceKinds
-                RequiredSkillOrCapabilityTags = [ Evidence.productionJourneyCapability ] }
+                RequiredSkillOrCapabilityTags = [ Evidence.productionJourneyCapability ]
+            }
 
         HandlersEvidence.evidenceDispositions
             [ obligation ]
@@ -2330,9 +2394,11 @@ tasks:
 
         match
             Task.parseTaskFacts
-                { Path = $"work/{workId}/tasks.yml"
-                  Text = text
-                  RawBytes = None }
+                {
+                    Path = $"work/{workId}/tasks.yml"
+                    Text = text
+                    RawBytes = None
+                }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"gameplay task facts did not parse: {diagnostics}"
@@ -2386,7 +2452,9 @@ tasks:
                     facts.Tasks
                     |> List.map (fun task ->
                         { task with
-                            RequiredSkills = Evidence.productionJourneyCapability :: task.RequiredSkills }) }
+                            RequiredSkills = Evidence.productionJourneyCapability :: task.RequiredSkills
+                        })
+            }
 
         let view =
             HandlersVerify.verifyTestDispositionViews
