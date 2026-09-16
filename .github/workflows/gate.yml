@@ -258,7 +258,7 @@ jobs:
       # Two isolated extractions and typechecks must agree byte-for-byte, and the general contract
       # projection executes under both .NET and Fable/Node. This required job remains merge-enforcing.
       - name: Set up exact Go toolchain for the Q1 lmt object
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: "1.24.1"
           cache: false
