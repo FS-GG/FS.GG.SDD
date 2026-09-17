@@ -10,9 +10,9 @@
       },
       "FS.GG.Drivers": {
         "type": "Direct",
-        "requested": "[0.89.0, )",
-        "resolved": "0.89.0",
-        "contentHash": "9/9Q/gS0E+c3N+ARuJ5PfxcGKMbHeK1vK/QnoigkFujQslfpB1TnRuqhgzS2pi+qOBIYjWD8Uu8YCr15+vXrsw=="
+        "requested": "[0.90.0, )",
+        "resolved": "0.90.0",
+        "contentHash": "ztSesJ4Bo9I7BR2vjwBCaNGj2fxOcIXlRz1t5A4i/vUwLU/V/FwhXjNWYTyL/BK7pHLFX50S1riMrp5OMEZ98Q=="
       },
       "FS.GG.Game.Skills": {
         "type": "Direct",
@@ -30,7 +30,7 @@
         "type": "Direct",
         "requested": "[10.1.302, )",
         "resolved": "10.1.302",
-        "contentHash": "bN7XMQrAQg1dyHScJ7FcsznERBkvm74LtIo1O6C5mUzgbDqSwNbDpb3+nBGaJAjDmtC/suK5Vx5pFysKY6Hm+Q=="
+        "contentHash": "wFeXgAqIWoV1Hr++7HjtlmKGA/ft9/1XAJIvOtDNDYGuKyr+/k7b11ZEnj0aNNjicpHSsRsOcubgTqiDI12EUg=="
       },
       "fs.gg.contracts": {
         "type": "Project",
