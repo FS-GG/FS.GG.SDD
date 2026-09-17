@@ -234,7 +234,7 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 2.0.0 changes the omitted typed-sdd author backend and therefore carries a migration note.
+    // 2.0.1 republishes the GS2 bridge adoption without a breaking public-contract change.
     //
     // The well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It was
     // intentionally present while additive releases made it vacuous, and this release now exercises
@@ -297,11 +297,9 @@ module ReleaseContractTests =
 
     // ...and the classification of THIS release, pinned separately.
     [<Fact>]
-    let ``T023 this major release carries its migration note`` () =
-        Assert.True(migrationNoteRequired Breaking)
-        let note = Assert.Single release.Migrations
-        Assert.Equal("2.0.0", note.Version)
-        Assert.Empty(noteDefects release.Identity.Version note)
+    let ``T023 this patch release carries no migration note`` () =
+        Assert.False(migrationNoteRequired Clarifying)
+        Assert.Empty release.Migrations
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =

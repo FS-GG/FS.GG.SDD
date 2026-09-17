@@ -1185,19 +1185,8 @@ module ReleaseContract =
             //
             // And enumerate EVERY breaking change: a note that under-reports is the exact failure
             // the note exists to prevent.
-            // 2.0.0 changes the omitted typed-sdd author backend from F# to Quint. Explicit F#
-            // selection remains available throughout the compatibility window.
-            Migrations =
-                [
-                    {
-                        Version = "2.0.0"
-                        Path = "docs/release/migrations/2.0.0.md"
-                        BreakingChanges =
-                            [
-                                "typed-sdd author now selects quint-specification-v1 when --backend is omitted; pass --backend fsharp-specification-v1 to preserve the prior authority format during the 2.x compatibility window."
-                            ]
-                    }
-                ]
+            // 2.0.1 republishes the GS2 bridge adoption without a breaking public-contract change.
+            Migrations = []
         }
 
     // ---- canonical serialization ----

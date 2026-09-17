@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "2.0.0"
+    "version": "2.0.1"
   },
   "identity": {
-    "version": "2.0.0",
+    "version": "2.0.1",
     "channel": "stable",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -3864,13 +3864,5 @@
       "durableGenerated": false
     }
   ],
-  "migrations": [
-    {
-      "version": "2.0.0",
-      "path": "docs/release/migrations/2.0.0.md",
-      "breakingChanges": [
-        "typed-sdd author now selects quint-specification-v1 when --backend is omitted; pass --backend fsharp-specification-v1 to preserve the prior authority format during the 2.x compatibility window."
-      ]
-    }
-  ]
+  "migrations": []
 }
