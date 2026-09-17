@@ -4,7 +4,7 @@
   "workId": "068-readiness-golden",
   "stage": "verify",
   "status": "verificationReady",
-  "generator": "FS.GG.SDD.Artifacts/2.0.0",
+  "generator": "FS.GG.SDD.Artifacts/2.0.1",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -41,7 +41,7 @@
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "e7fcb33479ede0a181b53cb1ffd94e650808a62e384e11dd44b48345b608cebf"
+        "value": "73651c371d79bceab86c07322c29c92841f000ae803148c695d8c7d7fb57ff6f"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -51,7 +51,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "c875c8b02d488771b935601c24ef91e756ceba895f4df473a1367cbb788632e5"
+        "value": "bfcecea337c3403d2f065de3eb659e2afa57314dbba9f1ad30512987d47fee65"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +81,7 @@
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "e498f85e0469f6d2cc80a5a6b1cb391ca3605e63a1a4020f515b972690b4b71f"
+        "value": "5802d35996a6483a5e50c80de1612c1c9f8d1b19aae6e33b0d6e8ebde3d3711c"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
