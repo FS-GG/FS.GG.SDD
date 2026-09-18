@@ -3,6 +3,12 @@ namespace FS.GG.SDD.Commands.Tests
 open System.IO
 open Xunit
 
+/// Environment mutation must exclude every sibling collection, including lifecycle tests
+/// that launch git indirectly through TestSupport.commitFixtureCandidate. A shared collection
+/// name alone only serializes its own members and leaves those indirect callers exposed.
+[<CollectionDefinition("ProcessGlobalEnv", DisableParallelization = true)>]
+type ProcessGlobalEnvCollection() = class end
+
 /// Feature 067 / FR-001 durable defense: any test module in this assembly that spawns a
 /// PATH-resolved process or mutates process-global environment MUST belong to the
 /// `ProcessGlobalEnv` collection, so its mutation is never observed by a concurrently-running
