@@ -95,7 +95,7 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T011 channel is derived from the version and preview suffix`` () =
-        Assert.Equal(Stable, release.Identity.Channel)
+        Assert.Equal(StableRelease, release.Identity.Channel)
         Assert.Equal(PreRelease, channelOfVersion "0.2.0")
         Assert.Equal(PreRelease, channelOfVersion "1.3.0-preview.1")
         Assert.Equal(StableRelease, channelOfVersion "1.0.0")

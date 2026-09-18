@@ -33,8 +33,8 @@ release version deterministically from package metadata or
 
 The `channel` is derived from the version: a major of `0` is `preRelease`; a
 major of `>=1` without a prerelease suffix is `stable`. A prerelease suffix selects
-`preRelease`. The current release is `preRelease`. This extraction preview qualifies
-the new FsQuint dependency before stable adoption.
+`preRelease`. The current release is `stable`. This release adopts
+the qualified FsQuint dependency behind the existing replay compatibility facade.
 
 ## Change class to bump rule
 
