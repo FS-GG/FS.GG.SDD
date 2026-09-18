@@ -133,6 +133,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FsQuint" />
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>

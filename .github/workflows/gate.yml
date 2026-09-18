@@ -77,6 +77,14 @@ jobs:
       - name: Build (net10.0)
         run: dotnet build FS.GG.SDD.sln -c Debug --no-restore
 
+      - name: Previous compiled Quint replay consumer remains compatible
+        run: |
+          set -euo pipefail
+          candidate="$RUNNER_TEMP/quint-replay-compat"
+          dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release --no-restore -o "$candidate"
+          version=$(dotnet msbuild src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -getProperty:Version)
+          bash scripts/quint-replay-binary-compat.sh "$version" "$candidate"
+
       # #944: release authorization is a custody chain, not an assumption that a later pack emits
       # the same ZIP container. These mutations prove head/hash/archive substitution fails closed.
       - name: Release artifact custody mutations
