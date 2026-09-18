@@ -1185,7 +1185,7 @@ module ReleaseContract =
             //
             // And enumerate EVERY breaking change: a note that under-reports is the exact failure
             // the note exists to prevent.
-            // 2.0.1 republishes the GS2 bridge adoption without a breaking public-contract change.
+            // 2.0.2-preview.1 republishes the GS2 bridge adoption without a breaking public-contract change.
             Migrations = []
         }
 

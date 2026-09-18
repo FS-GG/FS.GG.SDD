@@ -95,7 +95,7 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T011 channel is derived from the version and preview suffix`` () =
-        Assert.Equal(StableRelease, release.Identity.Channel)
+        Assert.Equal(PreRelease, release.Identity.Channel)
         Assert.Equal(PreRelease, channelOfVersion "0.2.0")
         Assert.Equal(PreRelease, channelOfVersion "1.3.0-preview.1")
         Assert.Equal(StableRelease, channelOfVersion "1.0.0")
@@ -170,7 +170,7 @@ module ReleaseContractTests =
             Assert.Contains(token, doc)
 
         Assert.Contains($"currently **`{release.Identity.Version}`**", rawDoc)
-        Assert.Contains($"current release is `{releaseChannelValue release.Identity.Channel}`", doc)
+        Assert.Contains(($"current release is `{releaseChannelValue release.Identity.Channel}`").ToLowerInvariant(), doc)
 
     // ===== US2 — schema reference doc agrees with the contract (T016) =====
 
@@ -234,7 +234,7 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 2.0.1 republishes the GS2 bridge adoption without a breaking public-contract change.
+    // 2.0.2-preview.1 republishes the GS2 bridge adoption without a breaking public-contract change.
     //
     // The well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It was
     // intentionally present while additive releases made it vacuous, and this release now exercises

@@ -1,0 +1,4 @@
+- [x] Specify compatibility and preserve the signature surface.
+- [ ] Replace implementation with lossless mappings and package delegation.
+- [ ] Prove existing fixtures, fingerprints, API and compiled consumer compatibility.
+- [ ] Consume the public package and publish the coherent SDD release.

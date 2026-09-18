@@ -43,7 +43,17 @@
         "dependencies": {
           "FS.GG.Contracts": "[7.5.2, )",
           "FSharp.Core": "[10.1.302, )",
+          "FsQuint": "[0.1.0-preview.1, )",
           "YamlDotNet": "[18.1.0, )"
+        }
+      },
+      "FsQuint": {
+        "type": "CentralTransitive",
+        "requested": "[0.1.0-preview.1, )",
+        "resolved": "0.1.0-preview.1",
+        "contentHash": "obymfwaTEfmYR8SmMOFgJa2IkK5yistD10L7BRjLyV89ETMIziafQ/EVKlg0iFVSP1agkG7nPqdKEQyGAQMo9A==",
+        "dependencies": {
+          "FSharp.Core": "10.1.302"
         }
       },
       "YamlDotNet": {
