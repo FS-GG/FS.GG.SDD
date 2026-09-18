@@ -370,3 +370,20 @@ module QuintReplayBindingsTests =
         Assert.Contains("QUINT-CONTRACT-CATALOGUE-DUPLICATE", duplicateCodes)
         Assert.Contains("QBD-CATALOGUE-ID-DUPLICATE", duplicateCodes)
         Assert.Contains("QBD-IDENTIFIER-COLLISION", collisionCodes)
+
+    [<Fact>]
+    let ``upstream package rejects malformed Unicode without changing valid fingerprints`` () =
+        let invalid = System.String(char 0xD800, 1)
+
+        let fingerprint text =
+            QuintReplay.stateFingerprint
+                {
+                    Identity = digest
+                    Bindings = [ "text", QuintReplayValue.Text text ]
+                }
+
+        match fingerprint invalid with
+        | Error findings -> Assert.Contains("QRP-STRING-UNICODE", replayDiagnosticCodes findings)
+        | Ok _ -> failwith "Malformed UTF-16 must not collide with the replacement character"
+
+        Assert.NotEqual(fingerprint "\uFFFD" |> expectOk, fingerprint "😀" |> expectOk)

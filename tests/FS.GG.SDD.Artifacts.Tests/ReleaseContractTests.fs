@@ -238,7 +238,7 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 2.0.2-preview.1 republishes the GS2 bridge adoption without a breaking public-contract change.
+    // 2.0.2-preview.2 republishes the GS2 bridge adoption without a breaking public-contract change.
     //
     // The well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It was
     // intentionally present while additive releases made it vacuous, and this release now exercises
