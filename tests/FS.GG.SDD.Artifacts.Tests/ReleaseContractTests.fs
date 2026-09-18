@@ -170,7 +170,11 @@ module ReleaseContractTests =
             Assert.Contains(token, doc)
 
         Assert.Contains($"currently **`{release.Identity.Version}`**", rawDoc)
-        Assert.Contains(($"current release is `{releaseChannelValue release.Identity.Channel}`").ToLowerInvariant(), doc)
+
+        Assert.Contains(
+            ($"current release is `{releaseChannelValue release.Identity.Channel}`").ToLowerInvariant(),
+            doc
+        )
 
     // ===== US2 — schema reference doc agrees with the contract (T016) =====
 
