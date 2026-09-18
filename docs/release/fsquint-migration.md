@@ -37,9 +37,9 @@ must retain the last qualified pin; no SDD algorithm fork is introduced.
 
 ## Stable adoption
 
-The 2.0.2 release is prepared against the same qualified replay facade and Unicode
-regression. Its final FsQuint pin is advanced only after the stable upstream archives
-are publicly served. Existing SDD CLR types and public signatures remain unchanged.
+The 2.0.2 release adopts publicly served FsQuint 0.1.0 with the same qualified
+replay facade and Unicode regression. Upstream [release verification](https://github.com/FS-GG/FsQuint/actions/runs/35330871321)
+confirms both-feed payload/source identity and anonymous independent use. Existing SDD CLR types and public signatures remain unchanged.
 
 Renovate's existing organization preset discovers the central package pin. The
 FsQuint rule uses anonymous public NuGet, exact pins and no automatic merge; Quint
