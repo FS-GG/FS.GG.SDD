@@ -19,22 +19,22 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.0.2-preview.2`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.0.2`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
 - `FS.GG.SDD.Cli` (the `fsgg-sdd` CLI)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.0.2-preview.2"` and
-`generatorVersion.version = "2.0.2-preview.2"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.0.2"` and
+`generatorVersion.version = "2.0.2"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
 The `channel` is derived from the version: a major of `0` is `preRelease`; a
 major of `>=1` without a prerelease suffix is `stable`. A prerelease suffix selects
-`preRelease`. The current release is `preRelease`. This extraction preview qualifies
-the new FsQuint dependency before stable adoption.
+`preRelease`. The current release is `stable`. This release adopts
+the qualified FsQuint dependency behind the existing replay compatibility facade.
 
 ## Change class to bump rule
 

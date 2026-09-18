@@ -1,12 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>FS-GG/.github"],
-  "hostRules": [
+  "extends": [
+    "github>FS-GG/.github"
+  ],
+  "packageRules": [
     {
-      "description": "read:packages auth for the private org GitHub Packages NuGet feed (FS.GG.* are not on nuget.org). Lives in this repo's own config — NOT the shared preset — because Renovate does not substitute {{ secrets }} inside presets pulled via extends. Value = org-level Mend App Secret FSGG_PACKAGES_READ_TOKEN.",
-      "matchHost": "nuget.pkg.github.com",
-      "hostType": "nuget",
-      "token": "{{ secrets.FSGG_PACKAGES_READ_TOKEN }}"
+      "description": "FsQuint updates use public packages and require replay qualification. Tool pins are separate.",
+      "matchManagers": [
+        "nuget"
+      ],
+      "matchPackageNames": [
+        "FsQuint",
+        "FsQuint.Tooling"
+      ],
+      "registryUrls": [
+        "https://api.nuget.org/v3/index.json"
+      ],
+      "automerge": false,
+      "rangeStrategy": "pin"
     }
   ]
 }
