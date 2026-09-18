@@ -1,4 +1,4 @@
 - [x] Specify compatibility and preserve the signature surface.
 - [x] Replace implementation with lossless mappings and package delegation.
 - [x] Prove existing fixtures, fingerprints, API and compiled consumer compatibility.
-- [ ] Consume the public package and publish the coherent SDD release.
+- [x] Consume the public package and publish the coherent SDD release; see [stable qualification](../../docs/release/fsquint-migration.md#stable-release-qualification).
