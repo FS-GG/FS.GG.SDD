@@ -3,7 +3,7 @@
   "viewVersion": "1.0",
   "workId": "247-full-shape-golden",
   "targetId": "claude",
-  "generator": "FS.GG.SDD.Artifacts/2.0.2-preview.2",
+  "generator": "FS.GG.SDD.Artifacts/2.0.2",
   "generated": true,
   "sources": [
     {

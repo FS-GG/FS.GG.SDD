@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "contractVersion": "2.0.0",
-  "generatorVersion": "FS.GG.SDD.Artifacts/2.0.2-preview.2",
+  "generatorVersion": "FS.GG.SDD.Artifacts/2.0.2",
   "workId": "247-full-shape-golden",
   "sources": [
     {

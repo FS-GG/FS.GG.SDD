@@ -34,3 +34,16 @@ pin and lock files, restoring packages and rerunning the eight replay tests pass
 This is a deliberately rejected downgrade, not a production incident. No model,
 projection, expected observations or Quint tool pin changes. A failed package update
 must retain the last qualified pin; no SDD algorithm fork is introduced.
+
+## Stable adoption
+
+The 2.0.2 release is prepared against the same qualified replay facade and Unicode
+regression. Its final FsQuint pin is advanced only after the stable upstream archives
+are publicly served. Existing SDD CLR types and public signatures remain unchanged.
+
+Renovate's existing organization preset discovers the central package pin. The
+FsQuint rule uses anonymous public NuGet, exact pins and no automatic merge; Quint
+compiler/tool identities remain separate. The obsolete GitHub-feed secret rule is
+removed: it asserted that public packages were private and prevented a real local
+Renovate scan from loading configuration. Renovate 44.99.0 now extracts the FsQuint
+pin from `Directory.Packages.local.props` without credentials.

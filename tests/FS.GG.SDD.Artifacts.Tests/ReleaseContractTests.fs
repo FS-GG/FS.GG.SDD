@@ -95,7 +95,7 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T011 channel is derived from the version and preview suffix`` () =
-        Assert.Equal(PreRelease, release.Identity.Channel)
+        Assert.Equal(Stable, release.Identity.Channel)
         Assert.Equal(PreRelease, channelOfVersion "0.2.0")
         Assert.Equal(PreRelease, channelOfVersion "1.3.0-preview.1")
         Assert.Equal(StableRelease, channelOfVersion "1.0.0")
@@ -238,7 +238,7 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 2.0.2-preview.2 republishes the GS2 bridge adoption without a breaking public-contract change.
+    // 2.0.2 republishes the GS2 bridge adoption without a breaking public-contract change.
     //
     // The well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It was
     // intentionally present while additive releases made it vacuous, and this release now exercises
