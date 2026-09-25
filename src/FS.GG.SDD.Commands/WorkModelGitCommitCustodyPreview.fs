@@ -30,6 +30,8 @@ module internal WorkModelGitCommitCustodyPreview =
         | MalformedTreeEntry of string
         | BlobTooLarge of string
         | BlobIdMismatch of string
+        | CommitTooLarge
+        | CommitIdMismatch
         | GitFailure
 
     type CommitFile internal (path: string, mode: string, blobId: string, raw: byte[]) =
@@ -45,6 +47,7 @@ module internal WorkModelGitCommitCustodyPreview =
     exception private Refused of Refusal
     let private refuse reason = raise (Refused reason)
     let private maxBlobBytes = 32 * 1024 * 1024
+    let private maxCommitBytes = 1024 * 1024
 
     [<DllImport("libc", SetLastError = true, EntryPoint = "statx")>]
     extern int private statx(int directory, string path, int flags, uint32 mask, nativeint buffer)
@@ -252,6 +255,24 @@ module internal WorkModelGitCommitCustodyPreview =
             refuse (NonRegularPath path)
         fields.[0], fields.[2]
 
+    let private requireObjectDigest kind (expectedId: string) (bytes: byte[]) refusal =
+        // Git cat-file can return valid foreign content placed under an
+        // existing loose-object filename. Hash the actual returned payload,
+        // including Git's object header, without copying the payload again.
+        let algorithm = if expectedId.Length = 40 then HashAlgorithmName.SHA1 else HashAlgorithmName.SHA256
+        use hash = IncrementalHash.CreateHash algorithm
+        hash.AppendData(Encoding.ASCII.GetBytes($"{kind} {bytes.Length}\u0000"))
+        hash.AppendData bytes
+        let actualId = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant()
+        if not (String.Equals(actualId, expectedId, StringComparison.Ordinal)) then
+            refuse refusal
+
+    let private requireCommitDigest root commitId =
+        // This is a deliberately bounded commit-body observation. The later
+        // ls-tree call remains separate and is not a handle-pinned tree read.
+        let bytes = runGit root [ "cat-file"; "commit"; commitId ] maxCommitBytes CommitTooLarge
+        requireObjectDigest "commit" commitId bytes CommitIdMismatch
+
     let private readBlob (root: string) (path: string) (blobId: string) =
         let sizeText = runGit root [ "cat-file"; "-s"; blobId ] 64 (BlobTooLarge path) |> ascii
         let mutable size = 0L
@@ -259,17 +280,7 @@ module internal WorkModelGitCommitCustodyPreview =
         if size > int64 maxBlobBytes then refuse (BlobTooLarge path)
         let bytes = runGit root [ "cat-file"; "blob"; blobId ] maxBlobBytes (BlobTooLarge path)
         if int64 bytes.Length <> size then refuse GitFailure
-        // cat-file validates the decompressed object shape and length, but a
-        // loose-object payload can be replaced under another ID's filename.
-        // Recompute the Git object ID from the actual returned bytes. Hash the
-        // header and bytes incrementally to avoid a second 32 MiB allocation.
-        let algorithm = if blobId.Length = 40 then HashAlgorithmName.SHA1 else HashAlgorithmName.SHA256
-        use hash = IncrementalHash.CreateHash algorithm
-        hash.AppendData(Encoding.ASCII.GetBytes($"blob {bytes.Length}\u0000"))
-        hash.AppendData bytes
-        let actualId = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant()
-        if not (String.Equals(actualId, blobId, StringComparison.Ordinal)) then
-            refuse (BlobIdMismatch path)
+        requireObjectDigest "blob" blobId bytes (BlobIdMismatch path)
         bytes
 
     /// The commit ID is a full object ID, never a moving ref. Bytes come from
@@ -289,6 +300,7 @@ module internal WorkModelGitCommitCustodyPreview =
             afterRegistration ()
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
+            requireCommitDigest root commitId
             let files =
                 [ ".fsgg/project.yml"; ".fsgg/sdd.yml" ]
                 |> List.map (fun path ->
