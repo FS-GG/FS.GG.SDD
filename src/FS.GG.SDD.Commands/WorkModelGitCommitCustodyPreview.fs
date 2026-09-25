@@ -12,6 +12,7 @@ module internal WorkModelGitCommitCustodyPreview =
     type Refusal =
         | InvalidCommitId
         | InvalidRepository
+        | NotRepositoryRoot
         | NotCommit
         | MissingPath of string
         | NonRegularPath of string
@@ -78,6 +79,16 @@ module internal WorkModelGitCommitCustodyPreview =
 
     let private ascii (bytes: byte[]) = Encoding.ASCII.GetString bytes
 
+    let private requireRepositoryRoot root =
+        // Git otherwise walks to an enclosing repository. The caller's
+        // physical source root must be that repository's worktree root.
+        // A linked worktree (.git file) is valid; a nested copied source is not.
+        let location =
+            runGit root [ "rev-parse"; "--is-inside-work-tree"; "--show-prefix" ]
+                   4096 NotRepositoryRoot
+        if location <> Encoding.ASCII.GetBytes "true\n\n" then
+            refuse NotRepositoryRoot
+
     let private commitEntry (root: string) (commitId: string) (path: string) =
         let output = runGit root [ "ls-tree"; "-z"; "--full-tree"; commitId; "--"; path ] 4096 (MalformedTreeEntry path)
         if output.Length = 0 then refuse (MissingPath path)
@@ -108,6 +119,7 @@ module internal WorkModelGitCommitCustodyPreview =
         try
             if String.IsNullOrWhiteSpace root || not (Directory.Exists root) then refuse InvalidRepository
             if not (fullObjectId commitId) then refuse InvalidCommitId
+            requireRepositoryRoot root
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
             let files =
