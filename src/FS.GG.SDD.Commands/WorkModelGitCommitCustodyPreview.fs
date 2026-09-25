@@ -32,6 +32,8 @@ module internal WorkModelGitCommitCustodyPreview =
         | BlobIdMismatch of string
         | CommitTooLarge
         | CommitIdMismatch
+        | TreeTooLarge of string
+        | TreeIdMismatch of string
         | GitFailure
 
     type CommitFile internal (path: string, mode: string, blobId: string, raw: byte[]) =
@@ -48,6 +50,7 @@ module internal WorkModelGitCommitCustodyPreview =
     let private refuse reason = raise (Refused reason)
     let private maxBlobBytes = 32 * 1024 * 1024
     let private maxCommitBytes = 1024 * 1024
+    let private maxTreeBytes = 1024 * 1024
 
     [<DllImport("libc", SetLastError = true, EntryPoint = "statx")>]
     extern int private statx(int directory, string path, int flags, uint32 mask, nativeint buffer)
@@ -240,21 +243,6 @@ module internal WorkModelGitCommitCustodyPreview =
                     | :? UnauthorizedAccessException -> refuse LooseObjectLeafRedirect
         finally Marshal.FreeHGlobal buffer
 
-    let private commitEntry (root: string) (commitId: string) (path: string) =
-        let output = runGit root [ "ls-tree"; "-z"; "--full-tree"; commitId; "--"; path ] 4096 (MalformedTreeEntry path)
-        if output.Length = 0 then refuse (MissingPath path)
-        let records = ascii output |> fun text -> text.Split('\u0000', StringSplitOptions.RemoveEmptyEntries)
-        if records.Length <> 1 then refuse (MalformedTreeEntry path)
-        let tab = records.[0].IndexOf '\t'
-        if tab <= 0 || records.[0].Substring(tab + 1) <> path then
-            refuse (MalformedTreeEntry path)
-        let fields = records.[0].Substring(0, tab).Split(' ', StringSplitOptions.RemoveEmptyEntries)
-        if fields.Length <> 3 || fields.[1] <> "blob" || not (fullObjectId fields.[2]) then
-            refuse (MalformedTreeEntry path)
-        if fields.[0] <> "100644" && fields.[0] <> "100755" then
-            refuse (NonRegularPath path)
-        fields.[0], fields.[2]
-
     let private requireObjectDigest kind (expectedId: string) (bytes: byte[]) refusal =
         // Git cat-file can return valid foreign content placed under an
         // existing loose-object filename. Hash the actual returned payload,
@@ -268,10 +256,59 @@ module internal WorkModelGitCommitCustodyPreview =
             refuse refusal
 
     let private requireCommitDigest root commitId =
-        // This is a deliberately bounded commit-body observation. The later
-        // ls-tree call remains separate and is not a handle-pinned tree read.
+        // This is a deliberately bounded commit-body observation. Subsequent
+        // tree-object reads remain separate, not handle-pinned to this read.
         let bytes = runGit root [ "cat-file"; "commit"; commitId ] maxCommitBytes CommitTooLarge
         requireObjectDigest "commit" commitId bytes CommitIdMismatch
+        bytes
+
+    let private commitRootTreeId (commitId: string) (commitBytes: byte[]) =
+        let newline = Array.IndexOf(commitBytes, 10uy)
+        if newline < 6 || ascii commitBytes.[0..4] <> "tree " then
+            refuse (MalformedTreeEntry "<root>")
+        let treeId = ascii commitBytes.[5..newline - 1]
+        if treeId.Length <> commitId.Length || not (fullObjectId treeId) then
+            refuse (MalformedTreeEntry "<root>")
+        treeId
+
+    let private readTree root path treeId =
+        let bytes = runGit root [ "cat-file"; "tree"; treeId ] maxTreeBytes (TreeTooLarge path)
+        requireObjectDigest "tree" treeId bytes (TreeIdMismatch path)
+        bytes
+
+    type private TreeEntry = { Mode: string; Id: string }
+
+    let private selectedTreeEntry (treeBytes: byte[]) idLength path (name: string) =
+        // Git tree records are "mode name\0<raw object ID>". Parse bounded,
+        // verified bytes in memory so pathname-based ls-tree cannot reselect
+        // a different child after the digest check.
+        let target = Encoding.UTF8.GetBytes name
+        let idBytes = idLength / 2
+        let mutable offset = 0
+        let mutable selected = None
+        while offset < treeBytes.Length do
+            let space = Array.IndexOf(treeBytes, 32uy, offset)
+            if space < 0 || space - offset < 5 || space - offset > 6 then
+                refuse (MalformedTreeEntry path)
+            let nul = Array.IndexOf(treeBytes, 0uy, space + 1)
+            if nul < 0 || nul = space + 1 || nul + 1 + idBytes > treeBytes.Length then
+                refuse (MalformedTreeEntry path)
+            let mode = Encoding.ASCII.GetString(treeBytes, offset, space - offset)
+            if mode |> Seq.exists (fun c -> c < '0' || c > '7') then
+                refuse (MalformedTreeEntry path)
+            let nameLength = nul - space - 1
+            let mutable matches = nameLength = target.Length
+            let mutable index = 0
+            while matches && index < target.Length do
+                if treeBytes.[space + 1 + index] <> target.[index] then matches <- false
+                index <- index + 1
+            if matches then
+                if selected.IsSome then refuse (MalformedTreeEntry path)
+                let oid =
+                    Convert.ToHexString(treeBytes, nul + 1, idBytes).ToLowerInvariant()
+                selected <- Some { Mode = mode; Id = oid }
+            offset <- nul + 1 + idBytes
+        selected
 
     let private readBlob (root: string) (path: string) (blobId: string) =
         let sizeText = runGit root [ "cat-file"; "-s"; blobId ] 64 (BlobTooLarge path) |> ascii
@@ -300,12 +337,24 @@ module internal WorkModelGitCommitCustodyPreview =
             afterRegistration ()
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
-            requireCommitDigest root commitId
+            let commitBytes = requireCommitDigest root commitId
+            let rootTreeId = commitRootTreeId commitId commitBytes
+            let rootTree = readTree root "<root>" rootTreeId
+            let child =
+                selectedTreeEntry rootTree commitId.Length ".fsgg" ".fsgg"
+                |> Option.defaultWith (fun () -> refuse (MissingPath ".fsgg/project.yml"))
+            if child.Mode <> "40000" then refuse (NonRegularPath ".fsgg/project.yml")
+            let configTree = readTree root ".fsgg" child.Id
             let files =
                 [ ".fsgg/project.yml"; ".fsgg/sdd.yml" ]
                 |> List.map (fun path ->
-                    let mode, blobId = commitEntry root commitId path
-                    CommitFile(path, mode, blobId, readBlob root path blobId))
+                    let name = path.Substring(".fsgg/".Length)
+                    let entry =
+                        selectedTreeEntry configTree commitId.Length path name
+                        |> Option.defaultWith (fun () -> refuse (MissingPath path))
+                    if entry.Mode <> "100644" && entry.Mode <> "100755" then
+                        refuse (NonRegularPath path)
+                    CommitFile(path, entry.Mode, entry.Id, readBlob root path entry.Id))
             beforeFinalCheck ()
             // Recheck after the separate Git object reads. A persistent .git
             // switch to an unregistered repository must not return an observed
