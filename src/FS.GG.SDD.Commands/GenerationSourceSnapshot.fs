@@ -94,10 +94,18 @@ module internal GenerationSourceSnapshot =
                 if not (expected.Add path) then refuse (DuplicatePath path)
 
             let workspace = Path.GetFullPath workspaceRoot
-            match classify workspace "." with
-            | Directory -> ()
-            | Link -> refuse (Symlink ".")
-            | _ -> refuse InvalidRoot
+            // A lexical workspace path can pass through a linked ancestor even
+            // when its final directory is not itself a link. Probe every parent
+            // before treating the supplied root as a physical source boundary.
+            let mutable ancestor = Some workspace
+            while ancestor.IsSome do
+                let path = ancestor.Value
+                let relative = Path.GetRelativePath(workspace, path).Replace('\\', '/')
+                match classify path relative with
+                | Directory -> ()
+                | Link -> refuse (Symlink relative)
+                | _ -> refuse InvalidRoot
+                ancestor <- Directory.GetParent(path) |> Option.ofObj |> Option.map _.FullName
             let mutable absoluteRoot = workspace
             let mutable relativeRoot = ""
             for segment in closedRoot.Split('/') do
