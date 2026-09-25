@@ -41,6 +41,7 @@
     <Compile Include="WorkModelGitLooseLeafTests.fs" />
     <Compile Include="WorkModelGitBlobIntegrityTests.fs" />
     <Compile Include="WorkModelGitCommitIntegrityTests.fs" />
+    <Compile Include="WorkModelGitTreeIntegrityTests.fs" />
     <Compile Include="WorkModelHeldChildRosterTests.fs" />
     <Compile Include="GenerationHeldDirectoryLimitTests.fs" />
     <Compile Include="GenerationPinnedFileCapacityTests.fs" />
