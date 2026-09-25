@@ -28,6 +28,7 @@
     <Compile Include="GenerationPinnedAggregateCapacityTests.fs" />
     <Compile Include="GenerationPinnedFileCountTests.fs" />
     <Compile Include="GenerationPinnedPathCapacityTests.fs" />
+    <Compile Include="GenerationPinnedSecondPassMemoryTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
