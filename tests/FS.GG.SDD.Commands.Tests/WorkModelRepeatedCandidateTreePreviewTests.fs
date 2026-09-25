@@ -21,7 +21,7 @@ module WorkModelRepeatedCandidateTreePreviewTests =
             finally Directory.Delete(root, true)
 
     [<Fact>]
-    let ``red-before second full-tree pass refuses late candidate missed by first`` () =
+    let ``held child refuses late candidate before second full tree pass`` () =
         fixture (fun root ->
             let mutable calls = 0
             let afterOpen path =
@@ -33,9 +33,9 @@ module WorkModelRepeatedCandidateTreePreviewTests =
                     capturePinnedWithHooks ignore afterOpen root "work" [ selected ] ExactBytes
                 else
                     capturePinnedWithHooks ignore ignore root "work" [ selected ] ExactBytes
-            Assert.Equal(Error(SecondCapture(UnexpectedFile earlier)),
+            Assert.Equal(Error(FirstCapture(DirectoryUnstable "work/a")),
                          verifyWithCapture capture workId)
-            Assert.Equal(2, calls))
+            Assert.Equal(1, calls))
 
     [<Fact>]
     let ``stable full work tree with unrelated candidate succeeds read only`` () =

@@ -8,6 +8,8 @@ Given a caller-declared complete set of files under `work/`, capture the whole r
 
 The #1028 disposable interleaving is the red-before control. Adding a duplicate-ID `work/a/spec.md` after `work/a` was visited but while `work/z/spec.md` was being read lets one pinned pass return a selected-only false green. The repeated pass refuses the persistent late file as `UnexpectedFile`. Separate controls cover a stable unrelated candidate, changed bytes between valid passes, changed rosters between valid passes, and a linked candidate.
 
+The later held-child repair in `specs/144-fsc04-held-child-roster/` makes that second-pass outcome historical. The stacked reader now refuses the persistent late addition in its first pass as `DirectoryUnstable`.
+
 ## Boundary
 
 Two matching observations are an instability screen, not an atomic snapshot. An adversary can mutate and restore a tree between passes or after the second pass; metadata checks cannot rule out ABA or timestamp-hidden writes. The caller still supplies the candidate file declaration, and this preview does not bind `work/` to `.fsgg` or optional performance roots at one instant. The strict whole-root rule also needs producer-owner acceptance for unrelated entries. Windows has no equivalent pinned production path in this slice. #1017 physical custody, #1018 verification-wave/staging/rollback, installed parity, publication, receiver pinning, merge and GS2-10 freeze remain held.

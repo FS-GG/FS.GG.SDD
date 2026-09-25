@@ -9,3 +9,5 @@ A deterministic disposable tree contains empty `work/a` and selected `work/z/spe
 ## Boundary
 
 The reader's per-directory name and metadata checks cover a child while it is visited, but do not recheck that child after later siblings. Adding a file to an already visited child need not change the held parent directory's stamp. A complete candidate inventory cannot be inferred from one traversal under concurrent mutation, even with no-follow descriptors. A bounded observed-stability repair could repeat the full pinned tree pass or retain child handles for a final roster check; both still have ABA, timestamp-hidden, post-check and non-atomic cross-root limits. #1017 selected-source custody, #1018 verification-wave/staging/rollback, Windows concurrency, installed parity, publication, receiver pinning, merge and GS2-10 freeze remain held. No output or live effect is produced.
+
+The later held-child repair in `specs/144-fsc04-held-child-roster/` makes this a historical red-before finding. The stacked test now requires first-pass `DirectoryUnstable` refusal.
