@@ -20,6 +20,8 @@ module internal WorkModelGitCommitCustodyPreview =
         | AlternateObjectStore
         | ObjectDirectoryRedirect
         | PackDirectoryRedirect
+        | PackFileRedirect
+        | PackFileLimit
         | LooseObjectDirectoryRedirect
         | LooseObjectLeafRedirect
         | LooseObjectLeafLimit
@@ -209,6 +211,22 @@ module internal WorkModelGitCommitCustodyPreview =
             else
                 let mode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
                 if mode &&& 0xf000 <> 0x4000 then refuse PackDirectoryRedirect
+                // A direct pack directory can still borrow another store via
+                // symlinked .idx/.pack leaves. Inspect every present child and
+                // cap the roster; Git may read any of these files later.
+                try
+                    let mutable leafCount = 0
+                    for leaf in Directory.EnumerateFileSystemEntries expected do
+                        leafCount <- leafCount + 1
+                        if leafCount > 4096 then refuse PackFileLimit
+                        if statx(-100, leaf, 0x100, 1u, buffer) <> 0 then
+                            refuse PackFileRedirect
+                        let leafMode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
+                        if leafMode &&& 0xf000 <> 0x8000 then
+                            refuse PackFileRedirect
+                with
+                | :? IOException
+                | :? UnauthorizedAccessException -> refuse PackFileRedirect
         finally Marshal.FreeHGlobal buffer
 
     let private requireDirectLooseFanouts objects =
