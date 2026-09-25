@@ -49,6 +49,13 @@ module GenerationPinnedSecondPassMemoryTests =
                         $"An 8 MiB file allocated %d{allocated} bytes during pinned capture")
 
     [<Fact>]
+    let ``first pass avoids MemoryStream output duplication`` () =
+        if OperatingSystem.IsLinux() then
+            let allocated = measurePinnedAllocation ()
+            Assert.True(allocated < 12L * mib,
+                        $"An 8 MiB file allocated %d{allocated} bytes during pinned capture")
+
+    [<Fact>]
     let ``ordinary captured-file constructor defensively copies supplied bytes`` () =
         let supplied = [| 1uy; 2uy |]
         let captured = CapturedFile("source.bin", supplied, SchemaVersion.sha256Bytes supplied)

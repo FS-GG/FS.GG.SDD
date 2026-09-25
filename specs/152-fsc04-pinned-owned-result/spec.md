@@ -11,3 +11,5 @@ Keep the ordinary three-argument `CapturedFile` constructor's copy. Add an inter
 ## Boundary
 
 The 20 MiB threshold is a focused 8 MiB fixture control, not a portable peak-memory ceiling. Ownership transfer relies on the pinned reader's local no-mutation invariant; changing that invariant would require restoring a defensive copy. Callers can still allocate through `Bytes`, and rosters, first-pass output and result objects remain. #1031's 256-child descriptor, #1032's 32 MiB per-file, #1033's 64 MiB aggregate raw-byte, #1034's 4,096-file and #1035's 1,024-code-unit path limits remain provisional. This is not an atomic snapshot: ABA, timestamp-hidden/post-check changes, caller-supplied inventory authority and non-atomic `.fsgg`/`work`/performance capture remain open. Windows pinned-reader parity, #1017 physical custody, #1018 verification/staging/rollback, installed parity, publication, receiver adoption, merge and GS2-10 freeze remain held. No output or live effect is produced.
+
+The later `specs/153-fsc04-pinned-direct-read/` slice removes the first-pass `MemoryStream` output named above. The ownership and temporal limits remain.

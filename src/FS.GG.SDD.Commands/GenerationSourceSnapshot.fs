@@ -187,7 +187,7 @@ module internal GenerationSourceSnapshot =
             action handle
         finally nativeClose handle |> ignore
 
-    let private readPinnedRegular directory name path beforeOpen afterOpen afterRead remainingBytes =
+    let private readPinnedRegular directory name path beforeOpen afterOpen afterRead afterLength remainingBytes =
         beforeOpen path
         let handle = nativeOpenAt(directory, name, fileFlags)
         if handle < 0 then refuse (Unreadable path)
@@ -199,21 +199,22 @@ module internal GenerationSourceSnapshot =
         let initialLength = stream.Length
         if initialLength > maxPinnedFileBytes then refuse (FileLimitExceeded path)
         if initialLength > remainingBytes then refuse (CaptureLimitExceeded path)
+        afterLength path
         let readPass () =
             stream.Seek(0L, SeekOrigin.Begin) |> ignore
-            // The opened-fd length has passed both budgets. Reserve it once
-            // rather than geometrically reallocating as the first pass grows.
-            use output = new MemoryStream(int initialLength)
-            let buffer = Array.zeroCreate<byte> 81920
-            let mutable count = stream.Read(buffer, 0, buffer.Length)
-            while count > 0 do
-                if output.Length > maxPinnedFileBytes - int64 count then
-                    refuse (FileLimitExceeded path)
-                if output.Length > remainingBytes - int64 count then
-                    refuse (CaptureLimitExceeded path)
-                output.Write(buffer, 0, count)
-                count <- stream.Read(buffer, 0, buffer.Length)
-            output.ToArray()
+            // The opened-fd length is budget checked. Read into one owned array;
+            // a changed length is unstable rather than a reason to grow it.
+            let raw = Array.zeroCreate<byte> (int initialLength)
+            let mutable offset = 0
+            while offset < raw.Length do
+                let count = stream.Read(raw, offset, raw.Length - offset)
+                if count = 0 then refuse (FileUnstable path)
+                offset <- offset + count
+            if stream.ReadByte() >= 0 then
+                if initialLength >= maxPinnedFileBytes then refuse (FileLimitExceeded path)
+                if initialLength >= remainingBytes then refuse (CaptureLimitExceeded path)
+                refuse (FileUnstable path)
+            raw
         let raw = readPass ()
         afterRead path
         let middle = fileStamp handle path
@@ -260,7 +261,8 @@ module internal GenerationSourceSnapshot =
     /// opens each regular file relative to its pinned parent. Hooks are test seams
     /// around file open and the first byte pass to exercise controlled races.
     let private capturePinnedCore (beforeOpen: string -> unit) (afterOpen: string -> unit)
-                                  (afterRead: string -> unit) (workspaceRoot: string)
+                                  (afterRead: string -> unit) (afterLength: string -> unit)
+                                  (workspaceRoot: string)
                                   (closedRoot: string) (declared: string list)
                                   (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
         try
@@ -345,7 +347,9 @@ module internal GenerationSourceSnapshot =
                                     if files.Count >= maxPinnedCapturedFiles then
                                         refuse (CapturedFileLimit path)
                                     let remaining = maxPinnedCaptureBytes - capturedBytes
-                                    let raw = readPinnedRegular directory name path beforeOpen afterOpen afterRead remaining
+                                    let raw =
+                                        readPinnedRegular directory name path
+                                                          beforeOpen afterOpen afterRead afterLength remaining
                                     capturedBytes <- capturedBytes + int64 raw.Length
                                     files.Add(path, raw)
                             if directoryStamp directory relative <> before then
@@ -427,7 +431,7 @@ module internal GenerationSourceSnapshot =
                         | _ -> refuse (NonRegular relativePath)
                         let raw =
                             readPinnedRegular parent fileName relativePath
-                                              beforeOpen afterOpen afterRead Int64.MaxValue
+                                              beforeOpen afterOpen afterRead ignore Int64.MaxValue
                         requireSelectedName parent parentRelative fileName relativePath
                         if directoryStamp parent parentRelative <> before then
                             refuse (DirectoryUnstable parentRelative)
@@ -446,11 +450,16 @@ module internal GenerationSourceSnapshot =
         captureSelectedFileWithHooks ignore ignore ignore workspaceRoot relativePath
 
     let capturePinnedWithHooks beforeOpen afterOpen workspaceRoot closedRoot declared policy =
-        capturePinnedCore beforeOpen afterOpen ignore workspaceRoot closedRoot declared policy
+        capturePinnedCore beforeOpen afterOpen ignore ignore workspaceRoot closedRoot declared policy
 
     // Test seam after the first opened-fd byte pass, before the snapshot is returned.
     let capturePinnedWithReadHook afterRead workspaceRoot closedRoot declared policy =
-        capturePinnedCore ignore ignore afterRead workspaceRoot closedRoot declared policy
+        capturePinnedCore ignore ignore afterRead ignore workspaceRoot closedRoot declared policy
+
+    // Test seam after the opened descriptor's length was checked, before the
+    // direct first pass consumes bytes from that same descriptor.
+    let capturePinnedWithLengthHook afterLength workspaceRoot closedRoot declared policy =
+        capturePinnedCore ignore ignore ignore afterLength workspaceRoot closedRoot declared policy
 
     /// Test seam for a controlled interleaving between path classification and byte read.
     /// The Linux production path uses descriptor-pinned reads; this path-based
