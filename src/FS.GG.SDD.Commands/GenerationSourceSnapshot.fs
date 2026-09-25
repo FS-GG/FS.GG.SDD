@@ -22,6 +22,7 @@ module internal GenerationSourceSnapshot =
         | Symlink of string
         | NonRegular of string
         | DirectoryUnstable of string
+        | FileUnstable of string
         | Unreadable of string
         | EmptySet
         | UnsupportedPlatform
@@ -107,19 +108,25 @@ module internal GenerationSourceSnapshot =
             Marshal.ReadInt16(buffer, 28) |> uint16 |> int |> kindFromMode
         finally Marshal.FreeHGlobal buffer
 
-    let private directoryStamp directory relative =
+    let private descriptorStamp unstable descriptor relative =
         let buffer = Marshal.AllocHGlobal 256
         try
-            if statx(directory, "", 0x1000, 0x7ffu, buffer) <> 0 then
+            if statx(descriptor, "", 0x1000, 0x7ffu, buffer) <> 0 then
                 refuse (Unreadable relative)
             let bytes = Array.zeroCreate<byte> 256
             Marshal.Copy(buffer, bytes, 0, bytes.Length)
             // Require nlink, inode, size, mtime, and ctime from the held fd.
             if BitConverter.ToUInt32(bytes, 0) &&& 0x3c4u <> 0x3c4u then
-                refuse (DirectoryUnstable relative)
+                refuse (unstable relative)
             [| bytes.[16..19]; bytes.[32..47]; bytes.[96..127]; bytes.[136..143] |]
             |> Array.concat
         finally Marshal.FreeHGlobal buffer
+
+    let private directoryStamp directory relative =
+        descriptorStamp DirectoryUnstable directory relative
+
+    let private fileStamp descriptor relative =
+        descriptorStamp FileUnstable descriptor relative
 
     let private directoryNames directory =
         Directory.EnumerateFileSystemEntries($"/proc/self/fd/%d{directory}")
@@ -155,11 +162,12 @@ module internal GenerationSourceSnapshot =
         finally nativeClose handle |> ignore
 
     /// Linux capture pins every directory from / through the closed root, then
-    /// opens each regular file relative to its pinned parent. The hooks are only
-    /// test seams, surrounding the file open to exercise both sides of the race.
-    let capturePinnedWithHooks (beforeOpen: string -> unit) (afterOpen: string -> unit)
-                              (workspaceRoot: string) (closedRoot: string) (declared: string list)
-                              (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
+    /// opens each regular file relative to its pinned parent. Hooks are test seams
+    /// around file open and the first byte pass to exercise controlled races.
+    let private capturePinnedCore (beforeOpen: string -> unit) (afterOpen: string -> unit)
+                                  (afterRead: string -> unit) (workspaceRoot: string)
+                                  (closedRoot: string) (declared: string list)
+                                  (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
         try
             if not (OperatingSystem.IsLinux()) then refuse UnsupportedPlatform
             if not (validRelative closedRoot) || String.IsNullOrWhiteSpace workspaceRoot
@@ -221,10 +229,21 @@ module internal GenerationSourceSnapshot =
                                     use safeHandle = new SafeFileHandle(nativeint handle, true)
                                     if descriptorKind handle "" 0x1000 path <> Regular then refuse (NonRegular path)
                                     afterOpen path
+                                    let before = fileStamp handle path
                                     use stream = new FileStream(safeHandle, FileAccess.Read)
-                                    use output = new MemoryStream()
-                                    stream.CopyTo output
-                                    files.Add(path, output.ToArray())
+                                    let readPass () =
+                                        stream.Seek(0L, SeekOrigin.Begin) |> ignore
+                                        use output = new MemoryStream()
+                                        stream.CopyTo output
+                                        output.ToArray()
+                                    let raw = readPass ()
+                                    afterRead path
+                                    let middle = fileStamp handle path
+                                    if before <> middle then refuse (FileUnstable path)
+                                    let second = readPass ()
+                                    let after = fileStamp handle path
+                                    if middle <> after || raw <> second then refuse (FileUnstable path)
+                                    files.Add(path, raw)
                             if directoryStamp directory relative <> before then
                                 refuse (DirectoryUnstable relative)
                         walk sourceHandle closedRoot
@@ -247,6 +266,13 @@ module internal GenerationSourceSnapshot =
         | :? EntryPointNotFoundException -> Error UnsupportedPlatform
         | :? IOException
         | :? UnauthorizedAccessException -> Error(Unreadable closedRoot)
+
+    let capturePinnedWithHooks beforeOpen afterOpen workspaceRoot closedRoot declared policy =
+        capturePinnedCore beforeOpen afterOpen ignore workspaceRoot closedRoot declared policy
+
+    // Test seam after the first opened-fd byte pass, before the snapshot is returned.
+    let capturePinnedWithReadHook afterRead workspaceRoot closedRoot declared policy =
+        capturePinnedCore ignore ignore afterRead workspaceRoot closedRoot declared policy
 
     /// Test seam for a controlled interleaving between path classification and byte read.
     /// The Linux production path uses descriptor-pinned reads; this path-based
