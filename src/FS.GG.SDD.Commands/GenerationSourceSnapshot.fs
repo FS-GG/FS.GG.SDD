@@ -317,7 +317,9 @@ module internal GenerationSourceSnapshot =
                         | [] -> action parent
                         | segment :: tail ->
                             let child = if relative = "" then segment else relative + "/" + segment
-                            withDirectory parent segment child (fun handle -> sourceRoot handle tail child action)
+                            let parentRelative = if relative = "" then "." else relative
+                            withSelectedDirectory parent segment parentRelative child (fun handle ->
+                                sourceRoot handle tail child action)
 
                     sourceRoot workspaceHandle (segments closedRoot) "" (fun sourceHandle ->
                         let entries = HashSet<string>(StringComparer.OrdinalIgnoreCase)
