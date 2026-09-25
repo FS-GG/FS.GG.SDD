@@ -24,6 +24,7 @@ module internal GenerationSourceSnapshot =
         | DirectoryUnstable of string
         | HeldDirectoryLimit of string
         | FileLimitExceeded of string
+        | CaptureLimitExceeded of string
         | FileUnstable of string
         | Unreadable of string
         | EmptySet
@@ -60,6 +61,9 @@ module internal GenerationSourceSnapshot =
     // A pinned regular-file pass retains raw bytes for a second comparison.
     // Refuse before allocating beyond this provisional per-file preview cap.
     let private maxPinnedFileBytes = 32L * 1024L * 1024L
+    // The complete-root preview retains raw bytes for every file until its
+    // final closure check. Bound that raw payload sum separately from one file.
+    let private maxPinnedCaptureBytes = 64L * 1024L * 1024L
 
     let private refuse issue = raise (CaptureRefused issue)
 
@@ -169,7 +173,7 @@ module internal GenerationSourceSnapshot =
             action handle
         finally nativeClose handle |> ignore
 
-    let private readPinnedRegular directory name path beforeOpen afterOpen afterRead =
+    let private readPinnedRegular directory name path beforeOpen afterOpen afterRead remainingBytes =
         beforeOpen path
         let handle = nativeOpenAt(directory, name, fileFlags)
         if handle < 0 then refuse (Unreadable path)
@@ -179,6 +183,7 @@ module internal GenerationSourceSnapshot =
         let before = fileStamp handle path
         use stream = new FileStream(safeHandle, FileAccess.Read)
         if stream.Length > maxPinnedFileBytes then refuse (FileLimitExceeded path)
+        if stream.Length > remainingBytes then refuse (CaptureLimitExceeded path)
         let readPass () =
             stream.Seek(0L, SeekOrigin.Begin) |> ignore
             use output = new MemoryStream()
@@ -187,6 +192,8 @@ module internal GenerationSourceSnapshot =
             while count > 0 do
                 if output.Length > maxPinnedFileBytes - int64 count then
                     refuse (FileLimitExceeded path)
+                if output.Length > remainingBytes - int64 count then
+                    refuse (CaptureLimitExceeded path)
                 output.Write(buffer, 0, count)
                 count <- stream.Read(buffer, 0, buffer.Length)
             output.ToArray()
@@ -263,6 +270,7 @@ module internal GenerationSourceSnapshot =
                     sourceRoot workspaceHandle (segments closedRoot) "" (fun sourceHandle ->
                         let entries = HashSet<string>(StringComparer.OrdinalIgnoreCase)
                         let files = ResizeArray<string * byte[]>()
+                        let mutable capturedBytes = 0L
                         // Keep every visited child open until the complete traversal ends.
                         // A later sibling can otherwise add a candidate to an earlier child
                         // after that child's local roster check has already completed.
@@ -291,7 +299,10 @@ module internal GenerationSourceSnapshot =
                                     if descriptorKind child "" 0x1000 path <> Directory then refuse InvalidRoot
                                     walk child path
                                 | Regular ->
-                                    files.Add(path, readPinnedRegular directory name path beforeOpen afterOpen afterRead)
+                                    let remaining = maxPinnedCaptureBytes - capturedBytes
+                                    let raw = readPinnedRegular directory name path beforeOpen afterOpen afterRead remaining
+                                    capturedBytes <- capturedBytes + int64 raw.Length
+                                    files.Add(path, raw)
                             if directoryStamp directory relative <> before then
                                 refuse (DirectoryUnstable relative)
                         try
@@ -366,7 +377,9 @@ module internal GenerationSourceSnapshot =
                         | Link -> refuse (Symlink relativePath)
                         | Regular -> ()
                         | _ -> refuse (NonRegular relativePath)
-                        let raw = readPinnedRegular parent fileName relativePath beforeOpen afterOpen afterRead
+                        let raw =
+                            readPinnedRegular parent fileName relativePath
+                                              beforeOpen afterOpen afterRead Int64.MaxValue
                         requireSelectedName parent parentRelative fileName relativePath
                         if directoryStamp parent parentRelative <> before then
                             refuse (DirectoryUnstable parentRelative)

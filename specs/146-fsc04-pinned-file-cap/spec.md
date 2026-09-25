@@ -11,3 +11,5 @@ For this preview, a pinned regular file may contain at most 32 MiB. Refuse `File
 ## Boundary
 
 The 32 MiB threshold is provisional producer policy. This is a per-file pass cap, not a cap on the sum of files or peak process memory: raw results, the comparison pass and immutable captured-file copies coexist. The pre-read length and bounded loop do not establish a stable content snapshot under adversarial in-place writes; the existing two-pass byte/stamp check still has ABA, timestamp-hidden and post-check limits. #1031's 256-child descriptor cap remains provisional. Caller-supplied inventory authority, non-atomic `.fsgg`/`work`/performance capture, Windows pinned-reader parity, #1017 physical custody, #1018 verification/staging/rollback, installed parity, publication, receiver adoption, merge and GS2-10 freeze remain held. No output or live effect is produced.
+
+The later `specs/147-fsc04-pinned-aggregate-cap/` slice adds a provisional 64 MiB complete-root raw-payload sum cap. The unbounded-sum statement above records the #1032 base; peak process memory and file count remain outside that later cap.
