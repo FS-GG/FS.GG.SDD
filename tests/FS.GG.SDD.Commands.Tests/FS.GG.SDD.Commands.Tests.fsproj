@@ -30,6 +30,7 @@
     <Compile Include="GenerationPinnedPathCapacityTests.fs" />
     <Compile Include="GenerationPinnedSecondPassMemoryTests.fs" />
     <Compile Include="GenerationPinnedDirectReadRaceTests.fs" />
+    <Compile Include="GenerationPinnedUnicodeAliasTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
