@@ -21,6 +21,7 @@
     <Compile Include="WorkModelCandidateInventoryPreviewTests.fs" />
     <Compile Include="WorkModelCandidateOmissionTests.fs" />
     <Compile Include="WorkModelLateCandidateTreeTests.fs" />
+    <Compile Include="WorkModelRepeatedCandidateTreePreviewTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
