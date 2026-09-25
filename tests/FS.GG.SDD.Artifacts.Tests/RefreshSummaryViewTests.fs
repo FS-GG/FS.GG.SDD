@@ -74,6 +74,7 @@ module RefreshSummaryViewTests =
             createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
 
         Assert.False(isStale current manifest)
+        Assert.False(isStale (List.rev current) manifest)
 
     [<Fact>]
     let ``isStale is true when a summary source digest changes`` () =
@@ -89,3 +90,106 @@ module RefreshSummaryViewTests =
             ]
 
         Assert.True(isStale changed manifest)
+
+    [<Fact>]
+    let ``isStale rejects a newly required producer missing from the manifest`` () =
+        let current = sources ()
+        let recorded = current |> List.take 3
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator recorded outputDigest
+
+        Assert.True(isStale current manifest)
+
+    [<Fact>]
+    let ``isStale rejects a producer no longer in the current set`` () =
+        let current = sources ()
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
+
+        Assert.True(isStale (current |> List.take 3) manifest)
+
+    [<Fact>]
+    let ``isStale rejects a source from the wrong work root even with the same bytes`` () =
+        let current = sources ()
+        let wrongRoot =
+            sourceIdentity "readiness/other-work/analysis.json" "analysis-bytes"
+            :: (current |> List.filter (fun source -> not (source.Artifact.Path.EndsWith("/analysis.json"))))
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator wrongRoot outputDigest
+
+        Assert.True(isStale current manifest)
+
+    [<Fact>]
+    let ``isStale rejects duplicate paths in recorded or current sources`` () =
+        let current = sources ()
+        let duplicate = List.head current
+        let recordedDuplicate = createSummaryManifest (expectedSummaryOutputPath workId) generator (duplicate :: current) outputDigest
+        let clean = createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
+
+        Assert.True(isStale current recordedDuplicate)
+        Assert.True(isStale (duplicate :: current) clean)
+
+    [<Fact>]
+    let ``isStale rejects case-colliding source paths on either side`` () =
+        let first = sourceIdentity $"readiness/{workId}/Evidence.json" "first"
+        let alias = sourceIdentity $"readiness/{workId}/evidence.json" "second"
+        let rows = [ first; alias ]
+        let ambiguous = createSummaryManifest (expectedSummaryOutputPath workId) generator rows outputDigest
+
+        Assert.True(isStale rows ambiguous)
+        Assert.True(isStale (List.rev rows) ambiguous)
+
+    [<Fact>]
+    let ``isStale refuses null source artifact instead of throwing`` () =
+        let valid = List.head (sources ())
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ valid ] outputDigest
+        let malformed = { valid with Artifact = Unchecked.defaultof<ArtifactRef> }
+
+        Assert.True(isStale [ malformed ] manifest)
+        Assert.True(isStale [ valid ] { manifest with Sources = [ malformed ] })
+
+    [<Fact>]
+    let ``isStale refuses noncanonical artifact paths on either side`` () =
+        let valid = List.head (sources ())
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ valid ] outputDigest
+        for badPath in
+            [ ""; "/readiness/escape.json"; "readiness\\escape.json"; "readiness/../escape.json"
+              "readiness//escape.json"; "readiness/./escape.json" ] do
+            let malformed = { valid with Artifact = { valid.Artifact with Path = badPath } }
+            Assert.True(isStale [ malformed ] manifest)
+            Assert.True(isStale [ valid ] { manifest with Sources = [ malformed ] })
+
+    [<Fact>]
+    let ``isStale rejects a generated view with no producer`` () =
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [] outputDigest
+
+        Assert.True(isStale [] manifest)
+
+    [<Theory>]
+    [<InlineData("sha256", "")>]
+    [<InlineData("sha256", "not-a-digest")>]
+    [<InlineData("sha512", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")>]
+    [<InlineData("sha256", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")>]
+    let ``isStale rejects identical malformed digests on both sides`` algorithm value =
+        let source = List.head (sources ())
+        let malformed = { source with Digest = { source.Digest with Algorithm = algorithm; Value = value } }
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ malformed ] outputDigest
+
+        Assert.True(isStale [ malformed ] manifest)
+
+    [<Fact>]
+    let ``isStale rejects a null digest without throwing`` () =
+        let source = List.head (sources ())
+        let malformed = { source with Digest = { source.Digest with Value = Unchecked.defaultof<string> } }
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ malformed ] outputDigest
+
+        Assert.True(isStale [ malformed ] manifest)
+
+    [<Fact>]
+    let ``isStale compares long Unicode paths exactly without order dependence`` () =
+        let longSegment = String.replicate 2048 "x"
+        let longPath = $"readiness/{workId}/résumé-😃-{longSegment}.json"
+        let first = sourceIdentity longPath "unicode-content"
+        let second = sourceIdentity $"readiness/{workId}/analysis.json" "analysis-content"
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ first; second ] outputDigest
+
+        Assert.False(isStale [ second; first ] manifest)
+        let moved = sourceIdentity (longPath.Replace("résumé", "resume")) "unicode-content"
+        Assert.True(isStale [ second; moved ] manifest)
