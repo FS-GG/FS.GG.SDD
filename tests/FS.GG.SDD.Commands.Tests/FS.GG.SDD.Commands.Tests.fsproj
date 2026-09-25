@@ -13,6 +13,7 @@
     <Compile Include="WorkModelBundleContractTests.fs" />
     <Compile Include="WorkModelVerificationWaveTests.fs" />
     <Compile Include="WorkModelExactOutputPreviewTests.fs" />
+    <Compile Include="WorkModelTemporalCapturePreviewTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
