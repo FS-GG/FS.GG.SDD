@@ -25,6 +25,7 @@ module internal GenerationSourceSnapshot =
         | HeldDirectoryLimit of string
         | FileLimitExceeded of string
         | CaptureLimitExceeded of string
+        | CapturedFileLimit of string
         | FileUnstable of string
         | Unreadable of string
         | EmptySet
@@ -64,6 +65,9 @@ module internal GenerationSourceSnapshot =
     // The complete-root preview retains raw bytes for every file until its
     // final closure check. Bound that raw payload sum separately from one file.
     let private maxPinnedCaptureBytes = 64L * 1024L * 1024L
+    // Empty files consume path, digest and captured-file storage without using
+    // the raw byte budget. Bound their count in a complete-root preview.
+    let private maxPinnedCapturedFiles = 4096
 
     let private refuse issue = raise (CaptureRefused issue)
 
@@ -235,6 +239,8 @@ module internal GenerationSourceSnapshot =
             if not (validRelative closedRoot) || String.IsNullOrWhiteSpace workspaceRoot
                || not (Directory.Exists workspaceRoot) then refuse InvalidRoot
             if obj.ReferenceEquals(declared, null) || List.isEmpty declared then refuse EmptySet
+            if List.length declared > maxPinnedCapturedFiles then
+                refuse (CapturedFileLimit (List.item maxPinnedCapturedFiles declared))
             let prefix = closedRoot + "/"
             let expected = HashSet<string>(StringComparer.OrdinalIgnoreCase)
             for path in declared do
@@ -299,6 +305,8 @@ module internal GenerationSourceSnapshot =
                                     if descriptorKind child "" 0x1000 path <> Directory then refuse InvalidRoot
                                     walk child path
                                 | Regular ->
+                                    if files.Count >= maxPinnedCapturedFiles then
+                                        refuse (CapturedFileLimit path)
                                     let remaining = maxPinnedCaptureBytes - capturedBytes
                                     let raw = readPinnedRegular directory name path beforeOpen afterOpen afterRead remaining
                                     capturedBytes <- capturedBytes + int64 raw.Length
