@@ -4,6 +4,7 @@ open System
 open System.Diagnostics
 open System.IO
 open System.Runtime.InteropServices
+open System.Security.Cryptography
 open System.Text
 open FS.GG.SDD.Artifacts
 
@@ -28,6 +29,7 @@ module internal WorkModelGitCommitCustodyPreview =
         | NonRegularPath of string
         | MalformedTreeEntry of string
         | BlobTooLarge of string
+        | BlobIdMismatch of string
         | GitFailure
 
     type CommitFile internal (path: string, mode: string, blobId: string, raw: byte[]) =
@@ -257,6 +259,17 @@ module internal WorkModelGitCommitCustodyPreview =
         if size > int64 maxBlobBytes then refuse (BlobTooLarge path)
         let bytes = runGit root [ "cat-file"; "blob"; blobId ] maxBlobBytes (BlobTooLarge path)
         if int64 bytes.Length <> size then refuse GitFailure
+        // cat-file validates the decompressed object shape and length, but a
+        // loose-object payload can be replaced under another ID's filename.
+        // Recompute the Git object ID from the actual returned bytes. Hash the
+        // header and bytes incrementally to avoid a second 32 MiB allocation.
+        let algorithm = if blobId.Length = 40 then HashAlgorithmName.SHA1 else HashAlgorithmName.SHA256
+        use hash = IncrementalHash.CreateHash algorithm
+        hash.AppendData(Encoding.ASCII.GetBytes($"blob {bytes.Length}\u0000"))
+        hash.AppendData bytes
+        let actualId = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant()
+        if not (String.Equals(actualId, blobId, StringComparison.Ordinal)) then
+            refuse (BlobIdMismatch path)
         bytes
 
     /// The commit ID is a full object ID, never a moving ref. Bytes come from
