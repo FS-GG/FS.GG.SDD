@@ -126,3 +126,32 @@ module GenerationSourceRaceCharacterizationTests =
                     capturePinnedWithHooks beforeOpen ignore root "inputs" [ "inputs/nested/A.bin" ] ExactBytes
                 Assert.True(File.Exists extra)
                 Assert.Equal(Error(DirectoryUnstable "inputs/nested"), result))
+
+    [<Fact>]
+    let ``in-place overwrite after first fd read refuses stale bytes`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let target = Path.Combine(root, "inputs", "A.bin")
+                File.WriteAllBytes(target, [| 1uy |])
+                let afterRead path =
+                    Assert.Equal("inputs/A.bin", path)
+                    File.WriteAllBytes(target, [| 2uy |])
+                let result =
+                    capturePinnedWithReadHook afterRead root "inputs" [ "inputs/A.bin" ] ExactBytes
+                Assert.True(File.ReadAllBytes target = [| 2uy |])
+                Assert.Equal(Error(FileUnstable "inputs/A.bin"), result))
+
+    [<Fact>]
+    let ``same-byte rewrite with changed metadata refuses`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let target = Path.Combine(root, "inputs", "A.bin")
+                File.WriteAllBytes(target, [| 1uy |])
+                let afterRead path =
+                    Assert.Equal("inputs/A.bin", path)
+                    File.WriteAllBytes(target, [| 1uy |])
+                    File.SetLastWriteTimeUtc(target, DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc))
+                let result =
+                    capturePinnedWithReadHook afterRead root "inputs" [ "inputs/A.bin" ] ExactBytes
+                Assert.True(File.ReadAllBytes target = [| 1uy |])
+                Assert.Equal(Error(FileUnstable "inputs/A.bin"), result))
