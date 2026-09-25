@@ -11,3 +11,5 @@ For this preview, permit at most 4,096 captured regular files in one complete-ro
 ## Boundary
 
 The 4,096-file threshold is provisional producer policy. It bounds captured-file count but is not a peak process-memory or execution-time ceiling: path lengths, declaration storage supplied by the caller, result copies and traversal structures still matter. #1031's 256-child descriptor cap, #1032's 32 MiB per-file cap and #1033's 64 MiB complete-root raw-payload cap remain provisional. These checks establish observed refusals rather than an atomic source snapshot; ABA, timestamp-hidden/post-check mutation, caller-supplied inventory authority and non-atomic `.fsgg`/`work`/performance capture remain. Windows pinned-reader parity, #1017 physical custody, #1018 verification/staging/rollback, installed parity, publication, receiver adoption, merge and GS2-10 freeze remain held. No output or live effect is produced.
+
+The later `specs/149-fsc04-pinned-path-cap/` slice adds a provisional 1,024-code-unit relative-path cap. The unbounded-path statement above records the #1034 base; peak process memory remains outside the later cap.
