@@ -191,3 +191,30 @@ module internal WorkModelSourceBundle =
                     | Error reason -> refuse (Physical reason))
             verify workId selected (coreCaptured @ pinned) candidate
         with Refused reason -> Error reason
+
+    /// Discover the recognized core source set from physical paths, not from the selected
+    /// list or candidate. Each Linux read is pinned and no-follow; captures are sequential,
+    /// so this does not establish a simultaneous snapshot across files or roots.
+    let verifyFromPinnedCoreSources workspaceRoot workId selected candidate
+        : Result<GenerationSourceSnapshot.CapturedFile list, Refusal> =
+        try
+            if String.IsNullOrWhiteSpace workId
+               || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$")) then refuse InvalidWorkId
+            let required =
+                [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"
+                  $"work/{workId}/spec.md" ]
+            let optional =
+                [ "clarifications.md"; "checklist.md"; "plan.md"; "tasks.yml"; "evidence.yml" ]
+                |> List.map (fun name -> $"work/{workId}/{name}")
+            let captureRequired path =
+                match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
+                | Ok file -> file
+                | Error reason -> refuse (Physical reason)
+            let captureOptional path =
+                match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
+                | Ok file -> Some file
+                | Error(GenerationSourceSnapshot.MissingFile _) -> None
+                | Error reason -> refuse (Physical reason)
+            let core = (required |> List.map captureRequired) @ (optional |> List.choose captureOptional)
+            verifyWithPinnedPerformance workspaceRoot workId selected core candidate
+        with Refused reason -> Error reason
