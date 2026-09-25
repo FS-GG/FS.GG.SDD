@@ -92,6 +92,18 @@ module GenerationSourceSnapshotTests =
                     capture root "inputs" [ "inputs/A.txt" ] ExactBytes))
 
     [<Fact>]
+    let ``symlink in a workspace ancestor refuses before source capture`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let physical = Path.Combine(root, "physical", "workspace")
+                Directory.CreateDirectory(Path.Combine(physical, "inputs")) |> ignore
+                File.WriteAllBytes(Path.Combine(physical, "inputs", "A.bin"), [| 1uy |])
+                Directory.CreateSymbolicLink(Path.Combine(root, "alias"), Path.Combine(root, "physical")) |> ignore
+                let aliasedWorkspace = Path.Combine(root, "alias", "workspace")
+                Assert.Equal(Error(Symlink ".."),
+                    capture aliasedWorkspace "inputs" [ "inputs/A.bin" ] ExactBytes))
+
+    [<Fact>]
     let ``Unix FIFO refuses before a blocking byte read`` () =
         if OperatingSystem.IsLinux() then
             withTree (fun root ->
