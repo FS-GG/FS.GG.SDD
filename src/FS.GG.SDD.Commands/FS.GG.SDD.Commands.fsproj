@@ -49,6 +49,7 @@
     <Compile Include="WorkModelJointPreview.fs" />
     <Compile Include="WorkModelCurrentGeneratorPreview.fs" />
     <Compile Include="WorkModelBlockingDiagnosticsPreview.fs" />
+    <Compile Include="WorkModelCandidateInventoryPreview.fs" />
     <Compile Include="CommandWorkflow/Prerequisites.fs" />
     <Compile Include="CommandWorkflow/HandlersEarly.fs" />
     <Compile Include="CommandWorkflow/HandlersAnalyze.fs" />
