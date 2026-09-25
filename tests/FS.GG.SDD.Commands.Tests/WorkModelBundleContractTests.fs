@@ -292,6 +292,21 @@ evidence:
                          capture root "tests" [ "tests/performance.txt" ] ExactBytes))
 
     [<Fact>]
+    let ``selected-file capture binds crowded performance parent to complete bundle`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+            File.WriteAllText(Path.Combine(root, "tests", "unrelated.txt"), "other")
+            File.CreateSymbolicLink(Path.Combine(root, "tests", "shortcut.txt"),
+                                    Path.Combine(root, "tests", "performance.txt")) |> ignore
+            let performance =
+                match captureSelectedFile root "tests/performance.txt" with
+                | Ok file -> file
+                | Error refusal -> failwithf "selected-file capture refused: %A" refusal
+            let otherRoots = physical |> List.filter (fun file -> file.Path <> "tests/performance.txt")
+            match Bundle.verify "sample" selected (otherRoots @ [ performance ]) candidate with
+            | Error refusal -> failwithf "complete bundle refused: %A" refusal
+            | Ok files -> Assert.Equal(6, files.Length))
+
+    [<Fact>]
     let ``three selected roots bind captured bytes and projected evidence digest`` () =
         fixture (fun _ selected physical candidate ->
             let evidence = selected |> List.find (fun source -> source.Path = "work/sample/evidence.yml")
