@@ -17,6 +17,7 @@
     <Compile Include="WorkModelJointPreviewTests.fs" />
     <Compile Include="WorkModelCurrentGeneratorPreviewTests.fs" />
     <Compile Include="WorkModelBlockingDiagnosticsPreviewTests.fs" />
+    <Compile Include="WorkModelDuplicateIdBoundaryTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
