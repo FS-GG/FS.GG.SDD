@@ -14,6 +14,7 @@ module internal WorkModelGitCommitCustodyPreview =
         | InvalidRepository
         | NotRepositoryRoot
         | UnregisteredWorktree
+        | RepositoryChanged
         | NotCommit
         | MissingPath of string
         | NonRegularPath of string
@@ -138,12 +139,15 @@ module internal WorkModelGitCommitCustodyPreview =
 
     /// The commit ID is a full object ID, never a moving ref. Bytes come from
     /// Git blob objects, not the working tree; source-selection policy is separate.
-    let captureCoreConfig root (commitId: string) : Result<Observation, Refusal> =
+    // Hooks are a disposable race test seam; production supplies no actions.
+    let captureCoreConfigWithHooks afterRegistration beforeFinalCheck root (commitId: string)
+        : Result<Observation, Refusal> =
         try
             if String.IsNullOrWhiteSpace root || not (Directory.Exists root) then refuse InvalidRepository
             if not (fullObjectId commitId) then refuse InvalidCommitId
             requireRepositoryRoot root
             requireRegisteredWorktree root
+            afterRegistration ()
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
             let files =
@@ -151,9 +155,20 @@ module internal WorkModelGitCommitCustodyPreview =
                 |> List.map (fun path ->
                     let mode, blobId = commitEntry root commitId path
                     CommitFile(path, mode, blobId, readBlob root path blobId))
+            beforeFinalCheck ()
+            // Recheck after the separate Git object reads. A persistent .git
+            // switch to an unregistered repository must not return an observed
+            // match. A switch restored before this check remains ABA.
+            try
+                requireRepositoryRoot root
+                requireRegisteredWorktree root
+            with Refused _ -> refuse RepositoryChanged
             Ok { CommitId = commitId; Files = files }
         with
         | Refused reason -> Error reason
         | :? System.ComponentModel.Win32Exception
         | :? IOException
         | :? InvalidOperationException -> Error GitFailure
+
+    let captureCoreConfig root commitId =
+        captureCoreConfigWithHooks ignore ignore root commitId
