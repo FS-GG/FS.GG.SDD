@@ -127,6 +127,36 @@ module RefreshSummaryViewTests =
         Assert.True(isStale (duplicate :: current) clean)
 
     [<Fact>]
+    let ``isStale rejects case-colliding source paths on either side`` () =
+        let first = sourceIdentity $"readiness/{workId}/Evidence.json" "first"
+        let alias = sourceIdentity $"readiness/{workId}/evidence.json" "second"
+        let rows = [ first; alias ]
+        let ambiguous = createSummaryManifest (expectedSummaryOutputPath workId) generator rows outputDigest
+
+        Assert.True(isStale rows ambiguous)
+        Assert.True(isStale (List.rev rows) ambiguous)
+
+    [<Fact>]
+    let ``isStale refuses null source artifact instead of throwing`` () =
+        let valid = List.head (sources ())
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ valid ] outputDigest
+        let malformed = { valid with Artifact = Unchecked.defaultof<ArtifactRef> }
+
+        Assert.True(isStale [ malformed ] manifest)
+        Assert.True(isStale [ valid ] { manifest with Sources = [ malformed ] })
+
+    [<Fact>]
+    let ``isStale refuses noncanonical artifact paths on either side`` () =
+        let valid = List.head (sources ())
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ valid ] outputDigest
+        for badPath in
+            [ ""; "/readiness/escape.json"; "readiness\\escape.json"; "readiness/../escape.json"
+              "readiness//escape.json"; "readiness/./escape.json" ] do
+            let malformed = { valid with Artifact = { valid.Artifact with Path = badPath } }
+            Assert.True(isStale [ malformed ] manifest)
+            Assert.True(isStale [ valid ] { manifest with Sources = [ malformed ] })
+
+    [<Fact>]
     let ``isStale rejects a generated view with no producer`` () =
         let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [] outputDigest
 
