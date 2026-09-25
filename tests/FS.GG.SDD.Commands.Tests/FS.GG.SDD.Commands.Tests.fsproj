@@ -8,6 +8,7 @@
     <Compile Include="TestSupport.fs" />
     <Compile Include="GenerationSourceSnapshotTests.fs" />
     <Compile Include="GenerationSourceRaceCharacterizationTests.fs" />
+    <Compile Include="GenerationSelectedFileSnapshotTests.fs" />
     <Compile Include="GenerationSourceContractTests.fs" />
     <Compile Include="WorkModelBundleContractTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
