@@ -117,12 +117,15 @@ module GenerationManifest =
         }
 
     let isStale (currentSources: SourceIdentity list) (manifest: GenerationManifest) =
+        let invalidDigest source =
+            isNull (box source.Digest)
+            || (match SchemaVersion.createSourceDigest source.Digest.Algorithm source.Digest.Value with
+                | Ok normalized -> normalized <> source.Digest
+                | Error _ -> true)
+
         let identity sources =
             sources
             |> List.map (fun source -> source.Artifact.Path, source.Digest.Value)
-
-        let current = identity currentSources
-        let recorded = identity manifest.Sources
 
         let hasDuplicatePaths pairs =
             let paths = pairs |> List.map fst
@@ -131,11 +134,17 @@ module GenerationManifest =
         // Comparing only recorded rows against a map of current inputs loses newly
         // required producers, and Map.ofList hides duplicate paths. Require an exact
         // nonempty set of path/digest identities before calling a view current.
-        List.isEmpty current
-        || List.isEmpty recorded
-        || hasDuplicatePaths current
-        || hasDuplicatePaths recorded
-        || List.sort current <> List.sort recorded
+        if List.exists invalidDigest currentSources || List.exists invalidDigest manifest.Sources then
+            true
+        else
+            let current = identity currentSources
+            let recorded = identity manifest.Sources
+
+            List.isEmpty current
+            || List.isEmpty recorded
+            || hasDuplicatePaths current
+            || hasDuplicatePaths recorded
+            || List.sort current <> List.sort recorded
 
     let artifact path =
         match ArtifactRef.create path ArtifactKind.GeneratedView ArtifactOwner.Sdd true with

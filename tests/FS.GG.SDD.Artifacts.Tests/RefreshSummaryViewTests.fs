@@ -131,3 +131,35 @@ module RefreshSummaryViewTests =
         let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [] outputDigest
 
         Assert.True(isStale [] manifest)
+
+    [<Theory>]
+    [<InlineData("sha256", "")>]
+    [<InlineData("sha256", "not-a-digest")>]
+    [<InlineData("sha512", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")>]
+    [<InlineData("sha256", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")>]
+    let ``isStale rejects identical malformed digests on both sides`` algorithm value =
+        let source = List.head (sources ())
+        let malformed = { source with Digest = { source.Digest with Algorithm = algorithm; Value = value } }
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ malformed ] outputDigest
+
+        Assert.True(isStale [ malformed ] manifest)
+
+    [<Fact>]
+    let ``isStale rejects a null digest without throwing`` () =
+        let source = List.head (sources ())
+        let malformed = { source with Digest = { source.Digest with Value = Unchecked.defaultof<string> } }
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ malformed ] outputDigest
+
+        Assert.True(isStale [ malformed ] manifest)
+
+    [<Fact>]
+    let ``isStale compares long Unicode paths exactly without order dependence`` () =
+        let longSegment = String.replicate 2048 "x"
+        let longPath = $"readiness/{workId}/résumé-😃-{longSegment}.json"
+        let first = sourceIdentity longPath "unicode-content"
+        let second = sourceIdentity $"readiness/{workId}/analysis.json" "analysis-content"
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [ first; second ] outputDigest
+
+        Assert.False(isStale [ second; first ] manifest)
+        let moved = sourceIdentity (longPath.Replace("résumé", "resume")) "unicode-content"
+        Assert.True(isStale [ second; moved ] manifest)
