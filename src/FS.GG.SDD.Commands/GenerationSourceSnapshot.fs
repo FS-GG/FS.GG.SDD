@@ -272,7 +272,7 @@ module internal GenerationSourceSnapshot =
     let private capturePinnedCore (beforeOpen: string -> unit) (afterOpen: string -> unit)
                                   (afterRead: string -> unit) (afterLength: string -> unit)
                                   (workspaceRoot: string)
-                                  (closedRoot: string) (declared: string list)
+                                  (closedRoot: string) (declared: string list option)
                                   (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
         try
             if not (OperatingSystem.IsLinux()) then refuse UnsupportedPlatform
@@ -281,12 +281,14 @@ module internal GenerationSourceSnapshot =
                 refuse (PathLimitExceeded closedRoot)
             if not (validRelative closedRoot) || String.IsNullOrWhiteSpace workspaceRoot
                || not (Directory.Exists workspaceRoot) then refuse InvalidRoot
-            if obj.ReferenceEquals(declared, null) || List.isEmpty declared then refuse EmptySet
-            if List.length declared > maxPinnedCapturedFiles then
-                refuse (CapturedFileLimit (List.item maxPinnedCapturedFiles declared))
+            match declared with
+            | Some paths when obj.ReferenceEquals(paths, null) || List.isEmpty paths -> refuse EmptySet
+            | Some paths when List.length paths > maxPinnedCapturedFiles ->
+                refuse (CapturedFileLimit (List.item maxPinnedCapturedFiles paths))
+            | _ -> ()
             let prefix = closedRoot + "/"
             let expected = HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            for path in declared do
+            for path in Option.defaultValue [] declared do
                 if String.IsNullOrEmpty path then refuse (InvalidPath path)
                 if path.Length > maxPinnedRelativePathLength then
                     refuse (PathLimitExceeded path)
@@ -371,12 +373,15 @@ module internal GenerationSourceSnapshot =
                                 if directoryStamp directory relative <> before
                                    || stableDirectoryNames directory relative <> names then
                                     refuse (DirectoryUnstable relative)
-                            let actual = HashSet<string>(files |> Seq.map fst, StringComparer.Ordinal)
-                            match declared |> List.tryFind (fun path -> not (actual.Contains path)) with
-                            | Some path -> refuse (MissingFile path)
-                            | None -> ()
-                            match files |> Seq.tryFind (fun (path, _) -> not (expected.Contains(portableNameKey path))) with
-                            | Some (path, _) -> refuse (UnexpectedFile path)
+                            match declared with
+                            | Some paths ->
+                                let actual = HashSet<string>(files |> Seq.map fst, StringComparer.Ordinal)
+                                match paths |> List.tryFind (fun path -> not (actual.Contains path)) with
+                                | Some path -> refuse (MissingFile path)
+                                | None -> ()
+                                match files |> Seq.tryFind (fun (path, _) -> not (expected.Contains(portableNameKey path))) with
+                                | Some (path, _) -> refuse (UnexpectedFile path)
+                                | None -> ()
                             | None -> ()
                             files
                             |> Seq.sortBy fst
@@ -461,16 +466,25 @@ module internal GenerationSourceSnapshot =
         captureSelectedFileWithHooks ignore ignore ignore workspaceRoot relativePath
 
     let capturePinnedWithHooks beforeOpen afterOpen workspaceRoot closedRoot declared policy =
-        capturePinnedCore beforeOpen afterOpen ignore ignore workspaceRoot closedRoot declared policy
+        capturePinnedCore beforeOpen afterOpen ignore ignore workspaceRoot closedRoot (Some declared) policy
 
     // Test seam after the first opened-fd byte pass, before the snapshot is returned.
     let capturePinnedWithReadHook afterRead workspaceRoot closedRoot declared policy =
-        capturePinnedCore ignore ignore afterRead ignore workspaceRoot closedRoot declared policy
+        capturePinnedCore ignore ignore afterRead ignore workspaceRoot closedRoot (Some declared) policy
 
     // Test seam after the opened descriptor's length was checked, before the
     // direct first pass consumes bytes from that same descriptor.
     let capturePinnedWithLengthHook afterLength workspaceRoot closedRoot declared policy =
-        capturePinnedCore ignore ignore ignore afterLength workspaceRoot closedRoot declared policy
+        capturePinnedCore ignore ignore ignore afterLength workspaceRoot closedRoot (Some declared) policy
+
+    /// Discover every entry under a held closed root without trusting a caller-supplied
+    /// file roster. This remains an observed read-only capture, not an atomic snapshot.
+    let capturePinnedDiscovered workspaceRoot closedRoot policy =
+        capturePinnedCore ignore ignore ignore ignore workspaceRoot closedRoot None policy
+
+    // Deterministic test seam for an addition during a discovery read.
+    let capturePinnedDiscoveredWithReadHook afterRead workspaceRoot closedRoot policy =
+        capturePinnedCore ignore ignore afterRead ignore workspaceRoot closedRoot None policy
 
     /// Test seam for a controlled interleaving between path classification and byte read.
     /// The Linux production path uses descriptor-pinned reads; this path-based
