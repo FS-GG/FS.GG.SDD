@@ -23,6 +23,9 @@ module internal WorkModelSourceBundle =
         | DuplicatePhysical of string
         | DuplicateCandidate of string
         | InvalidCandidatePath of string
+        | InvalidPerformancePath of string
+        | MalformedEvidence
+        | MissingPerformanceSelection of string
         | MissingPhysical of string
         | UnexpectedPhysical of string
         | MissingCandidate of string
@@ -41,14 +44,14 @@ module internal WorkModelSourceBundle =
         && path.Split('/') |> Array.forall (fun part -> part <> "" && part <> "." && part <> "..")
         && path |> Seq.forall (fun c -> not (Char.IsControl c))
 
-    let private allowedPath workId path =
+    let private allowedPath workId performancePaths path =
         let config = [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml" ]
         let work =
             [ "spec.md"; "clarifications.md"; "checklist.md"; "plan.md"; "tasks.yml"; "evidence.yml" ]
             |> List.map (fun name -> $"work/{workId}/{name}")
         validRelative path
         && (List.contains path (config @ work)
-            || path.StartsWith($"readiness/{workId}/", StringComparison.Ordinal))
+            || Set.contains path performancePaths)
 
     let private distinct reason paths =
         let seen = HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -75,21 +78,45 @@ module internal WorkModelSourceBundle =
             if candidate.WorkId <> workId then refuse WrongWorkId
             if obj.ReferenceEquals(selected, null) || obj.ReferenceEquals(captured, null)
                || obj.ReferenceEquals(candidate.Sources, null) then refuse (MissingRequired ".fsgg/project.yml")
+            if captured |> List.exists (fun file -> obj.ReferenceEquals(file, null) || not (validRelative file.Path)) then
+                refuse (MissingPhysical "")
+            distinct DuplicatePhysical (captured |> List.map _.Path)
+            let physicalByPath = captured |> List.map (fun file -> file.Path, file) |> Map.ofList
+            let evidencePath = $"work/{workId}/evidence.yml"
+            let performancePaths =
+                match physicalByPath.TryFind evidencePath with
+                | None -> Set.empty
+                | Some file ->
+                    let bytes = file.Bytes
+                    let text =
+                        match Fsgg.SkillMirror.decodeBody bytes with
+                        | Ok body -> body
+                        | Error _ -> refuse MalformedEvidence
+                    let snapshot = { Path = evidencePath; Text = text; RawBytes = Some bytes }
+                    match Evidence.parseEvidenceArtifact snapshot with
+                    | Error _ -> refuse MalformedEvidence
+                    | Ok artifact when artifact.WorkId.Value <> workId || not (List.isEmpty artifact.Diagnostics) ->
+                        refuse MalformedEvidence
+                    | Ok artifact ->
+                        artifact.Evidence
+                        |> List.choose _.PerformanceBudget
+                        |> List.map _.ArtifactPath
+                        |> List.map (fun path ->
+                            if not (validRelative path) then refuse (InvalidPerformancePath path)
+                            path)
+                        |> Set.ofList
             for source in selected do
-                if obj.ReferenceEquals(source, null) || not (allowedPath workId source.Path) then
+                if obj.ReferenceEquals(source, null) || not (allowedPath workId performancePaths source.Path) then
                     refuse (InvalidSelectionPath(if obj.ReferenceEquals(source, null) then "" else source.Path))
             distinct DuplicateSelection (selected |> List.map _.Path)
             let selectedByPath = selected |> List.map (fun source -> source.Path, source) |> Map.ofList
             for required in [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; $"work/{workId}/spec.md" ] do
                 if not (selectedByPath.ContainsKey required) then refuse (MissingRequired required)
-            if selected |> List.exists (fun source -> source.Path.StartsWith($"readiness/{workId}/", StringComparison.Ordinal))
-               && not (selectedByPath.ContainsKey $"work/{workId}/evidence.yml") then
-                refuse (MissingRequired $"work/{workId}/evidence.yml")
+            if not (Set.isEmpty performancePaths) && not (selectedByPath.ContainsKey evidencePath) then
+                refuse (MissingRequired evidencePath)
+            for path in performancePaths do
+                if not (selectedByPath.ContainsKey path) then refuse (MissingPerformanceSelection path)
 
-            if captured |> List.exists (fun file -> obj.ReferenceEquals(file, null) || not (validRelative file.Path)) then
-                refuse (MissingPhysical "")
-            distinct DuplicatePhysical (captured |> List.map _.Path)
-            let physicalByPath = captured |> List.map (fun file -> file.Path, file) |> Map.ofList
             for source in selected do
                 if not (physicalByPath.ContainsKey source.Path) then refuse (MissingPhysical source.Path)
             for file in captured do
