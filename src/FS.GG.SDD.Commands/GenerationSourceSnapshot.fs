@@ -209,9 +209,25 @@ module internal GenerationSourceSnapshot =
         afterRead path
         let middle = fileStamp handle path
         if before <> middle then refuse (FileUnstable path)
-        let second = readPass ()
+        // Compare the second opened-fd pass against the retained first bytes
+        // without allocating another file-sized MemoryStream or byte array.
+        stream.Seek(0L, SeekOrigin.Begin) |> ignore
+        let comparison = Array.zeroCreate<byte> 81920
+        let mutable offset = 0
+        let mutable count = stream.Read(comparison, 0, comparison.Length)
+        while count > 0 do
+            let next = int64 offset + int64 count
+            if next > maxPinnedFileBytes then refuse (FileLimitExceeded path)
+            if next > remainingBytes then refuse (CaptureLimitExceeded path)
+            if next > int64 raw.Length then refuse (FileUnstable path)
+            for index in 0 .. count - 1 do
+                if raw.[offset + index] <> comparison.[index] then
+                    refuse (FileUnstable path)
+            offset <- offset + count
+            count <- stream.Read(comparison, 0, comparison.Length)
+        if offset <> raw.Length then refuse (FileUnstable path)
         let after = fileStamp handle path
-        if middle <> after || raw <> second then refuse (FileUnstable path)
+        if middle <> after then refuse (FileUnstable path)
         raw
 
     let private requireSelectedName directory relative name path =
