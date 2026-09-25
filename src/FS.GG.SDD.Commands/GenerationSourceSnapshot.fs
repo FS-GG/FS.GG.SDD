@@ -248,11 +248,18 @@ module internal GenerationSourceSnapshot =
                     sourceRoot workspaceHandle (segments closedRoot) "" (fun sourceHandle ->
                         let entries = HashSet<string>(StringComparer.OrdinalIgnoreCase)
                         let files = ResizeArray<string * byte[]>()
+                        // Keep every visited child open until the complete traversal ends.
+                        // A later sibling can otherwise add a candidate to an earlier child
+                        // after that child's local roster check has already completed.
+                        let childHandles = ResizeArray<int>()
+                        let visited = ResizeArray<int * string * byte[] * string list>()
                         let rec walk directory relative =
                             // procfs exposes the already-open directory. Names are
                             // scanned twice; children still open relative to its fd.
                             let before = directoryStamp directory relative
-                            for name in stableDirectoryNames directory relative do
+                            let names = stableDirectoryNames directory relative
+                            visited.Add(directory, relative, before, names)
+                            for name in names do
                                 let path = relative + "/" + name
                                 if not (validRelative path) then refuse (InvalidPath path)
                                 if not (entries.Add path) then refuse (DuplicatePath path)
@@ -261,23 +268,34 @@ module internal GenerationSourceSnapshot =
                                 | Special -> refuse (NonRegular path)
                                 | Directory ->
                                     if expected.Contains path then refuse (NonRegular path)
-                                    withDirectory directory name path (fun child -> walk child path)
+                                    let child = nativeOpenAt(directory, name, directoryFlags)
+                                    if child < 0 then refuse (Unreadable path)
+                                    childHandles.Add child
+                                    if descriptorKind child "" 0x1000 path <> Directory then refuse InvalidRoot
+                                    walk child path
                                 | Regular ->
                                     files.Add(path, readPinnedRegular directory name path beforeOpen afterOpen afterRead)
                             if directoryStamp directory relative <> before then
                                 refuse (DirectoryUnstable relative)
-                        walk sourceHandle closedRoot
-                        let actual = HashSet<string>(files |> Seq.map fst, StringComparer.Ordinal)
-                        match declared |> List.tryFind (fun path -> not (actual.Contains path)) with
-                        | Some path -> refuse (MissingFile path)
-                        | None -> ()
-                        match files |> Seq.tryFind (fun (path, _) -> not (expected.Contains path)) with
-                        | Some (path, _) -> refuse (UnexpectedFile path)
-                        | None -> ()
-                        files
-                        |> Seq.sortBy fst
-                        |> Seq.map (fun (path, raw) -> CapturedFile(path, raw, digest policy raw path))
-                        |> Seq.toList))
+                        try
+                            walk sourceHandle closedRoot
+                            for directory, relative, before, names in visited do
+                                if directoryStamp directory relative <> before
+                                   || stableDirectoryNames directory relative <> names then
+                                    refuse (DirectoryUnstable relative)
+                            let actual = HashSet<string>(files |> Seq.map fst, StringComparer.Ordinal)
+                            match declared |> List.tryFind (fun path -> not (actual.Contains path)) with
+                            | Some path -> refuse (MissingFile path)
+                            | None -> ()
+                            match files |> Seq.tryFind (fun (path, _) -> not (expected.Contains path)) with
+                            | Some (path, _) -> refuse (UnexpectedFile path)
+                            | None -> ()
+                            files
+                            |> Seq.sortBy fst
+                            |> Seq.map (fun (path, raw) -> CapturedFile(path, raw, digest policy raw path))
+                            |> Seq.toList
+                        finally
+                            for child in childHandles do nativeClose child |> ignore))
                 |> Ok
             finally nativeClose rootHandle |> ignore
         with

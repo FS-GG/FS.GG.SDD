@@ -20,22 +20,16 @@ module WorkModelLateCandidateTreeTests =
             finally Directory.Delete(root, true)
 
     [<Fact>]
-    let ``red-before late candidate in previously visited child escapes one pinned tree pass`` () =
+    let ``late candidate in previously visited child refuses pinned tree pass`` () =
         fixture (fun root ->
             let mutable calls = 0
             let afterOpen path =
                 Assert.Equal(selected, path)
                 calls <- calls + 1
                 File.WriteAllText(Path.Combine(root, late), TestSupport.validSpec "z" "Late duplicate")
-            let first =
-                match capturePinnedWithHooks ignore afterOpen root "work" [ selected ] ExactBytes with
-                | Ok files -> files
-                | Error reason -> failwithf "late-addition characterization refused: %A" reason
+            let first = capturePinnedWithHooks ignore afterOpen root "work" [ selected ] ExactBytes
             Assert.Equal(1, calls)
-            Assert.Equal<string list>([ selected ], first |> List.map _.Path)
-            match verify "z" first with
-            | Error reason -> failwithf "omitted late candidate unexpectedly refused: %A" reason
-            | Ok _ -> ()
+            Assert.Equal(Error(DirectoryUnstable "work/a"), first)
             Assert.Equal(Error(UnexpectedFile late), capture root "work" [ selected ] ExactBytes))
 
     [<Fact>]
