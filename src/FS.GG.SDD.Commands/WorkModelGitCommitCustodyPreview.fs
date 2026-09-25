@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Commands
 open System
 open System.Diagnostics
 open System.IO
+open System.Runtime.InteropServices
 open System.Text
 open FS.GG.SDD.Artifacts
 
@@ -16,6 +17,8 @@ module internal WorkModelGitCommitCustodyPreview =
         | UnregisteredWorktree
         | RepositoryChanged
         | AlternateObjectStore
+        | ObjectDirectoryRedirect
+        | UnsupportedPlatform
         | NotCommit
         | MissingPath of string
         | NonRegularPath of string
@@ -36,6 +39,9 @@ module internal WorkModelGitCommitCustodyPreview =
     exception private Refused of Refusal
     let private refuse reason = raise (Refused reason)
     let private maxBlobBytes = 32 * 1024 * 1024
+
+    [<DllImport("libc", SetLastError = true, EntryPoint = "statx")>]
+    extern int private statx(int directory, string path, int flags, uint32 mask, nativeint buffer)
 
     let private fullObjectId (value: string) =
         not (String.IsNullOrEmpty value)
@@ -114,23 +120,29 @@ module internal WorkModelGitCommitCustodyPreview =
                 String.Equals(first, expected, StringComparison.Ordinal))
         if selected.Length <> 1 then refuse UnregisteredWorktree
 
+    let private gitAbsolutePath root args refusal =
+        let output =
+            runGit root args 4096 refusal
+        let path =
+            try UTF8Encoding(false, true).GetString output
+            with :? DecoderFallbackException -> refuse refusal
+        if not (path.EndsWith("\n", StringComparison.Ordinal)) then
+            refuse refusal
+        let path = path.Substring(0, path.Length - 1)
+        if String.IsNullOrWhiteSpace path || not (Path.IsPathFullyQualified path) then
+            refuse refusal
+        Path.TrimEndingDirectorySeparator path
+
     let private requireNoAlternates root =
         // Refuse an alternates file as one prerequisite to object-store
         // custody; this check does not prove the store is self-contained.
         // Git follows objects/info/alternates even after ambient alternate
         // variables are cleared. Ask Git for the active common-store path so
         // registered linked worktrees use the same check as the main worktree.
-        let output =
-            runGit root [ "rev-parse"; "--path-format=absolute"; "--git-path"; "objects/info/alternates" ]
-                   4096 AlternateObjectStore
         let path =
-            try UTF8Encoding(false, true).GetString output
-            with :? DecoderFallbackException -> refuse AlternateObjectStore
-        if not (path.EndsWith("\n", StringComparison.Ordinal)) then
-            refuse AlternateObjectStore
-        let path = path.Substring(0, path.Length - 1)
-        if String.IsNullOrWhiteSpace path || not (Path.IsPathFullyQualified path) then
-            refuse AlternateObjectStore
+            gitAbsolutePath root
+                [ "rev-parse"; "--path-format=absolute"; "--git-path"; "objects/info/alternates" ]
+                AlternateObjectStore
         try
             File.GetAttributes path |> ignore
             // Even an empty or malformed alternate file is outside this
@@ -141,6 +153,28 @@ module internal WorkModelGitCommitCustodyPreview =
         | :? DirectoryNotFoundException -> ()
         | :? IOException
         | :? UnauthorizedAccessException -> refuse AlternateObjectStore
+
+    let private requireDirectObjectDirectory root =
+        if not (OperatingSystem.IsLinux()) then refuse UnsupportedPlatform
+        let common =
+            gitAbsolutePath root [ "rev-parse"; "--path-format=absolute"; "--git-common-dir" ]
+                            ObjectDirectoryRedirect
+        let reported =
+            gitAbsolutePath root [ "rev-parse"; "--path-format=absolute"; "--git-path"; "objects" ]
+                            ObjectDirectoryRedirect
+        let expected = Path.Combine(common, "objects")
+        if not (String.Equals(reported, expected, StringComparison.Ordinal)) then
+            refuse ObjectDirectoryRedirect
+        let buffer = Marshal.AllocHGlobal 256
+        try
+            // AT_SYMLINK_NOFOLLOW and STATX_TYPE inspect the final object-store
+            // directory entry itself. The Git path checks above are separate
+            // subprocess observations; this does not pin later object reads.
+            if statx(-100, expected, 0x100, 1u, buffer) <> 0 then
+                refuse ObjectDirectoryRedirect
+            let mode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
+            if mode &&& 0xf000 <> 0x4000 then refuse ObjectDirectoryRedirect
+        finally Marshal.FreeHGlobal buffer
 
     let private commitEntry (root: string) (commitId: string) (path: string) =
         let output = runGit root [ "ls-tree"; "-z"; "--full-tree"; commitId; "--"; path ] 4096 (MalformedTreeEntry path)
@@ -177,6 +211,7 @@ module internal WorkModelGitCommitCustodyPreview =
             requireRepositoryRoot root
             requireRegisteredWorktree root
             requireNoAlternates root
+            requireDirectObjectDirectory root
             afterRegistration ()
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
@@ -194,10 +229,13 @@ module internal WorkModelGitCommitCustodyPreview =
                 requireRegisteredWorktree root
             with Refused _ -> refuse RepositoryChanged
             requireNoAlternates root
+            requireDirectObjectDirectory root
             Ok { CommitId = commitId; Files = files }
         with
         | Refused reason -> Error reason
         | :? System.ComponentModel.Win32Exception
+        | :? DllNotFoundException
+        | :? EntryPointNotFoundException
         | :? IOException
         | :? InvalidOperationException -> Error GitFailure
 

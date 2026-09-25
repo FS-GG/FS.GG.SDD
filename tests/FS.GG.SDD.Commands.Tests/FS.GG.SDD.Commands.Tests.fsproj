@@ -34,6 +34,7 @@
     <Compile Include="WorkModelGitEntryCustodyTests.fs" />
     <Compile Include="WorkModelGitRegistryRaceTests.fs" />
     <Compile Include="WorkModelGitAlternateStoreTests.fs" />
+    <Compile Include="WorkModelGitObjectDirectoryTests.fs" />
     <Compile Include="WorkModelHeldChildRosterTests.fs" />
     <Compile Include="GenerationHeldDirectoryLimitTests.fs" />
     <Compile Include="GenerationPinnedFileCapacityTests.fs" />
