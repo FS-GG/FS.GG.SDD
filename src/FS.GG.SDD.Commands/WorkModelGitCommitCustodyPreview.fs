@@ -18,6 +18,7 @@ module internal WorkModelGitCommitCustodyPreview =
         | RepositoryChanged
         | AlternateObjectStore
         | ObjectDirectoryRedirect
+        | PackDirectoryRedirect
         | UnsupportedPlatform
         | NotCommit
         | MissingPath of string
@@ -179,6 +180,25 @@ module internal WorkModelGitCommitCustodyPreview =
             let mode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
             if mode &&& 0xf000 <> 0x4000 then refuse ObjectDirectoryRedirect
         finally Marshal.FreeHGlobal buffer
+        expected
+
+    let private requireDirectPackDirectory root objects =
+        let expected = Path.Combine(objects, "pack")
+        let reported =
+            gitAbsolutePath root [ "rev-parse"; "--path-format=absolute"; "--git-path"; "objects/pack" ]
+                            PackDirectoryRedirect
+        if not (String.Equals(reported, expected, StringComparison.Ordinal)) then
+            refuse PackDirectoryRedirect
+        let buffer = Marshal.AllocHGlobal 256
+        try
+            // A missing pack directory is allowed for a loose-only store. If
+            // present, inspect its final entry without following a symlink.
+            if statx(-100, expected, 0x100, 1u, buffer) <> 0 then
+                if Marshal.GetLastPInvokeError() <> 2 then refuse PackDirectoryRedirect
+            else
+                let mode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
+                if mode &&& 0xf000 <> 0x4000 then refuse PackDirectoryRedirect
+        finally Marshal.FreeHGlobal buffer
 
     let private commitEntry (root: string) (commitId: string) (path: string) =
         let output = runGit root [ "ls-tree"; "-z"; "--full-tree"; commitId; "--"; path ] 4096 (MalformedTreeEntry path)
@@ -215,7 +235,8 @@ module internal WorkModelGitCommitCustodyPreview =
             requireRepositoryRoot root
             requireRegisteredWorktree root
             requireNoAlternates root
-            requireDirectObjectDirectory root
+            let objects = requireDirectObjectDirectory root
+            requireDirectPackDirectory root objects
             afterRegistration ()
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
@@ -233,7 +254,8 @@ module internal WorkModelGitCommitCustodyPreview =
                 requireRegisteredWorktree root
             with Refused _ -> refuse RepositoryChanged
             requireNoAlternates root
-            requireDirectObjectDirectory root
+            let objects = requireDirectObjectDirectory root
+            requireDirectPackDirectory root objects
             Ok { CommitId = commitId; Files = files }
         with
         | Refused reason -> Error reason
