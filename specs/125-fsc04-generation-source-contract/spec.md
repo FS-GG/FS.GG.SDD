@@ -8,7 +8,7 @@ This source seam is provisional. It does not write an output, establish physical
 
 ## Current producer inventory and selection gap
 
-The existing work-model generation source list spans `.fsgg/*.yml`, selected `specs/<id>/*` files, and optional performance evidence paths. `ViewGeneration.workModelSnapshots` rewrites the `evidence.md` source-snapshot section before hashing. `SchemaVersion.sha256Text` folds CRLF to LF. `Serialization.sourceStale` checks recorded sources against current sources but does not enforce complete membership. Analysis, refresh, and governance handoff also derive text digests, while evidence artifacts can use exact bytes. No single existing work-model directory is an owned closed input root. A producer must select and document a dedicated root and policy before wiring this generic contract into a live generated view.
+The existing work-model generation source list spans `.fsgg/*.yml`, selected `work/<id>/*` files, and optional performance evidence paths. `ViewGeneration.workModelSnapshots` rewrites the `evidence.yml` source-snapshot section before hashing. `SchemaVersion.sha256Text` folds CRLF to LF. `Serialization.sourceStale` checks recorded sources against current sources but does not enforce complete membership. Analysis, refresh, and governance handoff also derive text digests, while evidence artifacts can use exact bytes. No single existing work-model directory is an owned closed input root. A producer must select and document a dedicated root and policy before wiring this generic contract into a live generated view.
 
 ## Acceptance
 
