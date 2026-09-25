@@ -50,3 +50,52 @@ module GenerationSourceRaceCharacterizationTests =
                     Assert.Single captured |> ignore
                     Assert.True(captured.Head.Bytes = [| 9uy |])
                     Assert.True(File.ReadAllBytes target = [| 1uy |]))
+
+    [<Fact>]
+    let ``descriptor-pinned read retains original bytes across a path swap`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let target = Path.Combine(root, "inputs", "A.bin")
+                let backup = Path.Combine(root, "backup.bin")
+                let foreign = Path.Combine(root, "foreign.bin")
+                File.WriteAllBytes(target, [| 1uy |])
+                File.WriteAllBytes(foreign, [| 9uy |])
+                let mutable opened = 0
+                let afterOpen path =
+                    Assert.Equal("inputs/A.bin", path)
+                    opened <- opened + 1
+                    File.Move(target, backup)
+                    try
+                        File.CreateSymbolicLink(target, foreign) |> ignore
+                    finally
+                        File.Delete target
+                        File.Move(backup, target)
+                let result =
+                    capturePinnedWithHooks ignore afterOpen root "inputs" [ "inputs/A.bin" ] ExactBytes
+                match result with
+                | Error reason -> failwithf "pinned capture was unexpectedly refused: %A" reason
+                | Ok captured ->
+                    Assert.Equal(1, opened)
+                    Assert.Single captured |> ignore
+                    Assert.True(captured.Head.Bytes = [| 1uy |])
+                    Assert.True(File.ReadAllBytes target = [| 1uy |]))
+
+    [<Fact>]
+    let ``a link swapped in before descriptor open is refused`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let target = Path.Combine(root, "inputs", "A.bin")
+                let backup = Path.Combine(root, "backup.bin")
+                let foreign = Path.Combine(root, "foreign.bin")
+                File.WriteAllBytes(target, [| 1uy |])
+                File.WriteAllBytes(foreign, [| 9uy |])
+                let beforeOpen path =
+                    Assert.Equal("inputs/A.bin", path)
+                    File.Move(target, backup)
+                    File.CreateSymbolicLink(target, foreign) |> ignore
+                try
+                    Assert.Equal(Error(Unreadable "inputs/A.bin"),
+                        capturePinnedWithHooks beforeOpen ignore root "inputs" [ "inputs/A.bin" ] ExactBytes)
+                finally
+                    File.Delete target
+                    File.Move(backup, target))
