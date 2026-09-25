@@ -112,7 +112,7 @@ module WorkModelRepeatedJointCaptureTests =
         fixture (fun root selected candidate ->
             File.WriteAllText(Path.Combine(root, other), TestSupport.validSpec "other" "Other")
             match Repeated.verifyPhysical root workId selected candidate with
-            | Ok preview ->
+            | Ok(Repeated.ObservedAgreement preview) ->
                 Assert.Equal<string list>([ other; spec ], preview.CandidatePaths)
                 Assert.Equal(4, preview.BundlePaths.Length)
             | Error reason -> failwithf "Stable repeated join refused: %A" reason)

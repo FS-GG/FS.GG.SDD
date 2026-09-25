@@ -22,6 +22,10 @@ module internal WorkModelRepeatedJointCapturePreview =
         | BundleRawChanged of string
         | TreeRawChanged of string
 
+    /// Matching finite observations carry no authorization for a common-instant
+    /// source claim or generation effect. ABA and later writes remain possible.
+    type Observation = ObservedAgreement of Joint.Preview
+
     let private sortedPaths (files: Physical.CapturedFile list) =
         files |> List.map _.Path
         |> List.sortWith (fun left right -> StringComparer.Ordinal.Compare(left, right))
@@ -37,7 +41,7 @@ module internal WorkModelRepeatedJointCapturePreview =
         (captureBundle: unit -> Result<Physical.CapturedFile list, Bundle.Refusal>)
         (captureTree: unit -> Result<Physical.CapturedFile list, Physical.Refusal>)
         workId (selected: FileSnapshot list) (candidate: Bundle.Candidate)
-        : Result<Joint.Preview, Refusal> =
+        : Result<Observation, Refusal> =
         match captureBundle () with
         | Error reason -> Error(FirstBundleCapture reason)
         | Ok firstBundle ->
@@ -68,7 +72,7 @@ module internal WorkModelRepeatedJointCapturePreview =
                                     | None ->
                                         match rawChange firstTree secondTree with
                                         | Some path -> Error(TreeRawChanged path)
-                                        | None -> Ok preview
+                                        | None -> Ok(ObservedAgreement preview)
 
     let verifyPhysical workspaceRoot workId selected candidate =
         verifyWithCapture
