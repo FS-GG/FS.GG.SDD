@@ -15,6 +15,7 @@
     <Compile Include="WorkModelExactOutputPreviewTests.fs" />
     <Compile Include="WorkModelTemporalCapturePreviewTests.fs" />
     <Compile Include="WorkModelJointPreviewTests.fs" />
+    <Compile Include="WorkModelCurrentGeneratorPreviewTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
