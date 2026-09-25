@@ -43,6 +43,7 @@
     <Compile Include="CommandWorkflow/TaskGraphAuthoring.fs" />
     <Compile Include="CommandWorkflow/ViewGeneration.fs" />
     <Compile Include="WorkModelSourceBundle.fs" />
+    <Compile Include="WorkModelVerificationWave.fs" />
     <Compile Include="CommandWorkflow/Prerequisites.fs" />
     <Compile Include="CommandWorkflow/HandlersEarly.fs" />
     <Compile Include="CommandWorkflow/HandlersAnalyze.fs" />

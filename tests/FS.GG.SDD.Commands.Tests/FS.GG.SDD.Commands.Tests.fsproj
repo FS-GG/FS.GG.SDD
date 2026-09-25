@@ -11,6 +11,7 @@
     <Compile Include="GenerationSelectedFileSnapshotTests.fs" />
     <Compile Include="GenerationSourceContractTests.fs" />
     <Compile Include="WorkModelBundleContractTests.fs" />
+    <Compile Include="WorkModelVerificationWaveTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
