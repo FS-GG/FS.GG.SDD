@@ -23,6 +23,7 @@ module internal GenerationSourceSnapshot =
         | NonRegular of string
         | DirectoryUnstable of string
         | HeldDirectoryLimit of string
+        | FileLimitExceeded of string
         | FileUnstable of string
         | Unreadable of string
         | EmptySet
@@ -56,6 +57,9 @@ module internal GenerationSourceSnapshot =
     // A full-root preview holds children through its final roster check. Bound
     // that per-capture descriptor use and fail closed on larger trees.
     let private maxHeldChildDirectories = 256
+    // A pinned regular-file pass retains raw bytes for a second comparison.
+    // Refuse before allocating beyond this provisional per-file preview cap.
+    let private maxPinnedFileBytes = 32L * 1024L * 1024L
 
     let private refuse issue = raise (CaptureRefused issue)
 
@@ -174,10 +178,17 @@ module internal GenerationSourceSnapshot =
         afterOpen path
         let before = fileStamp handle path
         use stream = new FileStream(safeHandle, FileAccess.Read)
+        if stream.Length > maxPinnedFileBytes then refuse (FileLimitExceeded path)
         let readPass () =
             stream.Seek(0L, SeekOrigin.Begin) |> ignore
             use output = new MemoryStream()
-            stream.CopyTo output
+            let buffer = Array.zeroCreate<byte> 81920
+            let mutable count = stream.Read(buffer, 0, buffer.Length)
+            while count > 0 do
+                if output.Length > maxPinnedFileBytes - int64 count then
+                    refuse (FileLimitExceeded path)
+                output.Write(buffer, 0, count)
+                count <- stream.Read(buffer, 0, buffer.Length)
             output.ToArray()
         let raw = readPass ()
         afterRead path
