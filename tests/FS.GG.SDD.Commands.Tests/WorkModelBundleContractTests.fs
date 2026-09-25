@@ -202,6 +202,63 @@ evidence:
         fixtureWithPerformance "readiness/sample/performance-evidence.json" action
 
     [<Fact>]
+    let ``red-before supplied performance capture remains green after physical byte change`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+            File.WriteAllText(Path.Combine(root, "tests/performance.txt"), "changed\n")
+            match Bundle.verify "sample" selected physical candidate with
+            | Ok _ -> ()
+            | Error refusal -> failwithf "pure supplied-capture control unexpectedly refused: %A" refusal)
+
+    let private coreWithoutPerformance (physical: CapturedFile list) =
+        physical |> List.filter (fun source -> source.Path <> "tests/performance.txt")
+
+    [<Fact>]
+    let ``pinned performance join accepts selected file with unrelated parent siblings`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+                File.WriteAllText(Path.Combine(root, "tests/unrelated.txt"), "other")
+                File.CreateSymbolicLink(Path.Combine(root, "tests/shortcut.txt"),
+                                        Path.Combine(root, "tests/performance.txt")) |> ignore
+                match Bundle.verifyWithPinnedPerformance root "sample" selected
+                          (coreWithoutPerformance physical) candidate with
+                | Ok files -> Assert.Equal(6, files.Length)
+                | Error reason -> failwithf "selected-file join refused valid source: %A" reason)
+
+    [<Fact>]
+    let ``pinned performance join refuses physical byte change after supplied capture`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+                File.WriteAllText(Path.Combine(root, "tests/performance.txt"), "changed\n")
+                Assert.Equal(Error(Bundle.RawDrift "tests/performance.txt"),
+                             Bundle.verifyWithPinnedPerformance root "sample" selected
+                                 (coreWithoutPerformance physical) candidate))
+
+    [<Fact>]
+    let ``pinned performance join refuses linked selected file and case alias`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+                let performance = Path.Combine(root, "tests/performance.txt")
+                File.Delete performance
+                File.CreateSymbolicLink(performance, Path.Combine(root, "work/sample/spec.md")) |> ignore
+                Assert.Equal(Error(Bundle.Physical(Symlink "tests/performance.txt")),
+                             Bundle.verifyWithPinnedPerformance root "sample" selected
+                                 (coreWithoutPerformance physical) candidate))
+            fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+                File.WriteAllText(Path.Combine(root, "tests/Performance.txt"), "alias")
+                Assert.Equal(Error(Bundle.Physical(DuplicatePath "tests/performance.txt")),
+                             Bundle.verifyWithPinnedPerformance root "sample" selected
+                                 (coreWithoutPerformance physical) candidate))
+
+    [<Fact>]
+    let ``pinned performance join refuses omitted selected declaration`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+                let selected = selected |> List.filter (fun source -> source.Path <> "tests/performance.txt")
+                Assert.Equal(Error(Bundle.MissingPerformanceSelection "tests/performance.txt"),
+                             Bundle.verifyWithPinnedPerformance root "sample" selected
+                                 (coreWithoutPerformance physical) candidate))
+
+    [<Fact>]
     let ``declared performance outside readiness binds as a selected source`` () =
         fixtureWithPerformance "tests/performance.txt" (fun _ selected physical candidate ->
             match Bundle.verify "sample" selected physical candidate with
