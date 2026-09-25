@@ -22,6 +22,7 @@ module internal GenerationSourceSnapshot =
         | Symlink of string
         | NonRegular of string
         | DirectoryUnstable of string
+        | HeldDirectoryLimit of string
         | FileUnstable of string
         | Unreadable of string
         | EmptySet
@@ -52,6 +53,9 @@ module internal GenerationSourceSnapshot =
     // from hanging the reader before the descriptor's type can be checked.
     let private directoryFlags = 0x10000 ||| 0x20000 ||| 0x80000
     let private fileFlags = 0x20000 ||| 0x80000 ||| 0x800
+    // A full-root preview holds children through its final roster check. Bound
+    // that per-capture descriptor use and fail closed on larger trees.
+    let private maxHeldChildDirectories = 256
 
     let private refuse issue = raise (CaptureRefused issue)
 
@@ -268,6 +272,8 @@ module internal GenerationSourceSnapshot =
                                 | Special -> refuse (NonRegular path)
                                 | Directory ->
                                     if expected.Contains path then refuse (NonRegular path)
+                                    if childHandles.Count >= maxHeldChildDirectories then
+                                        refuse (HeldDirectoryLimit path)
                                     let child = nativeOpenAt(directory, name, directoryFlags)
                                     if child < 0 then refuse (Unreadable path)
                                     childHandles.Add child
