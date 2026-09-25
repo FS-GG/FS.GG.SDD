@@ -28,6 +28,7 @@
     <Compile Include="WorkModelObservationLimitTests.fs" />
     <Compile Include="WorkModelMixedInstantCharacterizationTests.fs" />
     <Compile Include="WorkModelGitCommitCustodyTests.fs" />
+    <Compile Include="WorkModelGitDirtySourceTests.fs" />
     <Compile Include="WorkModelHeldChildRosterTests.fs" />
     <Compile Include="GenerationHeldDirectoryLimitTests.fs" />
     <Compile Include="GenerationPinnedFileCapacityTests.fs" />
