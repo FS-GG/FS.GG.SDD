@@ -10,6 +10,7 @@
     <Compile Include="CommandTypes.fsi" />
     <Compile Include="CommandTypes.fs" />
     <Compile Include="GenerationSourceSnapshot.fs" />
+    <Compile Include="GenerationSourceContract.fs" />
     <Compile Include="CommandReports/LifecycleSensing.fs" />
     <Compile Include="CommandReports/RemediationPointers.fs" />
     <Compile Include="CommandReports/DiagnosticRouting.fs" />
