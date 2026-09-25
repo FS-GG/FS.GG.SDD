@@ -259,6 +259,80 @@ evidence:
                                  (coreWithoutPerformance physical) candidate))
 
     [<Fact>]
+    let ``red-before stale supplied core capture stays green after source changes`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+                File.WriteAllText(Path.Combine(root, "work/sample/spec.md"), "changed core\n")
+                match Bundle.verifyWithPinnedPerformance root "sample" selected
+                          (coreWithoutPerformance physical) candidate with
+                | Ok _ -> ()
+                | Error reason -> failwithf "stale-core characterization unexpectedly refused: %A" reason)
+
+    [<Fact>]
+    let ``red-before omitted physical work source stays green with supplied core captures`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+                File.WriteAllText(Path.Combine(root, "work/sample/tasks.yml"), "schemaVersion: 1\ntasks: []\n")
+                match Bundle.verifyWithPinnedPerformance root "sample" selected
+                          (coreWithoutPerformance physical) candidate with
+                | Ok _ -> ()
+                | Error reason -> failwithf "omitted-core characterization unexpectedly refused: %A" reason)
+
+    [<Fact>]
+    let ``pinned core discovery accepts selected sources with unrelated siblings`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected _ candidate ->
+                File.WriteAllText(Path.Combine(root, ".fsgg/constitution.md"), "unselected")
+                File.WriteAllText(Path.Combine(root, "work/sample/charter.md"), "unselected")
+                match Bundle.verifyFromPinnedCoreSources root "sample" selected candidate with
+                | Ok files -> Assert.Equal(6, files.Length)
+                | Error reason -> failwithf "recognized core source set refused: %A" reason)
+
+    [<Fact>]
+    let ``pinned core discovery refuses changed previously supplied source`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected _ candidate ->
+                File.WriteAllText(Path.Combine(root, "work/sample/spec.md"), "changed core\n")
+                Assert.Equal(Error(Bundle.RawDrift "work/sample/spec.md"),
+                             Bundle.verifyFromPinnedCoreSources root "sample" selected candidate))
+
+    [<Fact>]
+    let ``pinned core discovery binds required config independently of candidate rows`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected _ candidate ->
+                File.WriteAllText(Path.Combine(root, ".fsgg/project.yml"), "changed config\n")
+                Assert.Equal(Error(Bundle.RawDrift ".fsgg/project.yml"),
+                             Bundle.verifyFromPinnedCoreSources root "sample" selected candidate))
+            fixtureWithPerformance "tests/performance.txt" (fun root selected _ candidate ->
+                let omitted = ".fsgg/agents.yml"
+                let selected = selected |> List.filter (fun source -> source.Path <> omitted)
+                let candidate = { candidate with
+                                    Sources = candidate.Sources |> List.filter (fun source -> source.Path <> omitted) }
+                Assert.Equal(Error(Bundle.MissingRequired omitted),
+                             Bundle.verifyFromPinnedCoreSources root "sample" selected candidate))
+
+    [<Fact>]
+    let ``pinned core discovery refuses omitted present optional work source`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected _ candidate ->
+                File.WriteAllText(Path.Combine(root, "work/sample/tasks.yml"), "schemaVersion: 1\ntasks: []\n")
+                Assert.Equal(Error(Bundle.UnexpectedPhysical "work/sample/tasks.yml"),
+                             Bundle.verifyFromPinnedCoreSources root "sample" selected candidate))
+
+    [<Fact>]
+    let ``pinned core discovery refuses optional linked source and case alias`` () =
+        if OperatingSystem.IsLinux() then
+            fixtureWithPerformance "tests/performance.txt" (fun root selected _ candidate ->
+                File.CreateSymbolicLink(Path.Combine(root, "work/sample/tasks.yml"),
+                                        Path.Combine(root, "work/sample/spec.md")) |> ignore
+                Assert.Equal(Error(Bundle.Physical(Symlink "work/sample/tasks.yml")),
+                             Bundle.verifyFromPinnedCoreSources root "sample" selected candidate))
+            fixtureWithPerformance "tests/performance.txt" (fun root selected _ candidate ->
+                File.WriteAllText(Path.Combine(root, "work/sample/Tasks.yml"), "alias")
+                Assert.Equal(Error(Bundle.Physical(DuplicatePath "work/sample/tasks.yml")),
+                             Bundle.verifyFromPinnedCoreSources root "sample" selected candidate))
+
+    [<Fact>]
     let ``declared performance outside readiness binds as a selected source`` () =
         fixtureWithPerformance "tests/performance.txt" (fun _ selected physical candidate ->
             match Bundle.verify "sample" selected physical candidate with
