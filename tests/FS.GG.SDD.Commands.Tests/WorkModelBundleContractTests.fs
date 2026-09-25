@@ -161,6 +161,85 @@ evidence:
                     { model with InterpretedEffects = [ observed ] }
             Assert.Equal<string list>([ path ], selected |> List.map _.Path))
 
+    let private selectedByProducer root performanceRead =
+        let read path text : CommandEffectResult =
+            let snapshot = { Path = path; Text = text; RawBytes = None }
+            { Effect = ReadFile path
+              Succeeded = true
+              Read = Bytes snapshot
+              Snapshot = Some snapshot
+              Process = None
+              Confirmed = None
+              Diagnostic = None }
+        let performancePath = "tests/performance.txt"
+        let performanceSnapshot =
+            match performanceRead with
+            | Bytes snapshot -> Some snapshot
+            | _ -> None
+        let result: CommandEffectResult =
+            { Effect = ReadFile performancePath
+              Succeeded = Option.isSome performanceSnapshot || performanceRead = Absent
+              Read = performanceRead
+              Snapshot = performanceSnapshot
+              Process = None
+              Confirmed = None
+              Diagnostic = None }
+        let config =
+            [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml" ]
+            |> List.map (fun path -> read path (File.ReadAllText(Path.Combine(root, path))))
+        let model, _ = FS.GG.SDD.Commands.CommandWorkflow.init (TestSupport.request Analyze ".")
+        ViewGeneration.workModelSnapshots "sample" None
+            (Some(File.ReadAllText(Path.Combine(root, "work/sample/spec.md"))))
+            None None None None
+            (Some(File.ReadAllText(Path.Combine(root, "work/sample/evidence.yml"))))
+            { model with InterpretedEffects = config @ [ result ] }
+
+    [<Fact>]
+    let ``observed declared performance is selected and bundle accepted`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root _ physical _ ->
+            let path = "tests/performance.txt"
+            let observed = { Path = path; Text = File.ReadAllText(Path.Combine(root, path)); RawBytes = None }
+            let selected = selectedByProducer root (Bytes observed)
+            Assert.Contains(path, selected |> List.map _.Path)
+            let candidate: Bundle.Candidate =
+                { Version = 2
+                  WorkId = "sample"
+                  Sources = selected |> List.map (fun source ->
+                      { Path = source.Path; Digest = SchemaVersion.sha256Text source.Text }) }
+            match Bundle.verify "sample" selected physical candidate with
+            | Error refusal -> failwithf "observed complete selection refused: %A" refusal
+            | Ok files -> Assert.Equal(6, files.Length))
+
+    [<Fact>]
+    let ``absent declared performance is omitted by producer and refused by bundle`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root _ physical _ ->
+            let selected = selectedByProducer root Absent
+            let path = "tests/performance.txt"
+            Assert.DoesNotContain(path, selected |> List.map _.Path)
+            let candidate: Bundle.Candidate =
+                { Version = 2
+                  WorkId = "sample"
+                  Sources = selected |> List.map (fun source ->
+                      { Path = source.Path; Digest = SchemaVersion.sha256Text source.Text }) }
+            let captured = physical |> List.filter (fun source -> source.Path <> path)
+            Assert.Equal(Error(Bundle.MissingPerformanceSelection path),
+                         Bundle.verify "sample" selected captured candidate))
+
+    [<Fact>]
+    let ``unreadable declared performance is omitted by producer and refused by bundle`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root _ physical _ ->
+            let path = "tests/performance.txt"
+            let selected = selectedByProducer root (Unreadable(path, "controlled failure"))
+            Assert.DoesNotContain(path, selected |> List.map _.Path)
+            let candidate: Bundle.Candidate =
+                { Version = 2
+                  WorkId = "sample"
+                  Sources = selected |> List.map (fun source ->
+                      { Path = source.Path; Digest = SchemaVersion.sha256Text source.Text }) }
+            let captured = physical |> List.filter (fun source -> source.Path <> path)
+            Assert.Equal(Error(Bundle.MissingPerformanceSelection path),
+                         Bundle.verify "sample" selected captured candidate))
+
     [<Fact>]
     let ``unbound performance selection and malformed physical evidence refuse`` () =
         fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
