@@ -25,6 +25,7 @@
     <Compile Include="WorkModelHeldChildRosterTests.fs" />
     <Compile Include="GenerationHeldDirectoryLimitTests.fs" />
     <Compile Include="GenerationPinnedFileCapacityTests.fs" />
+    <Compile Include="GenerationPinnedAggregateCapacityTests.fs" />
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
