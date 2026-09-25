@@ -195,7 +195,9 @@ module internal WorkModelSourceBundle =
     /// Discover the recognized core source set from physical paths, not from the selected
     /// list or candidate. Each Linux read is pinned and no-follow; captures are sequential,
     /// so this does not establish a simultaneous snapshot across files or roots.
-    let verifyFromPinnedCoreSources workspaceRoot workId selected candidate
+    /// Deterministic interleaving seam after each selected pinned file capture.
+    /// Production passes `ignore`; tests may mutate disposable source fixtures here.
+    let verifyFromPinnedCoreSourcesWithHook afterCapture workspaceRoot workId selected candidate
         : Result<GenerationSourceSnapshot.CapturedFile list, Refusal> =
         try
             if String.IsNullOrWhiteSpace workId
@@ -208,13 +210,20 @@ module internal WorkModelSourceBundle =
                 |> List.map (fun name -> $"work/{workId}/{name}")
             let captureRequired path =
                 match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
-                | Ok file -> file
+                | Ok file ->
+                    afterCapture path
+                    file
                 | Error reason -> refuse (Physical reason)
             let captureOptional path =
                 match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
-                | Ok file -> Some file
+                | Ok file ->
+                    afterCapture path
+                    Some file
                 | Error(GenerationSourceSnapshot.MissingFile _) -> None
                 | Error reason -> refuse (Physical reason)
             let core = (required |> List.map captureRequired) @ (optional |> List.choose captureOptional)
             verifyWithPinnedPerformance workspaceRoot workId selected core candidate
         with Refused reason -> Error reason
+
+    let verifyFromPinnedCoreSources workspaceRoot workId selected candidate =
+        verifyFromPinnedCoreSourcesWithHook ignore workspaceRoot workId selected candidate
