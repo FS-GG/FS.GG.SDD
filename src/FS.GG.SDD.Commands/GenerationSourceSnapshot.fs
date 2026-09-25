@@ -88,6 +88,13 @@ module internal GenerationSourceSnapshot =
         && value.Split('/') |> Array.forall (fun segment -> segment <> "" && segment <> "." && segment <> "..")
         && value |> Seq.forall (fun c -> not (Char.IsControl c))
 
+    // Linux can hold both composed and decomposed spellings in one directory.
+    // Refuse that portable-name ambiguity before a source path is selected.
+    // Preserve the original spelling for exact physical matching and digests.
+    let private portableNameKey (path: string) =
+        try path.Normalize(NormalizationForm.FormC)
+        with :? ArgumentException -> refuse (InvalidPath path)
+
     let private classify (absolute: string) (relative: string) =
         if OperatingSystem.IsLinux() then
             let buffer = Marshal.AllocHGlobal 256
@@ -241,9 +248,11 @@ module internal GenerationSourceSnapshot =
         raw
 
     let private requireSelectedName directory relative name path =
+        let selectedKey = portableNameKey name
         let matches =
             stableDirectoryNames directory relative
-            |> List.filter (fun candidate -> StringComparer.OrdinalIgnoreCase.Equals(candidate, name))
+            |> List.filter (fun candidate ->
+                StringComparer.OrdinalIgnoreCase.Equals(portableNameKey candidate, selectedKey))
         match matches with
         | [ exact ] when exact = name -> ()
         | [] -> refuse (MissingFile path)
@@ -284,7 +293,7 @@ module internal GenerationSourceSnapshot =
                 if not (validRelative path)
                    || not (path.StartsWith(prefix, StringComparison.Ordinal))
                    || path.Length = prefix.Length then refuse (InvalidPath path)
-                if not (expected.Add path) then refuse (DuplicatePath path)
+                if not (expected.Add(portableNameKey path)) then refuse (DuplicatePath path)
 
             let workspace = Path.GetFullPath workspaceRoot
             let rootHandle = nativeOpen("/", directoryFlags)
@@ -330,12 +339,12 @@ module internal GenerationSourceSnapshot =
                                 if path.Length > maxPinnedRelativePathLength then
                                     refuse (PathLimitExceeded path)
                                 if not (validRelative path) then refuse (InvalidPath path)
-                                if not (entries.Add path) then refuse (DuplicatePath path)
+                                if not (entries.Add(portableNameKey path)) then refuse (DuplicatePath path)
                                 match descriptorKind directory name 0x100 path with
                                 | Link -> refuse (Symlink path)
                                 | Special -> refuse (NonRegular path)
                                 | Directory ->
-                                    if expected.Contains path then refuse (NonRegular path)
+                                    if expected.Contains(portableNameKey path) then refuse (NonRegular path)
                                     if childHandles.Count >= maxHeldChildDirectories then
                                         refuse (HeldDirectoryLimit path)
                                     let child = nativeOpenAt(directory, name, directoryFlags)
@@ -364,7 +373,7 @@ module internal GenerationSourceSnapshot =
                             match declared |> List.tryFind (fun path -> not (actual.Contains path)) with
                             | Some path -> refuse (MissingFile path)
                             | None -> ()
-                            match files |> Seq.tryFind (fun (path, _) -> not (expected.Contains path)) with
+                            match files |> Seq.tryFind (fun (path, _) -> not (expected.Contains(portableNameKey path))) with
                             | Some (path, _) -> refuse (UnexpectedFile path)
                             | None -> ()
                             files
