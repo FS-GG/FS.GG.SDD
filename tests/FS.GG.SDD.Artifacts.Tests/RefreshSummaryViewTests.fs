@@ -74,6 +74,7 @@ module RefreshSummaryViewTests =
             createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
 
         Assert.False(isStale current manifest)
+        Assert.False(isStale (List.rev current) manifest)
 
     [<Fact>]
     let ``isStale is true when a summary source digest changes`` () =
@@ -89,3 +90,44 @@ module RefreshSummaryViewTests =
             ]
 
         Assert.True(isStale changed manifest)
+
+    [<Fact>]
+    let ``isStale rejects a newly required producer missing from the manifest`` () =
+        let current = sources ()
+        let recorded = current |> List.take 3
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator recorded outputDigest
+
+        Assert.True(isStale current manifest)
+
+    [<Fact>]
+    let ``isStale rejects a producer no longer in the current set`` () =
+        let current = sources ()
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
+
+        Assert.True(isStale (current |> List.take 3) manifest)
+
+    [<Fact>]
+    let ``isStale rejects a source from the wrong work root even with the same bytes`` () =
+        let current = sources ()
+        let wrongRoot =
+            sourceIdentity "readiness/other-work/analysis.json" "analysis-bytes"
+            :: (current |> List.filter (fun source -> not (source.Artifact.Path.EndsWith("/analysis.json"))))
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator wrongRoot outputDigest
+
+        Assert.True(isStale current manifest)
+
+    [<Fact>]
+    let ``isStale rejects duplicate paths in recorded or current sources`` () =
+        let current = sources ()
+        let duplicate = List.head current
+        let recordedDuplicate = createSummaryManifest (expectedSummaryOutputPath workId) generator (duplicate :: current) outputDigest
+        let clean = createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
+
+        Assert.True(isStale current recordedDuplicate)
+        Assert.True(isStale (duplicate :: current) clean)
+
+    [<Fact>]
+    let ``isStale rejects a generated view with no producer`` () =
+        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator [] outputDigest
+
+        Assert.True(isStale [] manifest)
