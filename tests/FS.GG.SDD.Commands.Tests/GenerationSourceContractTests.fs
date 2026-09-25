@@ -6,6 +6,8 @@ open System.Text
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.GenerationSourceContract
 open FS.GG.SDD.Commands.GenerationSourceSnapshot
+open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal
 open Xunit
 
 module GenerationSourceContractTests =
@@ -83,3 +85,113 @@ module GenerationSourceContractTests =
                 let workspace = Path.Combine(root, "alias", "workspace")
                 Assert.Equal(Error(Physical(Symlink "..")),
                     verify workspace selected (contract [ source "producer/a.bin" bytes ])))
+
+/// Selection evidence for a later producer-owned multi-root contract. These
+/// fixtures do not authorize the single-root verifier to accept work-model paths.
+module WorkModelMultiRootSelectionCharacterizationTests =
+    type private PerformanceObservation = Observed | NotRead | ReadFailed
+
+    let private workId = "multi-root-fixture"
+    let private performancePath = $"readiness/{workId}/performance-evidence.json"
+
+    let private evidence =
+        $"""schemaVersion: 1
+workId: {workId}
+stage: evidence
+status: evidenceReady
+sourceSpec: work/{workId}/spec.md
+sourceClarifications: work/{workId}/clarifications.md
+sourceChecklist: work/{workId}/checklist.md
+sourcePlan: work/{workId}/plan.md
+sourceTasks: work/{workId}/tasks.yml
+sourceAnalysis: readiness/{workId}/analysis.json
+sourceSnapshots: []
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [tests/performance.txt]
+    sourceRefs:
+      - kind: test-output
+        path: tests/performance.txt
+        result: pass
+    performanceBudget:
+      artifactPath: {performancePath}
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: [pointer-stress]
+      workloadDefinitionDigests: [normal-play=sha256:normal-v1, pointer-stress=sha256:stress-v1]
+      currencyToken: commit:fixture
+      capturedAfterUtc: 2026-08-22T00:00:00Z
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+    result: pass
+    synthetic: false
+    notes: []
+"""
+
+    let private observedRead path text : CommandEffectResult =
+        let snapshot = { Path = path; Text = text; RawBytes = None }
+        {
+            Effect = ReadFile path
+            Succeeded = true
+            Read = Bytes snapshot
+            Snapshot = Some snapshot
+            Process = None
+            Confirmed = None
+            Diagnostic = None
+        }
+
+    let private unreadableRead path : CommandEffectResult =
+        {
+            Effect = ReadFile path
+            Succeeded = false
+            Read = ReadResult.Unreadable(path, "fixture read failure")
+            Snapshot = None
+            Process = None
+            Confirmed = None
+            Diagnostic = None
+        }
+
+    let private select performanceObservation =
+        let request = TestSupport.request Analyze "."
+        let model, _ = FS.GG.SDD.Commands.CommandWorkflow.init request
+        let configReads =
+            [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml" ]
+            |> List.map (fun path -> observedRead path "schemaVersion: 1\n")
+        let reads =
+            match performanceObservation with
+            | Observed -> configReads @ [ observedRead performancePath "measured baseline" ]
+            | ReadFailed -> configReads @ [ unreadableRead performancePath ]
+            | NotRead -> configReads
+        let observed = { model with InterpretedEffects = reads }
+        ViewGeneration.workModelSnapshots workId None None None None None None (Some evidence) observed
+
+    [<Fact>]
+    let ``selected work-model sources span config work and performance roots`` () =
+        let paths = select Observed |> List.map _.Path
+        Assert.Contains(".fsgg/project.yml", paths)
+        Assert.Contains($"work/{workId}/evidence.yml", paths)
+        Assert.Contains(performancePath, paths)
+        Assert.Equal<string list>([ ".fsgg"; "readiness"; "work" ],
+                                  paths |> List.map (fun path -> path.Split('/')[0]) |> List.distinct |> List.sort)
+
+    [<Fact>]
+    let ``declared performance artifact absent and unreadable both disappear from selected sources`` () =
+        let absentPaths = select NotRead |> List.map _.Path
+        let unreadablePaths = select ReadFailed |> List.map _.Path
+        Assert.DoesNotContain(performancePath, absentPaths)
+        Assert.Equal<string list>(absentPaths, unreadablePaths)
