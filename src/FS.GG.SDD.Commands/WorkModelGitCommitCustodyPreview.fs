@@ -13,6 +13,7 @@ module internal WorkModelGitCommitCustodyPreview =
         | InvalidCommitId
         | InvalidRepository
         | NotRepositoryRoot
+        | UnregisteredWorktree
         | NotCommit
         | MissingPath of string
         | NonRegularPath of string
@@ -89,6 +90,28 @@ module internal WorkModelGitCommitCustodyPreview =
         if location <> Encoding.ASCII.GetBytes "true\n\n" then
             refuse NotRepositoryRoot
 
+    let private requireRegisteredWorktree root =
+        // A copied source can point .git at another repository (by symlink or
+        // gitfile) and still report itself as Git's top level. Require the
+        // repository to register this exact worktree path. -z makes paths with
+        // newlines unambiguous; this remains a point-in-time observation.
+        let output =
+            runGit root [ "worktree"; "list"; "--porcelain"; "-z" ]
+                   (1024 * 1024) UnregisteredWorktree
+        let roster =
+            try UTF8Encoding(false, true).GetString output
+            with :? DecoderFallbackException -> refuse UnregisteredWorktree
+        let records = roster.Split("\u0000\u0000", StringSplitOptions.RemoveEmptyEntries)
+        let expected = "worktree " + Path.TrimEndingDirectorySeparator(Path.GetFullPath root)
+        let selected =
+            records
+            |> Array.filter (fun record ->
+                let first = record.Split('\u0000').[0]
+                if not (first.StartsWith("worktree ", StringComparison.Ordinal)) then
+                    refuse UnregisteredWorktree
+                String.Equals(first, expected, StringComparison.Ordinal))
+        if selected.Length <> 1 then refuse UnregisteredWorktree
+
     let private commitEntry (root: string) (commitId: string) (path: string) =
         let output = runGit root [ "ls-tree"; "-z"; "--full-tree"; commitId; "--"; path ] 4096 (MalformedTreeEntry path)
         if output.Length = 0 then refuse (MissingPath path)
@@ -120,6 +143,7 @@ module internal WorkModelGitCommitCustodyPreview =
             if String.IsNullOrWhiteSpace root || not (Directory.Exists root) then refuse InvalidRepository
             if not (fullObjectId commitId) then refuse InvalidCommitId
             requireRepositoryRoot root
+            requireRegisteredWorktree root
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
             let files =
