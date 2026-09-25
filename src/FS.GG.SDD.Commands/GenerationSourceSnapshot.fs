@@ -32,8 +32,14 @@ module internal GenerationSourceSnapshot =
         | EmptySet
         | UnsupportedPlatform
 
-    type CapturedFile internal (path: string, raw: byte[], digest: SourceDigest) =
-        let snapshot = Array.copy raw
+    type CapturedFile internal (path: string, raw: byte[], digest: SourceDigest, takeOwnership: bool) =
+        let snapshot = if takeOwnership then raw else Array.copy raw
+        new(path, raw, digest) = CapturedFile(path, raw, digest, false)
+        // Only the pinned reader may hand off a freshly allocated array that
+        // has no mutable alias outside this capture. The ordinary constructor
+        // still snapshots caller-supplied arrays defensively.
+        static member internal FromOwned(path, raw, digest) =
+            CapturedFile(path, raw, digest, true)
         member _.Path = path
         member _.Bytes = Array.copy snapshot
         member _.Digest = digest
@@ -359,7 +365,7 @@ module internal GenerationSourceSnapshot =
                             | None -> ()
                             files
                             |> Seq.sortBy fst
-                            |> Seq.map (fun (path, raw) -> CapturedFile(path, raw, digest policy raw path))
+                            |> Seq.map (fun (path, raw) -> CapturedFile.FromOwned(path, raw, digest policy raw path))
                             |> Seq.toList
                         finally
                             for child in childHandles do nativeClose child |> ignore))
@@ -425,7 +431,7 @@ module internal GenerationSourceSnapshot =
                         requireSelectedName parent parentRelative fileName relativePath
                         if directoryStamp parent parentRelative <> before then
                             refuse (DirectoryUnstable parentRelative)
-                        CapturedFile(relativePath, raw, SchemaVersion.sha256Bytes raw)))
+                        CapturedFile.FromOwned(relativePath, raw, SchemaVersion.sha256Bytes raw)))
                 |> Ok
             finally nativeClose rootHandle |> ignore
         with
