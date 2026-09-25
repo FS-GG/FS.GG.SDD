@@ -13,6 +13,7 @@ A consumer comparing a generated view with its current producers receives `stale
 - FR-003: A different path is a different producer even when its basename and digest match. No path rewriting or suffix matching is permitted.
 - FR-004: The existing signature, persisted artifact schemas, generation bytes and CLI output shape remain unchanged. This is a read-only currency decision.
 - FR-005: Semantic tests prove green equality and red for missing, extra, duplicate, wrong-root and changed-digest sources. The missing-current-source case must fail before the implementation.
+- FR-006: A source identity with a missing, malformed, or unsupported digest cannot make a view current even when the malformed value occurs on both sides. The comparator must return stale rather than crash for null or empty digest values.
 
 ## Boundaries
 
