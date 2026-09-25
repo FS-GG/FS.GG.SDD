@@ -1,5 +1,7 @@
 namespace FS.GG.SDD.Artifacts
 
+open System
+open System.Collections.Generic
 open System.Text.Json
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
@@ -117,6 +119,20 @@ module GenerationManifest =
         }
 
     let isStale (currentSources: SourceIdentity list) (manifest: GenerationManifest) =
+        let invalidArtifact source =
+            isNull (box source)
+            || isNull (box source.Artifact)
+            || String.IsNullOrWhiteSpace source.Artifact.Path
+            || (source.Artifact.Path.Split('/') |> Array.exists (fun segment -> segment = "" || segment = "."))
+            || (source.Artifact.Path |> Seq.exists Char.IsControl)
+            || (match ArtifactRef.create
+                          source.Artifact.Path
+                          source.Artifact.Kind
+                          source.Artifact.Owner
+                          source.Artifact.RequiredBySdd with
+                | Ok normalized -> normalized.Path <> source.Artifact.Path
+                | Error _ -> true)
+
         let invalidDigest source =
             isNull (box source.Digest)
             || (match SchemaVersion.createSourceDigest source.Digest.Algorithm source.Digest.Value with
@@ -128,13 +144,17 @@ module GenerationManifest =
             |> List.map (fun source -> source.Artifact.Path, source.Digest.Value)
 
         let hasDuplicatePaths pairs =
-            let paths = pairs |> List.map fst
-            paths.Length <> (paths |> Set.ofList |> Set.count)
+            let seen = HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            pairs |> List.exists (fun (path, _) -> not (seen.Add path))
 
         // Comparing only recorded rows against a map of current inputs loses newly
         // required producers, and Map.ofList hides duplicate paths. Require an exact
         // nonempty set of path/digest identities before calling a view current.
-        if List.exists invalidDigest currentSources || List.exists invalidDigest manifest.Sources then
+        if isNull (box currentSources)
+           || isNull (box manifest)
+           || isNull (box manifest.Sources)
+           || List.exists (fun source -> invalidArtifact source || invalidDigest source) currentSources
+           || List.exists (fun source -> invalidArtifact source || invalidDigest source) manifest.Sources then
             true
         else
             let current = identity currentSources
