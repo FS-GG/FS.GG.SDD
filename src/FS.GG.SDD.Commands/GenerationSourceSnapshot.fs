@@ -190,11 +190,14 @@ module internal GenerationSourceSnapshot =
         afterOpen path
         let before = fileStamp handle path
         use stream = new FileStream(safeHandle, FileAccess.Read)
-        if stream.Length > maxPinnedFileBytes then refuse (FileLimitExceeded path)
-        if stream.Length > remainingBytes then refuse (CaptureLimitExceeded path)
+        let initialLength = stream.Length
+        if initialLength > maxPinnedFileBytes then refuse (FileLimitExceeded path)
+        if initialLength > remainingBytes then refuse (CaptureLimitExceeded path)
         let readPass () =
             stream.Seek(0L, SeekOrigin.Begin) |> ignore
-            use output = new MemoryStream()
+            // The opened-fd length has passed both budgets. Reserve it once
+            // rather than geometrically reallocating as the first pass grows.
+            use output = new MemoryStream(int initialLength)
             let buffer = Array.zeroCreate<byte> 81920
             let mutable count = stream.Read(buffer, 0, buffer.Length)
             while count > 0 do
