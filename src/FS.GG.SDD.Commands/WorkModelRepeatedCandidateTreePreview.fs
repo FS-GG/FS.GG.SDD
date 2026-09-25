@@ -51,3 +51,10 @@ module internal WorkModelRepeatedCandidateTreePreview =
             (fun () -> Physical.capturePinnedWithHooks ignore ignore
                            workspaceRoot "work" declared Physical.ExactBytes)
             workId
+
+    /// A read-only whole-work-tree preview whose candidate roster comes from held
+    /// directory traversal on each pass, without caller-supplied file names.
+    let verifyPhysicalDiscovered workspaceRoot workId =
+        verifyWithCapture
+            (fun () -> Physical.capturePinnedDiscovered workspaceRoot "work" Physical.ExactBytes)
+            workId
