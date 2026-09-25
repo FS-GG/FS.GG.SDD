@@ -55,6 +55,7 @@
     <Compile Include="WorkModelRepeatedJointCapturePreview.fs" />
     <Compile Include="WorkModelGitCommitCustodyPreview.fs" />
     <Compile Include="WorkModelGitDirtySourcePreview.fs" />
+    <Compile Include="WorkModelGitModePreview.fs" />
     <Compile Include="CommandWorkflow/Prerequisites.fs" />
     <Compile Include="CommandWorkflow/HandlersEarly.fs" />
     <Compile Include="CommandWorkflow/HandlersAnalyze.fs" />
