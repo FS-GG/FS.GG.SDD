@@ -52,7 +52,7 @@ module GenerationSourceRaceCharacterizationTests =
                     Assert.True(File.ReadAllBytes target = [| 1uy |]))
 
     [<Fact>]
-    let ``descriptor-pinned read retains original bytes across a path swap`` () =
+    let ``descriptor-pinned capture refuses a path swap that changes the roster stamp`` () =
         if OperatingSystem.IsLinux() then
             withTree (fun root ->
                 let target = Path.Combine(root, "inputs", "A.bin")
@@ -72,13 +72,9 @@ module GenerationSourceRaceCharacterizationTests =
                         File.Move(backup, target)
                 let result =
                     capturePinnedWithHooks ignore afterOpen root "inputs" [ "inputs/A.bin" ] ExactBytes
-                match result with
-                | Error reason -> failwithf "pinned capture was unexpectedly refused: %A" reason
-                | Ok captured ->
-                    Assert.Equal(1, opened)
-                    Assert.Single captured |> ignore
-                    Assert.True(captured.Head.Bytes = [| 1uy |])
-                    Assert.True(File.ReadAllBytes target = [| 1uy |]))
+                Assert.Equal(1, opened)
+                Assert.Equal(Error(DirectoryUnstable "inputs"), result)
+                Assert.True(File.ReadAllBytes target = [| 1uy |]))
 
     [<Fact>]
     let ``a link swapped in before descriptor open is refused`` () =
@@ -99,3 +95,34 @@ module GenerationSourceRaceCharacterizationTests =
                 finally
                     File.Delete target
                     File.Move(backup, target))
+
+    [<Fact>]
+    let ``late undeclared file after enumeration refuses`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let original = Path.Combine(root, "inputs", "A.bin")
+                let extra = Path.Combine(root, "inputs", "late.bin")
+                File.WriteAllBytes(original, [| 1uy |])
+                let beforeOpen path =
+                    Assert.Equal("inputs/A.bin", path)
+                    File.WriteAllBytes(extra, [| 2uy |])
+                let result =
+                    capturePinnedWithHooks beforeOpen ignore root "inputs" [ "inputs/A.bin" ] ExactBytes
+                Assert.True(File.Exists extra)
+                Assert.Equal(Error(DirectoryUnstable "inputs"), result))
+
+    [<Fact>]
+    let ``late undeclared nested file refuses its held parent`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let nested = Path.Combine(root, "inputs", "nested")
+                Directory.CreateDirectory(nested) |> ignore
+                File.WriteAllBytes(Path.Combine(nested, "A.bin"), [| 1uy |])
+                let extra = Path.Combine(nested, "late.bin")
+                let beforeOpen path =
+                    Assert.Equal("inputs/nested/A.bin", path)
+                    File.WriteAllBytes(extra, [| 2uy |])
+                let result =
+                    capturePinnedWithHooks beforeOpen ignore root "inputs" [ "inputs/nested/A.bin" ] ExactBytes
+                Assert.True(File.Exists extra)
+                Assert.Equal(Error(DirectoryUnstable "inputs/nested"), result))
