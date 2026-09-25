@@ -867,6 +867,35 @@ module internal ViewGeneration =
         |> List.choose (fun budget -> snapshot budget.ArtifactPath model)
         |> List.distinctBy _.Path
 
+    /// A declared performance artifact is a required work-model source. `snapshot` loses the
+    /// distinction between absent and unreadable reads; check the interpreted read result before
+    /// generation can turn either state into an omitted source and plan an output write.
+    let performanceEvidenceSourceDiagnostics workId evidenceText model =
+        evidenceText
+        |> Option.orElseWith (fun () -> snapshot (evidencePath workId) model |> Option.map _.Text)
+        |> Option.bind (fun text ->
+            match parseEvidence { Path = evidencePath workId; Text = text; RawBytes = None } with
+            | Ok declarations -> Some declarations
+            | Error _ -> None)
+        |> Option.defaultValue []
+        |> List.choose _.PerformanceBudget
+        |> List.map (fun budget -> normalizeRelativePath budget.ArtifactPath)
+        |> List.distinct
+        |> List.choose (fun path ->
+            match readOf path model with
+            | Bytes _ -> None
+            | Absent ->
+                Some(commandDiagnostic "missingPerformanceSource" DiagnosticSeverity.DiagnosticError
+                         (Some path) $"Declared performance artifact '{path}' is absent."
+                         "Restore the declared performance artifact and regenerate the work model."
+                         [ path ])
+            | Unreadable _
+            | Truncated _ ->
+                Some(commandDiagnostic "unreadablePerformanceSource" DiagnosticSeverity.DiagnosticError
+                         (Some path) $"Declared performance artifact '{path}' could not be read completely."
+                         "Make the declared performance artifact readable and regenerate the work model."
+                         [ path ]))
+
     let existingGeneratedViewDiagnostic workId path model =
         match snapshot path model with
         | None -> None
@@ -1039,7 +1068,8 @@ module internal ViewGeneration =
         =
         let path = workModelPath workId
         let currentDiagnostic = existingGeneratedViewDiagnostic workId path model
-        let blockingCommandIds = blockingDiagnosticIds commandDiagnostics
+        let performanceDiagnostics = performanceEvidenceSourceDiagnostics workId evidenceText model
+        let blockingCommandIds = blockingDiagnosticIds (commandDiagnostics @ performanceDiagnostics)
 
         if not (List.isEmpty blockingCommandIds) then
             let sources =
@@ -1064,7 +1094,7 @@ module internal ViewGeneration =
                     GeneratedViewCurrency.Blocked
                     blockingCommandIds
 
-            currentDiagnostic |> Option.toList, view, [], []
+            (currentDiagnostic |> Option.toList) @ performanceDiagnostics, view, [], []
         else
             let snapshots =
                 workModelSnapshots

@@ -13,6 +13,83 @@ open Xunit
 module WorkModelBundleContractTests =
     module Bundle = FS.GG.SDD.Commands.WorkModelSourceBundle
 
+    let private performancePlan performanceRead =
+        let workId = "preoutput-performance"
+        let path = "tests/performance.txt"
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeEvidencedProject root workId "Performance"
+        let source path = TestSupport.readRelative root path
+        let evidence =
+            (source $"work/{workId}/evidence.yml").Replace(
+                "    result: pass\n    synthetic: false",
+                $"""    performanceBudget:
+      artifactPath: {path}
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: [pointer-stress]
+      workloadDefinitionDigests: [normal-play=sha256:normal-v1, pointer-stress=sha256:stress-v1]
+      currencyToken: commit:fixture
+      capturedAfterUtc: 2026-08-22T00:00:00Z
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+    result: pass
+    synthetic: false""")
+        Assert.Contains("performanceBudget:", evidence)
+        let read path : CommandEffectResult =
+            let snapshot = { Path = path; Text = source path; RawBytes = None }
+            { Effect = ReadFile path; Succeeded = true; Read = Bytes snapshot
+              Snapshot = Some snapshot; Process = None; Confirmed = None; Diagnostic = None }
+        let config = [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml" ]
+        let model, _ = FS.GG.SDD.Commands.CommandWorkflow.init (TestSupport.request Analyze ".")
+        let request = TestSupport.request Analyze "."
+        let performanceResult: CommandEffectResult =
+            let snapshot =
+                match performanceRead with
+                | Bytes snapshot -> Some snapshot
+                | _ -> None
+            { Effect = ReadFile path; Succeeded = Option.isSome snapshot
+              Read = performanceRead; Snapshot = snapshot
+              Process = None; Confirmed = None; Diagnostic = None }
+        let diagnostics, view, effects, _ =
+            ViewGeneration.generatedViewPlan request workId None
+                (Some(source $"work/{workId}/spec.md"))
+                (Some(source $"work/{workId}/clarifications.md"))
+                (Some(source $"work/{workId}/checklist.md"))
+                (Some(source $"work/{workId}/plan.md"))
+                (Some(source $"work/{workId}/tasks.yml"))
+                (Some evidence) []
+                { model with InterpretedEffects = (config |> List.map read) @ [ performanceResult ] }
+        diagnostics, view, effects
+
+    [<Fact>]
+    let ``absent declared performance refuses before output planning`` () =
+        let diagnostics, view, effects = performancePlan Absent
+        Assert.Empty effects
+        Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "missingPerformanceSource")
+        Assert.Contains("missingPerformanceSource", view.DiagnosticIds)
+
+    [<Fact>]
+    let ``unreadable declared performance refuses before output planning`` () =
+        let diagnostics, view, effects =
+            performancePlan (Unreadable("tests/performance.txt", "controlled failure"))
+        Assert.Empty effects
+        Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "unreadablePerformanceSource")
+        Assert.Contains("unreadablePerformanceSource", view.DiagnosticIds)
+
+    [<Fact>]
+    let ``observed declared performance does not trigger source-read refusal`` () =
+        let path = "tests/performance.txt"
+        let snapshot = { Path = path; Text = "measured\n"; RawBytes = None }
+        let diagnostics, view, _ = performancePlan (Bytes snapshot)
+        Assert.DoesNotContain(diagnostics, fun diagnostic ->
+            diagnostic.Id = "missingPerformanceSource" || diagnostic.Id = "unreadablePerformanceSource")
+        Assert.DoesNotContain("missingPerformanceSource", view.DiagnosticIds)
+        Assert.DoesNotContain("unreadablePerformanceSource", view.DiagnosticIds)
+
     let private withTree action =
         let root = Path.Combine(Path.GetTempPath(), "sdd-work-model-bundle-" + Guid.NewGuid().ToString("N"))
         Directory.CreateDirectory(Path.Combine(root, ".fsgg")) |> ignore
