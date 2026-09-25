@@ -21,6 +21,7 @@ module internal GenerationSourceSnapshot =
         | UnexpectedFile of string
         | Symlink of string
         | NonRegular of string
+        | DirectoryUnstable of string
         | Unreadable of string
         | EmptySet
         | UnsupportedPlatform
@@ -106,6 +107,39 @@ module internal GenerationSourceSnapshot =
             Marshal.ReadInt16(buffer, 28) |> uint16 |> int |> kindFromMode
         finally Marshal.FreeHGlobal buffer
 
+    let private directoryStamp directory relative =
+        let buffer = Marshal.AllocHGlobal 256
+        try
+            if statx(directory, "", 0x1000, 0x7ffu, buffer) <> 0 then
+                refuse (Unreadable relative)
+            let bytes = Array.zeroCreate<byte> 256
+            Marshal.Copy(buffer, bytes, 0, bytes.Length)
+            // Require nlink, inode, size, mtime, and ctime from the held fd.
+            if BitConverter.ToUInt32(bytes, 0) &&& 0x3c4u <> 0x3c4u then
+                refuse (DirectoryUnstable relative)
+            [| bytes.[16..19]; bytes.[32..47]; bytes.[96..127]; bytes.[136..143] |]
+            |> Array.concat
+        finally Marshal.FreeHGlobal buffer
+
+    let private directoryNames directory =
+        Directory.EnumerateFileSystemEntries($"/proc/self/fd/%d{directory}")
+        |> Seq.map (fun entry ->
+            Path.GetFileName entry
+            |> Option.ofObj
+            |> Option.defaultWith (fun () -> refuse (InvalidPath entry)))
+        |> Seq.sortWith (fun left right -> StringComparer.Ordinal.Compare(left, right))
+        |> Seq.toList
+
+    let private stableDirectoryNames directory relative =
+        let before = directoryStamp directory relative
+        let first = directoryNames directory
+        let middle = directoryStamp directory relative
+        if before <> middle then refuse (DirectoryUnstable relative)
+        let second = directoryNames directory
+        let after = directoryStamp directory relative
+        if middle <> after || first <> second then refuse (DirectoryUnstable relative)
+        first
+
     let private withDirectory parent name relative (action: int -> 'a) =
         match descriptorKind parent name 0x100 relative with
         | Link -> refuse (Symlink relative)
@@ -167,13 +201,10 @@ module internal GenerationSourceSnapshot =
                         let entries = HashSet<string>(StringComparer.OrdinalIgnoreCase)
                         let files = ResizeArray<string * byte[]>()
                         let rec walk directory relative =
-                            // procfs exposes the already-open directory. Entry names
-                            // are subsequently resolved only through openat(directory).
-                            for entry in Directory.EnumerateFileSystemEntries($"/proc/self/fd/%d{directory}") |> Seq.sort do
-                                let name =
-                                    Path.GetFileName entry
-                                    |> Option.ofObj
-                                    |> Option.defaultWith (fun () -> refuse (InvalidPath entry))
+                            // procfs exposes the already-open directory. Names are
+                            // scanned twice; children still open relative to its fd.
+                            let before = directoryStamp directory relative
+                            for name in stableDirectoryNames directory relative do
                                 let path = relative + "/" + name
                                 if not (validRelative path) then refuse (InvalidPath path)
                                 if not (entries.Add path) then refuse (DuplicatePath path)
@@ -194,6 +225,8 @@ module internal GenerationSourceSnapshot =
                                     use output = new MemoryStream()
                                     stream.CopyTo output
                                     files.Add(path, output.ToArray())
+                            if directoryStamp directory relative <> before then
+                                refuse (DirectoryUnstable relative)
                         walk sourceHandle closedRoot
                         let actual = HashSet<string>(files |> Seq.map fst, StringComparer.Ordinal)
                         match declared |> List.tryFind (fun path -> not (actual.Contains path)) with
