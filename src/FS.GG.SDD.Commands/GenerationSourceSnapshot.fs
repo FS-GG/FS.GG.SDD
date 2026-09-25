@@ -26,6 +26,7 @@ module internal GenerationSourceSnapshot =
         | FileLimitExceeded of string
         | CaptureLimitExceeded of string
         | CapturedFileLimit of string
+        | PathLimitExceeded of string
         | FileUnstable of string
         | Unreadable of string
         | EmptySet
@@ -68,6 +69,9 @@ module internal GenerationSourceSnapshot =
     // Empty files consume path, digest and captured-file storage without using
     // the raw byte budget. Bound their count in a complete-root preview.
     let private maxPinnedCapturedFiles = 4096
+    // Limit retained relative-path strings, including discovered extra entries.
+    // String.Length counts UTF-16 code units, not filesystem-encoded bytes.
+    let private maxPinnedRelativePathLength = 1024
 
     let private refuse issue = raise (CaptureRefused issue)
 
@@ -236,6 +240,9 @@ module internal GenerationSourceSnapshot =
                                   (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
         try
             if not (OperatingSystem.IsLinux()) then refuse UnsupportedPlatform
+            if String.IsNullOrWhiteSpace closedRoot then refuse InvalidRoot
+            if closedRoot.Length > maxPinnedRelativePathLength then
+                refuse (PathLimitExceeded closedRoot)
             if not (validRelative closedRoot) || String.IsNullOrWhiteSpace workspaceRoot
                || not (Directory.Exists workspaceRoot) then refuse InvalidRoot
             if obj.ReferenceEquals(declared, null) || List.isEmpty declared then refuse EmptySet
@@ -244,6 +251,9 @@ module internal GenerationSourceSnapshot =
             let prefix = closedRoot + "/"
             let expected = HashSet<string>(StringComparer.OrdinalIgnoreCase)
             for path in declared do
+                if String.IsNullOrEmpty path then refuse (InvalidPath path)
+                if path.Length > maxPinnedRelativePathLength then
+                    refuse (PathLimitExceeded path)
                 if not (validRelative path)
                    || not (path.StartsWith(prefix, StringComparison.Ordinal))
                    || path.Length = prefix.Length then refuse (InvalidPath path)
@@ -290,6 +300,8 @@ module internal GenerationSourceSnapshot =
                             visited.Add(directory, relative, before, names)
                             for name in names do
                                 let path = relative + "/" + name
+                                if path.Length > maxPinnedRelativePathLength then
+                                    refuse (PathLimitExceeded path)
                                 if not (validRelative path) then refuse (InvalidPath path)
                                 if not (entries.Add path) then refuse (DuplicatePath path)
                                 match descriptorKind directory name 0x100 path with
@@ -344,10 +356,13 @@ module internal GenerationSourceSnapshot =
     /// Capture one explicitly selected repository-relative file. Siblings are not
     /// declared sources; each selected parent is checked only for a case alias
     /// of its chosen child and for observed roster mutation.
-    let captureSelectedFileWithHooks beforeOpen afterOpen afterRead workspaceRoot relativePath
+    let captureSelectedFileWithHooks beforeOpen afterOpen afterRead workspaceRoot (relativePath: string)
         : Result<CapturedFile, Refusal> =
         try
             if not (OperatingSystem.IsLinux()) then refuse UnsupportedPlatform
+            if String.IsNullOrEmpty relativePath then refuse (InvalidPath relativePath)
+            if relativePath.Length > maxPinnedRelativePathLength then
+                refuse (PathLimitExceeded relativePath)
             if not (validRelative relativePath) then refuse (InvalidPath relativePath)
             if String.IsNullOrWhiteSpace workspaceRoot || not (Directory.Exists workspaceRoot) then
                 refuse InvalidRoot
