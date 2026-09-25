@@ -70,3 +70,16 @@ module GenerationSourceContractTests =
             Assert.Equal(Error(MalformedDigest "producer/a.bin"), verify root selected (contract [ malformed ]))
             Assert.Equal(Error(Physical(DuplicatePath "producer/a.bin")),
                 verify root selected (contract [ valid; valid ])))
+
+    [<Fact>]
+    let ``contract propagates linked workspace ancestor refusal`` () =
+        if OperatingSystem.IsLinux() then
+            withTree (fun root ->
+                let physical = Path.Combine(root, "physical", "workspace")
+                Directory.CreateDirectory(Path.Combine(physical, "producer")) |> ignore
+                let bytes = [| 1uy |]
+                File.WriteAllBytes(Path.Combine(physical, "producer", "a.bin"), bytes)
+                Directory.CreateSymbolicLink(Path.Combine(root, "alias"), Path.Combine(root, "physical")) |> ignore
+                let workspace = Path.Combine(root, "alias", "workspace")
+                Assert.Equal(Error(Physical(Symlink "..")),
+                    verify workspace selected (contract [ source "producer/a.bin" bytes ])))
