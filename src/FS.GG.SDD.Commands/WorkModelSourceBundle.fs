@@ -25,6 +25,7 @@ module internal WorkModelSourceBundle =
         | InvalidCandidatePath of string
         | InvalidPerformancePath of string
         | MalformedEvidence
+        | Physical of GenerationSourceSnapshot.Refusal
         | MissingPerformanceSelection of string
         | MissingPhysical of string
         | UnexpectedPhysical of string
@@ -65,6 +66,31 @@ module internal WorkModelSourceBundle =
             | Ok canonical -> canonical = digest
             | Error _ -> false
 
+    let private performancePathsFromPhysical workId
+        (physicalByPath: Map<string, GenerationSourceSnapshot.CapturedFile>) =
+        let evidencePath = $"work/{workId}/evidence.yml"
+        match physicalByPath.TryFind evidencePath with
+        | None -> Set.empty
+        | Some file ->
+            let bytes = file.Bytes
+            let text =
+                match Fsgg.SkillMirror.decodeBody bytes with
+                | Ok body -> body
+                | Error _ -> refuse MalformedEvidence
+            let snapshot = { Path = evidencePath; Text = text; RawBytes = Some bytes }
+            match Evidence.parseEvidenceArtifact snapshot with
+            | Error _ -> refuse MalformedEvidence
+            | Ok artifact when artifact.WorkId.Value <> workId || not (List.isEmpty artifact.Diagnostics) ->
+                refuse MalformedEvidence
+            | Ok artifact ->
+                artifact.Evidence
+                |> List.choose _.PerformanceBudget
+                |> List.map _.ArtifactPath
+                |> List.map (fun path ->
+                    if not (validRelative path) then refuse (InvalidPerformancePath path)
+                    path)
+                |> Set.ofList
+
     /// The selected snapshots must be the producer's `workModelSnapshots` result, not rows
     /// reconstructed from the candidate. Captures must already cover each physical root.
     let verify (workId: string) (selected: FileSnapshot list)
@@ -83,28 +109,7 @@ module internal WorkModelSourceBundle =
             distinct DuplicatePhysical (captured |> List.map _.Path)
             let physicalByPath = captured |> List.map (fun file -> file.Path, file) |> Map.ofList
             let evidencePath = $"work/{workId}/evidence.yml"
-            let performancePaths =
-                match physicalByPath.TryFind evidencePath with
-                | None -> Set.empty
-                | Some file ->
-                    let bytes = file.Bytes
-                    let text =
-                        match Fsgg.SkillMirror.decodeBody bytes with
-                        | Ok body -> body
-                        | Error _ -> refuse MalformedEvidence
-                    let snapshot = { Path = evidencePath; Text = text; RawBytes = Some bytes }
-                    match Evidence.parseEvidenceArtifact snapshot with
-                    | Error _ -> refuse MalformedEvidence
-                    | Ok artifact when artifact.WorkId.Value <> workId || not (List.isEmpty artifact.Diagnostics) ->
-                        refuse MalformedEvidence
-                    | Ok artifact ->
-                        artifact.Evidence
-                        |> List.choose _.PerformanceBudget
-                        |> List.map _.ArtifactPath
-                        |> List.map (fun path ->
-                            if not (validRelative path) then refuse (InvalidPerformancePath path)
-                            path)
-                        |> Set.ofList
+            let performancePaths = performancePathsFromPhysical workId physicalByPath
             for source in selected do
                 if obj.ReferenceEquals(source, null) || not (allowedPath workId performancePaths source.Path) then
                     refuse (InvalidSelectionPath(if obj.ReferenceEquals(source, null) then "" else source.Path))
@@ -153,4 +158,36 @@ module internal WorkModelSourceBundle =
                 if not (validDigest recorded) then refuse (MalformedDigest path)
                 if recorded <> SchemaVersion.sha256Text projected then refuse (DigestDrift path)
             captured |> List.sortBy _.Path |> Ok
+        with Refused reason -> Error reason
+
+    /// Read-only bridge from independently captured core sources to selected performance files.
+    /// The core caller must separately establish complete source selection and physical closure.
+    /// Each performance path comes from the captured evidence bytes, never candidate rows.
+    let verifyWithPinnedPerformance (workspaceRoot: string) (workId: string)
+        (selected: FileSnapshot list) (coreCaptured: GenerationSourceSnapshot.CapturedFile list)
+        (candidate: Candidate)
+        : Result<GenerationSourceSnapshot.CapturedFile list, Refusal> =
+        try
+            if obj.ReferenceEquals(selected, null) || obj.ReferenceEquals(coreCaptured, null) then
+                refuse (MissingRequired ".fsgg/project.yml")
+            if String.IsNullOrWhiteSpace workId
+               || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$")) then refuse InvalidWorkId
+            if selected |> List.exists (fun source -> obj.ReferenceEquals(source, null)) then
+                refuse (InvalidSelectionPath "")
+            if coreCaptured |> List.exists (fun file -> obj.ReferenceEquals(file, null) || not (validRelative file.Path)) then
+                refuse (MissingPhysical "")
+            distinct DuplicatePhysical (coreCaptured |> List.map _.Path)
+            let physicalByPath = coreCaptured |> List.map (fun file -> file.Path, file) |> Map.ofList
+            let performancePaths = performancePathsFromPhysical workId physicalByPath
+            let selectedPaths = selected |> List.map _.Path |> Set.ofList
+            let pinned =
+                performancePaths
+                |> Set.toList
+                |> List.map (fun path ->
+                    if physicalByPath.ContainsKey path then refuse (DuplicatePhysical path)
+                    if not (Set.contains path selectedPaths) then refuse (MissingPerformanceSelection path)
+                    match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
+                    | Ok file -> file
+                    | Error reason -> refuse (Physical reason))
+            verify workId selected (coreCaptured @ pinned) candidate
         with Refused reason -> Error reason
