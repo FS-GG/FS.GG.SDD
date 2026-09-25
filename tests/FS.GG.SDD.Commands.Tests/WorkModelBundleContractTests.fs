@@ -261,6 +261,37 @@ evidence:
                          Bundle.verify "sample" selected alteredPhysical candidate))
 
     [<Fact>]
+    let ``arbitrary performance parent with unrelated sibling cannot be a closed root`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+            let sibling = "tests/unrelated.txt"
+            File.WriteAllText(Path.Combine(root, sibling), "not a work-model source")
+            Assert.Equal(Error(UnexpectedFile sibling),
+                         capture root "tests" [ "tests/performance.txt" ] ExactBytes)
+            let fullParent =
+                match capture root "tests" [ "tests/performance.txt"; sibling ] ExactBytes with
+                | Ok files -> files
+                | Error refusal -> failwithf "complete parent control refused: %A" refusal
+            let otherRoots = physical |> List.filter (fun file -> file.Path <> "tests/performance.txt")
+            Assert.Equal(Error(Bundle.UnexpectedPhysical sibling),
+                         Bundle.verify "sample" selected (otherRoots @ fullParent) candidate))
+
+    [<Fact>]
+    let ``unselected symlink in arbitrary performance parent refuses root capture`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root _ _ _ ->
+            let link = Path.Combine(root, "tests", "shortcut.txt")
+            File.CreateSymbolicLink(link, Path.Combine(root, "tests", "performance.txt")) |> ignore
+            Assert.Equal(Error(Symlink "tests/shortcut.txt"),
+                         capture root "tests" [ "tests/performance.txt" ] ExactBytes))
+
+    [<Fact>]
+    let ``case alias in arbitrary performance parent refuses root capture`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root _ _ _ ->
+            let alias = "tests/Performance.txt"
+            File.WriteAllText(Path.Combine(root, alias), "alias")
+            Assert.Equal(Error(DuplicatePath "tests/performance.txt"),
+                         capture root "tests" [ "tests/performance.txt" ] ExactBytes))
+
+    [<Fact>]
     let ``three selected roots bind captured bytes and projected evidence digest`` () =
         fixture (fun _ selected physical candidate ->
             let evidence = selected |> List.find (fun source -> source.Path = "work/sample/evidence.yml")
