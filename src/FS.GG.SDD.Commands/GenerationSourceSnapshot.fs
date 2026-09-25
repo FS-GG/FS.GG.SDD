@@ -161,6 +161,46 @@ module internal GenerationSourceSnapshot =
             action handle
         finally nativeClose handle |> ignore
 
+    let private readPinnedRegular directory name path beforeOpen afterOpen afterRead =
+        beforeOpen path
+        let handle = nativeOpenAt(directory, name, fileFlags)
+        if handle < 0 then refuse (Unreadable path)
+        use safeHandle = new SafeFileHandle(nativeint handle, true)
+        if descriptorKind handle "" 0x1000 path <> Regular then refuse (NonRegular path)
+        afterOpen path
+        let before = fileStamp handle path
+        use stream = new FileStream(safeHandle, FileAccess.Read)
+        let readPass () =
+            stream.Seek(0L, SeekOrigin.Begin) |> ignore
+            use output = new MemoryStream()
+            stream.CopyTo output
+            output.ToArray()
+        let raw = readPass ()
+        afterRead path
+        let middle = fileStamp handle path
+        if before <> middle then refuse (FileUnstable path)
+        let second = readPass ()
+        let after = fileStamp handle path
+        if middle <> after || raw <> second then refuse (FileUnstable path)
+        raw
+
+    let private requireSelectedName directory relative name path =
+        let matches =
+            stableDirectoryNames directory relative
+            |> List.filter (fun candidate -> StringComparer.OrdinalIgnoreCase.Equals(candidate, name))
+        match matches with
+        | [ exact ] when exact = name -> ()
+        | [] -> refuse (MissingFile path)
+        | _ -> refuse (DuplicatePath path)
+
+    let private withSelectedDirectory parent name parentRelative childRelative action =
+        let before = directoryStamp parent parentRelative
+        requireSelectedName parent parentRelative name childRelative
+        let result = withDirectory parent name childRelative action
+        requireSelectedName parent parentRelative name childRelative
+        if directoryStamp parent parentRelative <> before then refuse (DirectoryUnstable parentRelative)
+        result
+
     /// Linux capture pins every directory from / through the closed root, then
     /// opens each regular file relative to its pinned parent. Hooks are test seams
     /// around file open and the first byte pass to exercise controlled races.
@@ -223,27 +263,7 @@ module internal GenerationSourceSnapshot =
                                     if expected.Contains path then refuse (NonRegular path)
                                     withDirectory directory name path (fun child -> walk child path)
                                 | Regular ->
-                                    beforeOpen path
-                                    let handle = nativeOpenAt(directory, name, fileFlags)
-                                    if handle < 0 then refuse (Unreadable path)
-                                    use safeHandle = new SafeFileHandle(nativeint handle, true)
-                                    if descriptorKind handle "" 0x1000 path <> Regular then refuse (NonRegular path)
-                                    afterOpen path
-                                    let before = fileStamp handle path
-                                    use stream = new FileStream(safeHandle, FileAccess.Read)
-                                    let readPass () =
-                                        stream.Seek(0L, SeekOrigin.Begin) |> ignore
-                                        use output = new MemoryStream()
-                                        stream.CopyTo output
-                                        output.ToArray()
-                                    let raw = readPass ()
-                                    afterRead path
-                                    let middle = fileStamp handle path
-                                    if before <> middle then refuse (FileUnstable path)
-                                    let second = readPass ()
-                                    let after = fileStamp handle path
-                                    if middle <> after || raw <> second then refuse (FileUnstable path)
-                                    files.Add(path, raw)
+                                    files.Add(path, readPinnedRegular directory name path beforeOpen afterOpen afterRead)
                             if directoryStamp directory relative <> before then
                                 refuse (DirectoryUnstable relative)
                         walk sourceHandle closedRoot
@@ -266,6 +286,68 @@ module internal GenerationSourceSnapshot =
         | :? EntryPointNotFoundException -> Error UnsupportedPlatform
         | :? IOException
         | :? UnauthorizedAccessException -> Error(Unreadable closedRoot)
+
+    /// Capture one explicitly selected repository-relative file. Siblings are not
+    /// declared sources; each selected parent is checked only for a case alias
+    /// of its chosen child and for observed roster mutation.
+    let captureSelectedFileWithHooks beforeOpen afterOpen afterRead workspaceRoot relativePath
+        : Result<CapturedFile, Refusal> =
+        try
+            if not (OperatingSystem.IsLinux()) then refuse UnsupportedPlatform
+            if not (validRelative relativePath) then refuse (InvalidPath relativePath)
+            if String.IsNullOrWhiteSpace workspaceRoot || not (Directory.Exists workspaceRoot) then
+                refuse InvalidRoot
+            let workspace = Path.GetFullPath workspaceRoot
+            let parts = relativePath.Split('/') |> Array.toList
+            let fileName = List.last parts
+            let parentParts = parts |> List.take (List.length parts - 1)
+            let rootHandle = nativeOpen("/", directoryFlags)
+            if rootHandle < 0 then refuse InvalidRoot
+            try
+                let rec workspaceParent parent segments relative action =
+                    match segments with
+                    | [] -> action parent
+                    | segment :: tail ->
+                        let child = if relative = "" then segment else relative + "/" + segment
+                        let display = Path.GetRelativePath(workspace, "/" + child).Replace('\\', '/')
+                        withDirectory parent segment display (fun handle ->
+                            workspaceParent handle tail child action)
+                let workspaceSegments =
+                    workspace.Split('/', StringSplitOptions.RemoveEmptyEntries) |> Array.toList
+                workspaceParent rootHandle workspaceSegments "" (fun workspaceHandle ->
+                    let rec selectedParent parent segments relative action =
+                        match segments with
+                        | [] -> action parent relative
+                        | segment :: tail ->
+                            let child = if relative = "" then segment else relative + "/" + segment
+                            let parentRelative = if relative = "" then "." else relative
+                            withSelectedDirectory parent segment parentRelative child (fun handle ->
+                                selectedParent handle tail child action)
+                    selectedParent workspaceHandle parentParts "" (fun parent relative ->
+                        let parentRelative = if relative = "" then "." else relative
+                        let before = directoryStamp parent parentRelative
+                        requireSelectedName parent parentRelative fileName relativePath
+                        match descriptorKind parent fileName 0x100 relativePath with
+                        | Link -> refuse (Symlink relativePath)
+                        | Regular -> ()
+                        | _ -> refuse (NonRegular relativePath)
+                        let raw = readPinnedRegular parent fileName relativePath beforeOpen afterOpen afterRead
+                        requireSelectedName parent parentRelative fileName relativePath
+                        if directoryStamp parent parentRelative <> before then
+                            refuse (DirectoryUnstable parentRelative)
+                        CapturedFile(relativePath, raw, SchemaVersion.sha256Bytes raw)))
+                |> Ok
+            finally nativeClose rootHandle |> ignore
+        with
+        | CaptureRefused issue -> Error issue
+        | :? DllNotFoundException
+        | :? EntryPointNotFoundException -> Error UnsupportedPlatform
+        | :? IOException
+        | :? UnauthorizedAccessException -> Error(Unreadable relativePath)
+        | :? ArgumentException -> Error InvalidRoot
+
+    let captureSelectedFile workspaceRoot relativePath =
+        captureSelectedFileWithHooks ignore ignore ignore workspaceRoot relativePath
 
     let capturePinnedWithHooks beforeOpen afterOpen workspaceRoot closedRoot declared policy =
         capturePinnedCore beforeOpen afterOpen ignore workspaceRoot closedRoot declared policy
