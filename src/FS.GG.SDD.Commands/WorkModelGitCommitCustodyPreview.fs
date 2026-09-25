@@ -20,6 +20,8 @@ module internal WorkModelGitCommitCustodyPreview =
         | ObjectDirectoryRedirect
         | PackDirectoryRedirect
         | LooseObjectDirectoryRedirect
+        | LooseObjectLeafRedirect
+        | LooseObjectLeafLimit
         | UnsupportedPlatform
         | NotCommit
         | MissingPath of string
@@ -205,8 +207,10 @@ module internal WorkModelGitCommitCustodyPreview =
         // Git loose-object paths use exactly two lowercase hex digits for the
         // first directory level. Scan the fixed 256-name set, including names
         // absent at this instant, instead of trusting a caller inventory.
+        // Bound the total leaf roster retained/inspected by this preview.
         let buffer = Marshal.AllocHGlobal 256
         try
+            let mutable leafCount = 0
             for index in 0 .. 255 do
                 let prefix = index.ToString("x2", Globalization.CultureInfo.InvariantCulture)
                 let path = Path.Combine(objects, prefix)
@@ -217,6 +221,18 @@ module internal WorkModelGitCommitCustodyPreview =
                     let mode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
                     if mode &&& 0xf000 <> 0x4000 then
                         refuse LooseObjectDirectoryRedirect
+                    try
+                        for leaf in Directory.EnumerateFileSystemEntries path do
+                            leafCount <- leafCount + 1
+                            if leafCount > 4096 then refuse LooseObjectLeafLimit
+                            if statx(-100, leaf, 0x100, 1u, buffer) <> 0 then
+                                refuse LooseObjectLeafRedirect
+                            let leafMode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
+                            if leafMode &&& 0xf000 <> 0x8000 then
+                                refuse LooseObjectLeafRedirect
+                    with
+                    | :? IOException
+                    | :? UnauthorizedAccessException -> refuse LooseObjectLeafRedirect
         finally Marshal.FreeHGlobal buffer
 
     let private commitEntry (root: string) (commitId: string) (path: string) =
