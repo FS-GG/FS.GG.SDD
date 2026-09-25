@@ -23,6 +23,7 @@
     <Compile Include="WorkModelLateCandidateTreeTests.fs" />
     <Compile Include="WorkModelRepeatedCandidateTreePreviewTests.fs" />
     <Compile Include="WorkModelPinnedDiscoveryTests.fs" />
+    <Compile Include="WorkModelCandidateBundleJoinTests.fs" />
     <Compile Include="WorkModelHeldChildRosterTests.fs" />
     <Compile Include="GenerationHeldDirectoryLimitTests.fs" />
     <Compile Include="GenerationPinnedFileCapacityTests.fs" />
