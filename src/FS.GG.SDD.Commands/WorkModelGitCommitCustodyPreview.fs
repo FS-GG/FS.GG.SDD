@@ -61,6 +61,10 @@ module internal WorkModelGitCommitCustodyPreview =
           "GIT_ALTERNATE_OBJECT_DIRECTORIES"; "GIT_NAMESPACE"; "GIT_INDEX_FILE" ]
         |> List.iter (fun key -> start.Environment.Remove key |> ignore)
         start.Environment.["GIT_OPTIONAL_LOCKS"] <- "0"
+        // A promisor clone may fetch missing blobs during cat-file, mutating
+        // its object store (and potentially contacting a remote). Missing
+        // local objects must refuse this read-only preview instead.
+        start.Environment.["GIT_NO_LAZY_FETCH"] <- "1"
         // Git replace refs can otherwise make a full object ID resolve to the
         // replacement commit's tree. Inspect the named object itself.
         start.Environment.["GIT_NO_REPLACE_OBJECTS"] <- "1"
