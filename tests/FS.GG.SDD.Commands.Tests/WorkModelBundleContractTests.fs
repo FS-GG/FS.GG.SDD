@@ -6,12 +6,45 @@ open System.Text
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.GenerationSourceContract
 open FS.GG.SDD.Commands.GenerationSourceSnapshot
+open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.Internal
 open FS.GG.SDD.Commands.CommandTypes
 open Xunit
 
 module WorkModelBundleContractTests =
     module Bundle = FS.GG.SDD.Commands.WorkModelSourceBundle
+
+    let private withOutputOrderingTree action =
+        let root = Path.Combine(Path.GetTempPath(), "sdd-output-order-" + Guid.NewGuid().ToString("N"))
+        Directory.CreateDirectory root |> ignore
+        try
+            action root
+        finally Directory.Delete(root, true)
+
+    [<Fact>]
+    let ``red-before failed preceding effect does not gate generated output in one batch`` () =
+        withOutputOrderingTree (fun root ->
+            let path = "readiness/sample/work-model.json"
+            Directory.CreateDirectory(Path.Combine(root, "work/sample/spec.md")) |> ignore
+            let results =
+                interpretAll root false
+                    [ WriteFile("work/sample/spec.md", "source", HybridArtifact MergePolicies.specification)
+                      WriteFile(path, "{}", GeneratedView) ]
+            Assert.False(results.[0].Succeeded)
+            Assert.True(results.[1].Succeeded)
+            Assert.Equal("{}", File.ReadAllText(Path.Combine(root, path))))
+
+    [<Fact>]
+    let ``red-before later effect failure leaves earlier generated output committed`` () =
+        withOutputOrderingTree (fun root ->
+            File.WriteAllText(Path.Combine(root, "blocked"), "a file at a directory path")
+            let path = "readiness/sample/work-model.json"
+            let results =
+                interpretAll root false
+                    [ WriteFile(path, "{}", GeneratedView); CreateDirectory "blocked" ]
+            Assert.True(results.[0].Succeeded)
+            Assert.False(results.[1].Succeeded)
+            Assert.Equal("{}", File.ReadAllText(Path.Combine(root, path))))
 
     let private performancePlan performanceRead =
         let workId = "preoutput-performance"
