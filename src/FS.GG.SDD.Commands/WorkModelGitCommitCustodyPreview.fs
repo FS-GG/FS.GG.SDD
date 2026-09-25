@@ -15,6 +15,7 @@ module internal WorkModelGitCommitCustodyPreview =
         | NotRepositoryRoot
         | UnregisteredWorktree
         | RepositoryChanged
+        | AlternateObjectStore
         | NotCommit
         | MissingPath of string
         | NonRegularPath of string
@@ -113,6 +114,34 @@ module internal WorkModelGitCommitCustodyPreview =
                 String.Equals(first, expected, StringComparison.Ordinal))
         if selected.Length <> 1 then refuse UnregisteredWorktree
 
+    let private requireNoAlternates root =
+        // Refuse an alternates file as one prerequisite to object-store
+        // custody; this check does not prove the store is self-contained.
+        // Git follows objects/info/alternates even after ambient alternate
+        // variables are cleared. Ask Git for the active common-store path so
+        // registered linked worktrees use the same check as the main worktree.
+        let output =
+            runGit root [ "rev-parse"; "--path-format=absolute"; "--git-path"; "objects/info/alternates" ]
+                   4096 AlternateObjectStore
+        let path =
+            try UTF8Encoding(false, true).GetString output
+            with :? DecoderFallbackException -> refuse AlternateObjectStore
+        if not (path.EndsWith("\n", StringComparison.Ordinal)) then
+            refuse AlternateObjectStore
+        let path = path.Substring(0, path.Length - 1)
+        if String.IsNullOrWhiteSpace path || not (Path.IsPathFullyQualified path) then
+            refuse AlternateObjectStore
+        try
+            File.GetAttributes path |> ignore
+            // Even an empty or malformed alternate file is outside this
+            // provisional no-alternates source profile.
+            refuse AlternateObjectStore
+        with
+        | :? FileNotFoundException
+        | :? DirectoryNotFoundException -> ()
+        | :? IOException
+        | :? UnauthorizedAccessException -> refuse AlternateObjectStore
+
     let private commitEntry (root: string) (commitId: string) (path: string) =
         let output = runGit root [ "ls-tree"; "-z"; "--full-tree"; commitId; "--"; path ] 4096 (MalformedTreeEntry path)
         if output.Length = 0 then refuse (MissingPath path)
@@ -147,6 +176,7 @@ module internal WorkModelGitCommitCustodyPreview =
             if not (fullObjectId commitId) then refuse InvalidCommitId
             requireRepositoryRoot root
             requireRegisteredWorktree root
+            requireNoAlternates root
             afterRegistration ()
             let kind = runGit root [ "cat-file"; "-t"; commitId ] 32 GitFailure |> ascii
             if kind.Trim() <> "commit" then refuse NotCommit
@@ -163,6 +193,7 @@ module internal WorkModelGitCommitCustodyPreview =
                 requireRepositoryRoot root
                 requireRegisteredWorktree root
             with Refused _ -> refuse RepositoryChanged
+            requireNoAlternates root
             Ok { CommitId = commitId; Files = files }
         with
         | Refused reason -> Error reason
