@@ -32,17 +32,21 @@ module internal GenerationSourceSnapshot =
         | EmptySet
         | UnsupportedPlatform
 
-    type CapturedFile internal (path: string, raw: byte[], digest: SourceDigest, takeOwnership: bool) =
+    type CapturedFile internal (path: string, raw: byte[], digest: SourceDigest, takeOwnership: bool, unixMode: int option) =
         let snapshot = if takeOwnership then raw else Array.copy raw
-        new(path, raw, digest) = CapturedFile(path, raw, digest, false)
+        new(path, raw, digest) = CapturedFile(path, raw, digest, false, None)
         // Only the pinned reader may hand off a freshly allocated array that
         // has no mutable alias outside this capture. The ordinary constructor
         // still snapshots caller-supplied arrays defensively.
         static member internal FromOwned(path, raw, digest) =
-            CapturedFile(path, raw, digest, true)
+            CapturedFile(path, raw, digest, true, None)
+        static member internal FromOwnedWithUnixMode(path, raw, digest, mode) =
+            CapturedFile(path, raw, digest, true, Some mode)
         member _.Path = path
         member _.Bytes = Array.copy snapshot
         member _.Digest = digest
+        // Available only on Linux selected-file captures from the opened fd.
+        member _.UnixMode = unixMode
 
     type private EntryKind = Regular | Directory | Link | Special
     exception private CaptureRefused of Refusal
@@ -141,6 +145,17 @@ module internal GenerationSourceSnapshot =
             Marshal.ReadInt16(buffer, 28) |> uint16 |> int |> kindFromMode
         finally Marshal.FreeHGlobal buffer
 
+    let private openedUnixMode descriptor relative =
+        let buffer = Marshal.AllocHGlobal 256
+        try
+            if statx(descriptor, "", 0x1000, 0x3u, buffer) <> 0 then refuse (Unreadable relative)
+            if uint32 (Marshal.ReadInt32(buffer, 0)) &&& 0x2u = 0u then
+                refuse (FileUnstable relative)
+            let mode = Marshal.ReadInt16(buffer, 28) |> uint16 |> int
+            if kindFromMode mode <> Regular then refuse (NonRegular relative)
+            mode &&& 0o7777
+        finally Marshal.FreeHGlobal buffer
+
     let private descriptorStamp unstable descriptor relative =
         let buffer = Marshal.AllocHGlobal 256
         try
@@ -148,10 +163,10 @@ module internal GenerationSourceSnapshot =
                 refuse (Unreadable relative)
             let bytes = Array.zeroCreate<byte> 256
             Marshal.Copy(buffer, bytes, 0, bytes.Length)
-            // Require nlink, inode, size, mtime, and ctime from the held fd.
-            if BitConverter.ToUInt32(bytes, 0) &&& 0x3c4u <> 0x3c4u then
+            // Require mode, nlink, inode, size, mtime, and ctime from the held fd.
+            if BitConverter.ToUInt32(bytes, 0) &&& 0x3c6u <> 0x3c6u then
                 refuse (unstable relative)
-            [| bytes.[16..19]; bytes.[32..47]; bytes.[96..127]; bytes.[136..143] |]
+            [| bytes.[16..19]; bytes.[28..29]; bytes.[32..47]; bytes.[96..127]; bytes.[136..143] |]
             |> Array.concat
         finally Marshal.FreeHGlobal buffer
 
@@ -200,6 +215,7 @@ module internal GenerationSourceSnapshot =
         if handle < 0 then refuse (Unreadable path)
         use safeHandle = new SafeFileHandle(nativeint handle, true)
         if descriptorKind handle "" 0x1000 path <> Regular then refuse (NonRegular path)
+        let unixMode = openedUnixMode handle path
         afterOpen path
         let before = fileStamp handle path
         use stream = new FileStream(safeHandle, FileAccess.Read)
@@ -245,7 +261,7 @@ module internal GenerationSourceSnapshot =
         if offset <> raw.Length then refuse (FileUnstable path)
         let after = fileStamp handle path
         if middle <> after then refuse (FileUnstable path)
-        raw
+        raw, unixMode
 
     let private requireSelectedName directory relative name path =
         let selectedKey = portableNameKey name
@@ -360,7 +376,7 @@ module internal GenerationSourceSnapshot =
                                     if files.Count >= maxPinnedCapturedFiles then
                                         refuse (CapturedFileLimit path)
                                     let remaining = maxPinnedCaptureBytes - capturedBytes
-                                    let raw =
+                                    let raw, _ =
                                         readPinnedRegular directory name path
                                                           beforeOpen afterOpen afterRead afterLength remaining
                                     capturedBytes <- capturedBytes + int64 raw.Length
@@ -445,13 +461,13 @@ module internal GenerationSourceSnapshot =
                         | Link -> refuse (Symlink relativePath)
                         | Regular -> ()
                         | _ -> refuse (NonRegular relativePath)
-                        let raw =
+                        let raw, unixMode =
                             readPinnedRegular parent fileName relativePath
                                               beforeOpen afterOpen afterRead ignore Int64.MaxValue
                         requireSelectedName parent parentRelative fileName relativePath
                         if directoryStamp parent parentRelative <> before then
                             refuse (DirectoryUnstable parentRelative)
-                        CapturedFile.FromOwned(relativePath, raw, SchemaVersion.sha256Bytes raw)))
+                        CapturedFile.FromOwnedWithUnixMode(relativePath, raw, SchemaVersion.sha256Bytes raw, unixMode)))
                 |> Ok
             finally nativeClose rootHandle |> ignore
         with
