@@ -4,7 +4,7 @@
 
 ## Design
 
-Reuse the existing `GenerationManifest.isStale` public `.fsi` surface. Compare sorted source-path/digest pairs after rejecting empty or duplicate path lists. Exact path equality makes a wrong `readiness/<work-id>/` root stale; no new path format or schema is introduced. The function remains pure and deterministic.
+Reuse the existing `GenerationManifest.isStale` public `.fsi` surface. Compare sorted source-path/digest pairs after rejecting empty or duplicate path lists and source digests outside the existing SHA-256 constructor's invariant. Exact path equality makes a wrong `readiness/<work-id>/` root stale; no new path format or schema is introduced. The function remains pure and deterministic.
 
 ## Constitution and implementation order
 
@@ -12,4 +12,4 @@ The existing `.fsi` already fixes the public shape, so no new signature or API b
 
 ## Verification and join
 
-Run focused `FS.GG.SDD.Artifacts.Tests` and the normal project build. Keep the PR draft; no producer package release, receiver pin, gate flip or protected V2 merge follows from local green. A later FSC-04 owner must qualify installed producer bytes, consumers and wrong-root filesystem effects before adoption.
+Run focused `FS.GG.SDD.Artifacts.Tests` including null/empty/unsupported digest negatives and the normal project build. Keep the PR draft; no producer package release, receiver pin, gate flip or protected V2 merge follows from local green. A later FSC-04 owner must qualify installed producer bytes, consumers and wrong-root filesystem effects before adoption.
