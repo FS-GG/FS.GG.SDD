@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Commands.Tests
 open System
 open System.IO
 open FS.GG.SDD.Commands.GenerationSourceSnapshot
+open FS.GG.SDD.Artifacts
 open Xunit
 
 module GenerationPinnedSecondPassMemoryTests =
@@ -39,3 +40,17 @@ module GenerationPinnedSecondPassMemoryTests =
             let allocated = measurePinnedAllocation ()
             Assert.True(allocated < 28L * mib,
                         $"An 8 MiB file allocated %d{allocated} bytes during pinned capture")
+
+    [<Fact>]
+    let ``pinned result avoids a third full-sized raw copy`` () =
+        if OperatingSystem.IsLinux() then
+            let allocated = measurePinnedAllocation ()
+            Assert.True(allocated < 20L * mib,
+                        $"An 8 MiB file allocated %d{allocated} bytes during pinned capture")
+
+    [<Fact>]
+    let ``ordinary captured-file constructor defensively copies supplied bytes`` () =
+        let supplied = [| 1uy; 2uy |]
+        let captured = CapturedFile("source.bin", supplied, SchemaVersion.sha256Bytes supplied)
+        supplied.[0] <- 9uy
+        Assert.True(captured.Bytes = [| 1uy; 2uy |])

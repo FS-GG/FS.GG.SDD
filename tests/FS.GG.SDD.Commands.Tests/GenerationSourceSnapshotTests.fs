@@ -44,6 +44,17 @@ module GenerationSourceSnapshotTests =
             Assert.NotEqual(first.Head.Digest, second.Head.Digest))
 
     [<Fact>]
+    let ``path reader still copies bytes retained by its supplier`` () =
+        withTree (fun root ->
+            write root "inputs/A.bin" [| 1uy; 2uy |] |> ignore
+            let supplied = [| 1uy; 2uy |]
+            let files =
+                captureWithReader (fun _ -> supplied) root "inputs" [ "inputs/A.bin" ] ExactBytes
+                |> captured
+            supplied.[0] <- 9uy
+            Assert.True(files.Head.Bytes = [| 1uy; 2uy |]))
+
+    [<Fact>]
     let ``missing extra duplicate and escaping paths refuse without touching prior output`` () =
         withTree (fun root ->
             let prior = write root "prior-view.json" [| 42uy |]
