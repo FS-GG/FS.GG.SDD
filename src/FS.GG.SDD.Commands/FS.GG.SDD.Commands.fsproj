@@ -52,6 +52,7 @@
     <Compile Include="WorkModelCandidateInventoryPreview.fs" />
     <Compile Include="WorkModelRepeatedCandidateTreePreview.fs" />
     <Compile Include="WorkModelCandidateBundleJoinPreview.fs" />
+    <Compile Include="WorkModelRepeatedJointCapturePreview.fs" />
     <Compile Include="CommandWorkflow/Prerequisites.fs" />
     <Compile Include="CommandWorkflow/HandlersEarly.fs" />
     <Compile Include="CommandWorkflow/HandlersAnalyze.fs" />
