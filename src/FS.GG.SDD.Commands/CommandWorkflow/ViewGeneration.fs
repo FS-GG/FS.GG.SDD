@@ -838,7 +838,7 @@ module internal ViewGeneration =
     /// mandatory `sourceAnalysis` pointer and all author-declared evidence, while canonicalising
     /// only the tool-owned snapshot payload for the work-model source digest.  Evidence validation
     /// continues to read the original artifact and therefore still rejects stale source snapshots.
-    let private evidenceTextForWorkModel (text: string) =
+    let evidenceTextForWorkModel (text: string) =
         Regex.Replace(text, "(?ms)^sourceSnapshots:\\s*.*?(?=^evidence:)", "sourceSnapshots: []\n")
 
     let private evidenceSnapshotForWorkModel workId (snapshot: FileSnapshot) =
