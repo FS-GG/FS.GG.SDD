@@ -77,10 +77,12 @@ module internal GenerationSourceSnapshot =
                 SchemaVersion.sha256Text body
             with :? DecoderFallbackException -> refuse (Unreadable relative)
 
-    /// The caller owns the closed-root selection and digest policy. This is a read-only capture:
-    /// it never stages or replaces a generated output.
-    let capture (workspaceRoot: string) (closedRoot: string) (declared: string list)
-                (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
+    /// Test seam for a controlled interleaving between path classification and byte read.
+    /// Production capture always supplies File.ReadAllBytes. The reader must be read-only
+    /// outside a local characterization fixture; this does not close the path-swap race.
+    let captureWithReader (readBytes: string -> byte array)
+                          (workspaceRoot: string) (closedRoot: string) (declared: string list)
+                          (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
         try
             if not (validRelative closedRoot) || String.IsNullOrWhiteSpace workspaceRoot
                || not (Directory.Exists workspaceRoot) then refuse InvalidRoot
@@ -146,7 +148,7 @@ module internal GenerationSourceSnapshot =
             |> Seq.sortBy fst
             |> Seq.map (fun (path, absolute) ->
                 if classify absolute path <> Regular then refuse (NonRegular path)
-                let raw = File.ReadAllBytes absolute
+                let raw = readBytes absolute
                 if classify absolute path <> Regular then refuse (NonRegular path)
                 CapturedFile(path, raw, digest policy raw path))
             |> Seq.toList
@@ -157,3 +159,9 @@ module internal GenerationSourceSnapshot =
         | :? EntryPointNotFoundException -> Error UnsupportedPlatform
         | :? IOException
         | :? UnauthorizedAccessException -> Error(Unreadable closedRoot)
+
+    /// The caller owns the closed-root selection and digest policy. This is a read-only capture:
+    /// it never stages or replaces a generated output.
+    let capture (workspaceRoot: string) (closedRoot: string) (declared: string list)
+                (policy: DigestPolicy) : Result<CapturedFile list, Refusal> =
+        captureWithReader File.ReadAllBytes workspaceRoot closedRoot declared policy
