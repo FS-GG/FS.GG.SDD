@@ -7,6 +7,7 @@ open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.GenerationSourceContract
 open FS.GG.SDD.Commands.GenerationSourceSnapshot
 open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.Commands.CommandTypes
 open Xunit
 
 module WorkModelBundleContractTests =
@@ -36,15 +37,59 @@ module WorkModelBundleContractTests =
                 | Error refusal -> failwithf "control unexpectedly refused: %A" refusal
                 | Ok files -> Assert.Equal(3, files.Length))
 
-    let private fixture action =
+    let private fixtureWithPerformance performance action =
         if OperatingSystem.IsLinux() then
             withTree (fun root ->
-                Directory.CreateDirectory(Path.Combine(root, "readiness", "sample")) |> ignore
+                let performanceDirectory =
+                    Path.GetDirectoryName(Path.Combine(root, performance))
+                    |> Option.ofObj
+                    |> Option.defaultWith (fun () -> failwith "fixture path has no parent")
+                Directory.CreateDirectory(performanceDirectory) |> ignore
                 let config = [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml" ]
                 let work = [ "work/sample/spec.md"; "work/sample/evidence.yml" ]
-                let performance = "readiness/sample/performance-evidence.json"
                 let evidence =
-                    "sourceSnapshots:\n  - path: stale\nevidence:\n  - id: EV001\n"
+                    $"""schemaVersion: 1
+workId: sample
+stage: evidence
+status: evidenceReady
+sourceSnapshots:
+  - path: stale
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [{performance}]
+    sourceRefs:
+      - kind: test-output
+        path: {performance}
+        result: pass
+    performanceBudget:
+      artifactPath: {performance}
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: [pointer-stress]
+      workloadDefinitionDigests: [normal-play=sha256:normal-v1, pointer-stress=sha256:stress-v1]
+      currencyToken: commit:fixture
+      capturedAfterUtc: 2026-08-22T00:00:00Z
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+    result: pass
+    synthetic: false
+    notes: []
+"""
                 let bodies =
                     [ yield! config |> List.map (fun path -> path, "schemaVersion: 1\n")
                       "work/sample/spec.md", "# source\r\n"
@@ -66,7 +111,7 @@ module WorkModelBundleContractTests =
                 let physical =
                     captureRoot ".fsgg" config
                     @ captureRoot "work/sample" work
-                    @ captureRoot "readiness/sample" [ performance ]
+                    @ captureRoot (if performance.StartsWith("readiness/") then "readiness/sample" else "tests") [ performance ]
                 let candidate: Bundle.Candidate =
                     { Version = 2
                       WorkId = "sample"
@@ -76,11 +121,71 @@ module WorkModelBundleContractTests =
                             { Path = source.Path; Digest = SchemaVersion.sha256Text source.Text }) }
                 action root selected physical candidate)
 
+    let private fixture action =
+        fixtureWithPerformance "readiness/sample/performance-evidence.json" action
+
+    [<Fact>]
+    let ``declared performance outside readiness binds as a selected source`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun _ selected physical candidate ->
+            match Bundle.verify "sample" selected physical candidate with
+            | Error refusal -> failwithf "declared external-root source refused: %A" refusal
+            | Ok files -> Assert.Equal(6, files.Length))
+
+    [<Fact>]
+    let ``omitted declared performance refuses even if candidate and captures omit it`` () =
+        fixture (fun _ selected physical candidate ->
+            let performance = "readiness/sample/performance-evidence.json"
+            let selected = selected |> List.filter (fun source -> source.Path <> performance)
+            let physical = physical |> List.filter (fun source -> source.Path <> performance)
+            let candidate = { candidate with Sources = candidate.Sources |> List.filter (fun source -> source.Path <> performance) }
+            Assert.Equal(Error(Bundle.MissingPerformanceSelection performance),
+                         Bundle.verify "sample" selected physical candidate))
+
+    [<Fact>]
+    let ``producer selects observed performance path outside readiness`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root _ _ _ ->
+            let path = "tests/performance.txt"
+            let body = File.ReadAllText(Path.Combine(root, "work/sample/evidence.yml"))
+            let snapshot = { Path = path; Text = "measured\n"; RawBytes = None }
+            let observed: CommandEffectResult =
+                { Effect = ReadFile path
+                  Succeeded = true
+                  Read = Bytes snapshot
+                  Snapshot = Some snapshot
+                  Process = None
+                  Confirmed = None
+                  Diagnostic = None }
+            let model, _ = FS.GG.SDD.Commands.CommandWorkflow.init (TestSupport.request Analyze ".")
+            let selected =
+                ViewGeneration.performanceEvidenceSnapshots "sample" (Some body)
+                    { model with InterpretedEffects = [ observed ] }
+            Assert.Equal<string list>([ path ], selected |> List.map _.Path))
+
+    [<Fact>]
+    let ``unbound performance selection and malformed physical evidence refuse`` () =
+        fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+            let unbound =
+                selected |> List.map (fun source ->
+                    if source.Path = "tests/performance.txt" then { source with Path = "tests/other.txt" }
+                    else source)
+            Assert.Equal(Error(Bundle.InvalidSelectionPath "tests/other.txt"),
+                         Bundle.verify "sample" unbound physical candidate)
+            File.WriteAllText(Path.Combine(root, "work/sample/evidence.yml"), "not: [valid")
+            let alteredEvidence =
+                match capture root "work/sample" [ "work/sample/spec.md"; "work/sample/evidence.yml" ] ExactBytes with
+                | Ok files -> files |> List.find (fun file -> file.Path = "work/sample/evidence.yml")
+                | Error refusal -> failwithf "malformed-evidence bytes could not be captured: %A" refusal
+            let alteredPhysical =
+                physical |> List.map (fun file ->
+                    if file.Path = "work/sample/evidence.yml" then alteredEvidence else file)
+            Assert.Equal(Error Bundle.MalformedEvidence,
+                         Bundle.verify "sample" selected alteredPhysical candidate))
+
     [<Fact>]
     let ``three selected roots bind captured bytes and projected evidence digest`` () =
         fixture (fun _ selected physical candidate ->
             let evidence = selected |> List.find (fun source -> source.Path = "work/sample/evidence.yml")
-            Assert.Equal("sourceSnapshots: []\nevidence:\n  - id: EV001\n", evidence.Text)
+            Assert.Contains("sourceSnapshots: []\nevidence:\n  - id: EV001", evidence.Text)
             match Bundle.verify "sample" selected physical candidate with
             | Error refusal -> failwithf "valid bundle refused: %A" refusal
             | Ok files -> Assert.Equal(6, files.Length))
@@ -135,7 +240,7 @@ module WorkModelBundleContractTests =
             let unprojected =
                 selected |> List.map (fun source ->
                     if source.Path = evidence then
-                        { source with Text = "sourceSnapshots:\n  - path: stale\nevidence:\n  - id: EV001\n" }
+                        { source with Text = Encoding.UTF8.GetString(source.RawBytes.Value) }
                     else source)
             Assert.Equal(Error(Bundle.TextDrift evidence), Bundle.verify "sample" unprojected physical candidate)
             Assert.Equal(Error Bundle.WrongWorkId,
