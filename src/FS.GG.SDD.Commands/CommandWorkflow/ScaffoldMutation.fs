@@ -58,7 +58,7 @@ module internal ScaffoldMutation =
     let toolManifestPath = ".config/dotnet-tools.json"
 
     [<Literal>]
-    let coordinationToolVersion = "0.91.4"
+    let coordinationToolVersion = "0.91.5"
 
     let private writeToolEntry (writer: Utf8JsonWriter) ((packageId: string), (version: string), (command: string)) =
         writer.WritePropertyName(packageId)

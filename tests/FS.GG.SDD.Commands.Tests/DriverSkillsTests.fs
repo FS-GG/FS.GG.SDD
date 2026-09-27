@@ -17,7 +17,7 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "8d0c263863de26582e24287b83973b8f6bd75491746264c06e801ab4cb49c033"
+        "5748009c3990542c76574ec8628d8b07a1a04198701cb51177eb7e1c8240f87f"
 
     // work-board ships in FS.GG.Drivers, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
