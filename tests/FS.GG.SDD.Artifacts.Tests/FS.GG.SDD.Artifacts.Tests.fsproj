@@ -41,6 +41,7 @@
     <Compile Include="WorkModelTests.fs" />
     <Compile Include="NormalizedWorkModelTests.fs" />
     <Compile Include="GeneratedModelCurrencyTests.fs" />
+    <Compile Include="WorkModelSourcePolicyTests.fs" />
     <Compile Include="SchemaMigrationTests.fs" />
     <Compile Include="DiagnosticTests.fs" />
     <Compile Include="DeterministicJsonTests.fs" />

@@ -1,0 +1,3 @@
+# Plan: Work-model multi-root selection characterization
+
+Add focused in-memory Commands tests against `ViewGeneration.workModelSnapshots`, using interpreted file-read results to model config and performance-artifact observations. First invert the absent-artifact assertion to require a selected source and record the red result (one failure in two focused tests), then retain the observed behavior and compare it with an explicitly unreadable read in the committed test. Do not edit the selector, physical snapshot reader, generation contract, or output code. Run locked restore, focused tests, and `git diff --check`.
