@@ -10,9 +10,9 @@
       },
       "FS.GG.Drivers": {
         "type": "Direct",
-        "requested": "[0.90.0, )",
-        "resolved": "0.90.0",
-        "contentHash": "ztSesJ4Bo9I7BR2vjwBCaNGj2fxOcIXlRz1t5A4i/vUwLU/V/FwhXjNWYTyL/BK7pHLFX50S1riMrp5OMEZ98Q=="
+        "requested": "[0.91.4, )",
+        "resolved": "0.91.4",
+        "contentHash": "/0VkW697T2zDd+AKHsTLec0UN/dRPjWErVozWRBkAfhxtNs1AWeYKr8e2eEA2+skOqkGRfC4DtMYnj3S+WEd0A=="
       },
       "FS.GG.Game.Skills": {
         "type": "Direct",
