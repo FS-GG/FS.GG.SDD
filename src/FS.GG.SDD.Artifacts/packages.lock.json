@@ -10,7 +10,7 @@
       },
       "FsQuint": {
         "type": "Direct",
-        "requested": "[0.1.0, )",
+        "requested": "[0.1.0, 0.1.0]",
         "resolved": "0.1.0",
         "contentHash": "S1dCVHdcLRdXmZnjCOk+nJLhjO3acz705bEeQm2cBrwxiEsDpVj7PD8tECcKo/Bzpbw5ZOI4bLMWdlqSkISsbg==",
         "dependencies": {

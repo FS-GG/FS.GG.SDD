@@ -33,7 +33,7 @@
         "dependencies": {
           "FS.GG.Contracts": "[7.5.2, )",
           "FSharp.Core": "[10.1.302, )",
-          "FsQuint": "[0.1.0, )",
+          "FsQuint": "[0.1.0, 0.1.0]",
           "YamlDotNet": "[18.1.0, )"
         }
       },
@@ -83,7 +83,7 @@
       },
       "FsQuint": {
         "type": "CentralTransitive",
-        "requested": "[0.1.0, )",
+        "requested": "[0.1.0, 0.1.0]",
         "resolved": "0.1.0",
         "contentHash": "S1dCVHdcLRdXmZnjCOk+nJLhjO3acz705bEeQm2cBrwxiEsDpVj7PD8tECcKo/Bzpbw5ZOI4bLMWdlqSkISsbg==",
         "dependencies": {
