@@ -13,18 +13,26 @@ module GenerationSelectedFileSnapshotTests =
 
     let private withTree action =
         if OperatingSystem.IsLinux() then
-            let root = Path.Combine(Path.GetTempPath(), "sdd-selected-file-" + Guid.NewGuid().ToString("N"))
+            let root =
+                Path.Combine(Path.GetTempPath(), "sdd-selected-file-" + Guid.NewGuid().ToString("N"))
+
             Directory.CreateDirectory(Path.Combine(root, "tests")) |> ignore
             let target = Path.Combine(root, "tests", "performance.txt")
             File.WriteAllBytes(target, [| 1uy; 2uy |])
-            try action root target
-            finally Directory.Delete(root, true)
+
+            try
+                action root target
+            finally
+                Directory.Delete(root, true)
 
     [<Fact>]
     let ``selected file capture accepts unrelated regular and linked siblings`` () =
         withTree (fun root target ->
             File.WriteAllText(Path.Combine(root, "tests", "unrelated.txt"), "other")
-            File.CreateSymbolicLink(Path.Combine(root, "tests", "shortcut.txt"), target) |> ignore
+
+            File.CreateSymbolicLink(Path.Combine(root, "tests", "shortcut.txt"), target)
+            |> ignore
+
             match captureSelectedFile root "tests/performance.txt" with
             | Error reason -> failwithf "selected file refused: %A" reason
             | Ok file ->
@@ -39,35 +47,41 @@ module GenerationSelectedFileSnapshotTests =
             File.WriteAllText(foreign, "foreign")
             File.Delete target
             File.CreateSymbolicLink(target, foreign) |> ignore
-            Assert.Equal(Error(Symlink "tests/performance.txt"),
-                         captureSelectedFile root "tests/performance.txt")
+            Assert.Equal(Error(Symlink "tests/performance.txt"), captureSelectedFile root "tests/performance.txt")
             File.Delete target
-            Assert.Equal(0, mkfifo(target, 0o600u))
-            Assert.Equal(Error(NonRegular "tests/performance.txt"),
-                         captureSelectedFile root "tests/performance.txt"))
+            Assert.Equal(0, mkfifo (target, 0o600u))
+            Assert.Equal(Error(NonRegular "tests/performance.txt"), captureSelectedFile root "tests/performance.txt"))
 
     [<Fact>]
     let ``selected leaf and parent case aliases refuse`` () =
         withTree (fun root target ->
             File.WriteAllText(Path.Combine(root, "tests", "Performance.txt"), "alias")
-            Assert.Equal(Error(DuplicatePath "tests/performance.txt"),
-                         captureSelectedFile root "tests/performance.txt")
+
+            Assert.Equal(
+                Error(DuplicatePath "tests/performance.txt"),
+                captureSelectedFile root "tests/performance.txt"
+            )
+
             File.Delete(Path.Combine(root, "tests", "Performance.txt"))
             File.Delete target
             File.WriteAllText(Path.Combine(root, "tests", "Performance.txt"), "alias")
-            Assert.Equal(Error(DuplicatePath "tests/performance.txt"),
-                         captureSelectedFile root "tests/performance.txt")
+
+            Assert.Equal(
+                Error(DuplicatePath "tests/performance.txt"),
+                captureSelectedFile root "tests/performance.txt"
+            )
+
             Directory.CreateDirectory(Path.Combine(root, "Tests")) |> ignore
-            Assert.Equal(Error(DuplicatePath "tests"),
-                         captureSelectedFile root "tests/performance.txt"))
+            Assert.Equal(Error(DuplicatePath "tests"), captureSelectedFile root "tests/performance.txt"))
 
     [<Fact>]
     let ``linked selected ancestor and escaping path refuse`` () =
         withTree (fun root _ ->
-            Directory.CreateSymbolicLink(Path.Combine(root, "alias"), Path.Combine(root, "tests")) |> ignore
+            Directory.CreateSymbolicLink(Path.Combine(root, "alias"), Path.Combine(root, "tests"))
+            |> ignore
+
             Assert.Equal(Error(Symlink "alias"), captureSelectedFile root "alias/performance.txt")
-            Assert.Equal(Error(InvalidPath "tests/../outside"),
-                         captureSelectedFile root "tests/../outside"))
+            Assert.Equal(Error(InvalidPath "tests/../outside"), captureSelectedFile root "tests/../outside"))
 
     [<Fact>]
     let ``link swapped before selected descriptor open refuses`` () =
@@ -75,13 +89,17 @@ module GenerationSelectedFileSnapshotTests =
             let backup = Path.Combine(root, "backup.txt")
             let foreign = Path.Combine(root, "foreign.txt")
             File.WriteAllBytes(foreign, [| 9uy |])
+
             let beforeOpen path =
                 Assert.Equal("tests/performance.txt", path)
                 File.Move(target, backup)
                 File.CreateSymbolicLink(target, foreign) |> ignore
+
             try
-                Assert.Equal(Error(Unreadable "tests/performance.txt"),
-                             captureSelectedFileWithHooks beforeOpen ignore ignore root "tests/performance.txt")
+                Assert.Equal(
+                    Error(Unreadable "tests/performance.txt"),
+                    captureSelectedFileWithHooks beforeOpen ignore ignore root "tests/performance.txt"
+                )
             finally
                 File.Delete target
                 File.Move(backup, target))
@@ -92,15 +110,22 @@ module GenerationSelectedFileSnapshotTests =
             let backup = Path.Combine(root, "backup.txt")
             let foreign = Path.Combine(root, "foreign.txt")
             File.WriteAllBytes(foreign, [| 9uy |])
+
             let afterOpen path =
                 Assert.Equal("tests/performance.txt", path)
                 File.Move(target, backup)
-                try File.CreateSymbolicLink(target, foreign) |> ignore
+
+                try
+                    File.CreateSymbolicLink(target, foreign) |> ignore
                 finally
                     File.Delete target
                     File.Move(backup, target)
-            Assert.Equal(Error(DirectoryUnstable "tests"),
-                         captureSelectedFileWithHooks ignore afterOpen ignore root "tests/performance.txt")
+
+            Assert.Equal(
+                Error(DirectoryUnstable "tests"),
+                captureSelectedFileWithHooks ignore afterOpen ignore root "tests/performance.txt"
+            )
+
             Assert.True(File.ReadAllBytes target = [| 1uy; 2uy |]))
 
     [<Fact>]
@@ -109,16 +134,22 @@ module GenerationSelectedFileSnapshotTests =
             let backup = Path.Combine(root, "backup.txt")
             let foreign = Path.Combine(root, "foreign.txt")
             File.WriteAllBytes(foreign, [| 9uy |])
+
             let beforeOpen path =
                 Assert.Equal("tests/performance.txt", path)
                 File.Move(target, backup)
                 File.Copy(foreign, target)
+
             let afterOpen path =
                 Assert.Equal("tests/performance.txt", path)
                 File.Delete target
                 File.Move(backup, target)
-            Assert.Equal(Error(DirectoryUnstable "tests"),
-                         captureSelectedFileWithHooks beforeOpen afterOpen ignore root "tests/performance.txt")
+
+            Assert.Equal(
+                Error(DirectoryUnstable "tests"),
+                captureSelectedFileWithHooks beforeOpen afterOpen ignore root "tests/performance.txt"
+            )
+
             Assert.True(File.ReadAllBytes target = [| 1uy; 2uy |]))
 
     [<Fact>]
@@ -127,8 +158,11 @@ module GenerationSelectedFileSnapshotTests =
             let afterRead path =
                 Assert.Equal("tests/performance.txt", path)
                 File.WriteAllBytes(target, [| 8uy; 2uy |])
-            Assert.Equal(Error(FileUnstable "tests/performance.txt"),
-                         captureSelectedFileWithHooks ignore ignore afterRead root "tests/performance.txt"))
+
+            Assert.Equal(
+                Error(FileUnstable "tests/performance.txt"),
+                captureSelectedFileWithHooks ignore ignore afterRead root "tests/performance.txt"
+            ))
 
     [<Fact>]
     let ``selected file refuses parent roster mutation while read`` () =
@@ -136,5 +170,8 @@ module GenerationSelectedFileSnapshotTests =
             let afterOpen path =
                 Assert.Equal("tests/performance.txt", path)
                 File.WriteAllText(Path.Combine(root, "tests", "late.txt"), "late")
-            Assert.Equal(Error(DirectoryUnstable "tests"),
-                         captureSelectedFileWithHooks ignore afterOpen ignore root "tests/performance.txt"))
+
+            Assert.Equal(
+                Error(DirectoryUnstable "tests"),
+                captureSelectedFileWithHooks ignore afterOpen ignore root "tests/performance.txt"
+            ))

@@ -38,8 +38,7 @@ module WorkModelSourceSelectionTests =
         }
 
     let private selectedEvidence text =
-        ViewGeneration.workModelSnapshots
-            workId None None None None None None (Some text) emptyModel
+        ViewGeneration.workModelSnapshots workId None None None None None None (Some text) emptyModel
         |> List.find (fun source -> source.Path = evidencePath)
 
     [<Fact>]
@@ -52,5 +51,4 @@ module WorkModelSourceSelectionTests =
         Assert.Equal("sourceSnapshots: []\nevidence:\n  - id: E-1\n", selected.Text)
         Assert.Equal(selected.Text, (selectedEvidence second).Text)
         Assert.NotEqual(selected.Text, (selectedEvidence changedEvidence).Text)
-        Assert.Equal(SchemaVersion.sha256Text selected.Text,
-                     SchemaVersion.sha256Text (selectedEvidence second).Text)
+        Assert.Equal(SchemaVersion.sha256Text selected.Text, SchemaVersion.sha256Text (selectedEvidence second).Text)

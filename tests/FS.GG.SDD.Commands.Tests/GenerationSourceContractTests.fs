@@ -12,18 +12,35 @@ open Xunit
 
 module GenerationSourceContractTests =
     let private withTree action =
-        let root = Path.Combine(Path.GetTempPath(), "sdd-source-contract-" + Guid.NewGuid().ToString("N"))
+        let root =
+            Path.Combine(Path.GetTempPath(), "sdd-source-contract-" + Guid.NewGuid().ToString("N"))
+
         Directory.CreateDirectory(Path.Combine(root, "producer")) |> ignore
-        try action root
-        finally Directory.Delete(root, true)
+
+        try
+            action root
+        finally
+            Directory.Delete(root, true)
 
     let private source path bytes =
-        { Path = path; Digest = SchemaVersion.sha256Bytes bytes }
+        {
+            Path = path
+            Digest = SchemaVersion.sha256Bytes bytes
+        }
 
     let private contract files =
-        { Version = 1; ClosedRoot = "producer"; Policy = ExactBytes; Sources = files }
+        {
+            Version = 1
+            ClosedRoot = "producer"
+            Policy = ExactBytes
+            Sources = files
+        }
 
-    let private selected = { ClosedRoot = "producer"; Policy = ExactBytes }
+    let private selected =
+        {
+            ClosedRoot = "producer"
+            Policy = ExactBytes
+        }
 
     [<Fact>]
     let ``v1 binds the complete physical source set to immutable bytes`` () =
@@ -31,6 +48,7 @@ module GenerationSourceContractTests =
             let bytes = [| 0xefuy; 0xbbuy; 0xbfuy; 65uy; 13uy; 10uy |]
             let file = Path.Combine(root, "producer", "a.txt")
             File.WriteAllBytes(file, bytes)
+
             match verify root selected (contract [ source "producer/a.txt" bytes ]) with
             | Error reason -> failwithf "valid contract refused: %A" reason
             | Ok captured ->
@@ -68,10 +86,18 @@ module GenerationSourceContractTests =
             let bytes = [| 1uy |]
             File.WriteAllBytes(Path.Combine(root, "producer", "a.bin"), bytes)
             let valid = source "producer/a.bin" bytes
-            let malformed = { valid with Digest = { Algorithm = "sha256"; Value = "ABC" } }
+
+            let malformed =
+                { valid with
+                    Digest = { Algorithm = "sha256"; Value = "ABC" }
+                }
+
             Assert.Equal(Error(MalformedDigest "producer/a.bin"), verify root selected (contract [ malformed ]))
-            Assert.Equal(Error(Physical(DuplicatePath "producer/a.bin")),
-                verify root selected (contract [ valid; valid ])))
+
+            Assert.Equal(
+                Error(Physical(DuplicatePath "producer/a.bin")),
+                verify root selected (contract [ valid; valid ])
+            ))
 
     [<Fact>]
     let ``contract propagates linked workspace ancestor refusal`` () =
@@ -81,15 +107,24 @@ module GenerationSourceContractTests =
                 Directory.CreateDirectory(Path.Combine(physical, "producer")) |> ignore
                 let bytes = [| 1uy |]
                 File.WriteAllBytes(Path.Combine(physical, "producer", "a.bin"), bytes)
-                Directory.CreateSymbolicLink(Path.Combine(root, "alias"), Path.Combine(root, "physical")) |> ignore
+
+                Directory.CreateSymbolicLink(Path.Combine(root, "alias"), Path.Combine(root, "physical"))
+                |> ignore
+
                 let workspace = Path.Combine(root, "alias", "workspace")
-                Assert.Equal(Error(Physical(Symlink "..")),
-                    verify workspace selected (contract [ source "producer/a.bin" bytes ])))
+
+                Assert.Equal(
+                    Error(Physical(Symlink "..")),
+                    verify workspace selected (contract [ source "producer/a.bin" bytes ])
+                ))
 
 /// Selection evidence for a later producer-owned multi-root contract. These
 /// fixtures do not authorize the single-root verifier to accept work-model paths.
 module WorkModelMultiRootSelectionCharacterizationTests =
-    type private PerformanceObservation = Observed | NotRead | ReadFailed
+    type private PerformanceObservation =
+        | Observed
+        | NotRead
+        | ReadFailed
 
     let private workId = "multi-root-fixture"
     let private performancePath = $"readiness/{workId}/performance-evidence.json"
@@ -144,7 +179,13 @@ evidence:
 """
 
     let private observedRead path text : CommandEffectResult =
-        let snapshot = { Path = path; Text = text; RawBytes = None }
+        let snapshot =
+            {
+                Path = path
+                Text = text
+                RawBytes = None
+            }
+
         {
             Effect = ReadFile path
             Succeeded = true
@@ -169,15 +210,22 @@ evidence:
     let private select performanceObservation =
         let request = TestSupport.request Analyze "."
         let model, _ = FS.GG.SDD.Commands.CommandWorkflow.init request
+
         let configReads =
             [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml" ]
             |> List.map (fun path -> observedRead path "schemaVersion: 1\n")
+
         let reads =
             match performanceObservation with
             | Observed -> configReads @ [ observedRead performancePath "measured baseline" ]
             | ReadFailed -> configReads @ [ unreadableRead performancePath ]
             | NotRead -> configReads
-        let observed = { model with InterpretedEffects = reads }
+
+        let observed =
+            { model with
+                InterpretedEffects = reads
+            }
+
         ViewGeneration.workModelSnapshots workId None None None None None None (Some evidence) observed
 
     [<Fact>]
@@ -186,8 +234,11 @@ evidence:
         Assert.Contains(".fsgg/project.yml", paths)
         Assert.Contains($"work/{workId}/evidence.yml", paths)
         Assert.Contains(performancePath, paths)
-        Assert.Equal<string list>([ ".fsgg"; "readiness"; "work" ],
-                                  paths |> List.map (fun path -> path.Split('/')[0]) |> List.distinct |> List.sort)
+
+        Assert.Equal<string list>(
+            [ ".fsgg"; "readiness"; "work" ],
+            paths |> List.map (fun path -> path.Split('/')[0]) |> List.distinct |> List.sort
+        )
 
     [<Fact>]
     let ``declared performance artifact absent and unreadable both disappear from selected sources`` () =

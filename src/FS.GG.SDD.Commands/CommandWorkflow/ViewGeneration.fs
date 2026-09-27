@@ -874,7 +874,14 @@ module internal ViewGeneration =
         evidenceText
         |> Option.orElseWith (fun () -> snapshot (evidencePath workId) model |> Option.map _.Text)
         |> Option.bind (fun text ->
-            match parseEvidence { Path = evidencePath workId; Text = text; RawBytes = None } with
+            match
+                parseEvidence
+                    {
+                        Path = evidencePath workId
+                        Text = text
+                        RawBytes = None
+                    }
+            with
             | Ok declarations -> Some declarations
             | Error _ -> None)
         |> Option.defaultValue []
@@ -885,16 +892,26 @@ module internal ViewGeneration =
             match readOf path model with
             | Bytes _ -> None
             | Absent ->
-                Some(commandDiagnostic "missingPerformanceSource" DiagnosticSeverity.DiagnosticError
-                         (Some path) $"Declared performance artifact '{path}' is absent."
-                         "Restore the declared performance artifact and regenerate the work model."
-                         [ path ])
+                Some(
+                    commandDiagnostic
+                        "missingPerformanceSource"
+                        DiagnosticSeverity.DiagnosticError
+                        (Some path)
+                        $"Declared performance artifact '{path}' is absent."
+                        "Restore the declared performance artifact and regenerate the work model."
+                        [ path ]
+                )
             | Unreadable _
             | Truncated _ ->
-                Some(commandDiagnostic "unreadablePerformanceSource" DiagnosticSeverity.DiagnosticError
-                         (Some path) $"Declared performance artifact '{path}' could not be read completely."
-                         "Make the declared performance artifact readable and regenerate the work model."
-                         [ path ]))
+                Some(
+                    commandDiagnostic
+                        "unreadablePerformanceSource"
+                        DiagnosticSeverity.DiagnosticError
+                        (Some path)
+                        $"Declared performance artifact '{path}' could not be read completely."
+                        "Make the declared performance artifact readable and regenerate the work model."
+                        [ path ]
+                ))
 
     let existingGeneratedViewDiagnostic workId path model =
         match snapshot path model with
@@ -1068,8 +1085,12 @@ module internal ViewGeneration =
         =
         let path = workModelPath workId
         let currentDiagnostic = existingGeneratedViewDiagnostic workId path model
-        let performanceDiagnostics = performanceEvidenceSourceDiagnostics workId evidenceText model
-        let blockingCommandIds = blockingDiagnosticIds (commandDiagnostics @ performanceDiagnostics)
+
+        let performanceDiagnostics =
+            performanceEvidenceSourceDiagnostics workId evidenceText model
+
+        let blockingCommandIds =
+            blockingDiagnosticIds (commandDiagnostics @ performanceDiagnostics)
 
         if not (List.isEmpty blockingCommandIds) then
             let sources =

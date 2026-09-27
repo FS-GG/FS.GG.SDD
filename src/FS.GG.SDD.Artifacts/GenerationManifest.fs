@@ -123,13 +123,16 @@ module GenerationManifest =
             isNull (box source)
             || isNull (box source.Artifact)
             || String.IsNullOrWhiteSpace source.Artifact.Path
-            || (source.Artifact.Path.Split('/') |> Array.exists (fun segment -> segment = "" || segment = "."))
+            || (source.Artifact.Path.Split('/')
+                |> Array.exists (fun segment -> segment = "" || segment = "."))
             || (source.Artifact.Path |> Seq.exists Char.IsControl)
-            || (match ArtifactRef.create
-                          source.Artifact.Path
-                          source.Artifact.Kind
-                          source.Artifact.Owner
-                          source.Artifact.RequiredBySdd with
+            || (match
+                    ArtifactRef.create
+                        source.Artifact.Path
+                        source.Artifact.Kind
+                        source.Artifact.Owner
+                        source.Artifact.RequiredBySdd
+                with
                 | Ok normalized -> normalized.Path <> source.Artifact.Path
                 | Error _ -> true)
 
@@ -140,8 +143,7 @@ module GenerationManifest =
                 | Error _ -> true)
 
         let identity sources =
-            sources
-            |> List.map (fun source -> source.Artifact.Path, source.Digest.Value)
+            sources |> List.map (fun source -> source.Artifact.Path, source.Digest.Value)
 
         let hasDuplicatePaths pairs =
             let seen = HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -150,11 +152,13 @@ module GenerationManifest =
         // Comparing only recorded rows against a map of current inputs loses newly
         // required producers, and Map.ofList hides duplicate paths. Require an exact
         // nonempty set of path/digest identities before calling a view current.
-        if isNull (box currentSources)
-           || isNull (box manifest)
-           || isNull (box manifest.Sources)
-           || List.exists (fun source -> invalidArtifact source || invalidDigest source) currentSources
-           || List.exists (fun source -> invalidArtifact source || invalidDigest source) manifest.Sources then
+        if
+            isNull (box currentSources)
+            || isNull (box manifest)
+            || isNull (box manifest.Sources)
+            || List.exists (fun source -> invalidArtifact source || invalidDigest source) currentSources
+            || List.exists (fun source -> invalidArtifact source || invalidDigest source) manifest.Sources
+        then
             true
         else
             let current = identity currentSources

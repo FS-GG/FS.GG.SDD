@@ -11,7 +11,13 @@ open FS.GG.SDD.Commands.Internal
 /// The caller still owns physical closure of every root and a coherent capture boundary.
 module internal WorkModelSourceBundle =
     type Source = { Path: string; Digest: SourceDigest }
-    type Candidate = { Version: int; WorkId: string; Sources: Source list }
+
+    type Candidate =
+        {
+            Version: int
+            WorkId: string
+            Sources: Source list
+        }
 
     type Refusal =
         | InvalidWorkId
@@ -42,42 +48,65 @@ module internal WorkModelSourceBundle =
     let private validRelative (path: string) =
         not (String.IsNullOrWhiteSpace path)
         && not (path.Contains '\\')
-        && path.Split('/') |> Array.forall (fun part -> part <> "" && part <> "." && part <> "..")
+        && path.Split('/')
+           |> Array.forall (fun part -> part <> "" && part <> "." && part <> "..")
         && path |> Seq.forall (fun c -> not (Char.IsControl c))
 
     let private allowedPath workId performancePaths path =
         let config = [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml" ]
+
         let work =
-            [ "spec.md"; "clarifications.md"; "checklist.md"; "plan.md"; "tasks.yml"; "evidence.yml" ]
+            [
+                "spec.md"
+                "clarifications.md"
+                "checklist.md"
+                "plan.md"
+                "tasks.yml"
+                "evidence.yml"
+            ]
             |> List.map (fun name -> $"work/{workId}/{name}")
+
         validRelative path
-        && (List.contains path (config @ work)
-            || Set.contains path performancePaths)
+        && (List.contains path (config @ work) || Set.contains path performancePaths)
 
     let private distinct reason paths =
         let seen = HashSet<string>(StringComparer.OrdinalIgnoreCase)
+
         for path in paths do
-            if not (seen.Add path) then refuse (reason path)
+            if not (seen.Add path) then
+                refuse (reason path)
 
     let private validDigest (digest: SourceDigest) =
-        if obj.ReferenceEquals(digest, null) then false
+        if obj.ReferenceEquals(digest, null) then
+            false
         else
             match SchemaVersion.createSourceDigest digest.Algorithm digest.Value with
             | Ok canonical -> canonical = digest
             | Error _ -> false
 
-    let private performancePathsFromPhysical workId
-        (physicalByPath: Map<string, GenerationSourceSnapshot.CapturedFile>) =
+    let private performancePathsFromPhysical
+        workId
+        (physicalByPath: Map<string, GenerationSourceSnapshot.CapturedFile>)
+        =
         let evidencePath = $"work/{workId}/evidence.yml"
+
         match physicalByPath.TryFind evidencePath with
         | None -> Set.empty
         | Some file ->
             let bytes = file.Bytes
+
             let text =
                 match Fsgg.SkillMirror.decodeBody bytes with
                 | Ok body -> body
                 | Error _ -> refuse MalformedEvidence
-            let snapshot = { Path = evidencePath; Text = text; RawBytes = Some bytes }
+
+            let snapshot =
+                {
+                    Path = evidencePath
+                    Text = text
+                    RawBytes = Some bytes
+                }
+
             match Evidence.parseEvidenceArtifact snapshot with
             | Error _ -> refuse MalformedEvidence
             | Ok artifact when artifact.WorkId.Value <> workId || not (List.isEmpty artifact.Diagnostics) ->
@@ -87,134 +116,262 @@ module internal WorkModelSourceBundle =
                 |> List.choose _.PerformanceBudget
                 |> List.map _.ArtifactPath
                 |> List.map (fun path ->
-                    if not (validRelative path) then refuse (InvalidPerformancePath path)
+                    if not (validRelative path) then
+                        refuse (InvalidPerformancePath path)
+
                     path)
                 |> Set.ofList
 
     /// The selected snapshots must be the producer's `workModelSnapshots` result, not rows
     /// reconstructed from the candidate. Captures must already cover each physical root.
-    let verify (workId: string) (selected: FileSnapshot list)
-               (captured: GenerationSourceSnapshot.CapturedFile list) (candidate: Candidate)
+    let verify
+        (workId: string)
+        (selected: FileSnapshot list)
+        (captured: GenerationSourceSnapshot.CapturedFile list)
+        (candidate: Candidate)
         : Result<GenerationSourceSnapshot.CapturedFile list, Refusal> =
         try
-            if String.IsNullOrWhiteSpace workId
-               || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$")) then refuse InvalidWorkId
-            if obj.ReferenceEquals(candidate, null) then refuse (UnsupportedVersion 0)
-            if candidate.Version <> 2 then refuse (UnsupportedVersion candidate.Version)
-            if candidate.WorkId <> workId then refuse WrongWorkId
-            if obj.ReferenceEquals(selected, null) || obj.ReferenceEquals(captured, null)
-               || obj.ReferenceEquals(candidate.Sources, null) then refuse (MissingRequired ".fsgg/project.yml")
-            if captured |> List.exists (fun file -> obj.ReferenceEquals(file, null) || not (validRelative file.Path)) then
+            if
+                String.IsNullOrWhiteSpace workId
+                || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$"))
+            then
+                refuse InvalidWorkId
+
+            if obj.ReferenceEquals(candidate, null) then
+                refuse (UnsupportedVersion 0)
+
+            if candidate.Version <> 2 then
+                refuse (UnsupportedVersion candidate.Version)
+
+            if candidate.WorkId <> workId then
+                refuse WrongWorkId
+
+            if
+                obj.ReferenceEquals(selected, null)
+                || obj.ReferenceEquals(captured, null)
+                || obj.ReferenceEquals(candidate.Sources, null)
+            then
+                refuse (MissingRequired ".fsgg/project.yml")
+
+            if
+                captured
+                |> List.exists (fun file -> obj.ReferenceEquals(file, null) || not (validRelative file.Path))
+            then
                 refuse (MissingPhysical "")
+
             distinct DuplicatePhysical (captured |> List.map _.Path)
-            let physicalByPath = captured |> List.map (fun file -> file.Path, file) |> Map.ofList
+
+            let physicalByPath =
+                captured |> List.map (fun file -> file.Path, file) |> Map.ofList
+
             let evidencePath = $"work/{workId}/evidence.yml"
             let performancePaths = performancePathsFromPhysical workId physicalByPath
+
             for source in selected do
-                if obj.ReferenceEquals(source, null) || not (allowedPath workId performancePaths source.Path) then
-                    refuse (InvalidSelectionPath(if obj.ReferenceEquals(source, null) then "" else source.Path))
+                if
+                    obj.ReferenceEquals(source, null)
+                    || not (allowedPath workId performancePaths source.Path)
+                then
+                    refuse (
+                        InvalidSelectionPath(
+                            if obj.ReferenceEquals(source, null) then
+                                ""
+                            else
+                                source.Path
+                        )
+                    )
+
             distinct DuplicateSelection (selected |> List.map _.Path)
-            let selectedByPath = selected |> List.map (fun source -> source.Path, source) |> Map.ofList
-            for required in [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; $"work/{workId}/spec.md" ] do
-                if not (selectedByPath.ContainsKey required) then refuse (MissingRequired required)
-            if not (Set.isEmpty performancePaths) && not (selectedByPath.ContainsKey evidencePath) then
+
+            let selectedByPath =
+                selected |> List.map (fun source -> source.Path, source) |> Map.ofList
+
+            for required in
+                [
+                    ".fsgg/project.yml"
+                    ".fsgg/sdd.yml"
+                    ".fsgg/agents.yml"
+                    $"work/{workId}/spec.md"
+                ] do
+                if not (selectedByPath.ContainsKey required) then
+                    refuse (MissingRequired required)
+
+            if
+                not (Set.isEmpty performancePaths)
+                && not (selectedByPath.ContainsKey evidencePath)
+            then
                 refuse (MissingRequired evidencePath)
+
             for path in performancePaths do
-                if not (selectedByPath.ContainsKey path) then refuse (MissingPerformanceSelection path)
+                if not (selectedByPath.ContainsKey path) then
+                    refuse (MissingPerformanceSelection path)
 
             for source in selected do
-                if not (physicalByPath.ContainsKey source.Path) then refuse (MissingPhysical source.Path)
+                if not (physicalByPath.ContainsKey source.Path) then
+                    refuse (MissingPhysical source.Path)
+
             for file in captured do
-                if not (selectedByPath.ContainsKey file.Path) then refuse (UnexpectedPhysical file.Path)
+                if not (selectedByPath.ContainsKey file.Path) then
+                    refuse (UnexpectedPhysical file.Path)
 
-            if candidate.Sources |> List.exists (fun source -> obj.ReferenceEquals(source, null)) then
+            if
+                candidate.Sources
+                |> List.exists (fun source -> obj.ReferenceEquals(source, null))
+            then
                 refuse (MalformedDigest "")
+
             for source in candidate.Sources do
-                if not (validRelative source.Path) then refuse (InvalidCandidatePath source.Path)
+                if not (validRelative source.Path) then
+                    refuse (InvalidCandidatePath source.Path)
+
             distinct DuplicateCandidate (candidate.Sources |> List.map _.Path)
-            let candidateByPath = candidate.Sources |> List.map (fun source -> source.Path, source) |> Map.ofList
+
+            let candidateByPath =
+                candidate.Sources |> List.map (fun source -> source.Path, source) |> Map.ofList
+
             for source in selected do
-                if not (candidateByPath.ContainsKey source.Path) then refuse (MissingCandidate source.Path)
+                if not (candidateByPath.ContainsKey source.Path) then
+                    refuse (MissingCandidate source.Path)
+
             for source in candidate.Sources do
-                if not (selectedByPath.ContainsKey source.Path) then refuse (UnexpectedCandidate source.Path)
+                if not (selectedByPath.ContainsKey source.Path) then
+                    refuse (UnexpectedCandidate source.Path)
 
             for source in selected do
                 let path = source.Path
                 let file = physicalByPath.[path]
                 let bytes = file.Bytes
-                if file.Digest <> SchemaVersion.sha256Bytes bytes
-                   || (source.RawBytes |> Option.exists (fun raw -> raw <> bytes)) then
+
+                if
+                    file.Digest <> SchemaVersion.sha256Bytes bytes
+                    || (source.RawBytes |> Option.exists (fun raw -> raw <> bytes))
+                then
                     refuse (RawDrift path)
+
                 let text =
                     match Fsgg.SkillMirror.decodeBody bytes with
                     | Ok body -> body
                     | Error _ -> refuse (TextDrift path)
+
                 let projected =
                     if path = $"work/{workId}/evidence.yml" then
                         ViewGeneration.evidenceTextForWorkModel text
-                    else text
-                if source.Text <> projected then refuse (TextDrift path)
+                    else
+                        text
+
+                if source.Text <> projected then
+                    refuse (TextDrift path)
+
                 let recorded = candidateByPath.[path].Digest
-                if not (validDigest recorded) then refuse (MalformedDigest path)
-                if recorded <> SchemaVersion.sha256Text projected then refuse (DigestDrift path)
+
+                if not (validDigest recorded) then
+                    refuse (MalformedDigest path)
+
+                if recorded <> SchemaVersion.sha256Text projected then
+                    refuse (DigestDrift path)
+
             captured |> List.sortBy _.Path |> Ok
-        with Refused reason -> Error reason
+        with Refused reason ->
+            Error reason
 
     /// Read-only bridge from independently captured core sources to selected performance files.
     /// The core caller must separately establish complete source selection and physical closure.
     /// Each performance path comes from the captured evidence bytes, never candidate rows.
-    let verifyWithPinnedPerformance (workspaceRoot: string) (workId: string)
-        (selected: FileSnapshot list) (coreCaptured: GenerationSourceSnapshot.CapturedFile list)
+    let verifyWithPinnedPerformance
+        (workspaceRoot: string)
+        (workId: string)
+        (selected: FileSnapshot list)
+        (coreCaptured: GenerationSourceSnapshot.CapturedFile list)
         (candidate: Candidate)
         : Result<GenerationSourceSnapshot.CapturedFile list, Refusal> =
         try
             if obj.ReferenceEquals(selected, null) || obj.ReferenceEquals(coreCaptured, null) then
                 refuse (MissingRequired ".fsgg/project.yml")
-            if String.IsNullOrWhiteSpace workId
-               || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$")) then refuse InvalidWorkId
+
+            if
+                String.IsNullOrWhiteSpace workId
+                || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$"))
+            then
+                refuse InvalidWorkId
+
             if selected |> List.exists (fun source -> obj.ReferenceEquals(source, null)) then
                 refuse (InvalidSelectionPath "")
-            if coreCaptured |> List.exists (fun file -> obj.ReferenceEquals(file, null) || not (validRelative file.Path)) then
+
+            if
+                coreCaptured
+                |> List.exists (fun file -> obj.ReferenceEquals(file, null) || not (validRelative file.Path))
+            then
                 refuse (MissingPhysical "")
+
             distinct DuplicatePhysical (coreCaptured |> List.map _.Path)
-            let physicalByPath = coreCaptured |> List.map (fun file -> file.Path, file) |> Map.ofList
+
+            let physicalByPath =
+                coreCaptured |> List.map (fun file -> file.Path, file) |> Map.ofList
+
             let performancePaths = performancePathsFromPhysical workId physicalByPath
             let selectedPaths = selected |> List.map _.Path |> Set.ofList
+
             let pinned =
                 performancePaths
                 |> Set.toList
                 |> List.map (fun path ->
-                    if physicalByPath.ContainsKey path then refuse (DuplicatePhysical path)
-                    if not (Set.contains path selectedPaths) then refuse (MissingPerformanceSelection path)
+                    if physicalByPath.ContainsKey path then
+                        refuse (DuplicatePhysical path)
+
+                    if not (Set.contains path selectedPaths) then
+                        refuse (MissingPerformanceSelection path)
+
                     match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
                     | Ok file -> file
                     | Error reason -> refuse (Physical reason))
+
             verify workId selected (coreCaptured @ pinned) candidate
-        with Refused reason -> Error reason
+        with Refused reason ->
+            Error reason
 
     /// Discover the recognized core source set from physical paths, not from the selected
     /// list or candidate. Each Linux read is pinned and no-follow; captures are sequential,
     /// so this does not establish a simultaneous snapshot across files or roots.
-    let verifyFromPinnedCoreSources workspaceRoot workId selected candidate
+    let verifyFromPinnedCoreSources
+        workspaceRoot
+        workId
+        selected
+        candidate
         : Result<GenerationSourceSnapshot.CapturedFile list, Refusal> =
         try
-            if String.IsNullOrWhiteSpace workId
-               || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$")) then refuse InvalidWorkId
+            if
+                String.IsNullOrWhiteSpace workId
+                || not (Regex.IsMatch(workId, "^[a-z0-9][a-z0-9-]*$"))
+            then
+                refuse InvalidWorkId
+
             let required =
-                [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"
-                  $"work/{workId}/spec.md" ]
+                [
+                    ".fsgg/project.yml"
+                    ".fsgg/sdd.yml"
+                    ".fsgg/agents.yml"
+                    $"work/{workId}/spec.md"
+                ]
+
             let optional =
                 [ "clarifications.md"; "checklist.md"; "plan.md"; "tasks.yml"; "evidence.yml" ]
                 |> List.map (fun name -> $"work/{workId}/{name}")
+
             let captureRequired path =
                 match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
                 | Ok file -> file
                 | Error reason -> refuse (Physical reason)
+
             let captureOptional path =
                 match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with
                 | Ok file -> Some file
                 | Error(GenerationSourceSnapshot.MissingFile _) -> None
                 | Error reason -> refuse (Physical reason)
-            let core = (required |> List.map captureRequired) @ (optional |> List.choose captureOptional)
+
+            let core =
+                (required |> List.map captureRequired)
+                @ (optional |> List.choose captureOptional)
+
             verifyWithPinnedPerformance workspaceRoot workId selected core candidate
-        with Refused reason -> Error reason
+        with Refused reason ->
+            Error reason
