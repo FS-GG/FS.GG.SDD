@@ -382,7 +382,7 @@ jobs:
         run: bash scripts/verify-cli-tool.sh
 
       - name: Upload the only publishable package bytes
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coherent-sdd-packages-${{ github.sha }}
           path: artifacts/packages/*
@@ -453,7 +453,7 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Download the reviewed package bytes
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coherent-sdd-packages-${{ github.sha }}
           path: artifacts/packages
@@ -596,7 +596,7 @@ jobs:
           bash tests/quint-svg-workspace-installed-acceptance.sh
 
       - name: Upload durable dual-feed receipt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdd-${{ needs.resolve-versions.outputs.cli_version }}-dual-feed-receipt-${{ github.sha }}
           path: |
@@ -658,7 +658,7 @@ jobs:
           done
           echo "source_head=$source_head" >> "$GITHUB_OUTPUT"
       - name: Retain read-only feed archives and payload maps
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdd-${{ inputs.readback_version }}-dual-feed-readback-${{ steps.readback.outputs.source_head }}
           path: artifacts/feed-readback/*

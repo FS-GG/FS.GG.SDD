@@ -27,11 +27,11 @@
          profile guidance shipped elsewhere keeps its existing ownership and selection behavior. -->
     <PackageVersion Include="FS.GG.Audio.Skills" Version="0.1.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.12" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-    <PackageVersion Include="FsCheck" Version="3.3.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="FsCheck" Version="3.4.0" />
   </ItemGroup>
 </Project>
