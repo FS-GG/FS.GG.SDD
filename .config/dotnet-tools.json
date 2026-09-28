@@ -10,7 +10,7 @@
       "rollForward": false
     },
     "fs.gg.coord.cli": {
-      "version": "0.93.0",
+      "version": "0.94.0",
       "commands": [
         "fsgg-coord-engine"
       ],

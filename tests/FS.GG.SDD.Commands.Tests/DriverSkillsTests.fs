@@ -61,9 +61,6 @@ module DriverSkillsTests =
                     "references/host-loop.md"
                     "references/lifecycle-log.md"
                     "references/roadmap-ledger.md"
-                    "scripts/fsgg_telemetry_defaults.py"
-                    "scripts/native_collaboration_usage.py"
-                    "scripts/roadmap-telemetry.py"
                 ]
             ]
 
