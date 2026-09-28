@@ -1,0 +1,32 @@
+name: V2 ordinary receiver source tests
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/v2-ci-ordinary-*.yml
+      - policy/v2-ci-ordinary-*.json
+      - tools/v2-ci-ordinary-*.py
+      - tests/v2-ci-ordinary-*/**
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/v2-ci-ordinary-*.yml
+      - policy/v2-ci-ordinary-*.json
+      - tools/v2-ci-ordinary-*.py
+      - tests/v2-ci-ordinary-*/**
+
+permissions:
+  contents: read
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify source identity, native gates, and disabled custody boundary
+        run: |
+          python3 tests/v2-ci-ordinary-observe/run.py
+          python3 tests/v2-ci-ordinary-qualification/run.py
