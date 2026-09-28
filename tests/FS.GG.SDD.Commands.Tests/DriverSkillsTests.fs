@@ -17,11 +17,11 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "5748009c3990542c76574ec8628d8b07a1a04198701cb51177eb7e1c8240f87f"
+        "ebf48c78fdf0954fe23918ea75c676bc5ebff69d2f4ac0aaf91df323fc5c5e23"
 
     // work-board ships in FS.GG.Drivers, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "ff9f0ed5fde3ee86da7fd80ad3239180bbd7b20f0445814255d07e0108ca5f1c"
+        "255505c2b88124fd3d7daf6f944ef9ee7fe7f7569dd6f7ffc76fed5499e825cd"
 
     // padd-item is the product-workspace board filer added by FS.GG.Drivers (#703).
     let private paddItemSha256 =
@@ -74,7 +74,6 @@ module DriverSkillsTests =
             "scripts/check-claim-generation.py"
             "scripts/check-routine-eligibility-envelope.py"
             "scripts/lib/gate.py"
-            "tools/fsgg_telemetry_defaults.py"
             "tools/routine-delivery.py"
         ]
 

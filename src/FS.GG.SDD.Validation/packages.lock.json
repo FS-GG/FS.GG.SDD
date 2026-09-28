@@ -28,7 +28,7 @@
         "dependencies": {
           "FS.GG.Audio.Skills": "[0.1.0, )",
           "FS.GG.Contracts": "[7.5.2, )",
-          "FS.GG.Drivers": "[0.91.5, )",
+          "FS.GG.Drivers": "[0.93.0, )",
           "FS.GG.Game.Skills": "[0.9.0, )",
           "FS.GG.Rendering.Skills": "[0.2.0, )",
           "FS.GG.SDD.Artifacts": "[2.0.2, )",
@@ -43,9 +43,9 @@
       },
       "FS.GG.Drivers": {
         "type": "CentralTransitive",
-        "requested": "[0.91.5, )",
-        "resolved": "0.91.5",
-        "contentHash": "vUVKCZMU5BU9HlroXn/gLRdAASdFYTfCpbunJwmeQZTeSK/F1y8dAhGlKtcDN/2vQa0dew5/6MYHXzn7J8HKpQ=="
+        "requested": "[0.93.0, )",
+        "resolved": "0.93.0",
+        "contentHash": "98O3zkhs6pSbPD2qvfi1m3li5y1y3jNv7CWi5K8VcesQmaSaO110z/rhBlDTNCm6tG8Jy2W0IY/W1MMFoIERXw=="
       },
       "FS.GG.Game.Skills": {
         "type": "CentralTransitive",
