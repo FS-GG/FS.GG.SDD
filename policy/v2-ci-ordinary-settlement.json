@@ -1,7 +1,7 @@
 {
   "schema": "fsgg.github.v2-ci-ordinary-settlement-policy/1",
   "policyId": "v2-ci-i1-ordinary-settlement-v1",
-  "status": "source-qualified-not-installed",
+  "status": "installed",
   "repository": "FS-GG/FS.GG.SDD",
   "repositoryId": 1274272672,
   "selectedSource": {
@@ -96,9 +96,9 @@
     "allowedBranches": [
       "main"
     ],
-    "installed": false,
+    "installed": true,
     "liveObservation": {
-      "observedAt": "2026-09-28T16:30:57.097164+00:00",
+      "observedAt": "2026-09-28T17:31:59.582432+00:00",
       "environmentPresent": true,
       "environmentId": 22938103320,
       "environmentNodeId": "EN_kwDOS_PboM8AAAAFVzeuGA",
@@ -116,19 +116,23 @@
         "V2_ORDINARY_APP_PRIVATE_KEY",
         "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY"
       ],
-      "disposition": "dedicated-custody-enrolled-release-pending"
+      "disposition": "dedicated-custody-enrolled"
     }
   },
   "packagePin": {
-    "status": "awaiting-published-net-profile-release",
-    "version": null,
-    "sha256": null,
-    "servedPackageVerified": false,
+    "status": "published-verified",
+    "version": "0.1.6",
+    "sha256": "0f5d92799af84acb8663df0f524dc2ccfe54cfcc0bc6ad2183e867c8cdd47730",
+    "servedPackageVerified": true,
+    "sourceCommit": "275cccb30a5c9ade4b3bba344ede13d7df446d13",
+    "releaseTag": "v0.1.6",
+    "publisherRunId": 36457989575,
     "requiredCapability": "sdd-v1 selected source",
     "requiredBeforeActivation": true,
-    "refusal": "no immutable published CLI release asset with sdd-v1 support or verified served SHA-256 is selected",
-    "expectedVersion": "0.1.6",
-    "candidateSourceCommit": "275cccb30a5c9ade4b3bba344ede13d7df446d13"
+    "tagProtectionRulesetId": 21633398,
+    "githubReleaseImmutableFlag": false,
+    "githubPackagesReadback": "successful-protected-publisher",
+    "nugetOrgReadback": "independent-anonymous-payload-and-install"
   },
   "credentialInventory": [
     {
@@ -169,7 +173,7 @@
     "readBackAt": "2026-09-28T16:30:57.097164+00:00"
   },
   "activationEvidence": {
-    "observedAt": "2026-09-28T16:30:57.097164+00:00",
+    "observedAt": "2026-09-28T17:31:59.582432+00:00",
     "sourceMainSha": "6aed9a6ac8bbfbe46062f92298a684f40933b94d",
     "sourceRepositoryId": 1274272672,
     "requiredCheckAppId": 15368,
@@ -183,9 +187,9 @@
     ]
   },
   "activationPrerequisites": [
-    "published immutable Coordination CLI 0.1.6 with sdd-v1 support and independently verified served package SHA-256",
-    "dedicated ordinary-v2 custody enrolled and independently read back; refresh immediately before activation",
-    "current source-check population and shared Authority binding are read back again before a separate activation change"
+    "protected v0.1.6 tag and exact published Coordination CLI archive with sdd-v1 support: verified",
+    "dedicated ordinary-v2 custody and current source-check population refreshed before activation",
+    "installed settlement and AlreadyComplete rerun remain pending until the activation merge"
   ],
   "forbiddenCredentialReuse": [
     "CALLABLE_ISOLATED_OPERATION_APP_PRIVATE_KEY",

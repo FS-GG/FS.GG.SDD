@@ -16,8 +16,6 @@ concurrency:
 
 jobs:
   preflight:
-    # Local preparation only; enable after immutable 0.1.6 publication readback.
-    if: ${{ false }}
     name: ordinary-v2-secret-free-preflight
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -62,9 +60,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      PACKAGE_VERSION: UNSELECTED
-      # Replace both placeholders only after independent public archive verification.
-      PACKAGE_SHA256: UNSELECTED
+      PACKAGE_VERSION: 0.1.6
+      # Exact public v0.1.6 archive; protected tag and dual-feed payload verified.
+      PACKAGE_SHA256: 0f5d92799af84acb8663df0f524dc2ccfe54cfcc0bc6ad2183e867c8cdd47730
     permissions:
       actions: read
       contents: read
