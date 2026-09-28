@@ -1873,7 +1873,7 @@ providers:
         Assert.Contains($"\"version\": \"{installedVersion}\"", manifest)
         Assert.Contains("\"fsgg-sdd\"", manifest)
         Assert.Contains("\"fs.gg.coord.cli\"", manifest)
-        Assert.Contains("\"version\": \"0.91.5\"", manifest)
+        Assert.Contains("\"version\": \"0.92.0\"", manifest)
         Assert.Contains("\"fsgg-coord-engine\"", manifest)
 
         // It is real JSON, not a string that merely looks like one.
@@ -1919,7 +1919,7 @@ providers:
         Assert.Equal("fable", fable.GetProperty("commands").[0].GetString())
         Assert.False(fable.GetProperty("rollForward").GetBoolean())
         Assert.Equal(installedVersion, tools.GetProperty("fs.gg.sdd.cli").GetProperty("version").GetString())
-        Assert.Equal("0.91.5", tools.GetProperty("fs.gg.coord.cli").GetProperty("version").GetString())
+        Assert.Equal("0.92.0", tools.GetProperty("fs.gg.coord.cli").GetProperty("version").GetString())
 
         let provenance =
             TestSupport.readRelative root provenancePath
@@ -1946,13 +1946,13 @@ providers:
         Assert.Equal(0, exitCodeForReport report)
 
     [<Fact; Trait("tier", "slow")>]
-    let ``scaffold refuses a conflicting owned coordination entry without clobber`` () =
+    let ``scaffold refuses the retained predecessor coordination pin without clobber`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
 
         let authored =
             (HandlersScaffold.toolManifestText installedVersion)
-                .Replace("\"version\": \"0.91.5\"", "\"version\": \"0.86.1\"")
+                .Replace("\"version\": \"0.92.0\"", "\"version\": \"0.91.5\"")
 
         TestSupport.writeRelative root toolManifestPath authored
 
