@@ -1,0 +1,185 @@
+{
+  "schema": "fsgg.github.v2-ci-ordinary-settlement-policy/1",
+  "policyId": "v2-ci-i1-ordinary-settlement-v1",
+  "status": "source-qualified-not-installed",
+  "repository": "FS-GG/FS.GG.SDD",
+  "repositoryId": 1274272672,
+  "selectedSource": {
+    "profile": "sdd-v1",
+    "repository": "FS-GG/FS.GG.SDD",
+    "repositoryId": 1274272672
+  },
+  "sourceImplementation": {
+    "repository": "FS-GG/FS.GG.Net",
+    "commit": "94c2d0acb7addb416615110949afa984a5219b12",
+    "adaptation": "sdd-v1-code-owned-source-profile",
+    "observerSha256": "6e63f6f724fb267e77ef02f41b4c58a833e0dc5b08c003f07fd16c89e4f7fd55",
+    "qualificationSha256": "54d375cf1c85cb94650d990c7156be6370f2e2b6875726067b2508d811db28ed"
+  },
+  "operationClass": "ordinary-post-merge-delivery-settlement",
+  "trigger": {
+    "event": "push",
+    "ref": "refs/heads/main",
+    "associationEndpoint": "GET /repos/FS-GG/FS.GG.SDD/commits/{sourceSha}/pulls",
+    "associationCount": 1,
+    "requireMerged": true,
+    "requireMergeCommitMatch": true
+  },
+  "workflow": {
+    "path": ".github/workflows/v2-ci-ordinary-settlement.yml",
+    "revision": "sourceSha",
+    "requestEventsForbidden": [
+      "pull_request",
+      "pull_request_target"
+    ],
+    "manualEventsForbidden": [
+      "workflow_dispatch",
+      "repository_dispatch"
+    ]
+  },
+  "qualification": {
+    "phase": "secret-free-predecessor",
+    "credentialAccess": false,
+    "producerStatus": "trusted-main-push-predecessor",
+    "currentValidatorRole": "native-API-derived-evidence",
+    "requiredCheckAppId": 15368,
+    "requiredChecks": [
+      "Deterministic gate (locked restore + build + test)",
+      "Shared-build-config drift check"
+    ],
+    "requiredGateChecks": [
+      "Deterministic gate (locked restore + build + test)",
+      "Shared-build-config drift check",
+      "API compatibility gate (breaking-change → SemVer major)",
+      "kit / coordination-kit",
+      "skill-view-check",
+      "materialize / receiver-validate"
+    ],
+    "checkProducers": {
+      "Deterministic gate (locked restore + build + test)": {
+        "workflowId": 303425212,
+        "path": ".github/workflows/gate.yml",
+        "event": "pull_request"
+      },
+      "Shared-build-config drift check": {
+        "workflowId": 303425212,
+        "path": ".github/workflows/gate.yml",
+        "event": "pull_request"
+      },
+      "API compatibility gate (breaking-change → SemVer major)": {
+        "workflowId": 303425212,
+        "path": ".github/workflows/gate.yml",
+        "event": "pull_request"
+      },
+      "kit / coordination-kit": {
+        "workflowId": 307166760,
+        "path": ".github/workflows/coordination-coherence.yml",
+        "event": "pull_request"
+      },
+      "skill-view-check": {
+        "workflowId": 321983347,
+        "path": ".github/workflows/skill-view-check.yml",
+        "event": "pull_request"
+      },
+      "materialize / receiver-validate": {
+        "workflowId": 316861917,
+        "path": ".github/workflows/kit-materialize.yml",
+        "event": "pull_request"
+      }
+    }
+  },
+  "credentialJob": {
+    "environment": "ordinary-v2",
+    "runner": "github-hosted-ephemeral",
+    "requiredReviewers": 0,
+    "protectedBranchesOnly": true,
+    "allowedBranches": [
+      "main"
+    ],
+    "installed": false,
+    "liveObservation": {
+      "observedAt": "2026-09-28T15:27:58.835353+00:00",
+      "environmentPresent": true,
+      "environmentId": 22938103320,
+      "environmentNodeId": "EN_kwDOS_PboM8AAAAFVzeuGA",
+      "branchPolicyId": 61311037,
+      "branchPolicyNodeId": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2MTMxMTAzNw==",
+      "customBranchPolicy": "main",
+      "customBranchPolicyCount": 1,
+      "protectedBranches": false,
+      "customBranchPolicies": true,
+      "canAdminsBypass": true,
+      "requiredReviewerCount": 0,
+      "secretCount": 0,
+      "secretNames": [],
+      "disposition": "empty-environment-custody-pending"
+    }
+  },
+  "packagePin": {
+    "status": "awaiting-published-net-profile-release",
+    "version": null,
+    "sha256": null,
+    "servedPackageVerified": false,
+    "requiredCapability": "sdd-v1 selected source",
+    "requiredBeforeActivation": true,
+    "refusal": "no immutable published CLI release asset with sdd-v1 support or verified served SHA-256 is selected"
+  },
+  "credentialInventory": [
+    {
+      "name": "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY",
+      "purpose": "sign canonical ordinary-v2 settlement intent",
+      "generation": "new-v2-dedicated",
+      "provisioned": false,
+      "publicIdentity": "ordinary-v2-production-6121c3f2ab38acf3; spki-sha256:6121c3f2ab38acf38a37f782eb7775da78598b9cfabc0054917d3d59fe50e3ee"
+    },
+    {
+      "name": "V2_ORDINARY_APP_ID",
+      "purpose": "identify the repository-scoped ordinary-v2 GitHub App",
+      "generation": "new-v2-dedicated",
+      "provisioned": false,
+      "publicIdentity": "app:5064713; installation:164553252"
+    },
+    {
+      "name": "V2_ORDINARY_APP_PRIVATE_KEY",
+      "purpose": "mint a short-lived repository-scoped installation token",
+      "generation": "new-v2-dedicated",
+      "provisioned": false,
+      "publicIdentity": "app:5064713; installation:164553252"
+    }
+  ],
+  "credentialEnrollmentEvidence": {
+    "status": "pending-protected-sealed-bridge",
+    "encryptedPutCount": 0
+  },
+  "activationEvidence": {
+    "observedAt": "2026-09-28T15:27:58.835353+00:00",
+    "sourceMainSha": "9865a78514e7d60280d20f8aab3275018c0e8b81",
+    "sourceRepositoryId": 1274272672,
+    "requiredCheckAppId": 15368,
+    "requiredGateChecks": [
+      "Deterministic gate (locked restore + build + test)",
+      "Shared-build-config drift check",
+      "API compatibility gate (breaking-change → SemVer major)",
+      "kit / coordination-kit",
+      "skill-view-check",
+      "materialize / receiver-validate"
+    ]
+  },
+  "activationPrerequisites": [
+    "published immutable Coordination CLI 0.1.6 with sdd-v1 support and independently verified served package SHA-256",
+    "dedicated ordinary-v2 custody enrolled through the protected sealed bridge and three secret names independently read back",
+    "current source-check population and shared Authority binding are read back again before a separate activation change"
+  ],
+  "forbiddenCredentialReuse": [
+    "CALLABLE_ISOLATED_OPERATION_APP_PRIVATE_KEY",
+    "V1_ADMISSION_AUTHORIZER_PRIVATE_KEY",
+    "V1_ADMISSION_APP_PRIVATE_KEY"
+  ],
+  "unchangedGates": [
+    "OpenV2"
+  ],
+  "migration": {
+    "v1Admission": false,
+    "receiverStateImport": false
+  }
+}
