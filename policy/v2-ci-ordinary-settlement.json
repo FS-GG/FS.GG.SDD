@@ -98,7 +98,7 @@
     ],
     "installed": false,
     "liveObservation": {
-      "observedAt": "2026-09-28T15:27:58.835353+00:00",
+      "observedAt": "2026-09-28T16:30:57.097164+00:00",
       "environmentPresent": true,
       "environmentId": 22938103320,
       "environmentNodeId": "EN_kwDOS_PboM8AAAAFVzeuGA",
@@ -110,9 +110,13 @@
       "customBranchPolicies": true,
       "canAdminsBypass": true,
       "requiredReviewerCount": 0,
-      "secretCount": 0,
-      "secretNames": [],
-      "disposition": "empty-environment-custody-pending"
+      "secretCount": 3,
+      "secretNames": [
+        "V2_ORDINARY_APP_ID",
+        "V2_ORDINARY_APP_PRIVATE_KEY",
+        "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY"
+      ],
+      "disposition": "dedicated-custody-enrolled-release-pending"
     }
   },
   "packagePin": {
@@ -122,38 +126,51 @@
     "servedPackageVerified": false,
     "requiredCapability": "sdd-v1 selected source",
     "requiredBeforeActivation": true,
-    "refusal": "no immutable published CLI release asset with sdd-v1 support or verified served SHA-256 is selected"
+    "refusal": "no immutable published CLI release asset with sdd-v1 support or verified served SHA-256 is selected",
+    "expectedVersion": "0.1.6",
+    "candidateSourceCommit": "275cccb30a5c9ade4b3bba344ede13d7df446d13"
   },
   "credentialInventory": [
     {
       "name": "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY",
       "purpose": "sign canonical ordinary-v2 settlement intent",
       "generation": "new-v2-dedicated",
-      "provisioned": false,
+      "provisioned": true,
       "publicIdentity": "ordinary-v2-production-6121c3f2ab38acf3; spki-sha256:6121c3f2ab38acf38a37f782eb7775da78598b9cfabc0054917d3d59fe50e3ee"
     },
     {
       "name": "V2_ORDINARY_APP_ID",
       "purpose": "identify the repository-scoped ordinary-v2 GitHub App",
       "generation": "new-v2-dedicated",
-      "provisioned": false,
+      "provisioned": true,
       "publicIdentity": "app:5064713; installation:164553252"
     },
     {
       "name": "V2_ORDINARY_APP_PRIVATE_KEY",
       "purpose": "mint a short-lived repository-scoped installation token",
       "generation": "new-v2-dedicated",
-      "provisioned": false,
+      "provisioned": true,
       "publicIdentity": "app:5064713; installation:164553252"
     }
   ],
   "credentialEnrollmentEvidence": {
-    "status": "pending-protected-sealed-bridge",
-    "encryptedPutCount": 0
+    "status": "sealed-and-independently-read-back",
+    "bridgeRepository": "FS-GG/.github",
+    "bridgeRepositoryId": 1269292704,
+    "bridgeCommit": "3ed9b4f8316a14c5e15bfb4c1e11554730b9ae3f",
+    "bridgeWorkflow": ".github/workflows/c3-sdd-ordinary-enrollment-bridge.yml",
+    "bridgeRunId": 36450825631,
+    "bridgeRunAttempt": 1,
+    "bridgeConclusion": "success",
+    "artifactId": 10983781659,
+    "artifactDigest": "sha256:4f434a9f6355aeb820bdca954ffd4d0988cd3b0401d99720e7d807aa9441840b",
+    "ciphertextPacketVerification": "signed-packet-validated",
+    "encryptedPutCount": 3,
+    "readBackAt": "2026-09-28T16:30:57.097164+00:00"
   },
   "activationEvidence": {
-    "observedAt": "2026-09-28T15:27:58.835353+00:00",
-    "sourceMainSha": "9865a78514e7d60280d20f8aab3275018c0e8b81",
+    "observedAt": "2026-09-28T16:30:57.097164+00:00",
+    "sourceMainSha": "6aed9a6ac8bbfbe46062f92298a684f40933b94d",
     "sourceRepositoryId": 1274272672,
     "requiredCheckAppId": 15368,
     "requiredGateChecks": [
@@ -167,7 +184,7 @@
   },
   "activationPrerequisites": [
     "published immutable Coordination CLI 0.1.6 with sdd-v1 support and independently verified served package SHA-256",
-    "dedicated ordinary-v2 custody enrolled through the protected sealed bridge and three secret names independently read back",
+    "dedicated ordinary-v2 custody enrolled and independently read back; refresh immediately before activation",
     "current source-check population and shared Authority binding are read back again before a separate activation change"
   ],
   "forbiddenCredentialReuse": [

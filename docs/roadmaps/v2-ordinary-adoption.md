@@ -1,7 +1,8 @@
 # C3-SDD-01 — Ordinary V2 receiver adoption
 
-Status: disabled receiver source. Dedicated environment prepared; credential enrollment,
-published package selection, activation, and installed settlement remain pending.
+Status: local activation preparation only. Disabled source is protected in PR #1080;
+dedicated custody is enrolled. Package selection, activation, and installed settlement
+remain pending. This draft must not be pushed or admitted before public release verification.
 
 This repository uses the fixed `sdd-v1` source profile for `FS-GG/FS.GG.SDD`
 (repository ID `1274272672`). The receiver follows qualified Net commit
@@ -34,10 +35,15 @@ read back exactly `V2_ORDINARY_APP_ID`, `V2_ORDINARY_APP_PRIVATE_KEY`, and
 
 ## Ordered remaining window
 
-1. Land this disabled source through all six native required gates and receiver fixtures;
-   verify the protected merge and the skipped settlement job.
-2. Enroll and read back dedicated custody. Source delivery and an empty environment do not
-   establish credentials or settlement authority.
+1. Disabled source landed as `6aed9a6ac8bbfbe46062f92298a684f40933b94d` through all six
+   native gates and receiver fixtures. Settlement run `36445508395` was skipped.
+2. Dedicated custody was enrolled from protected bridge commit
+   `3ed9b4f8316a14c5e15bfb4c1e11554730b9ae3f`, run `36450825631`, attempt 1.
+   Artifact `10983781659` has digest
+   `sha256:4f434a9f6355aeb820bdca954ffd4d0988cd3b0401d99720e7d807aa9441840b`.
+   The signed ciphertext packet was verified before three encrypted PUTs; independent
+   readback confirms exactly the three names and the same sole main branch policy.
+   The policy retains the public evidence; no packet or secret value is committed.
 3. Independently verify the shared Coordination CLI `0.1.6` publication supports `sdd-v1`.
    Bind its immutable served archive, digest, and source commit. Version and digest remain
    unselected until that evidence exists.
@@ -49,3 +55,34 @@ read back exactly `V2_ORDINARY_APP_ID`, `V2_ORDINARY_APP_PRIVATE_KEY`, and
 This repository-owned receiver does not change SDD lifecycle APIs, package versions, fresh
 scaffolds, generated workspaces, or scaffold defaults. It imports no V1 admission or receiver
 state and leaves `OpenV2` unchanged. There is no workspace upgrade or live efficiency claim.
+
+## Package proof and local activation join
+
+Coordination `0.1.6` source is protected at
+`275cccb30a5c9ade4b3bba344ede13d7df446d13`; preparation run `36450952246` is not publication
+evidence. The local workflow therefore keeps its hard-disabled preflight, `UNSELECTED` version
+and digest, and `credentialJob.installed = false`. The staged credential job already binds
+the exact predecessor receipt, rechecks current public Authority, verifies the archive before
+local-only installation, and invokes the installed CLI once. It cannot run in this draft.
+
+Before replacing those placeholders:
+
+1. Read the immutable public `v0.1.6` release and exact tag/source commit. Download its
+   `FS.GG.Coordination.Cli.0.1.6.nupkg` anonymously, hash the served bytes, and verify the
+   release manifest, package identity, and source provenance. Retain producer publication
+   evidence and applicable feed-coherence evidence; a local build is insufficient.
+2. In a fresh disposable directory, copy only that verified archive into a local feed.
+   Install with a NuGet configuration containing `<clear/>` and only that feed, a fresh
+   task-specific package cache, explicit `--version 0.1.6`, and `--no-cache`. Verify the
+   installed tool/dependency payload against the archive and inspect the packaged provider's
+   fixed `sdd-v1` repository identity, two settlement checks, and six native gate checks.
+   Run a credential-free command refusal as a smoke test; it proves loading, not settlement.
+3. Refresh repository identity, all check/workflow producers, environment restriction and
+   exact three secret names, and shared Authority. Replace both workflow placeholders and
+   policy nulls with the verified version/digest/source, mark the package verified, update
+   policy installed state and remove the preflight disable together. Update the focused
+   assertions to bind that exact release. Run both Python fixtures and inspect the diff.
+4. Admit one managed activation PR, preserve all six native required gates, merge its exact
+   green head and read back protected main. Require the native settlement result and an
+   `AlreadyComplete` rerun before recording installed operation. A failed or pending run
+   stays pending; it is not repaired by copying an earlier receiver's receipt.

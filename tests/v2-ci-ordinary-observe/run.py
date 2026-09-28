@@ -97,18 +97,27 @@ class SddObservationSourceTests(unittest.TestCase):
         with patch.object(MODULE, "api", side_effect=api):
             MODULE.current_authority("FS-GG/FS.GG.SDD", policy)
 
-    def test_workflow_is_hard_disabled_and_has_no_credential_or_package_surface(self):
+    def test_prepared_settlement_remains_disabled_until_package_selection(self):
         workflow = (ROOT / ".github/workflows/v2-ci-ordinary-settlement.yml").read_text()
         self.assertIn("  push:\n    branches: [main]", workflow)
         self.assertIn("    if: ${{ false }}", workflow)
+        self.assertIn("if: needs.preflight.outputs.activation == 'true'", workflow)
+        self.assertIn("environment: ordinary-v2", workflow)
         self.assertIn("FSGG_V2_SOURCE_PROFILE: sdd-v1", workflow)
-        self.assertIn("persist-credentials: false", workflow)
+        self.assertEqual(2, workflow.count("persist-credentials: false"))
         self.assertIn("python3 tools/v2-ci-ordinary-observe.py produce", workflow)
-        for forbidden in (
-            "secrets.", "environment:", "ordinary-settlement execute", "PACKAGE_VERSION",
-            "PACKAGE_SHA256", "setup-dotnet", "global.json", "workflow_dispatch:",
-            "repository_dispatch:", "pull_request:", "pull_request_target:",
-        ):
+        self.assertIn("python3 tools/v2-ci-ordinary-observe.py verify", workflow)
+        self.assertIn("EXPECTED_RECEIPT_SHA256: ${{ needs.preflight.outputs.receipt_sha256 }}", workflow)
+        self.assertIn("PACKAGE_VERSION: UNSELECTED", workflow)
+        self.assertIn("PACKAGE_SHA256: UNSELECTED", workflow)
+        self.assertIn("--configfile", workflow)
+        self.assertIn("--no-cache", workflow)
+        self.assertIn("ordinary-settlement execute", workflow)
+        for name in ("V2_ORDINARY_APP_ID", "V2_ORDINARY_APP_PRIVATE_KEY",
+                     "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY"):
+            self.assertIn("${{ secrets." + name + " }}", workflow)
+        for forbidden in ("workflow_dispatch:", "repository_dispatch:", "pull_request:",
+                          "pull_request_target:", "V1_ADMISSION", "CALLABLE_ISOLATED_OPERATION"):
             self.assertNotIn(forbidden, workflow)
 
     def test_policy_anchor_environment_and_unresolved_package_are_bounded(self):
@@ -122,15 +131,16 @@ class SddObservationSourceTests(unittest.TestCase):
         self.assertEqual(22938103320, observation["environmentId"])
         self.assertEqual(61311037, observation["branchPolicyId"])
         self.assertEqual("main", observation["customBranchPolicy"])
-        self.assertEqual(0, observation["secretCount"])
-        self.assertEqual([], observation["secretNames"])
+        self.assertEqual(3, observation["secretCount"])
+        self.assertEqual({"V2_ORDINARY_APP_ID", "V2_ORDINARY_APP_PRIVATE_KEY",
+                          "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY"}, set(observation["secretNames"]))
         self.assertEqual("awaiting-published-net-profile-release",
                          policy["packagePin"]["status"])
         self.assertIsNone(policy["packagePin"]["version"])
         self.assertIsNone(policy["packagePin"]["sha256"])
         self.assertFalse(policy["packagePin"]["servedPackageVerified"])
         self.assertEqual(3, len(policy["credentialInventory"]))
-        self.assertTrue(all(not item["provisioned"] for item in policy["credentialInventory"]))
+        self.assertTrue(all(item["provisioned"] for item in policy["credentialInventory"]))
         self.assertEqual(5064713, anchor["writer"]["appId"])
         self.assertEqual(164553252, anchor["writer"]["installationId"])
         self.assertEqual(1351660651, anchor["writer"]["repositoryId"])
