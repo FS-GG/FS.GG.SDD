@@ -216,6 +216,11 @@ FS.GG.SDD.Artifacts.Identifiers.taskIdValue
 FS.GG.SDD.Artifacts.Identifiers.userStoryIdValue
 FS.GG.SDD.Artifacts.Identifiers.verificationObligationIdValue
 FS.GG.SDD.Artifacts.Identifiers.workIdValue
+FS.GG.SDD.Artifacts.Knowledge.get
+FS.GG.SDD.Artifacts.Knowledge.load
+FS.GG.SDD.Artifacts.Knowledge.parse
+FS.GG.SDD.Artifacts.Knowledge.related
+FS.GG.SDD.Artifacts.Knowledge.search
 FS.GG.SDD.Artifacts.LifecycleRuleContracts.contractIds
 FS.GG.SDD.Artifacts.LifecycleRuleContracts.initialContracts
 FS.GG.SDD.Artifacts.LifecycleRuleContracts.sddOnlyCompatibility

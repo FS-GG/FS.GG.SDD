@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "architecture",
+  "kind": "decision",
+  "title": "Use a pure read API",
+  "conclusion": "CLI is the only I/O edge",
+  "limits": "Synthetic fixture, not a claim about production",
+  "created": "2026-10-02",
+  "updated": "2026-10-02",
+  "scope": [
+    "cli",
+    "日本語"
+  ],
+  "status": "accepted",
+  "attribution": [
+    "Fixture authors"
+  ],
+  "evidence": [
+    {
+      "repository": "FS-GG/example",
+      "revision": "fixture-revision",
+      "path": "docs/example.md",
+      "digest": "",
+      "run": "synthetic-run",
+      "url": ""
+    }
+  ],
+  "related": [
+    "bug"
+  ],
+  "supersedes": []
+}

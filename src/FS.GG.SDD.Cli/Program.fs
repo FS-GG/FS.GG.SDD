@@ -212,7 +212,9 @@ let private emitHelp format forceColor (envelopeCommand: SddCommand) (summary: H
 let private printTopLevelHelp format forceColor =
     // Stamped `Help`, not `Init`: `fsgg-sdd --help` is not an invocation of `init`, and a report
     // that says it is misleads every machine reader of the JSON contract (FS.GG.SDD#352).
-    emitHelp format forceColor Help (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion ()))
+    let summary = CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion ())
+    let knowledge = { Name = "knowledge"; Description = "Check and query Git text project knowledge (check/search/get/related)." }
+    emitHelp format forceColor Help { summary with Commands = summary.Commands @ [knowledge] }
 
 let private printCommandHelp format forceColor command =
     emitHelp format forceColor command (CommandHelp.commandHelp command)
@@ -380,6 +382,7 @@ let run args =
     // producer manifest; peer of `registry validate`, also before `parseCommand`.
     | "registry" :: "skill-manifest" :: rest -> FS.GG.SDD.Cli.RegistrySkillManifest.run rest
     | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
+    | "knowledge" :: rest -> FS.GG.SDD.Cli.Knowledge.run rest
     | "typed-sdd" :: rest -> FS.GG.SDD.Cli.TypedSdd.run rest
     | commandValue :: rest ->
         match parseCommand commandValue with

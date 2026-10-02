@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "experiment",
+  "kind": "experiment-negative",
+  "title": "Index cache trial failed",
+  "conclusion": "Cache startup exceeded a useful bound",
+  "limits": "Synthetic fixture, not a claim about production",
+  "created": "2026-10-02",
+  "updated": "2026-10-02",
+  "scope": [
+    "cli",
+    "日本語"
+  ],
+  "status": "superseded",
+  "attribution": [
+    "Fixture authors"
+  ],
+  "evidence": [
+    {
+      "repository": "FS-GG/example",
+      "revision": "fixture-revision",
+      "path": "docs/example.md",
+      "digest": "",
+      "run": "synthetic-run",
+      "url": ""
+    }
+  ],
+  "related": [],
+  "supersedes": []
+}

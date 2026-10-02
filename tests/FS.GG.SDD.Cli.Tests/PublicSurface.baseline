@@ -1,3 +1,6 @@
+FS.GG.SDD.Cli.Knowledge.init
+FS.GG.SDD.Cli.Knowledge.run
+FS.GG.SDD.Cli.Knowledge.update
 FS.GG.SDD.Cli.Options.commandOptions
 FS.GG.SDD.Cli.Options.missingValue
 FS.GG.SDD.Cli.Options.positional
