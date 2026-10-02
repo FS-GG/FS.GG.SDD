@@ -31,6 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Knowledge.fsi" />
+    <Compile Include="Knowledge.fs" />
     <Compile Include="Rendering.fsi" />
     <Compile Include="Rendering.fs" />
     <Compile Include="Options.fsi" />

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "lesson",
+  "kind": "operating-lesson",
+  "title": "Diagnose Unicode paths",
+  "conclusion": "Test café and 日本語 on all hosts",
+  "limits": "Synthetic fixture, not a claim about production",
+  "created": "2026-10-02",
+  "updated": "2026-10-02",
+  "scope": [
+    "cli",
+    "日本語"
+  ],
+  "status": "observed",
+  "attribution": [
+    "Fixture authors"
+  ],
+  "evidence": [
+    {
+      "repository": "FS-GG/example",
+      "revision": "fixture-revision",
+      "path": "docs/example.md",
+      "digest": "",
+      "run": "synthetic-run",
+      "url": ""
+    }
+  ],
+  "related": [],
+  "supersedes": []
+}

@@ -17,6 +17,8 @@
     <Compile Include="ArtifactRef.fs" />
     <Compile Include="PathContainment.fsi" />
     <Compile Include="PathContainment.fs" />
+    <Compile Include="Knowledge.fsi" />
+    <Compile Include="Knowledge.fs" />
     <Compile Include="FsharpIdentifier.fsi" />
     <Compile Include="FsharpIdentifier.fs" />
     <Compile Include="Diagnostics.fsi" />

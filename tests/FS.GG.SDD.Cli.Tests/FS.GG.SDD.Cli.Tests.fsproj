@@ -29,6 +29,7 @@
     <Compile Include="UnknownOptionTests.fs" />
     <Compile Include="MissingOptionValueTests.fs" />
     <Compile Include="TypedSddCommandTests.fs" />
+    <Compile Include="KnowledgeCommandTests.fs" />
     <Compile Include="ExceptionBackstopTests.fs" />
   </ItemGroup>
 
