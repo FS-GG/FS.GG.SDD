@@ -182,3 +182,36 @@ module StoreTests =
             let recovered, _ = Store.capture store (Some first.Revision) { first.Record with Summary = "Candidate update" }
             Assert.Equal("Candidate update", recovered.Record.Summary)
             Assert.Empty(Directory.EnumerateFiles(root, ".knowledge-write-*")))
+
+    [<Fact>]
+    let ``initialization rejects linked destinations before any workspace or outside write`` () = temporary (fun parent ->
+        for relative, directory, dangling in [
+            ".fsgg", true, false
+            ".fsgg/knowledge-guide.md", false, false
+            ".gitignore", false, false
+            ".gitignore", false, true
+            ".fsgg/knowledge", true, false
+            ".fsgg/knowledge/records", true, false
+        ] do
+            let name = Guid.NewGuid().ToString("N")
+            let root = Path.Combine(parent, "workspace-" + name)
+            let outside = Path.Combine(parent, "outside-" + name)
+            Directory.CreateDirectory root |> ignore
+            if directory then
+                Directory.CreateDirectory outside |> ignore
+                File.WriteAllText(Path.Combine(outside, "sentinel"), "Authored outside bytes.")
+            elif not dangling then File.WriteAllText(outside, "Authored outside bytes.")
+            let linked = Path.Combine(root, relative)
+            Directory.CreateDirectory(Path.GetDirectoryName linked |> nonNull) |> ignore
+            if directory then Directory.CreateSymbolicLink(linked, outside) |> ignore
+            else File.CreateSymbolicLink(linked, outside) |> ignore
+            let before = Directory.EnumerateFileSystemEntries(root, "*", SearchOption.TopDirectoryOnly) |> Seq.sort |> Seq.toArray
+            Assert.Throws<InvalidDataException>(fun () -> Workspace.initialize root |> ignore) |> ignore
+            Assert.Equal<string>(before, Directory.EnumerateFileSystemEntries(root, "*", SearchOption.TopDirectoryOnly) |> Seq.sort |> Seq.toArray)
+            if directory then
+                Assert.Equal("Authored outside bytes.", File.ReadAllText(Path.Combine(outside, "sentinel")))
+                Assert.Single(Directory.EnumerateFileSystemEntries outside) |> ignore
+            elif dangling then Assert.False(File.Exists outside)
+            else Assert.Equal("Authored outside bytes.", File.ReadAllText outside)
+            Assert.False(File.Exists(Path.Combine(root, ".fsgg", "knowledge-guide.md")) && relative <> ".fsgg/knowledge-guide.md")
+            Assert.False(File.Exists(Path.Combine(root, ".gitignore")) && relative <> ".gitignore"))

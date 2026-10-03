@@ -60,8 +60,27 @@ shared references must not leak private titles, paths or snippets.
         ".fsgg/knowledge/schema.json", Store.schemaText
         ".fsgg/knowledge/records/project-knowledge.json", System.Text.Json.JsonSerializer.Serialize(initialRecord, System.Text.Json.JsonSerializerOptions(WriteIndented = true))
     ]
+    let private preflightPath path =
+        let mutable current = Path.GetFullPath path
+        while not (String.IsNullOrEmpty current) do
+            let attributes =
+                try Some(File.GetAttributes current)
+                with
+                | :? FileNotFoundException | :? DirectoryNotFoundException -> None
+            if attributes |> Option.exists (fun value -> value.HasFlag FileAttributes.ReparsePoint) then
+                raise (InvalidDataException "Symlink workspace initialization path refused.")
+            current <- match Path.GetDirectoryName current with null -> "" | value -> value
+
     let initialize root =
         let store = Path.Combine(root, ".fsgg", "knowledge")
+        // Validate every destination and existing canonical member before creating or
+        // editing guidance/ignore files. GetAttributes also detects dangling links.
+        for relative in [ ".fsgg"; ".fsgg/knowledge-guide.md"; ".gitignore";
+                          ".fsgg/knowledge"; ".fsgg/knowledge/schema.json";
+                          ".fsgg/knowledge/records"; ".fsgg/knowledge/records/project-knowledge.json";
+                          ".fsgg/.knowledge-writer.lock" ] do
+            preflightPath (Path.Combine(root, relative))
+        Store.check store |> ignore
         Directory.CreateDirectory(Path.Combine(root, ".fsgg")) |> ignore
         let guide = Path.Combine(root, ".fsgg", "knowledge-guide.md")
         if not (File.Exists guide) then File.WriteAllText(guide, guidance)

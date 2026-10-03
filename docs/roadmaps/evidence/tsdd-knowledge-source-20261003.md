@@ -39,20 +39,20 @@ bootstrap composition and installed capability floor must add and execute that
 join before feature-wide CI enforcement is claimed. Published SDD 2.0.3 does not
 provide the new knowledge command.
 
-Receiver preparation independently passed 18 bounded probes against the frozen
-source closure, including nine automatic provider routes and nine raw-product
+Initial receiver preparation independently passed 18 bounded probes against the
+first source closure, including nine automatic provider routes and nine raw-product
 standalone knowledge routes. Raw Fable player/complete/legacy generic init retains
 its preexisting `unsafeOverwrite` refusal on product `.gitignore`: original product
 bytes remain intact but foundation files can already have been added. Standalone
 knowledge initialization does not imply typed lifecycle activation.
 
-Frozen source closure: `/tmp/knowledge-source-cli-20261003-358a3985061c`.
+Frozen source closure: `/tmp/knowledge-source-cli-20261003-c61cfc5928e9`.
 
-- CLI SHA-256: `a387112a771eddb021e35f4c21177d1fe58eaa4dc0eb58648e9250c7adfaf3b5`.
-- Knowledge SHA-256: `358a3985061cc8828631b7695ffbdf0a276ecdd302a7cd27d86f99b0df6871b6`.
-- Commands SHA-256: `31ea65748f78099939098bb3ea0d141dd1da135e7077e141ad0e08374ecc8eca`.
+- CLI SHA-256: `1ab4c25c4d1bf7052999d201a10960f3363daa416ddcc198a5af66346a30d978`.
+- Knowledge SHA-256: `c61cfc5928e9cf347e2c6700ef450ca7bd761ff89e399a705914313e39ce29bd`.
+- Commands SHA-256: `ee72998bc1573f3c47b1b83c22f95d86782450fa27e803179d0682f9986ef19e`.
 
-Final current-source native tier passed: Contracts 180, Artifacts 653, Knowledge
+The initial source commit full native tier passed: Contracts 180, Artifacts 653, Knowledge
 9, Validation 35, CLI 234, Commands 1,424 and Acceptance 46; 2,581 passed, zero
 failed and five existing opt-in composition skips. Locked restore and solution
 build passed; API surface check reported no changes or diagnostics. The real
@@ -63,3 +63,29 @@ Ephemeral logs and TRXs are under `/tmp/knowledge-current-native.log` and
 
 Telemetry is `not-configured`; cost attribution and efficiency qualification
 remain unknown.
+
+## Initialization path repair
+
+Review reproduced a preflight-order defect against the first frozen source CLI:
+a linked `.fsgg` changed outside files before refusal; a linked `.gitignore`
+changed outside bytes and reported success; a linked existing guide reported
+success without replacing its outside target. Initialization now preflights all
+intended workspace/store/guide/ignore/writer-lock paths and their ancestors,
+including dangling reparse points, and checks existing canonical members before
+any directory creation or write. The same three actual CLI fixtures now refuse
+with no outside changes and no ready store. The additional test covers linked
+store/records directories and a dangling ignore leaf as well.
+
+Repair qualification uses a clean solution build, all ten knowledge tests,
+all 17 affected CLI/typed-entry and 116 scaffold tests, the real CLI/FSI/Git route
+qualifier and API readback (no changes or diagnostics). The earlier full native result remains evidence for the source
+window; it is not presented as a rerun after this narrow repair.
+
+A fresh download of the [public NuGet 2.0.3 tool](https://api.nuget.org/v3-flatcontainer/fs.gg.sdd.cli/2.0.3/fs.gg.sdd.cli.2.0.3.nupkg)
+has package SHA-256 `b950bf4fc46a09554a51b6b31f920830c8811bb6580b2724c500b8317bcfa9d7`
+and packaged CLI assembly SHA-256
+`d126134e2ce9c1d236e266a17f366e9998561c91dc554f5c8bbbfdeef1198997`.
+Its nuspec identifies source commit `0c26ac591e76d2839177da823b3f6ada5c09a698`.
+Executing those extracted bytes reports `toolVersion: 2.0.3`, exit 1 and
+`unknownCommand` for `knowledge`. This establishes the stated public capability
+boundary directly, independently of any older 2.0.2 observation.
