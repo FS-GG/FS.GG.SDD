@@ -29,13 +29,36 @@ for id in ['FS.GG.SDD.Artifacts', 'FS.GG.SDD.Cli']:
 PY
 left="$scratch/left/FS.GG.SDD.Cli/tools/net10.0/any"
 right="$scratch/right/FS.GG.SDD.Cli/tools/net10.0/any"
+framework="$(python3 - <<'PY'
+from pathlib import Path
+import shutil
+root=Path(shutil.which('dotnet')).resolve().parent/'packs/Microsoft.NETCore.App.Ref'
+candidates=[p for p in root.iterdir() if p.name.startswith('10.0.') and all(part.isdigit() for part in p.name.split('.'))]
+selected=max(candidates,key=lambda p:tuple(map(int,p.name.split('.'))))/'ref/net10.0'
+assert selected.is_dir()
+print(selected)
+PY
+)"
+compare() {
+  if "$scratch/tool/apicompat" "$@" --lref "$left,$framework" --rref "$right,$framework" > "$scratch/comparison.log" 2>&1; then
+    comparison_status=0
+  else
+    comparison_status=$?
+  fi
+  cat "$scratch/comparison.log"
+  [ "$comparison_status" -eq 0 ] || return "$comparison_status"
+  python3 - "$scratch/comparison.log" <<'PY'
+from pathlib import Path
+import sys
+if 'Could not resolve reference' in Path(sys.argv[1]).read_text():
+    raise SystemExit('ApiCompat reference resolution incomplete; refusing a compared verdict')
+PY
+}
 for assembly in FS.GG.SDD.Artifacts FS.GG.SDD.Cli FS.GG.SDD.Commands FS.GG.SDD.Validation; do
-  "$scratch/tool/apicompat" -l "$left/$assembly.dll" -r "$right/$assembly.dll" \
-    --lref "$left" --rref "$right"
+  compare -l "$left/$assembly.dll" -r "$right/$assembly.dll"
 done
-"$scratch/tool/apicompat" \
+compare \
   -l "$scratch/left/FS.GG.SDD.Artifacts/lib/net10.0/FS.GG.SDD.Artifacts.dll" \
-  -r "$scratch/right/FS.GG.SDD.Artifacts/lib/net10.0/FS.GG.SDD.Artifacts.dll" \
-  --lref "$left" --rref "$right"
+  -r "$scratch/right/FS.GG.SDD.Artifacts/lib/net10.0/FS.GG.SDD.Artifacts.dll"
 printf '%s\n' 'ApiCompat compared the four shipped tool assemblies and standalone Artifacts against public 2.0.3.' \
   'Knowledge is a new package with no published API baseline; it was not classified as compared.'

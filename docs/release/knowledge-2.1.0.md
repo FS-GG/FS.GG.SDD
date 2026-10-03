@@ -60,6 +60,16 @@ ancestor refused. Retained-custody fixtures passed eight cases, and authenticate
 fixtures passed fifteen. These source observations do not establish that the actual publisher
 credentials, retained package consumers, or new public feeds have been qualified.
 
+The first local source-bound three-package candidate passed exact inventory/source/hash verification.
+Native ApiCompat compared all five existing assembly positions with real public 2.0.3 and found no
+breaks with framework references fully resolved. The adapter now refuses unresolved references
+even if the native tool returns zero; an actual missing-framework mutation reproduced that zero
+native result and was refused by the adapter. A fresh isolated local-package installation and NuGet-backed
+FSI consumer passed typed entry, captures, exact past versions, history, normal initial Git
+inclusion, selected recovery, and a cacheless bundle clone. Both actual Core DLLs matched their
+corresponding official archive entries. These are local retained-package observations; new-public
+readback, publisher credentials, and product adoption remain unqualified until their own runs.
+
 Milestones .4 product composition/CI, .5 public clean adoption, and .6 retained extraction remain
 open. Source, retained packages, public readback, clean installation, and operating project adoption
 are separate observations. Telemetry is not configured; the preflight choice claims no measured
