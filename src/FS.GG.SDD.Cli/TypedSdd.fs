@@ -916,6 +916,7 @@ module TypedSdd =
                     match authorQuint args workId agent session with
                     | Ok changed ->
                         FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
+
                         emit
                             {
                                 Operation = "author"
@@ -1019,6 +1020,7 @@ module TypedSdd =
                     with
                     | Ok changed ->
                         FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
+
                         emit
                             {
                                 Operation = "author"
@@ -1244,6 +1246,7 @@ module TypedSdd =
                             match migrateQuint args workId source payload rollback with
                             | Ok changed ->
                                 FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
+
                                 emit
                                     {
                                         Operation = "migrate"
@@ -1286,6 +1289,7 @@ module TypedSdd =
                         with
                         | Ok changed ->
                             FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
+
                             emit
                                 {
                                     Operation = "migrate"

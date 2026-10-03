@@ -473,8 +473,10 @@ let run args =
 
                 match report.Scaffold with
                 | Some scaffold when
-                    (report.Outcome = CommandOutcome.Succeeded || report.Outcome = CommandOutcome.SucceededWithWarnings)
-                    && (scaffold.EffectiveParameters |> List.contains ("lifecycle", "typed-sdd")) ->
+                    (report.Outcome = CommandOutcome.Succeeded
+                     || report.Outcome = CommandOutcome.SucceededWithWarnings)
+                    && (scaffold.EffectiveParameters |> List.contains ("lifecycle", "typed-sdd"))
+                    ->
                     FS.GG.SDD.Knowledge.Workspace.initialize request.ProjectRoot |> ignore
                 | _ -> ()
 

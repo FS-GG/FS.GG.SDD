@@ -3018,10 +3018,12 @@ providers:
     let ``effective typed scaffold creates concise canonical knowledge before completion`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
+
         let report =
             runScaffold (
                 scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "typed-sdd" ] false false
             )
+
         Assert.Equal(0, exitCodeForReport report)
         let store = Path.Combine(root, ".fsgg", "knowledge")
         Assert.Single(FS.GG.SDD.Knowledge.Store.all store) |> ignore

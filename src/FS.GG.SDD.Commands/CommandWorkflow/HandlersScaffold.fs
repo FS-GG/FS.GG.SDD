@@ -366,9 +366,13 @@ module internal HandlersScaffold =
             match providerBytes with
             | Some bytes when bytes.Length > 0 -> Array.append prefix bytes
             | _ -> prefix
+
         let finalBytes =
-            if typedKnowledge then Array.append composed (System.Text.Encoding.UTF8.GetBytes FS.GG.SDD.Knowledge.Workspace.ignoreBlock)
-            else composed
+            if typedKnowledge then
+                Array.append composed (System.Text.Encoding.UTF8.GetBytes FS.GG.SDD.Knowledge.Workspace.ignoreBlock)
+            else
+                composed
+
         finalBytes
         |> System.Convert.ToBase64String
         |> fun encoded -> "\uDC00fsgg-sdd-atomic-bytes:" + encoded
@@ -1851,7 +1855,8 @@ module internal HandlersScaffold =
                     if Map.tryFind "lifecycle" effective = Some "typed-sdd" then
                         FS.GG.SDD.Knowledge.Workspace.initialFiles
                         |> List.map (fun (path, text) -> WriteFile(path, text, AgentGuidanceTarget))
-                    else []
+                    else
+                        []
 
                 let effects =
                     knowledgeEffects
