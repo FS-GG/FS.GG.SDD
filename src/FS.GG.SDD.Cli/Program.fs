@@ -380,6 +380,7 @@ let run args =
     // producer manifest; peer of `registry validate`, also before `parseCommand`.
     | "registry" :: "skill-manifest" :: rest -> FS.GG.SDD.Cli.RegistrySkillManifest.run rest
     | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
+    | "knowledge" :: rest -> FS.GG.SDD.Cli.Knowledge.run rest
     | "typed-sdd" :: rest -> FS.GG.SDD.Cli.TypedSdd.run rest
     | commandValue :: rest ->
         match parseCommand commandValue with
@@ -469,6 +470,15 @@ let run args =
                     }
 
                 let report = driveToReport request
+
+                match report.Scaffold with
+                | Some scaffold when
+                    (report.Outcome = CommandOutcome.Succeeded
+                     || report.Outcome = CommandOutcome.SucceededWithWarnings)
+                    && (scaffold.EffectiveParameters |> List.contains ("lifecycle", "typed-sdd"))
+                    ->
+                    FS.GG.SDD.Knowledge.Workspace.initialize request.ProjectRoot |> ignore
+                | _ -> ()
 
                 // FS.GG.SDD#535: the CommandReport is the automation contract and always routes to
                 // stdout — a Blocked outcome included. A blocked stage's structured verdict (which

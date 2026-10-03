@@ -170,6 +170,7 @@
   <ItemGroup>
     <ProjectReference Include="../FS.GG.Contracts/FS.GG.Contracts.fsproj" />
     <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
+    <ProjectReference Include="../FS.GG.SDD.Knowledge/FS.GG.SDD.Knowledge.fsproj" />
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="FS.GG.Drivers" GeneratePathProperty="true" />
     <PackageReference Include="FS.GG.Game.Skills" GeneratePathProperty="true" />

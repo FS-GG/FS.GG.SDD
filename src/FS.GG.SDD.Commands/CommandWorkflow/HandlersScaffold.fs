@@ -359,12 +359,21 @@ module internal HandlersScaffold =
     /// authored content; SDD only supplies the lifecycle fragment that was intentionally staged
     /// before the `dotnet new` invocation. This avoids both a blanket provider `--force` and a
     /// lossy line-normalizing "merge".
-    let private composeRootGitignore (providerBytes: byte array option) =
+    let private composeRootGitignore typedKnowledge (providerBytes: byte array option) =
         let prefix = System.Text.Encoding.UTF8.GetBytes gitignoreSeedText
 
-        match providerBytes with
-        | Some bytes when bytes.Length > 0 -> Array.append prefix bytes
-        | _ -> prefix
+        let composed =
+            match providerBytes with
+            | Some bytes when bytes.Length > 0 -> Array.append prefix bytes
+            | _ -> prefix
+
+        let finalBytes =
+            if typedKnowledge then
+                Array.append composed (System.Text.Encoding.UTF8.GetBytes FS.GG.SDD.Knowledge.Workspace.ignoreBlock)
+            else
+                composed
+
+        finalBytes
         |> System.Convert.ToBase64String
         |> fun encoded -> "\uDC00fsgg-sdd-atomic-bytes:" + encoded
 
@@ -1297,7 +1306,7 @@ module internal HandlersScaffold =
             let writeEffect =
                 WriteFile(
                     rootGitignorePath,
-                    composeRootGitignore providerBytes,
+                    composeRootGitignore (Map.tryFind "lifecycle" effective = Some "typed-sdd") providerBytes,
                     HybridArtifact(SectionMerge([], [], []))
                 )
 
@@ -1842,8 +1851,16 @@ module internal HandlersScaffold =
                         productSkillManifestPaths
                         |> List.fold (fun acc path -> Map.add path digest acc) skillDigests
 
+                let knowledgeEffects =
+                    if Map.tryFind "lifecycle" effective = Some "typed-sdd" then
+                        FS.GG.SDD.Knowledge.Workspace.initialFiles
+                        |> List.map (fun (path, text) -> WriteFile(path, text, AgentGuidanceTarget))
+                    else
+                        []
+
                 let effects =
-                    driverOutcome.Writes
+                    knowledgeEffects
+                    @ driverOutcome.Writes
                     @ gameSkillOutcome.Writes
                     @ renderingSkillOutcome.Writes
                     @ audioSkillOutcome.Writes

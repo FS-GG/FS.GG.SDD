@@ -621,6 +621,7 @@ providers:
 
         let manifest = TestSupport.readRelative root "scaffold-manifest.txt"
         Assert.Contains("lifecycle=sdd", manifest)
+        Assert.False(Directory.Exists(Path.Combine(root, ".fsgg", "knowledge")))
 
     // T011 (US1.2): the same run reports the success outcome and that the provider ran.
     [<Fact; Trait("tier", "slow")>]
@@ -2260,6 +2261,7 @@ providers:
                 [
                     ".fsgg/constitution.md"
                     ".fsgg/early-stage-guidance.md"
+                    ".fsgg/knowledge-guide.md"
                     FS.GG.SDD.Commands.Internal.Foundation.governanceResolutionPath
                     ".gitignore"
                     provenancePath
@@ -3011,3 +3013,18 @@ providers:
 
         let expected = [ "--productName"; "Roquelike-DungeonCrawler" ]
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``effective typed scaffold creates concise canonical knowledge before completion`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "typed-sdd" ] false false
+            )
+
+        Assert.Equal(0, exitCodeForReport report)
+        let store = Path.Combine(root, ".fsgg", "knowledge")
+        Assert.Single(FS.GG.SDD.Knowledge.Store.all store) |> ignore
+        Assert.Contains("Capture concise", TestSupport.readRelative root ".fsgg/knowledge-guide.md")

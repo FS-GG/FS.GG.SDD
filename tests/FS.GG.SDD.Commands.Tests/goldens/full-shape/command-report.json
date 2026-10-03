@@ -626,6 +626,19 @@
       "diagnosticIds": []
     },
     {
+      "path": ".fsgg/knowledge-guide.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "2c022b36ce07a4a6597f1eea13b5dd7aab77b9bfe27f2efa1e73a83ac975c08c"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
       "path": ".fsgg/project.yml",
       "kind": "structuredSource",
       "ownership": "authored",
@@ -685,7 +698,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "573478302f23f99b81bc09a4685fdf8f0de01632835835d91330f30f7a7868dc"
+        "value": "e3b4532d71a00ac6fc9a9f7d51da9f63133e3e6965910fe2dff954f302f350ab"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []
@@ -698,7 +711,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "4fd9dae32b327ab0bd4fd12f8f71096359b26f8cefc9eea6cfdfa4f0528793d2"
+        "value": "e8d5c33305d2621f7b1565d0a4332cd599506925a86404f5793cc76421f4b69c"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []

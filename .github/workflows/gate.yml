@@ -77,6 +77,9 @@ jobs:
       - name: Build (net10.0)
         run: dotnet build FS.GG.SDD.sln -c Debug --no-restore
 
+      - name: Project knowledge schema and byte budget
+        run: dotnet run --project src/FS.GG.SDD.Cli --no-build --no-restore -- knowledge check --root .
+
       - name: Previous compiled Quint replay consumer remains compatible
         run: |
           set -euo pipefail

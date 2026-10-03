@@ -47,6 +47,12 @@
           "YamlDotNet": "[18.1.0, )"
         }
       },
+      "fs.gg.sdd.knowledge": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[10.1.401, )"
+        }
+      },
       "FsQuint": {
         "type": "CentralTransitive",
         "requested": "[0.1.0, 0.1.0]",

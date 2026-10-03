@@ -99,6 +99,9 @@ policy:
 This file is an SDD lifecycle guidance target. Generated agent guidance is a
 projection over `.fsgg/agents.yml` and readiness data; it is not a second source
 of truth.
+
+For concise project findings and evidence-linked retrieval, read
+`.fsgg/knowledge-guide.md`. Capture and query through `fsgg-sdd knowledge`.
 """
 
     // The generic, deterministic lifecycle constitution the SDD skeleton seeds at
@@ -578,6 +581,7 @@ nuget-cache/
             WriteFile(governanceResolutionPath, governanceResolutionText, StructuredSource)
             WriteFile(".fsgg/constitution.md", constitutionText, AgentGuidanceTarget)
             WriteFile(earlyStageGuidancePath, earlyStageGuidanceText, AgentGuidanceTarget)
+            WriteFile(".fsgg/knowledge-guide.md", FS.GG.SDD.Knowledge.Workspace.guidance, AgentGuidanceTarget)
             WriteFile("AGENTS.md", agentGuidance "Codex", AgentGuidanceTarget)
             WriteFile("CLAUDE.md", agentGuidance "Claude", AgentGuidanceTarget)
             // 073/ADR-0018: seed the regenerable-output `.gitignore` (whole-file, no-clobber).
