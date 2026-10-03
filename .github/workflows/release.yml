@@ -575,21 +575,9 @@ jobs:
               [ "$attempt" -lt 40 ] || { echo "::error::feed readback timed out for $id $VERSION"; exit 1; }
               sleep 15
             done
-            for feed in local github nuget; do
-              if [ "$feed" = local ]; then
-                package="$local_package"
-              else
-                package="artifacts/feed-readback/$id.$feed.nupkg"
-              fi
-              unzip -Z1 "$package" | grep -v '^\.signature\.p7s$' | LC_ALL=C sort >"$package.entries"
-              while IFS= read -r entry; do
-                printf '%s  %s\n' "$(unzip -p "$package" "$entry" | sha256sum | cut -d' ' -f1)" "$entry"
-              done <"$package.entries" >"$package.payloads"
-            done
-            diff -u "$local_package.payloads" \
-              "artifacts/feed-readback/$id.github.nupkg.payloads"
-            diff -u "$local_package.payloads" \
-              "artifacts/feed-readback/$id.nuget.nupkg.payloads"
+            python3 scripts/verify-package-payloads.py "$local_package" \
+              "artifacts/feed-readback/$id.github.nupkg" \
+              "artifacts/feed-readback/$id.nuget.nupkg"
           done
 
       - name: Qualify the public Knowledge CLI and SDK
@@ -718,13 +706,10 @@ jobs:
               package="artifacts/feed-readback/$id.$feed.nupkg"
               unzip -p "$package" '*.nuspec' | grep -F "commit=\"$source_head\"" >/dev/null \
                 || { echo "::error::$package does not bind tag source $source_head"; exit 1; }
-              unzip -Z1 "$package" | grep -v '^\.signature\.p7s$' | LC_ALL=C sort >"$package.entries"
-              while IFS= read -r entry; do
-                printf '%s  %s\n' "$(unzip -p "$package" "$entry" | sha256sum | cut -d' ' -f1)" "$entry"
-              done <"$package.entries" >"$package.payloads"
             done
-            diff -u "artifacts/feed-readback/$id.github.nupkg.payloads" \
-              "artifacts/feed-readback/$id.nuget.nupkg.payloads"
+            python3 scripts/verify-package-payloads.py \
+              "artifacts/feed-readback/$id.github.nupkg" \
+              "artifacts/feed-readback/$id.nuget.nupkg"
           done
           echo "source_head=$source_head" >> "$GITHUB_OUTPUT"
       - name: Retain read-only feed archives and payload maps
