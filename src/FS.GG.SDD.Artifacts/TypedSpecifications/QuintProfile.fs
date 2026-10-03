@@ -1400,6 +1400,7 @@ module private GeneralProfileCore =
     let version = "0.32.0"
     let maxTypedEffectBytes = 16 * 1024 * 1024
     let maxDeclarations = 4096
+    let maxCompilerTableRows = 8192
     let maxBindings = 4096
     let maxExports = 256
     let maxValueNodes = 100000
@@ -2167,13 +2168,13 @@ module QuintGeneralProfile =
 
                     if
                         value.ValueKind = JsonValueKind.Object
-                        && (value.EnumerateObject() |> Seq.length) > GeneralProfileCore.maxDeclarations
+                        && (value.EnumerateObject() |> Seq.length) > GeneralProfileCore.maxCompilerTableRows
                     then
                         findings <-
                             ProfileCore.diagnostic
                                 "QUINT-GENERAL-RESOURCE-TABLE"
                                 ("/" + field)
-                                $"Compiler table '%s{field}' exceeds 4,096 rows."
+                                $"Compiler table '%s{field}' exceeds 8,192 rows."
                                 "Reduce the model declaration and expression count."
                                 None
                             :: findings
