@@ -6,7 +6,7 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 verifier="$repo/scripts/verify-release-candidate.sh"
 fail=0
 head_sha="0123456789abcdef0123456789abcdef01234567"
-version="1.7.0"
+version="2.1.0"
 
 make_package() {
   local path="$1" id="$2" timestamp="$3"
@@ -18,6 +18,9 @@ info = zipfile.ZipInfo(f"{package_id}.nuspec", (year, 1, 1, 0, 0, 0))
 body = f'''<?xml version="1.0"?><package><metadata><id>{package_id}</id><version>{version}</version><repository type="git" commit="{head}" /></metadata></package>'''.encode()
 with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
     archive.writestr(info, body)
+    if package_id == "FS.GG.SDD.Knowledge":
+        for member in ["api-surface/Store.fsi", "api-surface/Workspace.fsi", "lib/net10.0/FS.GG.SDD.Knowledge.dll"]:
+            archive.writestr(member, b"synthetic custody fixture")
 PY
 }
 
@@ -26,12 +29,13 @@ seed_candidate() {
   mkdir -p "$root"
   make_package "$root/FS.GG.SDD.Artifacts.$version.nupkg" FS.GG.SDD.Artifacts "$timestamp"
   make_package "$root/FS.GG.SDD.Cli.$version.nupkg" FS.GG.SDD.Cli "$timestamp"
+  make_package "$root/FS.GG.SDD.Knowledge.$version.nupkg" FS.GG.SDD.Knowledge "$timestamp"
   printf '%s\n' \
-    'schema=fsgg.sdd.release-candidate/v1' \
+    'schema=fsgg.sdd.release-candidate/v2' \
     "head=$head_sha" \
     "version=$version" \
-    'packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Cli' > "$root/candidate.env"
-  (cd "$root" && sha256sum FS.GG.SDD.Artifacts.*.nupkg FS.GG.SDD.Cli.*.nupkg | LC_ALL=C sort -k2 > pre-push.sha256)
+    'packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge' > "$root/candidate.env"
+  (cd "$root" && sha256sum FS.GG.SDD.Artifacts.*.nupkg FS.GG.SDD.Cli.*.nupkg FS.GG.SDD.Knowledge.*.nupkg | LC_ALL=C sort -k2 > pre-push.sha256)
 }
 
 run_case() {
@@ -83,6 +87,21 @@ substituted="$root/substituted"
 cp -R "$pack_a" "$substituted"
 cp "$pack_b/FS.GG.SDD.Cli.$version.nupkg" "$substituted/FS.GG.SDD.Cli.$version.nupkg"
 run_case "equal-payload archive swap reds" "$substituted" 1
+
+missing="$root/missing-knowledge"
+cp -R "$pack_a" "$missing"
+rm "$missing/FS.GG.SDD.Knowledge.$version.nupkg"
+run_case "missing Knowledge archive reds" "$missing" 1
+
+extra="$root/extra"
+cp -R "$pack_a" "$extra"
+cp "$extra/FS.GG.SDD.Cli.$version.nupkg" "$extra/Unexpected.$version.nupkg"
+run_case "extra archive reds" "$extra" 1
+
+wrong="$root/wrong-version"
+cp -R "$pack_a" "$wrong"
+mv "$wrong/FS.GG.SDD.Knowledge.$version.nupkg" "$wrong/FS.GG.SDD.Knowledge.2.0.3.nupkg"
+run_case "Knowledge version skew reds" "$wrong" 1
 
 if [ "$fail" -ne 0 ]; then
   echo "release-artifact-custody.test.sh: FAILURES" >&2

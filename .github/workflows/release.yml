@@ -1,19 +1,19 @@
 name: release
 
 # Producer of the cross-repo auto-update fabric. On a release of FS.GG.SDD (or a pushed
-# v* tag, or a manual dispatch), a single run publishes THREE packages to the org GitHub
+# v* tag, or a manual dispatch), a single run publishes FOUR packages to the org GitHub
 # Packages feed (nuget.pkg.github.com/FS-GG): FS.GG.Contracts (the org-shared contracts
 # line), FS.GG.SDD.Artifacts (the independently consumable lifecycle/specification contracts),
-# and FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool). Versions come from each project's own
-# version properties — this header pins none, to avoid staleness. All three push with
+# FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool), and FS.GG.SDD.Knowledge (the findings SDK).
+# Versions come from each project's own version properties. All four push with
 # --skip-duplicate using the run-scoped GITHUB_TOKEN (packages: write, no
 # PAT), only from the canonical repo.
 #
-# THE CONTRACT for triggers + version-resolution + gating + the three-package scope is
+# THE CONTRACT for triggers + version-resolution + gating + the four-package scope is
 # specs/044-publish-cli-tool/contracts/release-workflow.md (it supersedes feature 039's
 # single-package producer contract). This YAML is its implementation, not folklore. Each
 # package's published version is its EVALUATED fsproj <Version> (msbuild -getProperty); a
-# release tag is a coherence check that must match AT LEAST ONE of the three lines, never the
+# release tag checks the independent Contracts or coherent SDD line, never supplies the
 # source (research Decisions 2-3; FR-014 reconciliation).
 
 on:
@@ -45,17 +45,18 @@ concurrency:
 
 jobs:
   # Shared version-resolution state machine — see the contract's version-resolution table.
-  # Evaluates all three fsproj <Version>s (msbuild -getProperty, not a grep) and applies the
+  # Evaluates the independent Contracts and coherent SDD fsproj <Version>s (msbuild -getProperty, not a grep) and applies the
   # at-least-one-line tag guard, then hands contracts_version / cli_version / push to the
   # three publish jobs. Fork events never satisfy the repo guard ⇒ no publish path runs.
   resolve-versions:
-    name: Resolve versions (three lines)
+    name: Resolve Contracts and coherent SDD versions
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
       artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
       cli_version: ${{ steps.ver.outputs.cli_version }}
+      knowledge_version: ${{ steps.ver.outputs.knowledge_version }}
       push: ${{ steps.ver.outputs.push }}
     steps:
       - name: Checkout
@@ -71,7 +72,7 @@ jobs:
           # gate's key (#92 / NU1403). Release runs rarely; a fresh restore is fine.
 
       # Source of truth is the EVALUATED fsproj <Version> for each line. The release/tag
-      # event's tag is a coherence check against all three lines, never the source. A
+      # event's tag checks the independent Contracts and shared SDD versions, never supplies them. A
       # version-bearing tag must match AT LEAST ONE evaluated version (research Decision 2).
       - name: Resolve versions
         id: ver
@@ -92,8 +93,11 @@ jobs:
           cli_version="$(dotnet msbuild src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -getProperty:Version)"
           cli_version="$(printf '%s' "$cli_version" | tr -d '[:space:]')"
 
-          if [ -z "$artifacts_version" ] || [ "$artifacts_version" != "$cli_version" ]; then
-            echo "::error::FS.GG.SDD.Artifacts ($artifacts_version) and FS.GG.SDD.Cli ($cli_version) must share one coherent-set version."
+          knowledge_version="$(dotnet msbuild src/FS.GG.SDD.Knowledge/FS.GG.SDD.Knowledge.fsproj -getProperty:Version)"
+          knowledge_version="$(printf '%s' "$knowledge_version" | tr -d '[:space:]')"
+
+          if [ -z "$artifacts_version" ] || [ "$artifacts_version" != "$cli_version" ] || [ "$knowledge_version" != "$cli_version" ]; then
+            echo "::error::FS.GG.SDD.Artifacts ($artifacts_version) and FS.GG.SDD.Cli ($cli_version) and FS.GG.SDD.Knowledge ($knowledge_version) must share one coherent-set version."
             exit 1
           fi
 
@@ -110,7 +114,7 @@ jobs:
               fi
               push="true"
             else
-              # Intentional dry run: pack all three fsproj versions, push nothing (FR-004).
+              # Intentional dry run: retain all three SDD members, push nothing (FR-004).
               if [ -z "$contracts_version" ] || [ -z "$artifacts_version" ] || [ -z "$cli_version" ]; then
                 echo "::error::could not read <Version> from one of the fsprojs (build defect)."
                 exit 1
@@ -147,6 +151,7 @@ jobs:
           echo "contracts_version=$contracts_version" >> "$GITHUB_OUTPUT"
           echo "artifacts_version=$artifacts_version" >> "$GITHUB_OUTPUT"
           echo "cli_version=$cli_version" >> "$GITHUB_OUTPUT"
+          echo "knowledge_version=$knowledge_version" >> "$GITHUB_OUTPUT"
           echo "push=$push" >> "$GITHUB_OUTPUT"
           echo "Resolved: contracts_version=$contracts_version artifacts_version=$artifacts_version cli_version=$cli_version push=$push (event=$EVENT_NAME)"
 
@@ -231,6 +236,35 @@ jobs:
       # reaches the push. ValidateCommandTests covers `registry validate` here.
       - name: Test (FS.GG.SDD.Cli)
         run: dotnet test tests/FS.GG.SDD.Cli.Tests/FS.GG.SDD.Cli.Tests.fsproj -c Release --no-restore
+
+  knowledge-tests:
+    name: Knowledge tests (publish gate)
+    runs-on: ubuntu-latest
+    # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+          # No restore cache: this job restores a single project (narrow footprint) and
+          # setup-dotnet keys the cache only on hashFiles(packages.lock.json)+OS+runtime with
+          # no per-job component, so caching here would share and poison the deterministic
+          # gate's key (#92 / NU1403). Release runs rarely; a fresh restore is fine.
+
+      # Locked restore via the shared composite action (feature 064).
+      - name: Restore (locked)
+        uses: ./.github/actions/locked-restore
+        with:
+          target: tests/FS.GG.SDD.Knowledge.Tests/FS.GG.SDD.Knowledge.Tests.fsproj
+
+      # Knowledge tests gate retained packing and therefore later promotion.
+      - name: Test (FS.GG.SDD.Knowledge)
+        run: dotnet test tests/FS.GG.SDD.Knowledge.Tests/FS.GG.SDD.Knowledge.Tests.fsproj -c Release --no-restore
+
 
   publish-contracts:
     name: Pack + publish FS.GG.Contracts
@@ -319,13 +353,14 @@ jobs:
 
   publish-artifacts:
     name: Build and retain coherent FS.GG.SDD candidate once
-    needs: [resolve-versions, artifacts-tests, cli-tests]
+    needs: [resolve-versions, artifacts-tests, cli-tests, knowledge-tests]
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
     # run promotes this run's retained artifact; it must never pack another container (#944).
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && needs.resolve-versions.outputs.push == 'false'
     permissions:
       contents: read
+      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -335,6 +370,11 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Verify the new version is unused on both feeds with native credentials
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/check-sdd-release-occupancy.py "${{ needs.resolve-versions.outputs.cli_version }}"
+
       - name: Restore (locked)
         uses: ./.github/actions/locked-restore
         with:
@@ -343,20 +383,19 @@ jobs:
       - name: Pack the reviewed coherent set once
         run: |
           set -euo pipefail
-          dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release \
-            -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
-            --no-restore -o artifacts/packages
-          dotnet pack src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -c Release \
-            -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
-            --no-restore -o artifacts/packages
+          while IFS= read -r id; do
+            dotnet pack "src/$id/$id.fsproj" -c Release \
+              -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
+              --no-restore -o artifacts/packages
+          done < scripts/sdd-release-packages.txt
 
       - name: Assert package inventory, source binding, and pre-push hashes
         run: |
           set -euo pipefail
           shopt -s nullglob
-          packages=(artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg artifacts/packages/FS.GG.SDD.Cli.*.nupkg)
-          if [ ${#packages[@]} -ne 2 ]; then
-            echo "::error::coherent pack must produce exactly Artifacts and CLI."
+          packages=(artifacts/packages/*.nupkg)
+          if [ ${#packages[@]} -ne 3 ]; then
+            echo "::error::coherent pack must produce exactly Artifacts, CLI and Knowledge."
             exit 1
           fi
           for package in "${packages[@]}"; do
@@ -365,13 +404,13 @@ jobs:
           done
           (
             cd artifacts/packages
-            sha256sum FS.GG.SDD.Artifacts.*.nupkg FS.GG.SDD.Cli.*.nupkg | LC_ALL=C sort -k2 > pre-push.sha256
+            sha256sum *.nupkg | LC_ALL=C sort -k2 > pre-push.sha256
           )
           printf '%s\n' \
-            'schema=fsgg.sdd.release-candidate/v1' \
+            'schema=fsgg.sdd.release-candidate/v2' \
             "head=$GITHUB_SHA" \
             "version=${{ needs.resolve-versions.outputs.cli_version }}" \
-            'packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Cli' \
+            'packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge' \
             > artifacts/packages/candidate.env
           bash scripts/verify-release-candidate.sh \
             artifacts/packages "$GITHUB_SHA" "${{ needs.resolve-versions.outputs.cli_version }}"
@@ -380,6 +419,15 @@ jobs:
         env:
           FSGG_SDD_PACKAGE_DIR: artifacts/packages
         run: bash scripts/verify-cli-tool.sh
+
+      - name: Compare the packed SDD APIs against public 2.0.3
+        run: bash scripts/verify-sdd-package-api.sh artifacts/packages "${{ needs.resolve-versions.outputs.cli_version }}"
+
+      - name: Qualify the packed Knowledge CLI and SDK
+        env:
+          FSGG_KNOWLEDGE_VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+          FSGG_KNOWLEDGE_SOURCE: ${{ github.workspace }}/artifacts/packages
+        run: bash scripts/verify-knowledge-packages.sh
 
       - name: Upload the only publishable package bytes
         uses: actions/upload-artifact@v7
@@ -391,7 +439,7 @@ jobs:
 
   locate-artifacts:
     name: Preflight retained candidate custody
-    needs: [resolve-versions, artifacts-tests, cli-tests]
+    needs: [resolve-versions, artifacts-tests, cli-tests, knowledge-tests]
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     permissions:
@@ -466,13 +514,21 @@ jobs:
           bash scripts/verify-release-candidate.sh \
             artifacts/packages "$GITHUB_SHA" "${{ needs.resolve-versions.outputs.cli_version }}"
 
-      - name: Publish both packages to GitHub Packages first
+      - name: Refuse occupied versions unless exact retained payloads already exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/check-sdd-release-occupancy.py "${{ needs.resolve-versions.outputs.cli_version }}" --candidate artifacts/packages
+
+      - name: Publish the coherent set to GitHub Packages first
         run: |
           set -euo pipefail
           dotnet nuget push "artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg" \
             --source https://nuget.pkg.github.com/FS-GG/index.json \
             --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
           dotnet nuget push "artifacts/packages/FS.GG.SDD.Cli.*.nupkg" \
+            --source https://nuget.pkg.github.com/FS-GG/index.json \
+            --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Knowledge.*.nupkg" \
             --source https://nuget.pkg.github.com/FS-GG/index.json \
             --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
@@ -491,6 +547,9 @@ jobs:
           dotnet nuget push "artifacts/packages/FS.GG.SDD.Cli.*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
             --api-key ${{ steps.nuget-login-sdd.outputs.NUGET_API_KEY }} --skip-duplicate
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Knowledge.*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key ${{ steps.nuget-login-sdd.outputs.NUGET_API_KEY }} --skip-duplicate
 
       - name: Read back both feeds and compare every non-signature entry
         env:
@@ -499,10 +558,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts/feed-readback
-          for id in fs.gg.sdd.artifacts fs.gg.sdd.cli; do
+          for id in fs.gg.sdd.artifacts fs.gg.sdd.cli fs.gg.sdd.knowledge; do
             case "$id" in
               fs.gg.sdd.artifacts) local_package="artifacts/packages/FS.GG.SDD.Artifacts.$VERSION.nupkg" ;;
               fs.gg.sdd.cli) local_package="artifacts/packages/FS.GG.SDD.Cli.$VERSION.nupkg" ;;
+              fs.gg.sdd.knowledge) local_package="artifacts/packages/FS.GG.SDD.Knowledge.$VERSION.nupkg" ;;
             esac
             [ -f "$local_package" ] || { echo "::error::reviewed package is missing for $id $VERSION"; exit 1; }
             gh_url="https://nuget.pkg.github.com/FS-GG/download/$id/$VERSION/$id.$VERSION.nupkg"
@@ -531,6 +591,12 @@ jobs:
             diff -u "$local_package.payloads" \
               "artifacts/feed-readback/$id.nuget.nupkg.payloads"
           done
+
+      - name: Qualify the public Knowledge CLI and SDK
+        env:
+          FSGG_KNOWLEDGE_VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+          FSGG_KNOWLEDGE_SOURCE: https://api.nuget.org/v3/index.json
+        run: bash scripts/verify-knowledge-packages.sh
 
       - name: Verify clean public installs
         env:
@@ -633,7 +699,11 @@ jobs:
           git fetch --force origin "refs/tags/v$VERSION:refs/tags/v$VERSION"
           source_head="$(git rev-parse "refs/tags/v$VERSION^{commit}")"
           mkdir -p artifacts/feed-readback
-          for id in fs.gg.sdd.artifacts fs.gg.sdd.cli; do
+          ids=(fs.gg.sdd.artifacts fs.gg.sdd.cli)
+          if git cat-file -e "$source_head:scripts/sdd-release-packages.txt" 2>/dev/null; then
+            mapfile -t ids < <(git show "$source_head:scripts/sdd-release-packages.txt" | tr '[:upper:]' '[:lower:]')
+          fi
+          for id in "${ids[@]}"; do
             gh_url="https://nuget.pkg.github.com/FS-GG/download/$id/$VERSION/$id.$VERSION.nupkg"
             public_url="https://api.nuget.org/v3-flatcontainer/$id/$VERSION/$id.$VERSION.nupkg"
             for attempt in $(seq 1 40); do

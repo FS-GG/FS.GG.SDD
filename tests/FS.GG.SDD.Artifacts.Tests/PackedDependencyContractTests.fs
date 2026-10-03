@@ -29,7 +29,18 @@ module PackedDependencyContractTests =
         startInfo.RedirectStandardError <- true
         startInfo.UseShellExecute <- false
 
-        [ "pack"; project; "-c"; "Release"; "--no-restore"; "-o"; outputDirectory ]
+        [
+            "pack"
+            project
+            "-c"
+            "Release"
+            "--no-restore"
+            "-m:1"
+            "-nr:false"
+            "-p:UseSharedCompilation=false"
+            "-o"
+            outputDirectory
+        ]
         |> List.iter startInfo.ArgumentList.Add
 
         use child =
@@ -57,7 +68,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.0.3.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.1.0.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -93,7 +104,7 @@ module PackedDependencyContractTests =
                 |> Option.map _.Value
                 |> Option.defaultWith (fun () -> failwith "the Contracts dependency has no version")
 
-            Assert.Equal("2.0.3", packageVersion)
+            Assert.Equal("2.1.0", packageVersion)
             Assert.Equal("7.5.2", dependencyVersion)
             Assert.DoesNotContain(packageVersion, dependency.ToString())
         finally
@@ -110,7 +121,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.0.3.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.1.0.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -136,7 +147,14 @@ module PackedDependencyContractTests =
     [<Fact>]
     let ``Artifacts release pack does not globally override dependency identities`` () =
         let job = artifactsJob ()
-        Assert.Contains("dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj", job)
+        Assert.Contains("dotnet pack \"src/$id/$id.fsproj\"", job)
+        Assert.Contains("done < scripts/sdd-release-packages.txt", job)
+
+        Assert.Contains(
+            "FS.GG.SDD.Artifacts",
+            File.ReadAllLines(Path.Combine(TestSupport.repoRoot, "scripts", "sdd-release-packages.txt"))
+        )
+
         Assert.DoesNotContain("-p:Version=", job)
         Assert.DoesNotContain("-p:PackageVersion=", job)
         Assert.Contains("-p:RepositoryCommit=\"$GITHUB_SHA\"", job)
@@ -156,7 +174,7 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.0.3.nupkg")
+                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.1.0.nupkg")
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package

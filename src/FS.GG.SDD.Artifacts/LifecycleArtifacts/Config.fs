@@ -298,7 +298,8 @@ module Config =
                                         IdentifierParameter =
                                             tryScalarAt [ "identifierParameter" ] mapping
                                             |> Option.filter (fun raw -> raw.Trim() <> "")
-                                        // Optional, value-agnostic (feature 052 E2). The coherent-set
+                                        // Parsed here without admission policy: major-1 providers use advisories;
+                                        // major-2 providers require a stable minimum before effects. The coherent-set
                                         // orchestrator axis (ADR-0008, epic FS-GG/.github#85) is
                                         // declared by Templates as a nested `minimumFsggSdd:` mapping
                                         // whose `version` scalar carries the minimum coherent fsgg-sdd

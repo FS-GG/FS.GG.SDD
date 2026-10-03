@@ -104,7 +104,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("2.0.x", entry.SddVersionLine)
+        Assert.Equal("2.1.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -139,7 +139,12 @@ module ReleaseContractTests =
         Assert.Equal("fsgg-sdd", release.Identity.CliCommandName)
 
         Assert.Equal<string list>(
-            [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ],
+            [
+                "FS.GG.SDD.Artifacts"
+                "FS.GG.SDD.Commands"
+                "FS.GG.SDD.Cli"
+                "FS.GG.SDD.Knowledge"
+            ],
             release.Identity.PackageIds
         )
 
@@ -238,7 +243,7 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
-    // 2.0.3 refreshes the embedded coordination receiver without a breaking public-contract change.
+    // 2.1.0 adds knowledge commands and the standalone SDK without a breaking existing contract.
     //
     // The well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It was
     // intentionally present while additive releases made it vacuous, and this release now exercises

@@ -37,11 +37,57 @@ module internal HandlersScaffold =
         | ProviderNotRun -> "providerNotRun"
         | ProviderFailed -> "providerFailed"
 
-    let supportedContractRange = ">=1.0.0 <2.0.0"
+    let supportedContractRange = ">=1.0.0 <3.0.0"
 
     let contractMajor version = ScaffoldMutation.contractMajor version
 
-    let isSupportedContract version = contractMajor version = Some 1
+    let private stableVersion (value: string) =
+        if
+            not (String.IsNullOrEmpty value)
+            && System.Text.RegularExpressions.Regex.IsMatch(
+                value,
+                "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+            )
+        then
+            Fsgg.Version.tryParse value
+        else
+            None
+
+    let isSupportedContract version =
+        match contractMajor version with
+        | Some 1 -> true // Preserve the legacy major-1 reader semantics.
+        | Some 2 -> stableVersion version |> Option.isSome
+        | _ -> false
+
+    let private capabilityRefusal (descriptor: ProviderDescriptor) (request: CommandRequest) =
+        if contractMajor descriptor.ContractVersion <> Some 2 then
+            None
+        else
+            let installed = request.GeneratorVersion.Version
+            let declared = descriptor.MinimumCliVersion |> Option.defaultValue "absent"
+
+            let valid =
+                match descriptor.MinimumCliVersion with
+                | Some minimum when stableVersion minimum |> Option.isSome ->
+                    (Fsgg.Version.compare minimum "2.1.0" |> Option.exists (fun value -> value >= 0))
+                    && (stableVersion installed |> Option.isSome)
+                    && (Fsgg.Version.compare installed minimum
+                        |> Option.exists (fun value -> value >= 0))
+                | _ -> false
+
+            if valid then
+                None
+            else
+                Some(
+                    DiagnosticsModule.create
+                        "scaffold.providerCapabilityRefused"
+                        DiagnosticError
+                        None
+                        None
+                        ($"Provider contract 2 requires a stable declared minimum >=2.1.0 and an installed CLI meeting it; installed={installed}, minimum={declared}.")
+                        "Use a capable stable fsgg-sdd and a valid declared minimum; provider effects have not started."
+                        []
+                )
 
     // The SDD-owned trees a compliant provider must never write into (FR-011), and
     // the paths the SDD skeleton/provenance own (excluded from collision + diff).
@@ -205,6 +251,14 @@ module internal HandlersScaffold =
                         (Some name)
                         (Some descriptor.ContractVersion)
                         $"Upgrade SDD or the provider to a contract version within {supportedContractRange}."
+                )
+            | Some descriptor when capabilityRefusal descriptor request |> Option.isSome ->
+                ScaffoldBlocked(
+                    capabilityRefusal descriptor request |> Option.toList,
+                    notRunSummary
+                        (Some name)
+                        (Some descriptor.ContractVersion)
+                        "Upgrade to the provider's stable minimum; provider effects have not started."
                 )
             | Some descriptor when not (List.isEmpty (invalidAuthorParamKeys request)) ->
                 ScaffoldBlocked(

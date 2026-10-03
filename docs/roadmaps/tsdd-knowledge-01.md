@@ -127,7 +127,7 @@ through ordinary commits/PRs. A git-unavailable route cannot claim Git qualifica
 
 ## Executable milestones
 
-- [ ] **TSDD-KNOWLEDGE-01.1 — Bounded canonical findings and safe writes — route: routine.**
+- [x] **TSDD-KNOWLEDGE-01.1 — Bounded canonical findings and safe writes — route: routine.**
   Depends on: none. SDD owns the schema/library, write validation and fixtures.
   Prove representative concise architecture, diagnostic, failed-experiment and
   bug/cause/fix records with evidence references. Test exact-limit acceptance,
@@ -135,7 +135,7 @@ through ordinary commits/PRs. A git-unavailable route cannot claim Git qualifica
   expected-revision conflicts, interrupted-write recovery and prohibited payload
   files. Keep the same size checker available for CI. No original-byte store.
 
-- [ ] **TSDD-KNOWLEDGE-01.2 — Shared access, Git history and portable recovery — route: routine.**
+- [x] **TSDD-KNOWLEDGE-01.2 — Shared access, Git history and portable recovery — route: routine.**
   Depends on: .1. SDD owns CLI/F#/.fsx/agent adapters and local browse guidance.
   Prove equivalent record IDs/versions through each access path, text search,
   relations, semantic status and provenance. Make two ordinary Git commits, retrieve
@@ -144,7 +144,7 @@ through ordinary commits/PRs. A git-unavailable route cannot claim Git qualifica
   losslessly without overwriting owner edits. Fresh clone retrieval succeeds without
   cache or agent session; public queries/exports reveal no private fixtures.
 
-- [ ] **TSDD-KNOWLEDGE-01.3 — Typed initialization and CI enforce the contract — route: routine.**
+- [x] **TSDD-KNOWLEDGE-01.3 — Typed initialization and CI enforce the contract — route: routine.**
   Depends on: .1/.2. SDD owns initialization seams, seeded guidance, ignore handling
   and a proportionate native CI entry for the common checker.
   Before first development work, typed scaffold and explicit typed entry routes have
@@ -237,8 +237,21 @@ attribution is not zero and this plan claims no efficiency qualification.
 
 The .1–.3 candidate implements the shared store, access routes and typed producer
 seams. Its [source qualification receipt](evidence/tsdd-knowledge-source-20261003.md)
-records the checks and receiver observations. Checkboxes remain open pending
-merge readback. The SDD source CI gate uses the shared checker; generated product
+records the checks and receiver observations. Milestones .1–.3 merged in [SDD PR 1091](https://github.com/FS-GG/FS.GG.SDD/pull/1091)
+at protected `5f07e02cb5064a3f3b9cf43a7d439e9c9a949d29`, independently verified
+with whole-candidate tree `c5a14679d1583bd838296be41d8897cfb935a360`.
+The hosted deterministic/API/format checks passed exact source head
+`e7ca28737c03839f91791bfed8fd2d3f2f7ebeee`. Receiver replay
+`7cb5bc8aaf83fbd89cfce99496d5b639137ee8ba` reports 18/18 source probes against
+the frozen a46 closure: nine automatic typed provider initializations and nine
+standalone raw-product knowledge routes, including three expected raw Fable
+generic-init partial-refusal controls. These are source observations, not
+installed/public .4–.6 completion. The SDD source CI gate uses the shared checker; generated product
 CI enforcement is a Templates/bootstrap composition join requiring the new public
 capability floor, and remains pending with .4/.5. No installed availability,
 publication or retained-project adoption is claimed here.
+
+The next source window prepares the coherent additive [2.1.0 release](../release/knowledge-2.1.0.md),
+including the new standalone SDK, native artifact custody and installed qualifiers, and additive
+provider-major-2 admission before effects. It does not close .4–.6 before their actual public and
+retained evidence is available.
