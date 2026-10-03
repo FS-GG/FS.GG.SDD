@@ -5,8 +5,11 @@ from pathlib import Path
 import tempfile
 import threading
 import http.server
+import sys
 import zipfile
 
+# Importing the actual adapter must preserve the caller's working tree.
+sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_file_location('occupancy', Path(__file__).parents[1] / 'check-sdd-release-occupancy.py')
 module = importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 

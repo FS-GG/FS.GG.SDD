@@ -47,6 +47,14 @@ entries. It does not modify or claim byte qualification of the shared SDK instal
 
 ## Local source qualification
 
+The initial PR 1092 hosted deterministic run reached all product checks but failed its final
+clean-tree gate: the occupancy fixture's dynamic adapter import generated `scripts/__pycache__`.
+The fixture now disables bytecode before that import. Direct execution with the environment
+override unset passes all fifteen controls without generated files; an isolated original-import
+control reproduces the bytecode and its repaired counterpart preserves the tree. The clean-tree
+gate remains unchanged. The 64c218 local packages and their receipts are historical candidates
+while the accepted compiler-capacity source joins this unpublished 2.1 release.
+
 Locked restore and a forced bounded solution rebuild with the private compiler mirror passed.
 The current native tier passed 2,594 tests, zero failures, and five existing opt-in composition
 skips in 405 seconds: Contracts 180, Artifacts 653, Knowledge 10, Validation 35, CLI 234,
