@@ -7,7 +7,7 @@ constitution Change Classification).
 
 ## Single version source
 
-All packages (`FS.GG.SDD.Artifacts`, `FS.GG.SDD.Commands`, `FS.GG.SDD.Cli`) and
+All packages (`FS.GG.SDD.Artifacts`, `FS.GG.SDD.Commands`, `FS.GG.SDD.Cli`, `FS.GG.SDD.Knowledge`) and
 the CLI share **one** semantic version sourced from `Directory.Build.props`
 `<Version>`. The generator version (`currentGeneratorVersion`) is reconciled to
 the same number. A consumer determines the release version deterministically from

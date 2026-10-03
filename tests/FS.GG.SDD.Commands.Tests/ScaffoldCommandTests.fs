@@ -3028,3 +3028,81 @@ providers:
         let store = Path.Combine(root, ".fsgg", "knowledge")
         Assert.Single(FS.GG.SDD.Knowledge.Store.all store) |> ignore
         Assert.Contains("Capture concise", TestSupport.readRelative root ".fsgg/knowledge-guide.md")
+
+    [<Theory>]
+    [<InlineData("absent", "2.1.0")>]
+    [<InlineData("broken", "2.1.0")>]
+    [<InlineData("2.0.3", "2.1.0")>]
+    [<InlineData("2.1.0-preview", "2.1.0")>]
+    [<InlineData("2.1.0", "broken")>]
+    [<InlineData("2.1.0", "2.0.3")>]
+    [<InlineData("2.1.0", "2.1.0-preview")>]
+    [<InlineData("2.2.0", "2.1.0")>]
+    let ``contract two capability failures refuse before writes and provider processes`` minimum installed =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+        let path = Path.Combine(root, ".fsgg", "providers.yml")
+
+        let original =
+            File.ReadAllText(path).Replace("contractVersion: \"1.0.0\"", "contractVersion: \"2.0.0\"")
+
+        let registry =
+            if minimum = "absent" then
+                original
+            else
+                original + $"\n    minimumFsggSdd:\n      version: {minimum}\n"
+
+        File.WriteAllText(path, registry)
+
+        let request =
+            scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "typed-sdd" ] false false
+
+        let request =
+            { request with
+                GeneratorVersion =
+                    { request.GeneratorVersion with
+                        Version = installed
+                    }
+            }
+
+        let model, report = runScaffoldModel request
+        Assert.Contains("scaffold.providerCapabilityRefused", diagnosticIds report)
+        Assert.Equal(1, exitCodeForReport report)
+        Assert.False((scaffoldSummary report).ProviderInvoked)
+        Assert.Equal(registry, File.ReadAllText path)
+        Assert.False(TestSupport.existsRelative root ".fsgg/project.yml")
+        Assert.False(TestSupport.existsRelative root ".fsgg/knowledge")
+
+        Assert.DoesNotContain(
+            model.InterpretedEffects,
+            fun result ->
+                match result.Effect with
+                | WriteFile _
+                | RunProcess("dotnet", _, _) -> true
+                | _ -> false
+        )
+
+    [<Theory>]
+    [<InlineData("typed-sdd")>]
+    [<InlineData("sdd")>]
+    [<InlineData("none")>]
+    [<InlineData("spec-kit")>]
+    let ``contract two admits ordinary and typed lifecycles without changing selection`` lifecycle =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+        let path = Path.Combine(root, ".fsgg", "providers.yml")
+
+        let registry =
+            File.ReadAllText(path).Replace("contractVersion: \"1.0.0\"", "contractVersion: \"2.0.0\"")
+            + "\n    minimumFsggSdd:\n      version: 2.1.0\n"
+
+        File.WriteAllText(path, registry)
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", lifecycle ] false false
+            )
+
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.Contains(("lifecycle", lifecycle), (scaffoldSummary report).EffectiveParameters)
+        Assert.Equal((lifecycle = "typed-sdd"), TestSupport.existsRelative root ".fsgg/knowledge/schema.json")

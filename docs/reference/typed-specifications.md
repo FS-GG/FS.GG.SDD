@@ -17,6 +17,50 @@ The authority is `SpecificationModel<'extension>`. Builders are authoring
 conveniences and Markdown/JSON projections are generated views. Neither is a
 second semantic source.
 
+## Profile 2 compiler capacity
+
+Profile `fsgg-quint-profile/2` accepts at most 8,192 rows independently in each
+compiler `/table`, `/types`, and `/effects` object. An excess returns
+`QUINT-GENERAL-RESOURCE-TABLE` at the affected path. Type and effect node identities
+must still agree. Equal payloads under distinct compiler node IDs are retained.
+The independent limits remain 4,096 top-level declarations, 4,096 action bindings,
+256 exports, 16 MiB typed/effect JSON, 100,000 exported value nodes, value depth 32,
+and 64 KiB per exported string. Public signatures and profile identity are unchanged.
+
+A local source qualification on 2026-10-03 compared published CLI 1.5.0 against
+this candidate on the same Linux host, SDK 10.0.401/runtime 10.0.12, with pinned
+Quint 0.32.0 and LMT. These observations qualify source behavior; installed release
+qualification remains a separate gate. Synthetic adapter controls accept
+4,096/4,097/8,192 rows and refuse 8,193 independently for every table. Declaration,
+binding, export, byte, string, node, malformed JSON, and depth refusals remain tested.
+
+| Actual native compiler corpus | Types/effects | Typed JSON bytes | Candidate author | Candidate retained inspect |
+|---|---:|---:|---|---|
+| Unchanged Coordination corpus | 4,095 each | 2,059,647 | Accepted | Accepted |
+| Private Markdown plus 16 unexported pure values | 4,127 each | 2,068,925 | Accepted | Accepted |
+| Private Markdown plus 2,048 pure values and one variable | 8,192 each | 3,257,822 | Accepted | Accepted |
+| Private Markdown plus 2,049 pure values | 8,193 each | Native output counted separately | Refused | No accepted receipt |
+
+The unchanged corpus used 128 declarations and 1,012 table rows; the 8,192-row
+case used 2,177 declarations and 3,060 table rows. Published 1.5.0 refused the
+same 4,127-row fixture. Every measured author invocation used a fresh empty output
+root and the same preinstalled tools/cache; first-process observations do not claim
+fresh downloads or an OS cache flush. Three warm unchanged runs had median wall
+time 2.776 s / 2.809 s and maximum-child RSS 267,008 / 269,780 KiB for baseline /
+candidate. The 8,192-row author took 3.111 s and 291,704 KiB. Python child resource
+accounting supplied user/system CPU and RSS because `/usr/bin/time` was unavailable;
+RSS is the largest child observation, not summed concurrent memory. All runs were
+bounded to 180 seconds. These screening observations stayed within the proposed
+25% unchanged and 2.5x doubled-workload diagnostic budgets.
+
+Adapter-only warm allocation was identical on the unchanged corpus: 109,609,224
+bytes per invocation. The 8,192-row case allocated 182,993,600 bytes, with median
+wall time 154.8 ms. `scripts/measure-quint-profile-capacity.fsx` reproduces four
+bounded adapter observations from retained typed JSON and selectors; pass the
+source-bound Contracts and Artifacts DLLs using FSI `--reference`, followed by
+`--exec`, the helper path, typed-effect JSON path, and profile-bindings JSON path.
+Compiler provenance comes from the actual author/tool chain, not the synthetic tests.
+
 ## Extension boundary
 
 A producer defines a concrete extension type and an explicit

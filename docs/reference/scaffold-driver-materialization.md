@@ -180,6 +180,20 @@ tree its own provenance accounts for. `doctor` reports the same gap read-only. R
 backfills by construction, as it always has; it remains the heavier path for a tree being regenerated
 anyway.
 
+## Provider capability admission
+
+Provider contract major 1 retains its existing advisory minimum CLI check and lifecycle defaults.
+Major 2 uses the same descriptor shape, but requires a stable `minimumFsggSdd.version` of at least
+`2.1.0` and a known stable installed CLI version at or above that declared minimum. Missing,
+malformed, prerelease, lowered, or unmet versions refuse before provider installation, creation, or
+workspace writes with `scaffold.providerCapabilityRefused`. An older CLI that does not support
+contract major 2 refuses it as unsupported before those effects.
+
+This admission applies to every lifecycle selection; it does not select `typed-sdd` automatically.
+When the effective selection is `typed-sdd`, knowledge initialization and validation finish before
+scaffold success is reported. Contract major 2 is a source capability for the proposed 2.1.0
+release until the producer is published and the actual installed receiver is qualified.
+
 ## Not covered here
 
 - Authoring or editing driver skill **content** — owned by `.github`; SDD lays the bytes down

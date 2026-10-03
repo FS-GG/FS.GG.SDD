@@ -2,8 +2,8 @@
 
 This receipt covers the source candidate for concise project knowledge. It does
 not qualify a published package, every installed template route, or retained
-project extraction. The six-milestone [roadmap](../tsdd-knowledge-01.md) remains
-open until source merge readback and the separate receiver/release work lands.
+project extraction. The six-milestone [roadmap](../tsdd-knowledge-01.md) now closes source milestones .1–.3 after protected merge readback; .4–.6 remain
+open for composition, publication/installed adoption and retained extraction.
 
 The canonical store contains current UTF-8 structured findings and schema only.
 Every canonical byte counts against 10,485,760 bytes. Common writes and
@@ -89,3 +89,23 @@ Its nuspec identifies source commit `0c26ac591e76d2839177da823b3f6ada5c09a698`.
 Executing those extracted bytes reports `toolVersion: 2.0.3`, exit 1 and
 `unknownCommand` for `knowledge`. This establishes the stated public capability
 boundary directly, independently of any older 2.0.2 observation.
+
+## Protected source closure
+
+[SDD PR 1091](https://github.com/FS-GG/FS.GG.SDD/pull/1091) merged exact source
+`e7ca28737c03839f91791bfed8fd2d3f2f7ebeee` at protected
+`5f07e02cb5064a3f3b9cf43a7d439e9c9a949d29`; whole-candidate tree equality was
+independently verified as `c5a14679d1583bd838296be41d8897cfb935a360`.
+The [hosted native run](https://github.com/FS-GG/FS.GG.SDD/actions/runs/37102775673)
+passed deterministic, API compatibility and pinned formatting checks for that
+exact source head. Its native tier passed 2,582 tests with five existing opt-in
+skips in 412 seconds: Contracts 180, Artifacts 653, Knowledge 10, Validation 35,
+CLI 234, Commands 1,424 and Acceptance 46. The source .1–.3 milestones are closed; generated product CI,
+public capability adoption and retained extraction remain separate open joins.
+
+Final receiver receipt `candidate-receipt-formatted-repair.json` at receiver commit
+`7cb5bc8aaf83fbd89cfce99496d5b639137ee8ba` reports 18/18 against frozen
+`/tmp/knowledge-source-cli-20261003-a46fb7e34e69`: nine automatic effective typed
+provider routes and nine standalone knowledge routes after actual raw creation.
+This receipt includes three expected raw Fable generic-init partial refusals and
+does not promote standalone initialization to typed activation.

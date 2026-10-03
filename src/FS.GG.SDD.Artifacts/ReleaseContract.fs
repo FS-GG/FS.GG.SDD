@@ -265,14 +265,20 @@ module ReleaseContract =
             {
                 Version = version
                 Channel = channelOfVersion version
-                PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
+                PackageIds =
+                    [
+                        "FS.GG.SDD.Artifacts"
+                        "FS.GG.SDD.Commands"
+                        "FS.GG.SDD.Cli"
+                        "FS.GG.SDD.Knowledge"
+                    ]
                 CliCommandName = "fsgg-sdd"
             }
 
         let compatibility =
             [
                 {
-                    SddVersionLine = "2.0.x"
+                    SddVersionLine = "2.1.x"
                     SpecKitRange = ">=0.8.5"
                     GovernanceContractVersionRange = Some "2.x"
                 }
@@ -1185,7 +1191,7 @@ module ReleaseContract =
             //
             // And enumerate EVERY breaking change: a note that under-reports is the exact failure
             // the note exists to prevent.
-            // 2.0.3 refreshes the embedded coordination receiver without a breaking public-contract change.
+            // 2.1.0 adds concise knowledge capture/retrieval and typed initialization; existing public contracts remain compatible.
             Migrations = []
         }
 

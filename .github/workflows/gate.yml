@@ -91,7 +91,9 @@ jobs:
       # #944: release authorization is a custody chain, not an assumption that a later pack emits
       # the same ZIP container. These mutations prove head/hash/archive substitution fails closed.
       - name: Release artifact custody mutations
-        run: bash scripts/tests/release-artifact-custody.test.sh
+        run: |
+          bash scripts/tests/release-artifact-custody.test.sh
+          python3 scripts/tests/sdd-release-occupancy.test.py
 
       # Guard the skill-root materializer's WRITE SET (FS.GG.SDD#767). The driver is a `.fsx` outside
       # the solution, so no `dotnet test` project reaches it, and its defect presented as a green board:

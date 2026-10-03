@@ -196,6 +196,27 @@ explicit upgrade boundary; it is never silently accepted. Standard SDD and `none
 
 ## Design consequences
 
+When preparation failures recur, consider an optional, proportionate preflight based on the actual
+defect history, retry cost, and bounded time investment. The
+[pipeline-preflight guidance](https://github.com/FS-GG/.github/blob/main/.agents/skills/pipeline-preflight/SKILL.md)
+can help select the scope. A proposed mechanism is a private-constructor `PreparedAttempt` whose
+admission requires observations of the exact command, configuration, transitive artifacts,
+prerequisites, and deadline. Inspect the assembled capsule through imports and discovery that have
+no effects, then revalidate mutable facts immediately before execution. This mechanism is a design
+option, not an available typed-sdd API or a universal model, approval, or reporting requirement.
+The proposed [V2-PREFLIGHT-01 prerequisite admission work](https://github.com/FS-GG/.github/blob/main/docs/github-substrate-v2-roadmap.md#v2-preflight-01--typed-prerequisite-admission-next-item-2026-10-03)
+records the corresponding exploration.
+
+Where the investment is justified, reuse partitioned Quint models with real F# replay, drift checks,
+and causal mutations. Invalid input before admission should preserve state; a valid clock advance or
+refusal may still require expiry, cleanup, or settlement effects. Qualify each actual packaged
+adapter independently, and place writable outputs outside immutable inputs. A type, sampled case,
+or shared test does not establish the behavior of the native or installed adapter.
+
+Keep source, published, installed, and operating evidence separate. Record the chosen preflight
+scope and its time cost without treating unmeasured avoided retries as savings; increase the scope
+only when recurring failures or material risk justify it.
+
 One ordered lifecycle and skill corpus avoids two processes drifting apart. A backend-specific authority
 manifest still allows strong freshness and identity checks. F# v1 requires a compatible compiler;
 Quint v2 requires the exact preseeded cache. Neither backend performs network acquisition.
