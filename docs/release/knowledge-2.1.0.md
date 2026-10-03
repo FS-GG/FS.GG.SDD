@@ -2,7 +2,9 @@
 
 The proposed additive minor release preserves contract-major-1 scaffold behavior and adds the
 concise findings SDK, knowledge commands, typed initialization, and provider-major-2 capability
-admission. The reviewed coherent publish inventory is Artifacts, CLI, and Knowledge; Commands
+admission. It also raises only the profile-2 compiler table ceilings for `/table`, `/types`,
+and `/effects` from 4,096 to 8,192 rows. Declaration and action-binding limits remain 4,096;
+all other resource ceilings and model partitions remain unchanged. The reviewed coherent publish inventory is Artifacts, CLI, and Knowledge; Commands
 remains a CLI-contained assembly. The independent Contracts release remains 7.5.2.
 
 Provider major 2 keeps the existing record shape. Its stable declared minimum must be at least
@@ -56,7 +58,7 @@ gate remains unchanged. The 64c218 local packages and their receipts are histori
 while the accepted compiler-capacity source joins this unpublished 2.1 release.
 
 Locked restore and a forced bounded solution rebuild with the private compiler mirror passed.
-The current native tier passed 2,594 tests, zero failures, and five existing opt-in composition
+The pre-capacity native tier passed 2,594 tests, zero failures, and five existing opt-in composition
 skips in 405 seconds: Contracts 180, Artifacts 653, Knowledge 10, Validation 35, CLI 234,
 Commands 1,436, and Acceptance 46. The initial run exposed stale release-coupled fixtures; their
 existing producers regenerated only generator versions and derived digests. Targeted artifact and
@@ -68,7 +70,7 @@ ancestor refused. Retained-custody fixtures passed eight cases, and authenticate
 fixtures passed fifteen. These source observations do not establish that the actual publisher
 credentials, retained package consumers, or new public feeds have been qualified.
 
-The first local source-bound three-package candidate passed exact inventory/source/hash verification.
+The historical 64c218 local source-bound three-package candidate passed exact inventory/source/hash verification.
 Native ApiCompat compared all five existing assembly positions with real public 2.0.3 and found no
 breaks with framework references fully resolved. The adapter now refuses unresolved references
 even if the native tool returns zero; an actual missing-framework mutation reproduced that zero
@@ -82,3 +84,26 @@ Milestones .4 product composition/CI, .5 public clean adoption, and .6 retained 
 open. Source, retained packages, public readback, clean installation, and operating project adoption
 are separate observations. Telemetry is not configured; the preflight choice claims no measured
 cost saving or efficiency qualification.
+
+## Compiler-capacity integration
+
+The approved capacity source commit `14c8dfbff0212cb73f79d09091a97d1171f15c53` adds
+independent boundary tests and a reusable adapter measurement script. Its genuine compiler
+fixtures accept 4,127 and exactly 8,192 type/effect rows and refuse 8,193 rows with the
+resource-table diagnostic. Retained inspection accepts the admitted results. The published
+1.5.0 CLI refuses the same above-4,096 input. Warm unchanged-input measurements observed
+1.2% additional median wall time and 1.0% additional median peak RSS; these bounded observations
+are not a general performance guarantee. A failed historical cold attempt remains excluded
+from the valid comparison. Exact inputs, tool identities, raw timing records, and native output
+are retained under `/tmp/v2-capacity-measure-20261003` for the integration qualification.
+
+The combined source passed locked restore, a forced bounded solution rebuild (39.17 seconds,
+zero warnings/errors), 29 focused profile controls, and the full native tier: 2,611 passed,
+zero failed, five existing opt-in skips, 419 seconds. The bytecode fixture passes fifteen
+controls with its environment override unset, and retained custody passes eight cases.
+A new three-package candidate is retained only after this combined source qualification.
+That candidate must independently pass the existing API and installed Knowledge qualifiers
+and actual installed compiler author/inspection above 4,096, at 8,192, and refusal at 8,193.
+The prior packages are historical observations and do not qualify this changed source. Public
+readback and actual consumer requalification follow protected source admission and publication;
+no model deduplication or partition removal is claimed by this capacity change.
