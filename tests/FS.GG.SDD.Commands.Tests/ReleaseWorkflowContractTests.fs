@@ -88,7 +88,10 @@ module ReleaseWorkflowContractTests =
         Assert.DoesNotContain("dotnet nuget push", job)
 
         let custody = workflow.Substring(locate, finish - locate)
-        let readbackStart = workflow.IndexOf("\n  readback-cli:\n", finish, StringComparison.Ordinal)
+
+        let readbackStart =
+            workflow.IndexOf("\n  readback-cli:\n", finish, StringComparison.Ordinal)
+
         Assert.True(readbackStart > finish, "publisher and read-only readback must remain distinct jobs")
         let publish = workflow.Substring(finish, readbackStart - finish)
         Assert.Contains("event=workflow_dispatch&status=completed", custody)
@@ -106,7 +109,12 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("Read back both feeds and compare every non-signature entry", publish)
         Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" publish)
         Assert.Contains("python3 scripts/verify-package-payloads.py \"$local_package\"", publish)
-        Assert.Contains("\"artifacts/feed-readback/$id.github.nupkg\" \\\n              \"artifacts/feed-readback/$id.nuget.nupkg\"", publish)
+
+        Assert.Contains(
+            "\"artifacts/feed-readback/$id.github.nupkg\" \\\n              \"artifacts/feed-readback/$id.nuget.nupkg\"",
+            publish
+        )
+
         Assert.Contains("artifacts/packages/*.nupkg.payloads", publish)
         Assert.Contains("artifacts/feed-readback/*.payloads", publish)
         Assert.Contains("artifacts/feed-readback/*.entries", publish)
@@ -153,11 +161,19 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("git rev-parse \"refs/tags/v$VERSION^{commit}\"", workflow)
         Assert.Contains("for attempt in $(seq 1 40)", workflow)
         Assert.Contains("RepositoryCommit", workflow)
-        let readbackStart = workflow.IndexOf("\n  readback-cli:\n", StringComparison.Ordinal)
+
+        let readbackStart =
+            workflow.IndexOf("\n  readback-cli:\n", StringComparison.Ordinal)
+
         Assert.True(readbackStart >= 0, "read-only readback job must exist")
         let readback = workflow.Substring(readbackStart)
         Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" readback)
-        Assert.Contains("python3 scripts/verify-package-payloads.py \\\n              \"artifacts/feed-readback/$id.github.nupkg\" \\\n              \"artifacts/feed-readback/$id.nuget.nupkg\"", readback)
+
+        Assert.Contains(
+            "python3 scripts/verify-package-payloads.py \\\n              \"artifacts/feed-readback/$id.github.nupkg\" \\\n              \"artifacts/feed-readback/$id.nuget.nupkg\"",
+            readback
+        )
+
         Assert.Contains("grep -F \"commit=\\\"$source_head\\\"\"", readback)
         Assert.Contains("Retain read-only feed archives and payload maps", readback)
         Assert.DoesNotContain("dotnet nuget push", readback)
