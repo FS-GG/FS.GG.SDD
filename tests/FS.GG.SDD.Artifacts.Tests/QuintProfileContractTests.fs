@@ -336,17 +336,33 @@ module QuintProfileContractTests =
 
     // Synthetic adapter controls isolate independent resource arithmetic; they are not compiler provenance.
     let private withTableRows (field: string) count (observation: QuintGeneralTypedEffectObservation) =
-        let root = System.Text.Json.Nodes.JsonNode.Parse(observation.TypedEffectJson) |> requiredNode
+        let root =
+            System.Text.Json.Nodes.JsonNode.Parse(observation.TypedEffectJson)
+            |> requiredNode
+
         let rows = (root[field] |> requiredNode).AsObject()
         let template = (rows["30"] |> requiredNode).DeepClone()
+
         for index in 1 .. count - 1 do
             let id = string (1000 + index)
+
             let row =
                 if field = "table" then
-                    System.Text.Json.Nodes.JsonNode.Parse(sprintf "{\"id\":%d,\"kind\":\"var\",\"name\":\"row%d\",\"typeAnnotation\":{\"id\":%d,\"kind\":\"int\"},\"depth\":0}" (1000 + index) index (20000 + index))
-                else template.DeepClone()
+                    System.Text.Json.Nodes.JsonNode.Parse(
+                        sprintf
+                            "{\"id\":%d,\"kind\":\"var\",\"name\":\"row%d\",\"typeAnnotation\":{\"id\":%d,\"kind\":\"int\"},\"depth\":0}"
+                            (1000 + index)
+                            index
+                            (20000 + index)
+                    )
+                else
+                    template.DeepClone()
+
             rows.Add(id, row)
-        { observation with TypedEffectJson = root.ToJsonString() }
+
+        { observation with
+            TypedEffectJson = root.ToJsonString()
+        }
 
     [<Theory>]
     [<InlineData(4096)>]
@@ -354,7 +370,12 @@ module QuintProfileContractTests =
     [<InlineData(8192)>]
     let ``general compiler table capacity accepts valid independent row boundaries`` count =
         let baseline = generalObservation QuintGeneralProfile.identity
-        withTableRows "table" count baseline |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
+
+        withTableRows "table" count baseline
+        |> QuintGeneralProfile.adaptTypedEffectJson
+        |> expectOk
+        |> ignore
+
         baseline
         |> withTableRows "types" count
         |> withTableRows "effects" count
@@ -368,12 +389,15 @@ module QuintProfileContractTests =
     [<InlineData("effects")>]
     let ``general compiler table refuses 8193 rows with the exact path`` field =
         let baseline = generalObservation QuintGeneralProfile.identity
+
         let observation =
-            baseline |> withTableRows field 8193
+            baseline
+            |> withTableRows field 8193
             |> fun value ->
                 if field = "types" then withTableRows "effects" 8193 value
                 elif field = "effects" then withTableRows "types" 8193 value
                 else value
+
         let errors = observation |> QuintGeneralProfile.adaptTypedEffectJson |> findings
         Assert.Contains(errors, fun item -> item.Code = "QUINT-GENERAL-RESOURCE-TABLE" && item.Path = "/" + field)
         Assert.DoesNotContain(errors, fun item -> item.Code = "QUINT-GENERAL-EFFECT-TYPE-COVERAGE")
@@ -385,7 +409,9 @@ module QuintProfileContractTests =
         let errors =
             generalObservation QuintGeneralProfile.identity
             |> withTableRows field 8193
-            |> QuintGeneralProfile.adaptTypedEffectJson |> findings
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings
+
         Assert.Contains(errors, fun item -> item.Code = "QUINT-GENERAL-RESOURCE-TABLE" && item.Path = "/" + field)
         Assert.Contains(errors, fun item -> item.Code = "QUINT-GENERAL-EFFECT-TYPE-COVERAGE")
 
@@ -394,17 +420,36 @@ module QuintProfileContractTests =
     [<InlineData(4097, false)>]
     let ``general top level declaration limit remains independent`` count accepted =
         let baseline = generalObservation QuintGeneralProfile.identity
-        let root = System.Text.Json.Nodes.JsonNode.Parse(baseline.TypedEffectJson) |> requiredNode
+
+        let root =
+            System.Text.Json.Nodes.JsonNode.Parse(baseline.TypedEffectJson) |> requiredNode
+
         let modules = (root["modules"] |> requiredNode).AsArray()
         let firstModule = modules[0] |> requiredNode
         let declarations = (firstModule["declarations"] |> requiredNode).AsArray()
+
         for index in 1 .. (count - declarations.Count) do
-            declarations.Add(System.Text.Json.Nodes.JsonNode.Parse(sprintf "{\"id\":%d,\"kind\":\"var\",\"name\":\"extra%d\",\"typeAnnotation\":{\"kind\":\"int\"},\"depth\":0}" (1000 + index) index))
-        let observation = { baseline with TypedEffectJson = root.ToJsonString() }
-        if accepted then observation |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
+            declarations.Add(
+                System.Text.Json.Nodes.JsonNode.Parse(
+                    sprintf
+                        "{\"id\":%d,\"kind\":\"var\",\"name\":\"extra%d\",\"typeAnnotation\":{\"kind\":\"int\"},\"depth\":0}"
+                        (1000 + index)
+                        index
+                )
+            )
+
+        let observation =
+            { baseline with
+                TypedEffectJson = root.ToJsonString()
+            }
+
+        if accepted then
+            observation |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
         else
-            Assert.Contains(observation |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-                            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-DECLARATIONS")
+            Assert.Contains(
+                observation |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
+                fun item -> item.Code = "QUINT-GENERAL-RESOURCE-DECLARATIONS"
+            )
 
     [<Theory>]
     [<InlineData(4096, true)>]
@@ -412,12 +457,25 @@ module QuintProfileContractTests =
     let ``general action binding limit remains independent`` count accepted =
         let baseline = generalObservation QuintGeneralProfile.identity
         let template = baseline.ActionBindings.Head
+
         let observation =
-            { baseline with ActionBindings = [ for index in 1 .. count -> { template with Id = sprintf "ACT-Step%d" index } ] }
-        if accepted then observation |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
+            { baseline with
+                ActionBindings =
+                    [
+                        for index in 1..count ->
+                            { template with
+                                Id = sprintf "ACT-Step%d" index
+                            }
+                    ]
+            }
+
+        if accepted then
+            observation |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
         else
-            Assert.Contains(observation |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-                            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-BINDINGS")
+            Assert.Contains(
+                observation |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
+                fun item -> item.Code = "QUINT-GENERAL-RESOURCE-BINDINGS"
+            )
 
     [<Theory>]
     [<InlineData(256, true)>]
@@ -425,62 +483,142 @@ module QuintProfileContractTests =
     let ``general export limit remains independent`` count accepted =
         let baseline = generalObservation QuintGeneralProfile.identity
         let template = baseline.ExportBindings.Head
+
         let observation =
-            { baseline with ExportBindings = [ for index in 1 .. count -> { template with Id = sprintf "EXPORT-Rules%d" index; PromoteCatalogueRows = false } ] }
-        if accepted then observation |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
+            { baseline with
+                ExportBindings =
+                    [
+                        for index in 1..count ->
+                            { template with
+                                Id = sprintf "EXPORT-Rules%d" index
+                                PromoteCatalogueRows = false
+                            }
+                    ]
+            }
+
+        if accepted then
+            observation |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
         else
-            Assert.Contains(observation |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-                            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-EXPORTS")
+            Assert.Contains(
+                observation |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
+                fun item -> item.Code = "QUINT-GENERAL-RESOURCE-EXPORTS"
+            )
 
     let private withClosedExport (expression: string) =
         let baseline = generalObservation QuintGeneralProfile.identity
-        let root = System.Text.Json.Nodes.JsonNode.Parse(baseline.TypedEffectJson) |> requiredNode
+
+        let root =
+            System.Text.Json.Nodes.JsonNode.Parse(baseline.TypedEffectJson) |> requiredNode
+
         let modules = (root["modules"] |> requiredNode).AsArray()
-        let declarations = ((modules[0] |> requiredNode)["declarations"] |> requiredNode).AsArray()
+
+        let declarations =
+            ((modules[0] |> requiredNode)["declarations"] |> requiredNode).AsArray()
+
         let declaration = declarations[1] |> requiredNode
         declaration["expr"] <- System.Text.Json.Nodes.JsonNode.Parse expression
+
         { baseline with
             TypedEffectJson = root.ToJsonString()
-            ExportBindings = baseline.ExportBindings |> List.map (fun item -> { item with PromoteCatalogueRows = false }) }
+            ExportBindings =
+                baseline.ExportBindings
+                |> List.map (fun item ->
+                    { item with
+                        PromoteCatalogueRows = false
+                    })
+        }
 
     [<Fact>]
     let ``general byte and exported string limits stay unchanged`` () =
         let baseline = generalObservation QuintGeneralProfile.identity
         let maxBytes = 16 * 1024 * 1024
         let bytes = System.Text.Encoding.UTF8.GetByteCount baseline.TypedEffectJson
-        let bounded = { baseline with TypedEffectJson = System.String(' ', maxBytes - bytes) + baseline.TypedEffectJson }
+
+        let bounded =
+            { baseline with
+                TypedEffectJson = System.String(' ', maxBytes - bytes) + baseline.TypedEffectJson
+            }
+
         bounded |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
+
         Assert.Contains(
-            { bounded with TypedEffectJson = " " + bounded.TypedEffectJson }
-            |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-BYTES")
-        let stringExpression count = sprintf "{\"kind\":\"str\",\"value\":\"%s\"}" (System.String('s', count))
-        withClosedExport (stringExpression 65536) |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
+            { bounded with
+                TypedEffectJson = " " + bounded.TypedEffectJson
+            }
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings,
+            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-BYTES"
+        )
+
+        let stringExpression count =
+            sprintf "{\"kind\":\"str\",\"value\":\"%s\"}" (System.String('s', count))
+
+        withClosedExport (stringExpression 65536)
+        |> QuintGeneralProfile.adaptTypedEffectJson
+        |> expectOk
+        |> ignore
+
         Assert.Contains(
-            withClosedExport (stringExpression 65537) |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-STRING")
+            withClosedExport (stringExpression 65537)
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings,
+            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-STRING"
+        )
 
     [<Fact>]
     let ``general exported value node ceiling stays at 100000`` () =
         let expression count =
-            let args = [ for index in 1 .. count - 1 -> sprintf "{\"id\":%d,\"kind\":\"int\",\"value\":%d}" (1000 + index) index ] |> String.concat ","
+            let args =
+                [
+                    for index in 1 .. count - 1 ->
+                        sprintf "{\"id\":%d,\"kind\":\"int\",\"value\":%d}" (1000 + index) index
+                ]
+                |> String.concat ","
+
             "{\"kind\":\"app\",\"opcode\":\"List\",\"args\":[" + args + "]}"
-        withClosedExport (expression 100000) |> QuintGeneralProfile.adaptTypedEffectJson |> expectOk |> ignore
+
+        withClosedExport (expression 100000)
+        |> QuintGeneralProfile.adaptTypedEffectJson
+        |> expectOk
+        |> ignore
+
         Assert.Contains(
-            withClosedExport (expression 100001) |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-NODES")
+            withClosedExport (expression 100001)
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings,
+            fun item -> item.Code = "QUINT-GENERAL-RESOURCE-NODES"
+        )
 
     [<Fact>]
     let ``general excessive depth and malformed JSON remain refused`` () =
         let expression =
-            [ 1 .. 33 ] |> List.fold (fun value _ -> "{\"kind\":\"app\",\"opcode\":\"List\",\"args\":[" + value + "]}") "{\"kind\":\"int\",\"value\":1}"
+            [ 1..33 ]
+            |> List.fold
+                (fun value _ -> "{\"kind\":\"app\",\"opcode\":\"List\",\"args\":[" + value + "]}")
+                "{\"kind\":\"int\",\"value\":1}"
         // JsonDocument's envelope depth guard can refuse before the exported-value depth guard.
         let baseline = generalObservation QuintGeneralProfile.identity
-        let deeplyNested = { baseline with TypedEffectJson = baseline.TypedEffectJson.Replace("{\"id\":19,\"kind\":\"app\",\"opcode\":\"Set\",\"args\":[", "{\"id\":19,\"kind\":\"app\",\"opcode\":\"Set\",\"args\":[" + expression + ",") }
-        Assert.Contains(deeplyNested |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-                        fun item -> item.Code = "QUINT-IR-MALFORMED" || item.Code = "QUINT-GENERAL-RESOURCE-DEPTH")
-        Assert.Contains({ baseline with TypedEffectJson = "{" } |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
-                        fun item -> item.Code = "QUINT-IR-MALFORMED")
+
+        let deeplyNested =
+            { baseline with
+                TypedEffectJson =
+                    baseline.TypedEffectJson.Replace(
+                        "{\"id\":19,\"kind\":\"app\",\"opcode\":\"Set\",\"args\":[",
+                        "{\"id\":19,\"kind\":\"app\",\"opcode\":\"Set\",\"args\":[" + expression + ","
+                    )
+            }
+
+        Assert.Contains(
+            deeplyNested |> QuintGeneralProfile.adaptTypedEffectJson |> findings,
+            fun item -> item.Code = "QUINT-IR-MALFORMED" || item.Code = "QUINT-GENERAL-RESOURCE-DEPTH"
+        )
+
+        Assert.Contains(
+            { baseline with TypedEffectJson = "{" }
+            |> QuintGeneralProfile.adaptTypedEffectJson
+            |> findings,
+            fun item -> item.Code = "QUINT-IR-MALFORMED"
+        )
 
     [<Fact>]
     let ``general profile accepts consumer exports without a program digest`` () =
