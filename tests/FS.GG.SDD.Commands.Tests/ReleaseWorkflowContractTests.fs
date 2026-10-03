@@ -36,6 +36,16 @@ module ReleaseWorkflowContractTests =
 
         found
 
+    let private assertPayloadReceiptMaps () =
+        let verifier =
+            Path.Combine(TestSupport.repoRoot, "scripts", "verify-package-payloads.py")
+            |> File.ReadAllText
+
+        Assert.Contains("if name != \".signature.p7s\"", verifier)
+        Assert.Contains("if manifest != original:", verifier)
+        Assert.Contains("Path(str(path) + \".entries\").write_text(", verifier)
+        Assert.Contains("Path(str(path) + \".payloads\").write_text(", verifier)
+
     [<Fact>]
     let ``release publishes the independently consumable artifacts package to both feeds`` () =
         Assert.Equal(1, count "\n  publish-artifacts:\n" workflow)
@@ -78,7 +88,9 @@ module ReleaseWorkflowContractTests =
         Assert.DoesNotContain("dotnet nuget push", job)
 
         let custody = workflow.Substring(locate, finish - locate)
-        let publish = workflow.Substring(finish)
+        let readbackStart = workflow.IndexOf("\n  readback-cli:\n", finish, StringComparison.Ordinal)
+        Assert.True(readbackStart > finish, "publisher and read-only readback must remain distinct jobs")
+        let publish = workflow.Substring(finish, readbackStart - finish)
         Assert.Contains("event=workflow_dispatch&status=completed", custody)
         Assert.Contains("expected exactly one retained no-push candidate", custody)
         Assert.Contains("run-id: ${{ needs.locate-artifacts.outputs.candidate_run_id }}", publish)
@@ -92,8 +104,13 @@ module ReleaseWorkflowContractTests =
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Cli.*.nupkg\"" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Knowledge.*.nupkg\"" publish)
         Assert.Contains("Read back both feeds and compare every non-signature entry", publish)
-        Assert.Contains("grep -v '^\\.signature\\.p7s$'", publish)
-        Assert.Contains("diff -u \"$local_package.payloads\"", publish)
+        Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" publish)
+        Assert.Contains("python3 scripts/verify-package-payloads.py \"$local_package\"", publish)
+        Assert.Contains("\"artifacts/feed-readback/$id.github.nupkg\" \\\n              \"artifacts/feed-readback/$id.nuget.nupkg\"", publish)
+        Assert.Contains("artifacts/packages/*.nupkg.payloads", publish)
+        Assert.Contains("artifacts/feed-readback/*.payloads", publish)
+        Assert.Contains("artifacts/feed-readback/*.entries", publish)
+        assertPayloadReceiptMaps ()
         Assert.Contains("Verify clean public installs", publish)
         Assert.Contains("Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
         Assert.Contains("Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
@@ -136,6 +153,13 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("git rev-parse \"refs/tags/v$VERSION^{commit}\"", workflow)
         Assert.Contains("for attempt in $(seq 1 40)", workflow)
         Assert.Contains("RepositoryCommit", workflow)
-        Assert.Contains("artifacts/feed-readback/$id.github.nupkg.payloads", workflow)
-        Assert.Contains("artifacts/feed-readback/$id.nuget.nupkg.payloads", workflow)
+        let readbackStart = workflow.IndexOf("\n  readback-cli:\n", StringComparison.Ordinal)
+        Assert.True(readbackStart >= 0, "read-only readback job must exist")
+        let readback = workflow.Substring(readbackStart)
+        Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" readback)
+        Assert.Contains("python3 scripts/verify-package-payloads.py \\\n              \"artifacts/feed-readback/$id.github.nupkg\" \\\n              \"artifacts/feed-readback/$id.nuget.nupkg\"", readback)
+        Assert.Contains("grep -F \"commit=\\\"$source_head\\\"\"", readback)
+        Assert.Contains("Retain read-only feed archives and payload maps", readback)
+        Assert.DoesNotContain("dotnet nuget push", readback)
+        assertPayloadReceiptMaps ()
         Assert.Contains("artifacts/feed-readback/*", workflow)
