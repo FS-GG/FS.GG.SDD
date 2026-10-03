@@ -71,6 +71,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PURE_PROJECTS=(
   tests/FS.GG.Contracts.Tests
   tests/FS.GG.SDD.Artifacts.Tests
+  tests/FS.GG.SDD.Knowledge.Tests
 )
 FAST_PROJECTS=(
   "${PURE_PROJECTS[@]}"

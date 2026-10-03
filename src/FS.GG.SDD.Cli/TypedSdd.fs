@@ -915,6 +915,7 @@ module TypedSdd =
                 if backend = "quint" || backend = "quint-specification-v1" then
                     match authorQuint args workId agent session with
                     | Ok changed ->
+                        FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
                         emit
                             {
                                 Operation = "author"
@@ -1017,6 +1018,7 @@ module TypedSdd =
                         |> Result.bind (fun model -> writeAuthority (root args) workId model None [])
                     with
                     | Ok changed ->
+                        FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
                         emit
                             {
                                 Operation = "author"
@@ -1241,6 +1243,7 @@ module TypedSdd =
 
                             match migrateQuint args workId source payload rollback with
                             | Ok changed ->
+                                FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
                                 emit
                                     {
                                         Operation = "migrate"
@@ -1282,6 +1285,7 @@ module TypedSdd =
                                 [ rollbackPath, sourceBytes ]
                         with
                         | Ok changed ->
+                            FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
                             emit
                                 {
                                     Operation = "migrate"

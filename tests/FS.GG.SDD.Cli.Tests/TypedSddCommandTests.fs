@@ -58,7 +58,8 @@ module TypedSddCommandTests =
 
             Assert.Equal(1, code)
             Assert.Contains("typedSdd.authoringAgentUnavailable", stdout)
-            Assert.False(Directory.Exists(Path.Combine(root, "work"))))
+            Assert.False(Directory.Exists(Path.Combine(root, "work")))
+            Assert.False(Directory.Exists(Path.Combine(root, ".fsgg", "knowledge"))))
 
     [<Fact>]
     let ``general Quint authoring requires explicit source and selector inputs`` () =
@@ -116,6 +117,7 @@ module TypedSddCommandTests =
                     ]
 
             Assert.Equal(0, code)
+            Assert.NotEmpty(FS.GG.SDD.Knowledge.Store.all (Path.Combine(root, ".fsgg", "knowledge")))
 
             let inspectCode, inspect, _ =
                 run root [ "typed-sdd"; "inspect"; "--root"; root; "--work"; "demo" ]

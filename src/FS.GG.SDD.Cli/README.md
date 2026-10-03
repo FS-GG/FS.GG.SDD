@@ -30,9 +30,17 @@ fsgg-sdd charter                           # continue the lifecycle
 through a generic, schema-versioned provider contract. SDD embeds no
 provider-specific id, path, or URL.
 
+## Project knowledge
+
+Typed workspace initialization creates concise, evidence-backed findings under
+`.fsgg/knowledge`. Use `fsgg-sdd knowledge --help` for capture, search, history,
+browse, size checks and selected record export. Current records and schema share
+an exact 10 MiB budget; Git retains past versions. Source code, raw logs and
+search caches remain outside the canonical store.
+
 ## Output formats
 
-Every command projects the same `CommandReport` three ways: `--json` (the default
+Lifecycle commands project the same `CommandReport` three ways: `--json` (the default
 deterministic automation contract), `--text` (portable plain text), and `--rich`
 (Spectre.Console panels/tables/color, degrading to plain text when non-interactive).
 

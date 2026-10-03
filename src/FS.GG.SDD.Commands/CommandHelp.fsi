@@ -10,7 +10,7 @@ module CommandHelp =
     val globalFlags: HelpFlag list
 
     /// Every command the CLI dispatches: the 14 lifecycle/cross-cutting `SddCommand` cases
-    /// plus the CLI-level peers `version`, `validate`, and `registry`.
+    /// plus the CLI-level peers `version`, `validate`, `registry`, and `knowledge`.
     val commandEntries: HelpCommandEntry list
 
     /// The value-taking and switch flags accepted by a specific lifecycle command, beyond

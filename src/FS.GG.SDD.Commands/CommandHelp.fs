@@ -105,6 +105,10 @@ module CommandHelp =
                 Name = "registry"
                 Description = "Validate a registry document against the schema."
             }
+            {
+                Name = "knowledge"
+                Description = "Capture and retrieve concise project findings with evidence references and Git history."
+            }
         ]
 
     let private work = flag "--work" (Some "<id>") "Target work item id."

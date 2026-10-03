@@ -93,86 +93,11 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "fs.gg.contracts": {
-        "type": "Project",
-        "dependencies": {
-          "FSharp.Core": "[10.1.401, )"
-        }
-      },
-      "fs.gg.sdd.artifacts": {
-        "type": "Project",
-        "dependencies": {
-          "FS.GG.Contracts": "[7.5.2, )",
-          "FSharp.Core": "[10.1.401, )",
-          "FsQuint": "[0.1.0, 0.1.0]",
-          "YamlDotNet": "[18.1.0, )"
-        }
-      },
-      "fs.gg.sdd.commands": {
-        "type": "Project",
-        "dependencies": {
-          "FS.GG.Audio.Skills": "[0.1.0, )",
-          "FS.GG.Contracts": "[7.5.2, )",
-          "FS.GG.Drivers": "[0.94.0, )",
-          "FS.GG.Game.Skills": "[0.9.0, )",
-          "FS.GG.Rendering.Skills": "[0.2.0, )",
-          "FS.GG.SDD.Artifacts": "[2.0.3, )",
-          "FS.GG.SDD.Knowledge": "[2.0.3, )",
-          "FSharp.Core": "[10.1.401, )"
-        }
-      },
       "fs.gg.sdd.knowledge": {
         "type": "Project",
         "dependencies": {
           "FSharp.Core": "[10.1.401, )"
         }
-      },
-      "fs.gg.sdd.validation": {
-        "type": "Project",
-        "dependencies": {
-          "FS.GG.SDD.Artifacts": "[2.0.3, )",
-          "FS.GG.SDD.Commands": "[2.0.3, )",
-          "FSharp.Core": "[10.1.401, )"
-        }
-      },
-      "FS.GG.Audio.Skills": {
-        "type": "CentralTransitive",
-        "requested": "[0.1.0, )",
-        "resolved": "0.1.0",
-        "contentHash": "y46khxa4cMAuQ1yYdQTDR+4yR9omo7ZkTkGIVAnrgZGY6xcVQ7JThVheBHkum6rQpqek3ftV/gCjU2sJNR7HEA=="
-      },
-      "FS.GG.Drivers": {
-        "type": "CentralTransitive",
-        "requested": "[0.94.0, )",
-        "resolved": "0.94.0",
-        "contentHash": "fX3yg7i+XPnXwEf7qI/vaArYRgx7HkaHAA8KYLkT+gcx/htza0mDssTyT1pkrR567zK7Ew4fAh1WUPgWpaU4nA=="
-      },
-      "FS.GG.Game.Skills": {
-        "type": "CentralTransitive",
-        "requested": "[0.9.0, )",
-        "resolved": "0.9.0",
-        "contentHash": "qA3f2ypjVVoaNwmwvrBsJx4VFSx1tUZ3zqv+lAd2nNaWL4nA3dNor9rS449+hRBDFr+UAzZnPBzkyrUEUrn+qg=="
-      },
-      "FS.GG.Rendering.Skills": {
-        "type": "CentralTransitive",
-        "requested": "[0.2.0, )",
-        "resolved": "0.2.0",
-        "contentHash": "VA1vB24HV1vGjjx8ySqZs7gZXVbEKdAsLglnCEhO/LyjN5Vi8gf/R+vE+R5wGxzGG6q6LUv55hDjT4th0WSvoQ=="
-      },
-      "FsQuint": {
-        "type": "CentralTransitive",
-        "requested": "[0.1.0, 0.1.0]",
-        "resolved": "0.1.0",
-        "contentHash": "S1dCVHdcLRdXmZnjCOk+nJLhjO3acz705bEeQm2cBrwxiEsDpVj7PD8tECcKo/Bzpbw5ZOI4bLMWdlqSkISsbg==",
-        "dependencies": {
-          "FSharp.Core": "10.1.302"
-        }
-      },
-      "YamlDotNet": {
-        "type": "CentralTransitive",
-        "requested": "[18.1.0, )",
-        "resolved": "18.1.0",
-        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
       }
     }
   }
