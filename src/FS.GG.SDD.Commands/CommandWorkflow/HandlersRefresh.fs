@@ -278,14 +278,12 @@ module internal HandlersRefresh =
                     | Error errors ->
                         errors
                         |> List.map (fun finding ->
-                            Diagnostics.create
-                                finding.Code
-                                DiagnosticSeverity.DiagnosticError
-                                None
-                                None
-                                (finding.Path + ": " + finding.Message)
-                                "Restore supported coherent provenance before refreshing."
-                                [])
+                            // Retain refresh's published diagnostic identity and artifact context.
+                            let diagnostic = scaffoldProvenanceMalformed ScaffoldProvenance.provenancePath
+
+                            { diagnostic with
+                                Message = diagnostic.Message + " " + finding.Path + ": " + finding.Message
+                            })
                 | None -> []
 
             let baseDiags = model.Diagnostics @ projectDiags @ duplicateDiags @ provenanceDiags

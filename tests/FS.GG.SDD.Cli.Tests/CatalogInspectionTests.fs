@@ -89,7 +89,7 @@ module CatalogInspectionTests =
         let richCode, rich = capture (args @ [ "--rich" ])
         Assert.Equal(textCode, richCode)
         Assert.Equal(text, rich)
-        Assert.DoesNotContain("\u001b", rich)
+        Assert.False(rich.Contains("\u001b", StringComparison.Ordinal))
 
     [<Fact>]
     let ``raw digest unknown option and malformed parameter failures remain located`` () =

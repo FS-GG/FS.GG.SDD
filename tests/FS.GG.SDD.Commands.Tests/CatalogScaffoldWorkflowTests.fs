@@ -99,7 +99,7 @@ module CatalogScaffoldWorkflowTests =
                 |> Map.ofArray
 
             let report = TestSupport.runRefresh root "missing-work"
-            Assert.Contains(report.Diagnostics, fun d -> d.Id = "provenance.malformed")
+            Assert.Contains(report.Diagnostics, fun d -> d.Id = "scaffold.provenanceMalformed")
 
             let lifecycleReport =
                 TestSupport.runCharter root "missing-work" "Blocked catalog document"
