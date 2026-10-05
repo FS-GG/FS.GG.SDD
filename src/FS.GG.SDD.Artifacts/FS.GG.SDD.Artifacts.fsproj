@@ -65,6 +65,8 @@
     <Compile Include="LifecycleArtifacts/SkillRegistryDocument.fs" />
     <Compile Include="LifecycleArtifacts/Config.fsi" />
     <Compile Include="LifecycleArtifacts/Config.fs" />
+    <Compile Include="ProviderCatalog.fsi" />
+    <Compile Include="ProviderCatalog.fs" />
     <Compile Include="ScaffoldProvenance.fsi" />
     <Compile Include="ScaffoldProvenance.fs" />
     <Compile Include="DriverManifest.fsi" />

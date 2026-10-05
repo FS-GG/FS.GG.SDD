@@ -278,7 +278,7 @@ module ReleaseContract =
         let compatibility =
             [
                 {
-                    SddVersionLine = "2.1.x"
+                    SddVersionLine = "2.2.x"
                     SpecKitRange = ">=0.8.5"
                     GovernanceContractVersionRange = Some "2.x"
                 }
@@ -1191,7 +1191,7 @@ module ReleaseContract =
             //
             // And enumerate EVERY breaking change: a note that under-reports is the exact failure
             // the note exists to prevent.
-            // 2.1.0 adds concise knowledge capture/retrieval and typed initialization; existing public contracts remain compatible.
+            // 2.2.0 adds a provider catalog parser and pure contract; existing public contracts remain compatible.
             Migrations = []
         }
 

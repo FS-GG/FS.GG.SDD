@@ -9,6 +9,7 @@
     <Compile Include="SchemaVersionConstantTests.fs" />
     <Compile Include="SkillMirrorTests.fs" />
     <Compile Include="ProviderDescriptorTests.fs" />
+    <Compile Include="ProviderCatalogTests.fs" />
     <Compile Include="VersionTests.fs" />
     <Compile Include="RegistryValidatorTests.fs" />
     <Compile Include="RegistryDocumentTests.fs" />

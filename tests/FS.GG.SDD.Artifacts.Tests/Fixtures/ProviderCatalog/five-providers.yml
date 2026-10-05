@@ -1,0 +1,757 @@
+{
+  "schemaVersion": 2,
+  "id": "fixture-catalog",
+  "revision": "fixture-revision",
+  "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "providers": [
+    {
+      "id": "typescript-cli",
+      "displayName": "typescript-cli",
+      "help": "Synthetic declaration fixture",
+      "language": "TypeScript",
+      "productShape": "executable-cli",
+      "descriptorId": "typescript-cli-descriptor",
+      "descriptorRevision": "fixture-revision",
+      "descriptorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contractVersion": "3.0.0",
+      "templateSource": "fixture-opaque-source",
+      "templateId": "typescript-cli-template",
+      "platforms": [
+        "fixture-os"
+      ],
+      "parameters": [
+        {
+          "key": "raw",
+          "kind": "string",
+          "required": true,
+          "prompt": "raw",
+          "help": "Explicit raw",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          }
+        },
+        {
+          "key": "package",
+          "kind": "string",
+          "required": true,
+          "prompt": "package",
+          "help": "Explicit package",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "explicit-package"
+        },
+        {
+          "key": "code",
+          "kind": "string",
+          "required": true,
+          "prompt": "code",
+          "help": "Explicit code",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "ExplicitCode"
+        },
+        {
+          "key": "mode",
+          "kind": "enum",
+          "required": true,
+          "prompt": "mode",
+          "help": "Explicit mode",
+          "values": [
+            "safe",
+            "fast"
+          ],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "safe"
+        },
+        {
+          "key": "version",
+          "kind": "exact-version",
+          "required": true,
+          "prompt": "version",
+          "help": "Explicit version",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "2026-10-05"
+        }
+      ],
+      "identities": {
+        "rawName": "raw",
+        "packageIdentity": "package",
+        "codeIdentifier": "code"
+      },
+      "tools": [
+        {
+          "id": "fixture-tool",
+          "version": "1.22",
+          "platforms": [
+            "fixture-os"
+          ]
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "arbitrary:capability",
+          "required": true,
+          "platforms": [
+            "fixture-os"
+          ],
+          "toolIds": [
+            "fixture-tool"
+          ],
+          "evidenceIds": [
+            "fixture-evidence"
+          ],
+          "binding": {
+            "kind": "command",
+            "executable": "fixture-tool",
+            "arguments": [
+              "test",
+              "--literal",
+              "value with spaces"
+            ],
+            "workingDirectory": ".",
+            "timeoutSeconds": 30,
+            "costClass": "cheap",
+            "environmentIds": [
+              "fixture-environment"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "id": "fixture-evidence",
+          "format": "fixture-format",
+          "path": "fixture/path",
+          "required": true
+        }
+      ],
+      "skills": [
+        "fixture-skill"
+      ]
+    },
+    {
+      "id": "javascript-cli",
+      "displayName": "javascript-cli",
+      "help": "Synthetic declaration fixture",
+      "language": "JavaScript",
+      "productShape": "executable-cli",
+      "descriptorId": "javascript-cli-descriptor",
+      "descriptorRevision": "fixture-revision",
+      "descriptorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contractVersion": "3.0.0",
+      "templateSource": "fixture-opaque-source",
+      "templateId": "javascript-cli-template",
+      "platforms": [
+        "fixture-os"
+      ],
+      "parameters": [
+        {
+          "key": "raw",
+          "kind": "string",
+          "required": true,
+          "prompt": "raw",
+          "help": "Explicit raw",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          }
+        },
+        {
+          "key": "package",
+          "kind": "string",
+          "required": true,
+          "prompt": "package",
+          "help": "Explicit package",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "explicit-package"
+        },
+        {
+          "key": "code",
+          "kind": "string",
+          "required": true,
+          "prompt": "code",
+          "help": "Explicit code",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "ExplicitCode"
+        },
+        {
+          "key": "mode",
+          "kind": "enum",
+          "required": true,
+          "prompt": "mode",
+          "help": "Explicit mode",
+          "values": [
+            "safe",
+            "fast"
+          ],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "safe"
+        },
+        {
+          "key": "version",
+          "kind": "exact-version",
+          "required": true,
+          "prompt": "version",
+          "help": "Explicit version",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "2026-10-05"
+        }
+      ],
+      "identities": {
+        "rawName": "raw",
+        "packageIdentity": "package",
+        "codeIdentifier": "code"
+      },
+      "tools": [
+        {
+          "id": "fixture-tool",
+          "version": "1.22",
+          "platforms": [
+            "fixture-os"
+          ]
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "arbitrary:capability",
+          "required": true,
+          "platforms": [
+            "fixture-os"
+          ],
+          "toolIds": [
+            "fixture-tool"
+          ],
+          "evidenceIds": [
+            "fixture-evidence"
+          ],
+          "binding": {
+            "kind": "command",
+            "executable": "fixture-tool",
+            "arguments": [
+              "test",
+              "--literal",
+              "value with spaces"
+            ],
+            "workingDirectory": ".",
+            "timeoutSeconds": 30,
+            "costClass": "cheap",
+            "environmentIds": [
+              "fixture-environment"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "id": "fixture-evidence",
+          "format": "fixture-format",
+          "path": "fixture/path",
+          "required": true
+        }
+      ],
+      "skills": [
+        "fixture-skill"
+      ]
+    },
+    {
+      "id": "rust-cli",
+      "displayName": "rust-cli",
+      "help": "Synthetic declaration fixture",
+      "language": "Rust",
+      "productShape": "executable-cli",
+      "descriptorId": "rust-cli-descriptor",
+      "descriptorRevision": "fixture-revision",
+      "descriptorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contractVersion": "3.0.0",
+      "templateSource": "fixture-opaque-source",
+      "templateId": "rust-cli-template",
+      "platforms": [
+        "fixture-os"
+      ],
+      "parameters": [
+        {
+          "key": "raw",
+          "kind": "string",
+          "required": true,
+          "prompt": "raw",
+          "help": "Explicit raw",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          }
+        },
+        {
+          "key": "package",
+          "kind": "string",
+          "required": true,
+          "prompt": "package",
+          "help": "Explicit package",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "explicit-package"
+        },
+        {
+          "key": "code",
+          "kind": "string",
+          "required": true,
+          "prompt": "code",
+          "help": "Explicit code",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "ExplicitCode"
+        },
+        {
+          "key": "mode",
+          "kind": "enum",
+          "required": true,
+          "prompt": "mode",
+          "help": "Explicit mode",
+          "values": [
+            "safe",
+            "fast"
+          ],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "safe"
+        },
+        {
+          "key": "version",
+          "kind": "exact-version",
+          "required": true,
+          "prompt": "version",
+          "help": "Explicit version",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "2026-10-05"
+        }
+      ],
+      "identities": {
+        "rawName": "raw",
+        "packageIdentity": "package",
+        "codeIdentifier": "code"
+      },
+      "tools": [
+        {
+          "id": "fixture-tool",
+          "version": "1.22",
+          "platforms": [
+            "fixture-os"
+          ]
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "arbitrary:capability",
+          "required": true,
+          "platforms": [
+            "fixture-os"
+          ],
+          "toolIds": [
+            "fixture-tool"
+          ],
+          "evidenceIds": [
+            "fixture-evidence"
+          ],
+          "binding": {
+            "kind": "command",
+            "executable": "fixture-tool",
+            "arguments": [
+              "test",
+              "--literal",
+              "value with spaces"
+            ],
+            "workingDirectory": ".",
+            "timeoutSeconds": 30,
+            "costClass": "cheap",
+            "environmentIds": [
+              "fixture-environment"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "id": "fixture-evidence",
+          "format": "fixture-format",
+          "path": "fixture/path",
+          "required": true
+        }
+      ],
+      "skills": [
+        "fixture-skill"
+      ]
+    },
+    {
+      "id": "go-cli",
+      "displayName": "go-cli",
+      "help": "Synthetic declaration fixture",
+      "language": "Go",
+      "productShape": "executable-cli",
+      "descriptorId": "go-cli-descriptor",
+      "descriptorRevision": "fixture-revision",
+      "descriptorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contractVersion": "3.0.0",
+      "templateSource": "fixture-opaque-source",
+      "templateId": "go-cli-template",
+      "platforms": [
+        "fixture-os"
+      ],
+      "parameters": [
+        {
+          "key": "raw",
+          "kind": "string",
+          "required": true,
+          "prompt": "raw",
+          "help": "Explicit raw",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          }
+        },
+        {
+          "key": "package",
+          "kind": "string",
+          "required": true,
+          "prompt": "package",
+          "help": "Explicit package",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          }
+        },
+        {
+          "key": "code",
+          "kind": "string",
+          "required": true,
+          "prompt": "code",
+          "help": "Explicit code",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "ExplicitCode"
+        },
+        {
+          "key": "mode",
+          "kind": "enum",
+          "required": true,
+          "prompt": "mode",
+          "help": "Explicit mode",
+          "values": [
+            "safe",
+            "fast"
+          ],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "safe"
+        },
+        {
+          "key": "version",
+          "kind": "exact-version",
+          "required": true,
+          "prompt": "version",
+          "help": "Explicit version",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "2026-10-05"
+        }
+      ],
+      "identities": {
+        "rawName": "raw",
+        "packageIdentity": "package",
+        "codeIdentifier": "code"
+      },
+      "tools": [
+        {
+          "id": "fixture-tool",
+          "version": "1.22",
+          "platforms": [
+            "fixture-os"
+          ]
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "arbitrary:capability",
+          "required": true,
+          "platforms": [
+            "fixture-os"
+          ],
+          "toolIds": [
+            "fixture-tool"
+          ],
+          "evidenceIds": [
+            "fixture-evidence"
+          ],
+          "binding": {
+            "kind": "command",
+            "executable": "fixture-tool",
+            "arguments": [
+              "test",
+              "--literal",
+              "value with spaces"
+            ],
+            "workingDirectory": ".",
+            "timeoutSeconds": 30,
+            "costClass": "cheap",
+            "environmentIds": [
+              "fixture-environment"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "id": "fixture-evidence",
+          "format": "fixture-format",
+          "path": "fixture/path",
+          "required": true
+        }
+      ],
+      "skills": [
+        "fixture-skill"
+      ]
+    },
+    {
+      "id": "arbitrary-cli",
+      "displayName": "arbitrary-cli",
+      "help": "Synthetic declaration fixture",
+      "language": "arbitrary-fixture-language",
+      "productShape": "executable-cli",
+      "descriptorId": "arbitrary-cli-descriptor",
+      "descriptorRevision": "fixture-revision",
+      "descriptorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contractVersion": "3.0.0",
+      "templateSource": "fixture-opaque-source",
+      "templateId": "arbitrary-cli-template",
+      "platforms": [
+        "fixture-os"
+      ],
+      "parameters": [
+        {
+          "key": "raw",
+          "kind": "string",
+          "required": true,
+          "prompt": "raw",
+          "help": "Explicit raw",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          }
+        },
+        {
+          "key": "package",
+          "kind": "string",
+          "required": true,
+          "prompt": "package",
+          "help": "Explicit package",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "explicit-package"
+        },
+        {
+          "key": "code",
+          "kind": "string",
+          "required": true,
+          "prompt": "code",
+          "help": "Explicit code",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "ExplicitCode"
+        },
+        {
+          "key": "mode",
+          "kind": "enum",
+          "required": true,
+          "prompt": "mode",
+          "help": "Explicit mode",
+          "values": [
+            "safe",
+            "fast"
+          ],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "safe"
+        },
+        {
+          "key": "version",
+          "kind": "exact-version",
+          "required": true,
+          "prompt": "version",
+          "help": "Explicit version",
+          "values": [],
+          "validation": {
+            "nonEmpty": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "allowedValues": []
+          },
+          "default": "2026-10-05"
+        }
+      ],
+      "identities": {
+        "rawName": "raw",
+        "packageIdentity": "package",
+        "codeIdentifier": "code"
+      },
+      "tools": [
+        {
+          "id": "fixture-tool",
+          "version": "1.22",
+          "platforms": [
+            "fixture-os"
+          ]
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "arbitrary:capability",
+          "required": true,
+          "platforms": [
+            "fixture-os"
+          ],
+          "toolIds": [
+            "fixture-tool"
+          ],
+          "evidenceIds": [
+            "fixture-evidence"
+          ],
+          "binding": {
+            "kind": "command",
+            "executable": "fixture-tool",
+            "arguments": [
+              "test",
+              "--literal",
+              "value with spaces"
+            ],
+            "workingDirectory": ".",
+            "timeoutSeconds": 30,
+            "costClass": "cheap",
+            "environmentIds": [
+              "fixture-environment"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "id": "fixture-evidence",
+          "format": "fixture-format",
+          "path": "fixture/path",
+          "required": true
+        }
+      ],
+      "skills": [
+        "fixture-skill"
+      ]
+    }
+  ]
+}

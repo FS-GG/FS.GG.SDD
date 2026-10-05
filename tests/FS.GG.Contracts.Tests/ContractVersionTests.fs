@@ -351,12 +351,14 @@ module ContractVersionTests =
     // listed version is 7.4.0, and source == feed == registry.version == registry.package-version ==
     // 7.4.0 held before it). Growing the surface without moving the number would make the `.nupkg`
     // at 7.4.0 and the source at 7.4.0 different artifacts — the #426/#432 shape a sixth time.
+    // 7.5.2 -> 7.6.0 (#928 C1): additive ProviderCatalog sibling types and values;
+    // the existing Provider record and legacy protocol remain unchanged.
     [<Fact>]
-    let ``contract version self-report matches 7_5_2`` () =
-        Assert.Equal("7.5.2", ContractVersion.value)
+    let ``contract version self-report matches 7_6_0`` () =
+        Assert.Equal("7.6.0", ContractVersion.value)
         Assert.Equal(7, ContractVersion.major)
-        Assert.Equal(5, ContractVersion.minor)
-        Assert.Equal(2, ContractVersion.patch)
+        Assert.Equal(6, ContractVersion.minor)
+        Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
     //
