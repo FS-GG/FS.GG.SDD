@@ -1,0 +1,28 @@
+{
+  "SchemaVersion": 1,
+  "Id": "typed-authority-boundary",
+  "Kind": "architecture",
+  "Title": "Typed SDD authority stays distinct from review projections",
+  "Summary": "The lifecycle documentation selects Quint for manifest v2, keeps explicit manifest-v1 F# compatibility during 2.x, and treats Markdown projections as review output.",
+  "Rationale": "Retain the representation and lifecycle-token boundary when explaining initialization.",
+  "Limits": "This summarizes documentation at the pinned revision; it proves neither installed behavior nor provider cutover.",
+  "State": "reported",
+  "Basis": "reported",
+  "Author": "TSDD-KNOWLEDGE-01.6 curated public-source fixture",
+  "Created": "2026-10-03",
+  "Updated": "2026-10-03",
+  "AsOf": "2026-10-03",
+  "Scope": "SDD public retained extraction fixture",
+  "Applicability": "Historical source finding; review the pinned evidence before reuse.",
+  "Evidence": [
+    {
+      "Locator": "https://github.com/FS-GG/FS.GG.SDD/blob/9df47707ab22b2486400fb359f381e08c4de90df/docs/typed-sdd-lifecycle.md",
+      "Repository": "FS-GG/FS.GG.SDD",
+      "Revision": "9df47707ab22b2486400fb359f381e08c4de90df",
+      "Path": "docs/typed-sdd-lifecycle.md",
+      "Digest": "6a7f928b22e067d780def219b0d12150e5079c9c83cf7c9f702dce3c3107f423",
+      "Run": ""
+    }
+  ],
+  "Relations": []
+}

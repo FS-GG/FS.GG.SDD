@@ -188,6 +188,10 @@ through ordinary commits/PRs. A git-unavailable route cannot claim Git qualifica
   Demonstrate cache-free restored retrieval and history before any old combined store
   can be retired. Retiring a real old store is a separate authorized operation;
   this fixture is not authority to modify BAR's private database.
+  Bounded [retained fixture preparation](evidence/tsdd-knowledge-retained-preparation.md)
+  records curated public proposals and existing-API test cases. Focused source
+  qualification passed 14/14 tests; installed retained-project acceptance remains
+  pending.
 
 ## Execution lanes and native checks
 

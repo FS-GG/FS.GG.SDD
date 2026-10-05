@@ -1,0 +1,37 @@
+{
+  "SchemaVersion": 1,
+  "Id": "q1-liveness-defect",
+  "Kind": "diagnostic",
+  "Title": "Unbounded response loss defeated eventual completion",
+  "Summary": "The Q1 temporal check reportedly found that LoseResponse followed by Retry could repeat forever; bounding loss alone still allowed a stale-refusal cycle.",
+  "Rationale": "Retain the failed model and its negative result rather than only its later repair.",
+  "Limits": "Reported finite-model defect; no claim about a deployed coordination service or a new TLC run.",
+  "State": "reported",
+  "Basis": "reported",
+  "Author": "TSDD-KNOWLEDGE-01.6 curated public-source fixture",
+  "Created": "2026-08-26",
+  "Updated": "2026-08-26",
+  "AsOf": "2026-08-26",
+  "Scope": "SDD public retained extraction fixture",
+  "Applicability": "Historical source finding; review the pinned evidence before reuse.",
+  "Evidence": [
+    {
+      "Locator": "https://github.com/FS-GG/FS.GG.SDD/blob/9df47707ab22b2486400fb359f381e08c4de90df/docs/experiments/quint-q1/qualification-report.md",
+      "Repository": "FS-GG/FS.GG.SDD",
+      "Revision": "9df47707ab22b2486400fb359f381e08c4de90df",
+      "Path": "docs/experiments/quint-q1/qualification-report.md",
+      "Digest": "c0025131237b0ded9fb34d835f28b007c23ae92440854df0f1b960f2e248b2c2",
+      "Run": ""
+    }
+  ],
+  "Relations": [
+    {
+      "Kind": "related",
+      "Target": "q1-liveness-cause"
+    },
+    {
+      "Kind": "bug-fix",
+      "Target": "q1-liveness-fix"
+    }
+  ]
+}
