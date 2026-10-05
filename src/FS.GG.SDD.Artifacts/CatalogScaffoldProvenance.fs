@@ -230,16 +230,18 @@ module CatalogScaffoldProvenance =
         if e.ValueKind <> JsonValueKind.Object then
             bad path "Expected descriptor object."
 
-        let node = JsonNode.Parse(e.GetRawText())
+        let node = JsonNode.Parse(e.GetRawText()) |> nonNull
         let parameterElements = array path "parameters" e
 
         for i, parameter in List.indexed parameterElements do
             if parameter.ValueKind <> JsonValueKind.Object then
                 bad ($"{path}.parameters[{i}]") "Expected parameter object."
 
-        let parameters = node["parameters"].AsArray()
+        let parameters = (node["parameters"] |> nonNull).AsArray()
 
-        for p in parameters do
+        for parameter in parameters do
+            let p = nonNull parameter
+
             if p.AsObject().ContainsKey("default") && isNull p["default"] then
                 p.AsObject().Remove("default") |> ignore
 
@@ -881,7 +883,9 @@ module CatalogScaffoldProvenance =
             writeText w "sha256" (p.Sha256 |> Option.defaultValue "")
             w.WriteEndObject())
 
-    let serialize (r: CatalogScaffoldProvenanceRecord) =
+    let serialize (record: CatalogScaffoldProvenanceRecord) =
+        let r = record
+
         try
             validate r
             use stream = new MemoryStream()

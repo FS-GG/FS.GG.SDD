@@ -32,7 +32,7 @@ module CatalogInspectionTests =
                     DescriptorDigest = ProviderCatalogIntegrity.digest (ProviderCatalogIntegrity.descriptorBytes d)
                 })
 
-        let node = JsonNode.Parse authored
+        let node = JsonNode.Parse authored |> nonNull
 
         node["digest"] <-
             JsonValue.Create(
@@ -41,8 +41,9 @@ module CatalogInspectionTests =
                 )
             )
 
-        for provider in node["providers"].AsArray() do
-            let id = provider["id"].GetValue<string>()
+        for providerNode in (node["providers"] |> nonNull).AsArray() do
+            let provider = nonNull providerNode
+            let id = (provider["id"] |> nonNull).GetValue<string>()
 
             provider["descriptorDigest"] <-
                 JsonValue.Create((descriptors |> List.find (fun d -> d.Id = id)).DescriptorDigest)

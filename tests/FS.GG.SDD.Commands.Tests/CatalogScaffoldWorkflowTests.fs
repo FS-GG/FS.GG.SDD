@@ -30,11 +30,12 @@ module CatalogScaffoldWorkflowTests =
                 })
 
         let c = { catalog with Providers = ds }
-        let node = JsonNode.Parse text
+        let node = JsonNode.Parse text |> nonNull
         node["digest"] <- JsonValue.Create(ProviderCatalogIntegrity.digest (ProviderCatalogIntegrity.catalogBytes c))
 
-        for p in node["providers"].AsArray() do
-            let id = p["id"].GetValue<string>()
+        for provider in (node["providers"] |> nonNull).AsArray() do
+            let p = nonNull provider
+            let id = (p["id"] |> nonNull).GetValue<string>()
             p["descriptorDigest"] <- JsonValue.Create((ds |> List.find (fun d -> d.Id = id)).DescriptorDigest)
 
         Encoding.UTF8.GetBytes(node.ToJsonString())
@@ -100,7 +101,9 @@ module CatalogScaffoldWorkflowTests =
             let report = TestSupport.runRefresh root "missing-work"
             Assert.Contains(report.Diagnostics, fun d -> d.Id = "provenance.malformed")
 
-            let lifecycleReport = TestSupport.runCharter root "missing-work" "Blocked catalog document"
+            let lifecycleReport =
+                TestSupport.runCharter root "missing-work" "Blocked catalog document"
+
             Assert.Contains(lifecycleReport.Diagnostics, fun d -> d.Id = "provenance.malformed")
 
             for KeyValue(path, bytes) in before do

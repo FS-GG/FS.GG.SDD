@@ -197,8 +197,8 @@ module CatalogScaffoldProvenanceTests =
             ] do
             Assert.True(Result.isError (ScaffoldProvenanceDocument.parse invalid), invalid)
 
-        let node = JsonNode.Parse original
-        node["observation"].AsObject().Remove("tools") |> ignore
+        let node = JsonNode.Parse original |> nonNull
+        (node["observation"] |> nonNull).AsObject().Remove("tools") |> ignore
         Assert.True(Result.isError (ScaffoldProvenanceDocument.parse (node.ToJsonString())))
 
     [<Fact>]

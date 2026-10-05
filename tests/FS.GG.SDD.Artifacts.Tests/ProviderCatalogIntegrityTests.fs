@@ -39,11 +39,12 @@ module CatalogIntegrityFixture =
 
     let bytes () =
         let catalog = sealedCatalog ()
-        let node = JsonNode.Parse(authored ())
+        let node = JsonNode.Parse(authored ()) |> nonNull
         node["digest"] <- JsonValue.Create catalog.Digest
 
-        for d in node["providers"].AsArray() do
-            let id = d["id"].GetValue<string>()
+        for descriptor in (node["providers"] |> nonNull).AsArray() do
+            let d = nonNull descriptor
+            let id = (d["id"] |> nonNull).GetValue<string>()
 
             d["descriptorDigest"] <-
                 JsonValue.Create((catalog.Providers |> List.find (fun p -> p.Id = id)).DescriptorDigest)
@@ -64,8 +65,12 @@ module ProviderCatalogIntegrityTests =
 
     [<Fact>]
     let ``semantic tamper refuses even after caller updates the raw digest`` () =
-        let node = JsonNode.Parse(Encoding.UTF8.GetString(CatalogIntegrityFixture.bytes ()))
-        node["providers"][0]["help"] <- JsonValue.Create "tampered"
+        let node =
+            JsonNode.Parse(Encoding.UTF8.GetString(CatalogIntegrityFixture.bytes ()))
+            |> nonNull
+
+        let first = ((node["providers"] |> nonNull).AsArray()[0] |> nonNull)
+        first["help"] <- JsonValue.Create "tampered"
         let bytes = Encoding.UTF8.GetBytes(node.ToJsonString())
 
         match ProviderCatalogIntegrity.verify (ProviderCatalogIntegrity.digest bytes) bytes with

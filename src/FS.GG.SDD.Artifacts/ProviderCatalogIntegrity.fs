@@ -94,7 +94,7 @@ module ProviderCatalogIntegrity =
         w.WriteEndObject()
         w.WriteEndObject()
 
-    let descriptor (w: Utf8JsonWriter) includeDigest (d: Descriptor) =
+    let writeDescriptor (w: Utf8JsonWriter) includeDigest (d: Descriptor) =
         w.WriteStartObject()
         w.WriteString("id", d.Id)
         w.WriteString("displayName", d.DisplayName)
@@ -130,18 +130,23 @@ module ProviderCatalogIntegrity =
         writer.Flush()
         stream.ToArray()
 
-    let descriptorBytes d = encode (fun w -> descriptor w false d)
+    let descriptorBytes descriptor =
+        let d = descriptor
+        encode (fun w -> writeDescriptor w false d)
 
-    let descriptorJson d =
-        encode (fun w -> descriptor w true d) |> Encoding.UTF8.GetString
+    let descriptorJson descriptor =
+        let d = descriptor
+        encode (fun w -> writeDescriptor w true d) |> Encoding.UTF8.GetString
 
-    let catalogBytes (c: Catalog) =
+    let catalogBytes (catalog: Catalog) =
+        let c = catalog
+
         encode (fun w ->
             w.WriteStartObject()
             w.WriteNumber("schemaVersion", c.SchemaVersion)
             w.WriteString("id", c.Id)
             w.WriteString("revision", c.Revision)
-            objects w "providers" (fun (d: Descriptor) -> d.Id) (descriptor w true) c.Providers
+            objects w "providers" (fun (d: Descriptor) -> d.Id) (writeDescriptor w true) c.Providers
             w.WriteEndObject())
 
     let verify expectedRawDigest (bytes: byte array) =
