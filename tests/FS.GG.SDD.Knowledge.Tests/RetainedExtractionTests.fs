@@ -169,7 +169,7 @@ module RetainedExtractionTests =
             let owner = readRecord "changes/owner-edited.json"
             let changed = readRecord "changes/changed-conclusion.json"
             let current, _ = Store.capture root (Some first.Revision) owner
-            Assert.NotEqual(first.Revision, current.Revision)
+            Assert.NotEqual<string>(first.Revision, current.Revision)
 
             Assert.Throws<InvalidDataException>(fun () -> Store.capture root None original |> ignore)
             |> ignore
