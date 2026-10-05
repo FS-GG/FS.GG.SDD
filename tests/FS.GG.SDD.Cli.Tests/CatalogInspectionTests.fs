@@ -84,7 +84,7 @@ module CatalogInspectionTests =
         Assert.Equal(5, doc.RootElement.GetProperty("providers").GetArrayLength())
         Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("observations").ValueKind)
         Assert.Single(Directory.GetFiles(root)) |> ignore
-        Assert.True(bytes = File.ReadAllBytes path)
+        Assert.True((bytes = File.ReadAllBytes path))
         let textCode, text = capture (args @ [ "--text" ])
         let richCode, rich = capture (args @ [ "--rich" ])
         Assert.Equal(textCode, richCode)
@@ -119,4 +119,4 @@ module CatalogInspectionTests =
         finally
             Console.SetOut previous
 
-        Assert.True(before = Directory.GetFileSystemEntries root)
+        Assert.True((before = Directory.GetFileSystemEntries root))
