@@ -177,7 +177,7 @@ through ordinary commits/PRs. A git-unavailable route cannot claim Git qualifica
   lossless record export/restore and actual public/private separation. Existing
   source versions are not assigned the new capability retroactively.
 
-- [ ] **TSDD-KNOWLEDGE-01.6 — Retained extraction preserves findings and ownership — route: routine.**
+- [x] **TSDD-KNOWLEDGE-01.6 — Retained extraction preserves findings and ownership — route: routine.**
   Depends on: .1/.2 for source/fixture preparation; published tooling for installed proof.
   SDD owns preserving extraction/import with owner-visible proposal/diff and explicit
   application. Extract concise findings from representative existing material; retain
@@ -188,13 +188,17 @@ through ordinary commits/PRs. A git-unavailable route cannot claim Git qualifica
   Demonstrate cache-free restored retrieval and history before any old combined store
   can be retired. Retiring a real old store is a separate authorized operation;
   this fixture is not authority to modify BAR's private database.
-  Bounded [retained fixture preparation](evidence/tsdd-knowledge-retained-preparation.md)
+  Bounded [retained fixture acceptance](evidence/tsdd-knowledge-retained-preparation.md)
   records curated public proposals and existing-API test cases. [PR 1095](https://github.com/FS-GG/FS.GG.SDD/pull/1095)
   merged this source preparation at `f50c6bdd2b9996285f7267797316e52aa04cdfbd`.
   Focused qualification passed 14/14 tests with deterministic CI path mapping;
-  installed retained-project acceptance through published tooling remains pending.
-  The published 2.1.0 CLI already provides the unchanged capture/history/recovery
-  contract; this fixture delivery does not publish a new extraction service.
+  the installed 2.1.0 CLI then passed all 52 native steps for the six reviewed
+  retained fixtures in fresh isolated homes, with clear cleanup. The canonical
+  store measured 9,088 bytes; owner reconciliation, selected restore and three
+  Git versions recovered without cache. The published CLI provides the unchanged
+  capture/history/recovery contract. Acceptance closes the admitted manual
+  curated-review route; automatic extraction and real old-store retirement are
+  outside its scope. Milestones .4/.5 remain separate.
 
 ## Execution lanes and native checks
 
