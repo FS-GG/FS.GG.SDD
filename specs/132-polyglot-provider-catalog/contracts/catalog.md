@@ -44,3 +44,28 @@ remain absent. The result carries catalog and descriptor pins plus the normalize
 sorted effective parameters, and exact separate identity values. No observed tool/evidence facts
 or successful scaffold receipt are synthesized. Malformed documents return a deterministic
 `catalog.malformed` diagnostic with field path; semantic diagnostics use stable `catalog.*` codes.
+
+## C2.1 integrity and inspection
+
+Inspection requires an explicitly selected local catalog and `sha256:` followed by the exact
+64 lowercase hexadecimal digits of its raw bytes. UTF-8 decoding is strict. C1 declaration
+parsing is unchanged; the new integrity layer additionally verifies each descriptor and catalog
+semantic digest before preparation. No registry lookup, fallback, executable probe or write occurs.
+
+Canonical semantic bytes are compact UTF-8 JSON without BOM or trailing newline, using the
+default System.Text.Json escaping. Field order follows the existing catalog schema. Descriptor
+bytes omit only that descriptor's `descriptorDigest`; catalog bytes omit only the root `digest`
+and include verified descriptor digests. Providers, parameters, tools, capabilities and evidence
+sort by their ordinal identity keys; set-valued lists sort ordinally. Parameter defaults are
+explicit strings or `null`. Ordered command argv and literal values retain their order and
+content, including Unicode, control characters, whitespace and empty arguments. Raw byte
+identity therefore changes with document formatting while semantic identity remains stable.
+
+`fsgg-sdd catalog inspect --catalog <file> --catalog-sha256 <digest>` emits a deterministic
+`fsgg.catalog-preview/v1` JSON projection by default. `--text` and `--rich` show the same facts
+with existing output capability rules. Without `--provider`, all verified provider metadata and
+parameter prompts are exposed. An explicit provider may use repeated `--param key=value`;
+values are split only at the first equals sign and empty values are preserved. Parameters
+without a provider, duplicate valued options and unsupported options refuse with located
+diagnostics. Success reports `prepared` and `observations: null`, never provider success.
+`scaffold --catalog` is unavailable and refuses before file or process effects.

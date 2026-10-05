@@ -661,7 +661,9 @@ nuget-cache/
                 | ReadFile path, Some snapshot when
                     normalizeRelativePath path = normalizeRelativePath ScaffoldProvenance.provenancePath
                     ->
-                    ScaffoldProvenance.tryParse snapshot.Text
+                    ScaffoldProvenanceDocument.parse snapshot.Text
+                    |> Result.toOption
+                    |> Option.map ScaffoldProvenanceDocument.ownershipProjection
                 | _ -> None)
 
         provenance
@@ -722,8 +724,10 @@ nuget-cache/
 
         match findSnapshot ScaffoldProvenance.provenancePath with
         | Some provenanceSnapshot ->
-            match ScaffoldProvenance.tryParse provenanceSnapshot.Text with
-            | Some provenance ->
+            match ScaffoldProvenanceDocument.parse provenanceSnapshot.Text with
+            | Ok document ->
+                let provenance = ScaffoldProvenanceDocument.ownershipProjection document
+
                 match ScaffoldProvenance.lifecycleLane provenance with
                 | Ok TypedSdd ->
                     let manifestPath = TypedAuthorityManifest.path workId
@@ -839,7 +843,17 @@ nuget-cache/
                             |> List.map asDiagnostic
                 | Ok _ -> []
                 | Error finding -> [ asDiagnostic finding ]
-            | None -> []
+            | Error errors ->
+                errors
+                |> List.map (fun finding ->
+                    Diagnostics.create
+                        finding.Code
+                        DiagnosticError
+                        None
+                        None
+                        (finding.Path + ": " + finding.Message)
+                        "Restore supported coherent provenance before lifecycle mutation."
+                        [])
         | None -> []
 
     /// The read-effect frame the pre-work-model stages (charter → tasks) share: the three

@@ -21,6 +21,8 @@ FS.GG.SDD.Artifacts.ArtifactRef.kindValue
 FS.GG.SDD.Artifacts.ArtifactRef.optionalGovernanceBoundary
 FS.GG.SDD.Artifacts.ArtifactRef.ownerValue
 FS.GG.SDD.Artifacts.ArtifactRef.path
+FS.GG.SDD.Artifacts.CatalogScaffoldProvenance.parse
+FS.GG.SDD.Artifacts.CatalogScaffoldProvenance.serialize
 FS.GG.SDD.Artifacts.Checklist.checklistStandardSections
 FS.GG.SDD.Artifacts.Checklist.parseChecklistFacts
 FS.GG.SDD.Artifacts.Clarification.clarificationStandardSections
@@ -227,6 +229,11 @@ FS.GG.SDD.Artifacts.ProductSkillManifest.amend
 FS.GG.SDD.Artifacts.ProductSkillManifest.serialize
 FS.GG.SDD.Artifacts.ProductSkillManifest.tryParse
 FS.GG.SDD.Artifacts.ProviderCatalog.parse
+FS.GG.SDD.Artifacts.ProviderCatalogIntegrity.catalogBytes
+FS.GG.SDD.Artifacts.ProviderCatalogIntegrity.descriptorBytes
+FS.GG.SDD.Artifacts.ProviderCatalogIntegrity.descriptorJson
+FS.GG.SDD.Artifacts.ProviderCatalogIntegrity.digest
+FS.GG.SDD.Artifacts.ProviderCatalogIntegrity.verify
 FS.GG.SDD.Artifacts.RegistryDocument.load
 FS.GG.SDD.Artifacts.ReleaseContract.bumpRule
 FS.GG.SDD.Artifacts.ReleaseContract.changeClassValue
@@ -250,6 +257,8 @@ FS.GG.SDD.Artifacts.ScaffoldProvenance.isDevRepo
 FS.GG.SDD.Artifacts.ScaffoldProvenance.lifecycleLane
 FS.GG.SDD.Artifacts.ScaffoldProvenance.serialize
 FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse
+FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.ownershipProjection
+FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.parse
 FS.GG.SDD.Artifacts.SchemaVersion.classifyRaw
 FS.GG.SDD.Artifacts.SchemaVersion.create
 FS.GG.SDD.Artifacts.SchemaVersion.createGeneratorVersion

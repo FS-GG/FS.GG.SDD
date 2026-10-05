@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CatalogScaffoldWorkflow.fsi" />
+    <Compile Include="CatalogScaffoldWorkflow.fs" />
     <Compile Include="CommandTypes.fsi" />
     <Compile Include="CommandTypes.fs" />
     <Compile Include="GenerationSourceSnapshot.fs" />
