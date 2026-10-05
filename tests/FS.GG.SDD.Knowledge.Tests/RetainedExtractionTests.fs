@@ -14,6 +14,23 @@ module RetainedExtractionTests =
     let private fixtures =
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "RetainedExtraction")
 
+    let private repositoryRoot () =
+        // Deterministic CI maps compiler source paths to virtual locations; test output stays physical.
+        let rec find remaining (directory: DirectoryInfo) =
+            let project =
+                Path.Combine(directory.FullName, "src", "FS.GG.SDD.Knowledge", "FS.GG.SDD.Knowledge.fsproj")
+
+            if remaining = 0 then
+                failwith "Retained fixture source repository exceeds the ancestor lookup bound."
+            elif File.Exists project then
+                directory.FullName
+            else
+                match directory.Parent with
+                | null -> failwith "Could not locate retained fixture source repository."
+                | parent -> find (remaining - 1) parent
+
+        find 32 (DirectoryInfo AppContext.BaseDirectory)
+
     let private readRecord relative =
         JsonSerializer.Deserialize<Record>(File.ReadAllBytes(Path.Combine(fixtures, relative)))
         |> nonNull
@@ -94,7 +111,7 @@ module RetainedExtractionTests =
     let ``reviewed public findings retain original documents negative results dates and provenance`` () =
         temporary (fun root ->
             let records = proposals ()
-            let repository = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "..", ".."))
+            let repository = repositoryRoot ()
 
             let originals =
                 records
