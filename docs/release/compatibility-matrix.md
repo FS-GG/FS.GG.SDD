@@ -16,12 +16,12 @@ machine contract is authoritative. (FR-002)
 
 | SDD version line | Spec Kit range | Governance handoff `contractVersion` range (optional) |
 |---|---|---|
-| `2.1.x` | `>=0.8.5` | `2.x` |
+| `2.2.x` | `>=0.8.5` | `2.x` |
 
 ## How to read this
 
-- **SDD version line** — the `2.1.x` release line covered by this record. The
-  declared `identity.version` is `2.1.0` on the `stable` channel.
+- **SDD version line** — the `2.2.x` release line covered by this record. The
+  declared `identity.version` is `2.2.0` on the `stable` channel.
 - **Spec Kit range** — the supported Spec Kit version range for this line:
   `>=0.8.5`.
 - **Governance handoff `contractVersion` range** — the supported handoff

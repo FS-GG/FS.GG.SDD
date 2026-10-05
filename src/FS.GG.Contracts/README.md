@@ -16,6 +16,7 @@ dotnet add package FS.GG.Contracts
 ## What's inside
 
 - **Schemas** — the typed shapes for the `.fsgg` lifecycle artifacts.
+- **ProviderCatalog** — additive schema-2 / descriptor-protocol-3.0.0 typed declarations and pure effective-input resolution. Legacy Provider records stay compatible; this API certifies no scaffold, installed tools, evidence, or capability semantics.
 - **Provider** — the schema-versioned template-provider descriptor contract (v1).
 - **Registry** — the cross-repo dependency registry model plus a pure validator.
 - **Version / ContractVersion** — the coherent version and contract-version types.

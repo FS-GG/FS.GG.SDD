@@ -19,7 +19,7 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.1.0`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.2.0`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
@@ -27,15 +27,15 @@ sourced from `Directory.Build.local.props` `<Version>` — currently **`2.1.0`**
 - `FS.GG.SDD.Knowledge` (the standalone concise findings SDK)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.1.0"` and
-`generatorVersion.version = "2.1.0"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.2.0"` and
+`generatorVersion.version = "2.2.0"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
 The `channel` is derived from the version: a major of `0` is `preRelease`; a
 major of `>=1` without a prerelease suffix is `stable`. A prerelease suffix selects
-`preRelease`. The current release is `stable`. This minor adds the knowledge SDK and commands, plus initial knowledge for typed SDD
-workspaces. Existing public members remain compatible; no migration note is required.
+`preRelease`. The current release is `stable`. This prepared minor adds the provider catalog parser and pure typed contract. Catalog
+schema 2 and descriptor protocol 3.0.0 remain independent of package versions. Existing public members remain compatible; no migration note is required.
 
 ## Change class to bump rule
 

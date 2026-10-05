@@ -70,11 +70,11 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillManifestMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillNamespaceCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillPredicateUnevaluated
-FS.GG.SDD.Artifacts.Diagnostics.scaffoldOwnerSkillCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldInvalidParamKey
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldNameUnrepresentable
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldOwnerSkillCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProductManifestAmendRefused
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProvenanceMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderEmpty
@@ -226,6 +226,7 @@ FS.GG.SDD.Artifacts.ProductPredicate.evaluate
 FS.GG.SDD.Artifacts.ProductSkillManifest.amend
 FS.GG.SDD.Artifacts.ProductSkillManifest.serialize
 FS.GG.SDD.Artifacts.ProductSkillManifest.tryParse
+FS.GG.SDD.Artifacts.ProviderCatalog.parse
 FS.GG.SDD.Artifacts.RegistryDocument.load
 FS.GG.SDD.Artifacts.ReleaseContract.bumpRule
 FS.GG.SDD.Artifacts.ReleaseContract.changeClassValue

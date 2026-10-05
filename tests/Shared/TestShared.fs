@@ -202,6 +202,38 @@ module TestShared =
             with ex ->
                 Error ex
 
+        /// Keep an action failure primary when resource cleanup also fails. A returned
+        /// value carries a cleanup failure separately so callers can retain both diagnostics.
+        let withCleanupPreservingFailure (cleanup: unit -> unit) (action: unit -> 'a) : 'a * exn option =
+            let cleanupFailure () =
+                try
+                    cleanup ()
+                    None
+                with error ->
+                    Some error
+
+            try
+                let value = action ()
+                value, cleanupFailure ()
+            with original ->
+                match cleanupFailure () with
+                | None -> ()
+                | Some secondary ->
+                    original.Data["ChildProcessCleanupFailure"] <- secondary
+
+                    // Diagnostic output is secondary too: a closed stderr must not hide
+                    // the original failure. Keep the emitted cleanup message finite.
+                    try
+                        let message = secondary.Message
+
+                        Console.Error.WriteLine(
+                            "Child cleanup also failed: " + message.Substring(0, min 1_024 message.Length)
+                        )
+                    with _ ->
+                        ()
+
+                reraise ()
+
         /// Run `startInfo`'s child to completion under `timeoutMs`, capturing both streams.
         /// `Error` only when the child could not be *started*; a child that cannot be bounded raises
         /// `ChildProcessTimeout`. Redirection is forced on here so a caller cannot opt out of the
@@ -225,6 +257,8 @@ module TestShared =
                 let stderr = proc.StandardError.ReadToEndAsync()
 
                 if not (proc.WaitForExit timeoutMs) then
+                    let retirement = Stopwatch.StartNew()
+
                     // Best-effort: a tree we cannot fully kill (a descendant already reparented, or
                     // one that raced us) throws, and there is nothing further to do about it.
                     try
@@ -235,10 +269,35 @@ module TestShared =
                     // `Kill` only signals. Reap, so the child cannot outlive the test that spawned it.
                     proc.WaitForExit drainGraceMs |> ignore
 
+                    // Reap and diagnostics share the same grace. A held or faulted reader
+                    // cannot add another wait or replace the original timeout reason.
+                    let remainingMs = max 0 (drainGraceMs - int retirement.ElapsedMilliseconds)
+
+                    try
+                        Task.WhenAll(stdout, stderr).Wait remainingMs |> ignore
+                    with _ ->
+                        ()
+
+                    let capturedPrefix (reader: Task<string>) =
+                        if reader.IsCompletedSuccessfully then
+                            let text = reader.Result
+                            let limit = 16_384
+                            let prefix = text.Substring(0, min limit text.Length)
+
+                            if text.Length > limit then
+                                prefix + " [truncated]"
+                            else
+                                prefix
+                        else
+                            "[unavailable within drain grace]"
+
+                    let diagnostics =
+                        $"\nstdout: {capturedPrefix stdout}\nstderr: {capturedPrefix stderr}"
+
                     raise (
                         ChildProcessTimeout(
                             ChildOutlivedBound,
-                            $"Child process timed out after {timeoutMs} ms: {commandLine}"
+                            $"Child process timed out after {timeoutMs} ms: {commandLine}" + diagnostics
                         )
                     )
 
@@ -294,6 +353,78 @@ module TestShared =
 
             let completion = runBounded 60_000 info
             completion.ExitCode, completion.StandardOutput.Trim()
+
+    /// Browser selection is explicit before launch; a started failure never selects another driver.
+    module BrowserDriver =
+        let select (resolve: string -> string option) (declared: string option) =
+            match declared with
+            | Some path ->
+                if
+                    String.IsNullOrWhiteSpace path
+                    || path <> path.Trim()
+                    || not (Path.IsPathFullyQualified path)
+                    || Seq.exists Char.IsControl path
+                then
+                    invalidArg "CHROME_BIN" "CHROME_BIN must declare an absolute executable path."
+
+                match resolve path with
+                | Some executable -> executable
+                | None -> failwith $"Declared CHROME_BIN executable is missing: {path}"
+            | None ->
+                [ "google-chrome"; "chromium" ]
+                |> List.tryPick resolve
+                |> Option.defaultWith (fun () -> failwith "Neither google-chrome nor chromium exists on PATH.")
+
+        let resolveExecutable (path: string) =
+            let candidates =
+                if Path.IsPathFullyQualified path then
+                    [ path ]
+                else
+                    match Environment.GetEnvironmentVariable "PATH" with
+                    | null -> []
+                    | searchPath ->
+                        searchPath.Split(Path.PathSeparator)
+                        |> Array.filter Path.IsPathFullyQualified
+                        |> Array.map (fun directory -> Path.Combine(directory, path))
+                        |> Array.toList
+
+            candidates
+            |> List.tryFind File.Exists
+            |> Option.map (fun candidate ->
+                let file = FileInfo candidate
+
+                match file.ResolveLinkTarget true with
+                | null -> file.FullName
+                | target -> target.FullName)
+
+        /// Selection, version observation and DOM capture share one budget. Only a failing child
+        /// retires under ChildProcess's single drain grace; no second driver or deadline is created.
+        let observeAndRun
+            (elapsedMilliseconds: unit -> int64)
+            (run: int -> string list -> ChildProcess.Completion)
+            (observe: string -> unit)
+            (arguments: string list)
+            =
+            let remaining () =
+                let value = 60_000L - elapsedMilliseconds ()
+
+                if value <= 0L then
+                    failwith "Browser's 60000 ms total budget is exhausted."
+
+                int value
+
+            let version = run (min 5_000 (remaining ())) [ "--version" ]
+
+            if version.ExitCode <> 0 || String.IsNullOrWhiteSpace version.StandardOutput then
+                let prefix (value: string) =
+                    value.Substring(0, min 1_024 value.Length)
+
+                failwith
+                    $"Selected browser failed its bounded version observation (exit {version.ExitCode}). stdout: {prefix version.StandardOutput}; stderr: {prefix version.StandardError}"
+
+            let text = version.StandardOutput.Trim()
+            observe (text.Substring(0, min 1_024 text.Length))
+            run (remaining ()) arguments
 
     /// Unified public-surface baseline verification (feature 067 / FR-005). Set
     /// `FSGG_UPDATE_BASELINE=1` to re-capture intentionally; otherwise assert the captured surface

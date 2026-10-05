@@ -42,7 +42,10 @@ export NUGET_PACKAGES="$scratch/packages"
 export NUGET_HTTP_CACHE_PATH="$scratch/http"
 dotnet build "$scratch/old/OldClient.fsproj" -c Release
 cat > "$scratch/host/Host.fsproj" <<PROJECT
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference></PropertyGroup><ItemGroup><PackageReference Include="FSharp.Core" Version="10.1.302"/><PackageReference Include="FS.GG.SDD.Artifacts" Version="$version"/><Reference Include="OldClient"><HintPath>../old/bin/Release/net10.0/OldClient.dll</HintPath></Reference><Compile Include="Program.fs"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference><DisableImplicitLibraryPacksFolder>true</DisableImplicitLibraryPacksFolder></PropertyGroup><ItemGroup><PackageReference Include="FS.GG.SDD.Artifacts" Version="$version"/><Reference Include="OldClient"><HintPath>../old/bin/Release/net10.0/OldClient.dll</HintPath></Reference><Compile Include="Program.fs"/></ItemGroup></Project>
 PROJECT
+# The host uses the candidate's transitive FSharp.Core dependency. Keep the old
+# client's compilation pin above unchanged; forcing that pin on the new host
+# would downgrade the candidate runtime and obscure the compatibility check.
 printf 'OldClient.run ()\n' > "$scratch/host/Program.fs"
 dotnet run --project "$scratch/host/Host.fsproj" -c Release

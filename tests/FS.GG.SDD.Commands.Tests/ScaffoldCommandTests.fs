@@ -343,6 +343,23 @@ providers:
         Assert.False(TestSupport.existsRelative root "App.fsproj")
 
     [<Fact>]
+    let ``catalog protocol three remains refused by legacy scaffold before mutation`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "bad-version.providers.yml"
+        let registryPath = Path.Combine(root, ".fsgg/providers.yml")
+        File.WriteAllText(registryPath, File.ReadAllText(registryPath).Replace("9.0.0", "3.0.0"))
+
+        let before =
+            Directory.GetFiles(root, "*", SearchOption.AllDirectories) |> Array.sort
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        Assert.Contains("scaffold.providerVersionUnsupported", diagnosticIds report)
+        Assert.False((scaffoldSummary report).ProviderInvoked)
+        Assert.Equal<string array>(before, Directory.GetFiles(root, "*", SearchOption.AllDirectories) |> Array.sort)
+
+    [<Fact>]
     let ``scaffold missing required param blocks with providerParamMissing`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
