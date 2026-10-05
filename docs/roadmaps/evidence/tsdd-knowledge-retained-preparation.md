@@ -1,9 +1,10 @@
 # Retained extraction fixture preparation
 
-TSDD-KNOWLEDGE-01.6 has a bounded source fixture candidate based on protected
-SDD `9df47707ab22b2486400fb359f381e08c4de90df`. It exercises manually curated
+TSDD-KNOWLEDGE-01.6 source preparation merged in [PR 1095](https://github.com/FS-GG/FS.GG.SDD/pull/1095)
+at protected `f50c6bdd2b9996285f7267797316e52aa04cdfbd`, from reviewed head
+`2ac858a3f5ab0ce60a72b44aaa775859a764b3e2`. It exercises manually curated
 public findings through the existing knowledge API. Focused source qualification
-passed all 14 knowledge tests at `6cb29e12f8df05fffc7e2c147ba27d419f104b3a`.
+passed all 14 knowledge tests, including the deterministic CI source-path mapping.
 Installed retained-project proof remains pending; .6 stays open.
 
 The [fixture directory](../../../tests/FS.GG.SDD.Knowledge.Tests/Fixtures/RetainedExtraction/README.md)
@@ -40,6 +41,13 @@ The first build exposed an ambiguous assertion overload; the following test run
 exposed missing fixture copying. Both were repaired within the focused test scope,
 and their failed attempts remain retained.
 
+The first hosted run failed because deterministic compilation maps source paths
+to virtual `/_/` locations. The original-document test now locates the actual
+repository from its physical test output with a bounded ancestor walk and an
+existing project marker. It still hashes the original public documents. The
+repair passed the same 14 named tests with `PathMap` enabled; the merged head
+subsequently passed the required hosted checks.
+
 The accepted test run's restore, build and test steps all exited naturally with
 zero status. Its supervisor's final observation refused an unrecorded adopted
 child that the kernel reported as an exited-zero zombie. A subsequent read-only
@@ -50,6 +58,15 @@ source qualification using that distinct later observation. The original failed
 terminal result remains preserved; no earlier reaping or executable cause is
 claimed. Peak observed capacity was two task CLR processes and four total.
 
-Required hosted gates remain independent. Published tooling qualification and any
-real old-store retirement are separate pending operations. PR 1089 and private BAR
-storage are outside this candidate.
+The next installed check will apply these six reviewed fixtures through the
+published CLI's existing capture/update, query, history and recovery commands.
+The Knowledge implementation and CLI adapter at published 2.1.0 source
+`518517f6b90330a6e99f90bbce68faa0a891287f` are unchanged at this merged source
+head. PR 1095 adds test fixtures and their qualification; its head is not a new
+published package identity. Installed checks must independently join actual
+public package bytes and prove preservation, conflict refusal, idempotence,
+size, selected-record recovery and cache-free Git history recovery. Existing
+publication or other installed-consumer results do not close that boundary.
+
+Real old-store retirement remains a separate authorized operation. PR 1089 and
+private BAR storage are outside this preparation.

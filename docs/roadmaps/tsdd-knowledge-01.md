@@ -189,9 +189,12 @@ through ordinary commits/PRs. A git-unavailable route cannot claim Git qualifica
   can be retired. Retiring a real old store is a separate authorized operation;
   this fixture is not authority to modify BAR's private database.
   Bounded [retained fixture preparation](evidence/tsdd-knowledge-retained-preparation.md)
-  records curated public proposals and existing-API test cases. Focused source
-  qualification passed 14/14 tests; installed retained-project acceptance remains
-  pending.
+  records curated public proposals and existing-API test cases. [PR 1095](https://github.com/FS-GG/FS.GG.SDD/pull/1095)
+  merged this source preparation at `f50c6bdd2b9996285f7267797316e52aa04cdfbd`.
+  Focused qualification passed 14/14 tests with deterministic CI path mapping;
+  installed retained-project acceptance through published tooling remains pending.
+  The published 2.1.0 CLI already provides the unchanged capture/history/recovery
+  contract; this fixture delivery does not publish a new extraction service.
 
 ## Execution lanes and native checks
 
