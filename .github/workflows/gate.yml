@@ -84,6 +84,9 @@ jobs:
         run: |
           set -euo pipefail
           candidate="$RUNNER_TEMP/quint-replay-compat"
+          # The consumer restores the coherent candidate closure before either
+          # new package is published. Artifacts depends on this Contracts version.
+          dotnet pack src/FS.GG.Contracts/FS.GG.Contracts.fsproj -c Release --no-restore -o "$candidate"
           dotnet pack src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -c Release --no-restore -o "$candidate"
           version=$(dotnet msbuild src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -getProperty:Version)
           bash scripts/quint-replay-binary-compat.sh "$version" "$candidate"

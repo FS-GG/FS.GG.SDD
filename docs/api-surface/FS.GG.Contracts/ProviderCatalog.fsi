@@ -2,7 +2,11 @@ namespace Fsgg
 
 /// Additive schema-2 catalog data; no lifecycle or invocation authority is implied.
 module ProviderCatalog =
-    type ParameterKind = String | Enum | ExactVersion
+    type ParameterKind =
+        | String
+        | Enum
+        | ExactVersion
+
     type Validation =
         {
             NonEmpty: bool
@@ -10,6 +14,7 @@ module ProviderCatalog =
             MaxLength: int
             AllowedValues: string list
         }
+
     type Parameter =
         {
             Key: string
@@ -21,18 +26,21 @@ module ProviderCatalog =
             Values: string list
             Validation: Validation
         }
+
     type IdentityBindings =
         {
             RawName: string
             PackageIdentity: string
             CodeIdentifier: string
         }
+
     type ToolRequirement =
         {
             Id: string
             Version: string
             Platforms: string list
         }
+
     type EvidenceDeclaration =
         {
             Id: string
@@ -40,6 +48,7 @@ module ProviderCatalog =
             Path: string
             Required: bool
         }
+
     /// Limits are declared requirements, not observed or enforced execution facts.
     type CommandLimits =
         {
@@ -48,7 +57,11 @@ module ProviderCatalog =
             CostClass: string
             EnvironmentIds: string list
         }
-    type CapabilityBinding = SemanticOnly | Command of command: Provider.DeclaredCommand * limits: CommandLimits
+
+    type CapabilityBinding =
+        | SemanticOnly
+        | Command of command: Provider.DeclaredCommand * limits: CommandLimits
+
     type CapabilityDeclaration =
         {
             Id: string
@@ -58,6 +71,7 @@ module ProviderCatalog =
             EvidenceIds: string list
             Binding: CapabilityBinding
         }
+
     type Descriptor =
         {
             Id: string
@@ -79,6 +93,7 @@ module ProviderCatalog =
             Evidence: EvidenceDeclaration list
             Skills: string list
         }
+
     type Catalog =
         {
             SchemaVersion: int
@@ -87,12 +102,14 @@ module ProviderCatalog =
             Digest: string
             Providers: Descriptor list
         }
+
     type Diagnostic =
         {
             Code: string
             Path: string
             Message: string
         }
+
     /// Exact declared pins and metadata, with no successful scaffold/observed-tool claim.
     type PreparedConfiguration =
         {
@@ -105,9 +122,15 @@ module ProviderCatalog =
             PackageIdentity: string
             CodeIdentifier: string
         }
+
     /// Closed, ecosystem-neutral lexical version literal; no ranges or floating selectors.
     val isExactVersion: value: string -> bool
     /// Validate shape, pins, defaults and references, returning stable ordered diagnostics.
     val validate: catalog: Catalog -> Diagnostic list
+
     /// Defaults precede overrides; any invalid declaration/input refuses the entire result.
-    val resolve: catalog: Catalog -> providerId: string -> overrides: (string * string) list -> Result<PreparedConfiguration, Diagnostic list>
+    val resolve:
+        catalog: Catalog ->
+        providerId: string ->
+        overrides: (string * string) list ->
+            Result<PreparedConfiguration, Diagnostic list>

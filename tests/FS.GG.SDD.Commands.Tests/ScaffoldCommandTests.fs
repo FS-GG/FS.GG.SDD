@@ -348,8 +348,13 @@ providers:
         writeRegistry root "bad-version.providers.yml"
         let registryPath = Path.Combine(root, ".fsgg/providers.yml")
         File.WriteAllText(registryPath, File.ReadAllText(registryPath).Replace("9.0.0", "3.0.0"))
-        let before = Directory.GetFiles(root, "*", SearchOption.AllDirectories) |> Array.sort
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let before =
+            Directory.GetFiles(root, "*", SearchOption.AllDirectories) |> Array.sort
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
         Assert.Contains("scaffold.providerVersionUnsupported", diagnosticIds report)
         Assert.False((scaffoldSummary report).ProviderInvoked)
         Assert.Equal<string array>(before, Directory.GetFiles(root, "*", SearchOption.AllDirectories) |> Array.sort)
