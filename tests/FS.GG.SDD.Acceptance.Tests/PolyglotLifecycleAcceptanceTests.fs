@@ -5,6 +5,7 @@ open System.Diagnostics
 open System.IO
 open System.Net.Http
 open FS.GG.SDD.Artifacts
+open FS.GG.SDD.TestShared
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Tests
@@ -101,19 +102,40 @@ module PolyglotLifecycleAcceptanceTests =
                                 + String.concat "; " (List.rev diagnostics)
                         }
                     | executable :: remaining ->
+                        let profile =
+                            Path.Combine(Path.GetTempPath(), "sdd-browser-" + Guid.NewGuid().ToString("N"))
+
+                        Directory.CreateDirectory profile |> ignore
+
+                        let completed, cleanupFailure =
+                            TestShared.ChildProcess.withCleanupPreservingFailure
+                                (fun () -> Directory.Delete(profile, true))
+                                (fun () ->
+                                    runToCompletionCapturingOutput
+                                        executable
+                                        [
+                                            "--headless"
+                                            "--no-sandbox"
+                                            "--disable-dev-shm-usage"
+                                            "--disable-background-networking"
+                                            "--timeout=10000"
+                                            $"--user-data-dir={profile}"
+                                            "--dump-dom"
+                                            "http://127.0.0.1:51817"
+                                        ]
+                                        fixtureRoot
+                                        60_000)
+
                         let result =
-                            runToCompletionCapturingOutput
-                                executable
-                                [
-                                    "--headless"
-                                    "--no-sandbox"
-                                    "--disable-dev-shm-usage"
-                                    "--disable-background-networking"
-                                    "--dump-dom"
-                                    "http://127.0.0.1:51817"
-                                ]
-                                fixtureRoot
-                                60_000
+                            match cleanupFailure with
+                            | None -> completed
+                            | Some error ->
+                                { completed with
+                                    ExitCode = if completed.ExitCode = 0 then -1 else completed.ExitCode
+                                    Diagnostic =
+                                        completed.Diagnostic + $"\nBrowser profile cleanup failed: {error.Message}"
+                                }
+
 
                         if result.Started then
                             result

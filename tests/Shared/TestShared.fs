@@ -202,6 +202,38 @@ module TestShared =
             with ex ->
                 Error ex
 
+        /// Keep an action failure primary when resource cleanup also fails. A returned
+        /// value carries a cleanup failure separately so callers can retain both diagnostics.
+        let withCleanupPreservingFailure (cleanup: unit -> unit) (action: unit -> 'a) : 'a * exn option =
+            let cleanupFailure () =
+                try
+                    cleanup ()
+                    None
+                with error ->
+                    Some error
+
+            try
+                let value = action ()
+                value, cleanupFailure ()
+            with original ->
+                match cleanupFailure () with
+                | None -> ()
+                | Some secondary ->
+                    original.Data["ChildProcessCleanupFailure"] <- secondary
+
+                    // Diagnostic output is secondary too: a closed stderr must not hide
+                    // the original failure. Keep the emitted cleanup message finite.
+                    try
+                        let message = secondary.Message
+
+                        Console.Error.WriteLine(
+                            "Child cleanup also failed: " + message.Substring(0, min 1_024 message.Length)
+                        )
+                    with _ ->
+                        ()
+
+                reraise ()
+
         /// Run `startInfo`'s child to completion under `timeoutMs`, capturing both streams.
         /// `Error` only when the child could not be *started*; a child that cannot be bounded raises
         /// `ChildProcessTimeout`. Redirection is forced on here so a caller cannot opt out of the
@@ -225,6 +257,8 @@ module TestShared =
                 let stderr = proc.StandardError.ReadToEndAsync()
 
                 if not (proc.WaitForExit timeoutMs) then
+                    let retirement = Stopwatch.StartNew()
+
                     // Best-effort: a tree we cannot fully kill (a descendant already reparented, or
                     // one that raced us) throws, and there is nothing further to do about it.
                     try
@@ -235,10 +269,35 @@ module TestShared =
                     // `Kill` only signals. Reap, so the child cannot outlive the test that spawned it.
                     proc.WaitForExit drainGraceMs |> ignore
 
+                    // Reap and diagnostics share the same grace. A held or faulted reader
+                    // cannot add another wait or replace the original timeout reason.
+                    let remainingMs = max 0 (drainGraceMs - int retirement.ElapsedMilliseconds)
+
+                    try
+                        Task.WhenAll(stdout, stderr).Wait remainingMs |> ignore
+                    with _ ->
+                        ()
+
+                    let capturedPrefix (reader: Task<string>) =
+                        if reader.IsCompletedSuccessfully then
+                            let text = reader.Result
+                            let limit = 16_384
+                            let prefix = text.Substring(0, min limit text.Length)
+
+                            if text.Length > limit then
+                                prefix + " [truncated]"
+                            else
+                                prefix
+                        else
+                            "[unavailable within drain grace]"
+
+                    let diagnostics =
+                        $"\nstdout: {capturedPrefix stdout}\nstderr: {capturedPrefix stderr}"
+
                     raise (
                         ChildProcessTimeout(
                             ChildOutlivedBound,
-                            $"Child process timed out after {timeoutMs} ms: {commandLine}"
+                            $"Child process timed out after {timeoutMs} ms: {commandLine}" + diagnostics
                         )
                     )
 

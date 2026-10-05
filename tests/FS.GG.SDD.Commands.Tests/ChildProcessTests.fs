@@ -73,6 +73,7 @@ module ChildProcessTests =
         elapsed.Stop()
 
         Assert.Contains("timed out after 1500 ms", ex.Message)
+        Assert.Equal(TestShared.ChildProcess.ChildOutlivedBound, ex.Reason)
 
         // Generous: the point is "bounded at all", not the precise bound. A sequential drain never
         // gets here, so any finite number proves the property.
@@ -102,6 +103,7 @@ module ChildProcessTests =
         elapsed.Stop()
 
         Assert.Contains("pipes were still held", ex.Message)
+        Assert.Equal(TestShared.ChildProcess.PipesHeldAfterExit, ex.Reason)
 
         Assert.True(
             elapsed.ElapsedMilliseconds < 20_000L,
@@ -127,3 +129,57 @@ module ChildProcessTests =
         Assert.Contains("Failed to start", ex.Message)
         // The launch reason survives: "no such file" and "exec bit stripped" are different bugs.
         Assert.NotNull(ex.InnerException)
+
+    // SYNTHETIC: retain finite diagnostic prefixes without weakening the timeout or
+    // waiting for another drain grace after retirement.
+    [<Fact; Trait("tier", "slow")>]
+    let ``a timed out child retains bounded stdout and stderr diagnostics`` () =
+        let info = ProcessStartInfo "sh"
+        info.ArgumentList.Add "-c"
+
+        info.ArgumentList.Add
+            "printf 'timeout-stdout-marker'; printf 'timeout-stderr-marker' >&2; i=0; while [ $i -lt 32 ]; do printf '%01024d' 0 >&2; i=$((i+1)); done; sleep 3600"
+
+        let elapsed = Stopwatch.StartNew()
+
+        let ex =
+            Assert.Throws<TestShared.ChildProcess.ChildProcessTimeout>(fun () ->
+                TestShared.ChildProcess.runBounded 1_500 info |> ignore)
+
+        elapsed.Stop()
+        Assert.Equal(TestShared.ChildProcess.ChildOutlivedBound, ex.Reason)
+        Assert.Contains("stdout: timeout-stdout-marker", ex.Message)
+        Assert.Contains("stderr: timeout-stderr-marker", ex.Message)
+        Assert.Contains("[truncated]", ex.Message)
+        Assert.True(ex.Message.Length < 35_000, "captured stream prefixes are finite")
+
+        Assert.True(
+            elapsed.ElapsedMilliseconds < 10_000L,
+            $"timeout plus one drain grace remains bounded: {elapsed.ElapsedMilliseconds} ms"
+        )
+
+        // The actual browser cleanup wrapper must preserve this typed timeout if
+        // profile cleanup independently fails, rather than raising the cleanup error.
+        let secondary = IO.IOException "synthetic-profile-cleanup-failure"
+
+        let preserved =
+            Assert.Throws<TestShared.ChildProcess.ChildProcessTimeout>(fun () ->
+                TestShared.ChildProcess.withCleanupPreservingFailure (fun () -> raise secondary) (fun () -> raise ex)
+                |> ignore)
+
+        Assert.Same(ex, preserved)
+        Assert.Same(secondary, preserved.Data["ChildProcessCleanupFailure"])
+        Assert.Equal(TestShared.ChildProcess.ChildOutlivedBound, preserved.Reason)
+
+        let value, cleanupFailure =
+            TestShared.ChildProcess.withCleanupPreservingFailure (fun () -> raise secondary) (fun () ->
+                "original-result")
+
+        Assert.Equal("original-result", value)
+        Assert.Same(secondary, cleanupFailure.Value)
+
+        let cleanValue, cleanFailure =
+            TestShared.ChildProcess.withCleanupPreservingFailure ignore (fun () -> "clean-result")
+
+        Assert.Equal("clean-result", cleanValue)
+        Assert.True(cleanFailure.IsNone)
