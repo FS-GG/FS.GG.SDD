@@ -170,7 +170,7 @@ module CatalogScaffoldProvenanceTests =
 
             match doc with
             | ScaffoldProvenanceDocument.Catalog parsed ->
-                Assert.Equal(value.Observation.Invocations, parsed.Observation.Invocations)
+                Assert.True(value.Observation.Invocations = parsed.Observation.Invocations)
             | _ -> failwith "No legacy fallback."
 
     [<Fact>]

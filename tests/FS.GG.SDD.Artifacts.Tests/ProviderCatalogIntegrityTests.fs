@@ -90,14 +90,14 @@ module ProviderCatalogIntegrityTests =
                 Platforms = List.rev d.Platforms
             }
 
-        Assert.Equal<byte>(ProviderCatalogIntegrity.descriptorBytes d, ProviderCatalogIntegrity.descriptorBytes altered)
+        Assert.True(ProviderCatalogIntegrity.descriptorBytes d = ProviderCatalogIntegrity.descriptorBytes altered)
 
-        Assert.Equal<byte>(
-            ProviderCatalogIntegrity.catalogBytes catalog,
-            ProviderCatalogIntegrity.catalogBytes
-                { catalog with
-                    Providers = List.rev catalog.Providers
-                }
+        Assert.True(
+            ProviderCatalogIntegrity.catalogBytes catalog =
+                ProviderCatalogIntegrity.catalogBytes
+                    { catalog with
+                        Providers = List.rev catalog.Providers
+                    }
         )
 
         let special = { d with Help = "é<\n\u0001" }

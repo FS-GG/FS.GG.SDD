@@ -107,4 +107,4 @@ module CatalogScaffoldWorkflowTests =
             Assert.Contains(lifecycleReport.Diagnostics, fun d -> d.Id = "provenance.malformed")
 
             for KeyValue(path, bytes) in before do
-                Assert.Equal<byte>(bytes, File.ReadAllBytes path)
+                Assert.True(bytes = File.ReadAllBytes path)
