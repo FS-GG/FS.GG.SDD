@@ -359,8 +359,12 @@ module TestShared =
         let select (resolve: string -> string option) (declared: string option) =
             match declared with
             | Some path ->
-                if String.IsNullOrWhiteSpace path || path <> path.Trim() || not (Path.IsPathFullyQualified path)
-                   || Seq.exists Char.IsControl path then
+                if
+                    String.IsNullOrWhiteSpace path
+                    || path <> path.Trim()
+                    || not (Path.IsPathFullyQualified path)
+                    || Seq.exists Char.IsControl path
+                then
                     invalidArg "CHROME_BIN" "CHROME_BIN must declare an absolute executable path."
 
                 match resolve path with
@@ -373,7 +377,8 @@ module TestShared =
 
         let resolveExecutable (path: string) =
             let candidates =
-                if Path.IsPathFullyQualified path then [ path ]
+                if Path.IsPathFullyQualified path then
+                    [ path ]
                 else
                     match Environment.GetEnvironmentVariable "PATH" with
                     | null -> []
@@ -387,6 +392,7 @@ module TestShared =
             |> List.tryFind File.Exists
             |> Option.map (fun candidate ->
                 let file = FileInfo candidate
+
                 match file.ResolveLinkTarget true with
                 | null -> file.FullName
                 | target -> target.FullName)
@@ -401,12 +407,18 @@ module TestShared =
             =
             let remaining () =
                 let value = 60_000L - elapsedMilliseconds ()
-                if value <= 0L then failwith "Browser's 60000 ms total budget is exhausted."
+
+                if value <= 0L then
+                    failwith "Browser's 60000 ms total budget is exhausted."
+
                 int value
 
             let version = run (min 5_000 (remaining ())) [ "--version" ]
+
             if version.ExitCode <> 0 || String.IsNullOrWhiteSpace version.StandardOutput then
-                let prefix (value: string) = value.Substring(0, min 1_024 value.Length)
+                let prefix (value: string) =
+                    value.Substring(0, min 1_024 value.Length)
+
                 failwith
                     $"Selected browser failed its bounded version observation (exit {version.ExitCode}). stdout: {prefix version.StandardOutput}; stderr: {prefix version.StandardError}"
 

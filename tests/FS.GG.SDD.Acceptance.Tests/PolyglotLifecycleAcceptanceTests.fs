@@ -88,6 +88,7 @@ module PolyglotLifecycleAcceptanceTests =
                 waitForHttp vite "http://127.0.0.1:51817" 60_000 |> ignore
 
                 let elapsed = Stopwatch.StartNew()
+
                 let declared =
                     match Environment.GetEnvironmentVariable "CHROME_BIN" with
                     | null -> None
@@ -97,7 +98,10 @@ module PolyglotLifecycleAcceptanceTests =
                     TestShared.BrowserDriver.select TestShared.BrowserDriver.resolveExecutable declared
 
                 Console.Error.WriteLine($"Browser executable: {executable}")
-                let profile = Path.Combine(Path.GetTempPath(), "sdd-browser-" + Guid.NewGuid().ToString("N"))
+
+                let profile =
+                    Path.Combine(Path.GetTempPath(), "sdd-browser-" + Guid.NewGuid().ToString("N"))
+
                 Directory.CreateDirectory profile |> ignore
 
                 let completed, cleanupFailure =
@@ -126,7 +130,10 @@ module PolyglotLifecycleAcceptanceTests =
                     {
                         Started = true
                         ExitCode =
-                            if cleanupFailure.IsSome && completed.ExitCode = 0 then -1 else completed.ExitCode
+                            if cleanupFailure.IsSome && completed.ExitCode = 0 then
+                                -1
+                            else
+                                completed.ExitCode
                         Diagnostic =
                             (completed.StandardError + completed.StandardOutput).Trim()
                             + (match cleanupFailure with
