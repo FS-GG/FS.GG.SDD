@@ -24,7 +24,9 @@ module RetainedExtractionTests =
         |> Array.map (fun path -> JsonSerializer.Deserialize<Record>(File.ReadAllBytes path) |> nonNull)
 
     let private temporary test =
-        let root = Path.Combine(Path.GetTempPath(), "retained-knowledge-" + Guid.NewGuid().ToString("N"))
+        let root =
+            Path.Combine(Path.GetTempPath(), "retained-knowledge-" + Guid.NewGuid().ToString("N"))
+
         Directory.CreateDirectory root |> ignore
 
         try
@@ -33,7 +35,13 @@ module RetainedExtractionTests =
             Directory.Delete(root, true)
 
     let private query text =
-        { Text = text; Kind = ""; Scope = ""; State = ""; Id = "" }
+        {
+            Text = text
+            Kind = ""
+            Scope = ""
+            State = ""
+            Id = ""
+        }
 
     let private git root args =
         let start =
@@ -69,7 +77,15 @@ module RetainedExtractionTests =
 
         git
             root
-            [ "-c"; "user.name=Retained Fixture"; "-c"; "user.email=retained@example.invalid"; "commit"; "-m"; message ]
+            [
+                "-c"
+                "user.name=Retained Fixture"
+                "-c"
+                "user.email=retained@example.invalid"
+                "commit"
+                "-m"
+                message
+            ]
         |> ignore
 
         git root [ "rev-parse"; "HEAD" ]
@@ -158,8 +174,7 @@ module RetainedExtractionTests =
             Assert.Throws<InvalidDataException>(fun () -> Store.capture root None original |> ignore)
             |> ignore
 
-            Assert.Throws<InvalidDataException>(fun () ->
-                Store.capture root (Some first.Revision) changed |> ignore)
+            Assert.Throws<InvalidDataException>(fun () -> Store.capture root (Some first.Revision) changed |> ignore)
             |> ignore
 
             Assert.Throws<InvalidDataException>(fun () -> Store.restore root archived |> ignore)
@@ -170,7 +185,10 @@ module RetainedExtractionTests =
 
             let reconciled =
                 { changed with
-                    Summary = changed.Summary + " " + "Project owner retains this result as a model-only lesson; production verification remains separate."
+                    Summary =
+                        changed.Summary
+                        + " "
+                        + "Project owner retains this result as a model-only lesson; production verification remains separate."
                     Author = owner.Author
                 }
 
