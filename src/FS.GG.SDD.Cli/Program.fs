@@ -380,6 +380,8 @@ let run args =
     // producer manifest; peer of `registry validate`, also before `parseCommand`.
     | "registry" :: "skill-manifest" :: rest -> FS.GG.SDD.Cli.RegistrySkillManifest.run rest
     | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
+    | "catalog" :: rest -> FS.GG.SDD.Cli.Catalog.run rest
+    | "scaffold" :: rest when hasFlag "--catalog" rest -> FS.GG.SDD.Cli.Catalog.unavailable rest
     | "knowledge" :: rest -> FS.GG.SDD.Cli.Knowledge.run rest
     | "typed-sdd" :: rest -> FS.GG.SDD.Cli.TypedSdd.run rest
     | commandValue :: rest ->

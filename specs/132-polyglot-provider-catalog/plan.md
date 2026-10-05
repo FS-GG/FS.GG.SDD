@@ -19,3 +19,10 @@ Root selected the additive source version join: Contracts 7.5.2 → 7.6.0 and sh
 2.1.0 → 2.2.0. Only local Project dependency lock edges change; external package bytes remain fixed.
 Native08 qualifies this source version join. Protected landing and coordinated publication remain pending.
 No feed or consumer pin is changed here. Legacy published consumers remain compatible.
+
+
+## SDD928-C2.1 — read-only catalog preparation
+
+Add explicit digest-checked `catalog inspect`, canonical semantic digest projections and closed schema-2 provenance reading/ownership projection. Preserve C1 parser/resolve and every legacy constructor. No runtime Governance reference or invocation is introduced. Inspection reports prepared declarations only, reads the explicitly selected local file and never writes or probes tools. `scaffold --catalog` refuses as unavailable before effects.
+
+Verify raw/semantic tamper, sorted declarations versus literal argv, Unicode/control byte goldens, explicit parameter identities/defaults, schema-1 parity, complete synthetic schema-2 ownership correspondence, and malformed/unsupported provenance blocking refresh/lifecycle mutation. Real executable provider qualification remains C2.2 under root admission.

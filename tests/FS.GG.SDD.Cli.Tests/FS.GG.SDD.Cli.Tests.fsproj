@@ -11,6 +11,7 @@
     <Compile Include="EarlyStageProjectionTests.fs" />
     <Compile Include="HelpRenderingTests.fs" />
     <Compile Include="ScaffoldParityTests.fs" />
+    <Compile Include="CatalogInspectionTests.fs" />
     <Compile Include="RemediationProjectionTests.fs" />
     <Compile Include="SurfaceProjectionTests.fs" />
     <Compile Include="DependencySurfaceProjectionTests.fs" />

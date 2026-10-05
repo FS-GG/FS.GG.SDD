@@ -268,14 +268,22 @@ module internal HandlersRefresh =
 
             // Scaffold-produced files are externally owned (FR-007): they are never SDD
             // generated views, so they are excluded from the refresh ledger by
-            // construction. Malformed provenance is surfaced and treated as absent
-            // (fail-safe) rather than silently regenerating anything (SC-007).
+            // construction. Malformed or unsupported provenance blocks mutation; schema-2
+            // errors never become an absent/legacy lifecycle fallback.
             let provenanceDiags =
                 match snapshot ScaffoldProvenance.provenancePath model with
                 | Some provenanceSnapshot ->
-                    match ScaffoldProvenance.tryParse provenanceSnapshot.Text with
-                    | Some _ -> []
-                    | None -> [ scaffoldProvenanceMalformed ScaffoldProvenance.provenancePath ]
+                    match ScaffoldProvenanceDocument.parse provenanceSnapshot.Text with
+                    | Ok _ -> []
+                    | Error errors ->
+                        errors
+                        |> List.map (fun finding ->
+                            // Retain refresh's published diagnostic identity and artifact context.
+                            let diagnostic = scaffoldProvenanceMalformed ScaffoldProvenance.provenancePath
+
+                            { diagnostic with
+                                Message = diagnostic.Message + " " + finding.Path + ": " + finding.Message
+                            })
                 | None -> []
 
             let baseDiags = model.Diagnostics @ projectDiags @ duplicateDiags @ provenanceDiags

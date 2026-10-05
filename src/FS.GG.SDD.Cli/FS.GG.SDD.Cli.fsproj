@@ -46,6 +46,8 @@
     <Compile Include="Knowledge.fs" />
     <Compile Include="TypedSdd.fsi" />
     <Compile Include="TypedSdd.fs" />
+    <Compile Include="Catalog.fsi" />
+    <Compile Include="Catalog.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

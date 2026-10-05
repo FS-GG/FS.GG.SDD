@@ -33,3 +33,10 @@ committed reflection surfaces, package-version coherence, legacy parser compatib
 refusal before mutation. Protected landing, package qualification and installed adoption remain open.
 
 See [wire contract](contracts/catalog.md), [plan](plan.md), and [tasks](tasks.md).
+
+
+## SDD928-C2.1 — read-only catalog preparation
+
+Add explicit digest-checked `catalog inspect`, canonical semantic digest projections and closed schema-2 provenance reading/ownership projection. Preserve C1 parser/resolve and every legacy constructor. No runtime Governance reference or invocation is introduced. Inspection reports prepared declarations only, reads the explicitly selected local file and never writes or probes tools. `scaffold --catalog` refuses as unavailable before effects.
+
+Verify raw/semantic tamper, sorted declarations versus literal argv, Unicode/control byte goldens, explicit parameter identities/defaults, schema-1 parity, complete synthetic schema-2 ownership correspondence, and malformed/unsupported provenance blocking refresh/lifecycle mutation. Real executable provider qualification remains C2.2 under root admission.
