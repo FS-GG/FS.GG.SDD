@@ -183,3 +183,87 @@ module ChildProcessTests =
 
         Assert.Equal("clean-result", cleanValue)
         Assert.True(cleanFailure.IsNone)
+
+    [<Fact>]
+    let ``browser selection honors declarations and only missing executables select another driver`` () =
+        let requested = ResizeArray<string>()
+        let resolve path =
+            requested.Add path
+            match path with
+            | "/declared/chrome" -> Some "/resolved/chrome"
+            | "google-chrome" -> Some "/stable/chrome"
+            | "chromium" -> Some "/snapshot/chromium"
+            | _ -> None
+
+        Assert.Equal("/resolved/chrome", TestShared.BrowserDriver.select resolve (Some "/declared/chrome"))
+        Assert.Equal<string list>([ "/declared/chrome" ], List.ofSeq requested)
+        for malformed in [ ""; "google-chrome"; " /declared/chrome"; "/declared/chrome\n" ] do
+            Assert.Throws<ArgumentException>(fun () -> TestShared.BrowserDriver.select resolve (Some malformed) |> ignore)
+            |> ignore
+        requested.Clear()
+        Assert.Throws<Exception>(fun () -> TestShared.BrowserDriver.select resolve (Some "/missing/chrome") |> ignore)
+        |> ignore
+        Assert.Equal<string list>([ "/missing/chrome" ], List.ofSeq requested)
+        requested.Clear()
+        Assert.Equal("/stable/chrome", TestShared.BrowserDriver.select resolve None)
+        Assert.Equal<string list>([ "google-chrome" ], List.ofSeq requested)
+        let missingStable path = if path = "google-chrome" then None else resolve path
+        Assert.Equal("/snapshot/chromium", TestShared.BrowserDriver.select missingStable None)
+
+    [<Fact>]
+    let ``browser version and DOM capture share a deadline and started failures never retry`` () =
+        let mutable elapsed = 1_000L
+        let calls = ResizeArray<int * string list>()
+        let completion: TestShared.ChildProcess.Completion =
+            { ExitCode = 0; StandardOutput = "Synthetic Chrome 1"; StandardError = "" }
+        let run timeout arguments =
+            calls.Add(timeout, arguments)
+            elapsed <- 8_000L
+            completion
+        let observed = ResizeArray<string>()
+        TestShared.BrowserDriver.observeAndRun (fun () -> elapsed) run observed.Add [ "--dump-dom" ] |> ignore
+        Assert.Equal<(int * string list) list>([ (5_000, [ "--version" ]); (52_000, [ "--dump-dom" ]) ], List.ofSeq calls)
+        Assert.Equal<string list>([ "Synthetic Chrome 1" ], List.ofSeq observed)
+        calls.Clear()
+        elapsed <- 0L
+        let expired timeout arguments =
+            calls.Add(timeout, arguments)
+            elapsed <- 60_000L
+            completion
+        Assert.Throws<Exception>(fun () ->
+            TestShared.BrowserDriver.observeAndRun (fun () -> elapsed) expired ignore [ "--dump-dom" ] |> ignore)
+        |> ignore
+        Assert.Single(calls) |> ignore
+        calls.Clear()
+        elapsed <- 60_000L
+        Assert.Throws<Exception>(fun () ->
+            TestShared.BrowserDriver.observeAndRun (fun () -> elapsed) run ignore [ "--dump-dom" ] |> ignore)
+        |> ignore
+        Assert.Empty calls
+        elapsed <- 0L
+        let failure = TestShared.ChildProcess.ChildProcessTimeout(TestShared.ChildProcess.ChildOutlivedBound, "synthetic")
+        let failed timeout arguments =
+            calls.Add(timeout, arguments)
+            raise failure
+        let actual = Assert.Throws<TestShared.ChildProcess.ChildProcessTimeout>(fun () ->
+            TestShared.BrowserDriver.observeAndRun (fun () -> elapsed) failed ignore [ "--dump-dom" ] |> ignore)
+        Assert.Same(failure, actual)
+        Assert.Single(calls) |> ignore
+
+        calls.Clear()
+        let failedDom timeout arguments =
+            calls.Add(timeout, arguments)
+            if arguments = [ "--version" ] then completion else raise failure
+        let domFailure = Assert.Throws<TestShared.ChildProcess.ChildProcessTimeout>(fun () ->
+            TestShared.BrowserDriver.observeAndRun (fun () -> 0L) failedDom ignore [ "--dump-dom" ] |> ignore)
+        Assert.Same(failure, domFailure)
+        Assert.Equal(2, calls.Count)
+        calls.Clear()
+        let badVersion timeout arguments =
+            calls.Add(timeout, arguments)
+            { completion with ExitCode = 1; StandardError = "synthetic driver failure" }
+        let versionFailure = Assert.Throws<Exception>(fun () ->
+            TestShared.BrowserDriver.observeAndRun (fun () -> 0L) badVersion ignore [ "--dump-dom" ] |> ignore)
+        Assert.Contains("exit 1", versionFailure.Message)
+        Assert.Contains("synthetic driver failure", versionFailure.Message)
+        Assert.Single(calls) |> ignore

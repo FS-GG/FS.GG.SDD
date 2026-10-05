@@ -87,62 +87,52 @@ module PolyglotLifecycleAcceptanceTests =
             try
                 waitForHttp vite "http://127.0.0.1:51817" 60_000 |> ignore
 
-                // Hosted runners and developer machines install the same browser under different
-                // prefixes. Let the process edge resolve it through PATH, just as a shell would, and
-                // fall back only when a candidate could not be started at all. A browser that starts
-                // but fails remains a real acceptance failure rather than being hidden by fallback.
-                let rec runBrowser candidates diagnostics =
-                    match candidates with
-                    | [] ->
-                        {
-                            Started = false
-                            ExitCode = -1
-                            Diagnostic =
-                                "could not start a supported browser from PATH (tried chromium and google-chrome): "
-                                + String.concat "; " (List.rev diagnostics)
-                        }
-                    | executable :: remaining ->
-                        let profile =
-                            Path.Combine(Path.GetTempPath(), "sdd-browser-" + Guid.NewGuid().ToString("N"))
+                let elapsed = Stopwatch.StartNew()
+                let declared =
+                    match Environment.GetEnvironmentVariable "CHROME_BIN" with
+                    | null -> None
+                    | value -> Some value
 
-                        Directory.CreateDirectory profile |> ignore
+                let executable =
+                    TestShared.BrowserDriver.select TestShared.BrowserDriver.resolveExecutable declared
 
-                        let completed, cleanupFailure =
-                            TestShared.ChildProcess.withCleanupPreservingFailure
-                                (fun () -> Directory.Delete(profile, true))
-                                (fun () ->
-                                    runToCompletionCapturingOutput
-                                        executable
-                                        [
-                                            "--headless"
-                                            "--no-sandbox"
-                                            "--disable-dev-shm-usage"
-                                            "--disable-background-networking"
-                                            "--timeout=10000"
-                                            $"--user-data-dir={profile}"
-                                            "--dump-dom"
-                                            "http://127.0.0.1:51817"
-                                        ]
-                                        fixtureRoot
-                                        60_000)
+                Console.Error.WriteLine($"Browser executable: {executable}")
+                let profile = Path.Combine(Path.GetTempPath(), "sdd-browser-" + Guid.NewGuid().ToString("N"))
+                Directory.CreateDirectory profile |> ignore
 
-                        let result =
-                            match cleanupFailure with
-                            | None -> completed
-                            | Some error ->
-                                { completed with
-                                    ExitCode = if completed.ExitCode = 0 then -1 else completed.ExitCode
-                                    Diagnostic =
-                                        completed.Diagnostic + $"\nBrowser profile cleanup failed: {error.Message}"
-                                }
+                let completed, cleanupFailure =
+                    TestShared.ChildProcess.withCleanupPreservingFailure
+                        (fun () -> Directory.Delete(profile, true))
+                        (fun () ->
+                            TestShared.BrowserDriver.observeAndRun
+                                (fun () -> elapsed.ElapsedMilliseconds)
+                                (fun timeout arguments ->
+                                    let info = ProcessStartInfo(FileName = executable, WorkingDirectory = fixtureRoot)
+                                    arguments |> List.iter info.ArgumentList.Add
+                                    TestShared.ChildProcess.runBounded timeout info)
+                                (fun version -> Console.Error.WriteLine($"Browser version: {version}"))
+                                [
+                                    "--headless"
+                                    "--no-sandbox"
+                                    "--disable-dev-shm-usage"
+                                    "--disable-background-networking"
+                                    "--timeout=10000"
+                                    $"--user-data-dir={profile}"
+                                    "--dump-dom"
+                                    "http://127.0.0.1:51817"
+                                ])
 
-
-                        if result.Started then
-                            result
-                        else
-                            runBrowser remaining ($"{executable}: {result.Diagnostic}" :: diagnostics)
-
-                let browser = runBrowser [ "chromium"; "google-chrome" ] []
+                let browser =
+                    {
+                        Started = true
+                        ExitCode =
+                            if cleanupFailure.IsSome && completed.ExitCode = 0 then -1 else completed.ExitCode
+                        Diagnostic =
+                            (completed.StandardError + completed.StandardOutput).Trim()
+                            + (match cleanupFailure with
+                               | None -> ""
+                               | Some error -> $"\nBrowser profile cleanup failed: {error.Message}")
+                    }
 
                 assertGreen "Vite browser runtime" browser
                 Assert.Contains("data-executed=\"typescript\"", browser.Diagnostic)
