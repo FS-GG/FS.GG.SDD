@@ -1,0 +1,22 @@
+--- owner-edited.json
++++ changed-conclusion.json
+@@ -3,14 +3,14 @@
+   "Id": "q1-liveness-defect",
+   "Kind": "diagnostic",
+   "Title": "Unbounded response loss defeated eventual completion",
+-  "Summary": "The Q1 temporal check reportedly found that LoseResponse followed by Retry could repeat forever; bounding loss alone still allowed a stale-refusal cycle. Project owner retains this result as a model-only lesson; production verification remains separate.",
++  "Summary": "Proposed narrower wording: Q1 reported two distinct non-completing cycles, response-loss retry and stale refusal after loss was bounded.",
+   "Rationale": "Retain the failed model and its negative result rather than only its later repair.",
+   "Limits": "Reported finite-model defect; no claim about a deployed coordination service or a new TLC run.",
+-  "State": "reported",
+-  "Basis": "reported",
+-  "Author": "Synthetic project owner edit for retained-extraction conflict fixture",
++  "State": "proposal",
++  "Basis": "proposal",
++  "Author": "Synthetic later review proposal for retained-extraction conflict fixture",
+   "Created": "2026-08-26",
+-  "Updated": "2026-09-01",
++  "Updated": "2026-09-02",
+   "AsOf": "2026-08-26",
+   "Scope": "SDD public retained extraction fixture",
+   "Applicability": "Historical source finding; review the pinned evidence before reuse.",

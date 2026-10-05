@@ -1,0 +1,37 @@
+{
+  "SchemaVersion": 1,
+  "Id": "q1-liveness-fix",
+  "Kind": "bug-fix",
+  "Title": "Q1 repair narrowed the fairness obligation",
+  "Summary": "The reported repair separates apply from stale refusal, bounds revision, makes loss a finite event and applies fairness to the complete state tuple; TLC then reported no temporal violation.",
+  "Rationale": "Keep the repair connected to the original defect and retain its failed-form mutation.",
+  "Limits": "Historical reported outcome with finite-model limits; import time supplies no new evidence or acceptance.",
+  "State": "reported",
+  "Basis": "reported",
+  "Author": "TSDD-KNOWLEDGE-01.6 curated public-source fixture",
+  "Created": "2026-08-26",
+  "Updated": "2026-08-26",
+  "AsOf": "2026-08-26",
+  "Scope": "SDD public retained extraction fixture",
+  "Applicability": "Historical source finding; review the pinned evidence before reuse.",
+  "Evidence": [
+    {
+      "Locator": "https://github.com/FS-GG/FS.GG.SDD/blob/9df47707ab22b2486400fb359f381e08c4de90df/docs/experiments/quint-q1/qualification-report.md",
+      "Repository": "FS-GG/FS.GG.SDD",
+      "Revision": "9df47707ab22b2486400fb359f381e08c4de90df",
+      "Path": "docs/experiments/quint-q1/qualification-report.md",
+      "Digest": "c0025131237b0ded9fb34d835f28b007c23ae92440854df0f1b960f2e248b2c2",
+      "Run": ""
+    }
+  ],
+  "Relations": [
+    {
+      "Kind": "bug-fix",
+      "Target": "q1-liveness-defect"
+    },
+    {
+      "Kind": "related",
+      "Target": "q1-liveness-cause"
+    }
+  ]
+}

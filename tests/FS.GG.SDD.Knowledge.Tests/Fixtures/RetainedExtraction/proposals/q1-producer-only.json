@@ -1,0 +1,28 @@
+{
+  "SchemaVersion": 1,
+  "Id": "q1-producer-only",
+  "Kind": "qualification",
+  "Title": "Q1 acceptance is producer-candidate only",
+  "Summary": "The Q1 qualification report accepts its pinned producer candidate while requiring S.I.R. interpreter replay, independent review acceptance and an ADR amendment before production authority.",
+  "Rationale": "Preserve negative-control results without promoting source qualification into consumer acceptance.",
+  "Limits": "Historical report only; extraction does not establish current production authority or rerun qualification.",
+  "State": "reported",
+  "Basis": "reported",
+  "Author": "TSDD-KNOWLEDGE-01.6 curated public-source fixture",
+  "Created": "2026-08-26",
+  "Updated": "2026-08-26",
+  "AsOf": "2026-08-26",
+  "Scope": "SDD public retained extraction fixture",
+  "Applicability": "Historical source finding; review the pinned evidence before reuse.",
+  "Evidence": [
+    {
+      "Locator": "https://github.com/FS-GG/FS.GG.SDD/blob/9df47707ab22b2486400fb359f381e08c4de90df/docs/experiments/quint-q1/qualification-report.md",
+      "Repository": "FS-GG/FS.GG.SDD",
+      "Revision": "9df47707ab22b2486400fb359f381e08c4de90df",
+      "Path": "docs/experiments/quint-q1/qualification-report.md",
+      "Digest": "c0025131237b0ded9fb34d835f28b007c23ae92440854df0f1b960f2e248b2c2",
+      "Run": ""
+    }
+  ],
+  "Relations": []
+}
