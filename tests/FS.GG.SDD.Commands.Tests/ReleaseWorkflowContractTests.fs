@@ -49,7 +49,12 @@ module ReleaseWorkflowContractTests =
     [<Fact>]
     let ``release publishes the independently consumable artifacts package to both feeds`` () =
         Assert.Equal(1, count "\n  publish-artifacts:\n" workflow)
-        Assert.Contains("needs: [resolve-versions, artifacts-tests, cli-tests, knowledge-tests]", workflow)
+
+        Assert.Contains(
+            "needs: [resolve-versions, contracts-tests, artifacts-tests, cli-tests, knowledge-tests]",
+            workflow
+        )
+
         Assert.Contains("target: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj", workflow)
         Assert.Contains("run: tests/fixtures/typed-specifications/run-clean-consumer.sh", workflow)
         Assert.Contains("artifacts_version: ${{ steps.ver.outputs.artifacts_version }}", workflow)
@@ -80,7 +85,7 @@ module ReleaseWorkflowContractTests =
         Assert.DoesNotContain("-p:Version=", job)
         Assert.DoesNotContain("-p:PackageVersion=", job)
         Assert.Contains("-p:RepositoryCommit=\"$GITHUB_SHA\"", job)
-        Assert.Contains("packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge", job)
+        Assert.Contains("packages=FS.GG.Contracts,FS.GG.SDD.Artifacts,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge", job)
         Assert.Contains("coherent-sdd-packages-${{ github.sha }}", job)
         Assert.Contains("needs.resolve-versions.outputs.push == 'false'", job)
         Assert.Contains("scripts/verify-release-candidate.sh", job)
@@ -102,7 +107,7 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("scripts/verify-release-candidate.sh", publish)
         Assert.DoesNotContain("dotnet pack src/FS.GG.SDD.Artifacts", publish)
         Assert.DoesNotContain("dotnet pack src/FS.GG.SDD.Cli", publish)
-        Assert.Equal(6, count "dotnet nuget push" publish)
+        Assert.Equal(8, count "dotnet nuget push" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg\"" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Cli.*.nupkg\"" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Knowledge.*.nupkg\"" publish)
