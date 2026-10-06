@@ -122,4 +122,12 @@ check before version evaluation; candidate/publisher dependencies prevent packin
 or effects after refusal. Independently running test jobs retain their existing
 semantics. A custom model is deferred for this sequential archive handoff; the
 initial source/control effort cap is30 minutes and warm target under60 seconds.
-Actual hosted savings, setup/queue costs and native qualification remain unknown.
+Actual hosted savings and setup/queue costs remain unknown. Exact source
+`5084433b6021b488dcd87610ef14b109f468ca86` passed the selected local seven-project
+locked dependency/evaluation/build qualification and both focused
+`ReleaseWorkflowContractTests` cases. The final twelve-command continuation
+completed with clean owned custody and no resource failure, using the pinned
+SDK10.0.401/runtime10.0.12 closure. Earlier failed attempts remain retained.
+This is source-contract qualification only: actual release packs, feed collision
+observations, installed candidate/public readback, provider runtime and coherent
+publication are not accepted by these two tests and remain separately gated.
