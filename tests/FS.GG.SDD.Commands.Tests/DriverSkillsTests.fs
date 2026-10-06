@@ -17,15 +17,15 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "ebf48c78fdf0954fe23918ea75c676bc5ebff69d2f4ac0aaf91df323fc5c5e23"
+        "b93acaf0145ab81ac5b6a888fd0fbfdb6205f3becc83e9cdd9d55de52b33419d"
 
     // work-board ships in FS.GG.Drivers, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "255505c2b88124fd3d7daf6f944ef9ee7fe7f7569dd6f7ffc76fed5499e825cd"
+        "6717f8af6fc64cad57bdb10cb54a4c68cb1199163d9c8718dfee5996d6e5ca31"
 
     // padd-item is the product-workspace board filer added by FS.GG.Drivers (#703).
     let private paddItemSha256 =
-        "60938ac4fc0f147de8be89f125a4a78a958be52ef1b879c33876f901d6486247"
+        "74025b26c92363fceca7a57aea3b295bfe2d47df74492717249e9715d9ca15ef"
 
     let private workBoardNormalSha256 =
         "55f96951dc04fd02cdc3411dd72ce0f6fcaca9c64a2daafd6270fc0d45adf05b"
