@@ -38,7 +38,7 @@ count = 0
 def check(expected, candidate=None, token='synthetic'):
     global count
     try:
-        module.preflight('2.1.0', ids, base + '/index', base + '/github', base + '/public', token, 'fixture', candidate)
+        module.preflight('2.1.0', ids, base + '/index', base + '/github', base + '/public', token, 'fixture', candidate, github_api=base + '/api')
     except ValueError:
         assert not expected
     else: assert expected
@@ -46,6 +46,7 @@ def check(expected, candidate=None, token='synthetic'):
 
 try:
     responses['/index'] = (200, b'{}')
+    responses['/api/orgs/FS-GG/packages/nuget/fs.gg.sdd.knowledge/versions?per_page=100&page=1'] = (200, b'[]')
     known = '/github/fs.gg.sdd.artifacts/2.0.3/fs.gg.sdd.artifacts.2.0.3.nupkg'
     artifact = package(b'known-baseline', package_id='FS.GG.SDD.Artifacts')
     tool = package(b'known-tool', package_id='FS.GG.SDD.Cli')
