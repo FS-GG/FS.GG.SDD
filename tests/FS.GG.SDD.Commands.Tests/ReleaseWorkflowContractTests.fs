@@ -49,7 +49,10 @@ module ReleaseWorkflowContractTests =
     [<Fact>]
     let ``release publishes the independently consumable artifacts package to both feeds`` () =
         Assert.Equal(1, count "\n  publish-artifacts:\n" workflow)
-        Assert.Contains("needs: [resolve-versions, contracts-tests, artifacts-tests, cli-tests, knowledge-tests]", workflow)
+        Assert.Contains(
+            "needs: [resolve-versions, contracts-tests, artifacts-tests, cli-tests, knowledge-tests]",
+            workflow
+        )
         Assert.Contains("target: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj", workflow)
         Assert.Contains("run: tests/fixtures/typed-specifications/run-clean-consumer.sh", workflow)
         Assert.Contains("artifacts_version: ${{ steps.ver.outputs.artifacts_version }}", workflow)
