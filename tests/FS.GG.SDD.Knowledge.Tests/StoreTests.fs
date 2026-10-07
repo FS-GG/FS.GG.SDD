@@ -323,6 +323,76 @@ module StoreTests =
             Assert.False(Directory.Exists restored))
 
     [<Fact>]
+    let ``direct store APIs refuse dangling canonical and linked writer lock paths`` () =
+        temporary (fun parent ->
+            let missingStore = Path.Combine(parent, "linked-store")
+
+            Directory.CreateSymbolicLink(missingStore, Path.Combine(parent, "missing-store-target"))
+            |> ignore
+
+            Assert.Throws<InvalidDataException>(fun () -> Store.check missingStore |> ignore)
+            |> ignore
+
+            Assert.Throws<InvalidDataException>(fun () -> Store.capture missingStore None (finding "record") |> ignore)
+            |> ignore
+
+            Assert.False(Directory.Exists(Path.Combine(parent, "missing-store-target")))
+            Assert.True((File.GetAttributes missingStore).HasFlag FileAttributes.ReparsePoint)
+
+            for relative in [ "schema.json"; "records/record.json"; "records" ] do
+                let store = Path.Combine(parent, Guid.NewGuid().ToString("N"))
+                Store.capture store None (finding "record") |> ignore
+                let linked = Path.Combine(store, relative)
+
+                if Directory.Exists linked then
+                    Directory.Delete(linked, true)
+                    Directory.CreateSymbolicLink(linked, Path.Combine(parent, "missing")) |> ignore
+                else
+                    File.Delete linked
+                    File.CreateSymbolicLink(linked, Path.Combine(parent, "missing")) |> ignore
+
+                Assert.Throws<InvalidDataException>(fun () -> Store.check store |> ignore)
+                |> ignore
+
+                Assert.Throws<InvalidDataException>(fun () -> Store.capture store None (finding "another") |> ignore)
+                |> ignore
+
+                Assert.False(File.Exists(Path.Combine(store, "records", "another.json")))
+                Assert.False(File.Exists(Path.Combine(parent, "missing")))
+                Assert.False(Directory.Exists(Path.Combine(parent, "missing")))
+                Assert.True((File.GetAttributes linked).HasFlag FileAttributes.ReparsePoint)
+
+            for dangling in [ false; true ] do
+                let owner = Path.Combine(parent, Guid.NewGuid().ToString("N"))
+                Directory.CreateDirectory owner |> ignore
+                let store = Path.Combine(owner, "store")
+                Store.capture store None (finding "record") |> ignore
+                let archive = Store.export store [| "record" |]
+                let current = Store.get store "record"
+                let outside = Path.Combine(parent, Guid.NewGuid().ToString("N"))
+
+                if not dangling then
+                    File.WriteAllText(outside, "Authored outside lock bytes.")
+
+                let linked = Path.Combine(owner, ".knowledge-writer.lock")
+                File.CreateSymbolicLink(linked, outside) |> ignore
+
+                Assert.Throws<InvalidDataException>(fun () -> Store.capture store None (finding "another") |> ignore)
+                |> ignore
+
+                Assert.Throws<InvalidDataException>(fun () -> Store.restore store archive |> ignore)
+                |> ignore
+
+                Assert.Single(Store.all store) |> ignore
+                Assert.Equal(current.Revision, (Store.get store "record").Revision)
+                Assert.True((File.GetAttributes linked).HasFlag FileAttributes.ReparsePoint)
+
+                if dangling then
+                    Assert.False(File.Exists outside)
+                else
+                    Assert.Equal("Authored outside lock bytes.", File.ReadAllText outside))
+
+    [<Fact>]
     let ``divergent Git edits remain explicit conflicts rather than timestamp winners`` () =
         temporary (fun root ->
             git root [ "init" ] |> ignore
