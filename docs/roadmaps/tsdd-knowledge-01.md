@@ -246,6 +246,30 @@ measure remain; useful test execution is excluded from narrow bureaucracy. Missi
 attribution is not zero and this plan claims no efficiency qualification.
 ## Source window readback
 
+### Direct store path refusal follow-up
+
+The existing .1 path contract also covers dangling canonical links and the
+sibling writer lock used by direct capture/restore calls. This bounded Tier 2
+repair changes no public signature, schema, size limit or provider behavior.
+The shared path guard must inspect link attributes even when the target does
+not exist, and capture/restore must validate the lock before opening it.
+Focused public-API regressions exercise dangling schema, record and records
+directory links, plus existing and dangling lock links. Refusal must preserve
+current records, linked outside bytes and links, and create no missing target.
+Existing store/history/retained tests remain the regression boundary.
+
+Local qualification on 2026-10-07 passed all 15 existing/new public-API test
+functions through installed SDK 10.0.401 FSI with the project preview-language
+and nullability settings, using cached xUnit 2.9.3 assertions without restore.
+The new regression failed against the unchanged base implementation because
+the dangling store path did not refuse. The private retained-test harness
+replaces only its executable fixture base directory with the source fixture
+directory; product source and signatures load unchanged. Prior locked restore
+refused NU1403 for FSharp.Core 10.1.401, so this local evidence does not replace
+locked build, the native test runner or exact-head hosted qualification.
+Lockfiles remain unchanged. Protected delivery and installed adoption of this
+repair remain pending.
+
 The .1–.3 candidate implements the shared store, access routes and typed producer
 seams. Its [source qualification receipt](evidence/tsdd-knowledge-source-20261003.md)
 records the checks and receiver observations. Milestones .1–.3 merged in [SDD PR 1091](https://github.com/FS-GG/FS.GG.SDD/pull/1091)

@@ -137,9 +137,18 @@ module Store =
         let mutable current = full
 
         while not (String.IsNullOrEmpty current) do
+            // Exists follows links and hides dangling targets; attributes still identify
+            // those links so canonical paths cannot become valid merely by target absence.
+            let attributes =
+                try
+                    Some(File.GetAttributes current)
+                with
+                | :? FileNotFoundException
+                | :? DirectoryNotFoundException -> None
+
             if
-                (File.Exists current || Directory.Exists current)
-                && (File.GetAttributes current).HasFlag FileAttributes.ReparsePoint
+                attributes
+                |> Option.exists (fun value -> value.HasFlag FileAttributes.ReparsePoint)
             then
                 fail "Symlink knowledge path refused."
 
@@ -311,11 +320,11 @@ module Store =
         record
 
     let private files root =
+        safe root "schema.json" |> ignore
+
         if not (Directory.Exists root) then
             []
         else
-            safe root "schema.json" |> ignore
-
             let rec walk relative =
                 let path = if relative = "" then root else safe root relative
 
@@ -429,8 +438,8 @@ module Store =
     let private locked root action =
         safe root "schema.json" |> ignore
         let parent = Path.GetDirectoryName(Path.GetFullPath root) |> string
+        let path = safe parent ".knowledge-writer.lock"
         Directory.CreateDirectory parent |> ignore
-        let path = Path.Combine(parent, ".knowledge-writer.lock")
 
         use guard =
             new FileStream(
