@@ -326,10 +326,16 @@ module StoreTests =
     let ``direct store APIs refuse dangling canonical and linked writer lock paths`` () =
         temporary (fun parent ->
             let missingStore = Path.Combine(parent, "linked-store")
-            Directory.CreateSymbolicLink(missingStore, Path.Combine(parent, "missing-store-target")) |> ignore
-            Assert.Throws<InvalidDataException>(fun () -> Store.check missingStore |> ignore) |> ignore
+
+            Directory.CreateSymbolicLink(missingStore, Path.Combine(parent, "missing-store-target"))
+            |> ignore
+
+            Assert.Throws<InvalidDataException>(fun () -> Store.check missingStore |> ignore)
+            |> ignore
+
             Assert.Throws<InvalidDataException>(fun () -> Store.capture missingStore None (finding "record") |> ignore)
             |> ignore
+
             Assert.False(Directory.Exists(Path.Combine(parent, "missing-store-target")))
             Assert.True((File.GetAttributes missingStore).HasFlag FileAttributes.ReparsePoint)
 
@@ -345,9 +351,12 @@ module StoreTests =
                     File.Delete linked
                     File.CreateSymbolicLink(linked, Path.Combine(parent, "missing")) |> ignore
 
-                Assert.Throws<InvalidDataException>(fun () -> Store.check store |> ignore) |> ignore
+                Assert.Throws<InvalidDataException>(fun () -> Store.check store |> ignore)
+                |> ignore
+
                 Assert.Throws<InvalidDataException>(fun () -> Store.capture store None (finding "another") |> ignore)
                 |> ignore
+
                 Assert.False(File.Exists(Path.Combine(store, "records", "another.json")))
                 Assert.False(File.Exists(Path.Combine(parent, "missing")))
                 Assert.False(Directory.Exists(Path.Combine(parent, "missing")))
@@ -367,9 +376,13 @@ module StoreTests =
 
                 let linked = Path.Combine(owner, ".knowledge-writer.lock")
                 File.CreateSymbolicLink(linked, outside) |> ignore
+
                 Assert.Throws<InvalidDataException>(fun () -> Store.capture store None (finding "another") |> ignore)
                 |> ignore
-                Assert.Throws<InvalidDataException>(fun () -> Store.restore store archive |> ignore) |> ignore
+
+                Assert.Throws<InvalidDataException>(fun () -> Store.restore store archive |> ignore)
+                |> ignore
+
                 Assert.Single(Store.all store) |> ignore
                 Assert.Equal(current.Revision, (Store.get store "record").Revision)
                 Assert.True((File.GetAttributes linked).HasFlag FileAttributes.ReparsePoint)
