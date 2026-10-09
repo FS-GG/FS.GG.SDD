@@ -193,3 +193,18 @@ reporting. These controls do not compile the sample, qualify fresh archives,
 invoke the SDK or establish the actual authoring-to-CLI-to-Verify journey. That
 integration requires the separately selected qualified package/runtime inputs
 and the existing SDD and Governance acceptance drivers.
+
+
+## Selected-template data transport
+
+The catalog edge selects exactly one descriptor template alias from the held multi-template
+package and checks its installed identity/configuration/alias against the SDK cache. Unselected
+legacy templates confer no execution authority. The selected profile supports literal text,
+string and single-valued choice parameters, descriptions and boolean requiredness, plus one
+fixed declared-parameter hyphen-to-underscore payload substitution. Generated symbols are not
+forwarded as CLI parameters. Static source exclusions use only directory/extension forms;
+`**` includes zero directories. Expected payload bytes exclude those paths and retain all
+other declared substitutions. Conditions, source renames, arbitrary generators and callbacks
+refuse. Synthetic parser/cache tests do not qualify actual SDK matching or a language provider;
+the real Node vertical must use its owner's exact once-packed multi-template archive through
+the maintained driver and namespace backend. Public contracts and custody remain unchanged.

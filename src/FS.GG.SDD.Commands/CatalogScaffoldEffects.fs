@@ -168,12 +168,22 @@ module CatalogScaffoldEffects =
 
         preview, policy, selected, archive
 
+    type private ArchiveParameter =
+        {
+            Default: string option
+            DataType: string
+            Description: string
+            Required: bool
+            Choices: Map<string, string>
+        }
+
     type private ArchiveTemplate =
         {
             Identity: string
             ShortName: string
+            Classifications: string list
             Archive: CatalogScaffoldProvenance.ArchiveIdentity
-            Parameters: Map<string, string option>
+            Parameters: Map<string, ArchiveParameter>
             ConfigPlace: string
             ExpectedPayload: (string * byte array) list
         }
@@ -275,15 +285,96 @@ module CatalogScaffoldEffects =
                 "catalog.archiveDependencyRefused"
                 "Template dependency acquisition is outside the first data-only profile."
 
-        let templateEntry = unique "/.template.config/template.json"
+        let declarations =
+            archive.Entries
+            |> Seq.filter (fun entry ->
+                entry.FullName.EndsWith("/.template.config/template.json", StringComparison.OrdinalIgnoreCase))
+            |> Seq.map (fun entry ->
+                use document = JsonDocument.Parse(ReadOnlyMemory<byte>(readEntry entry))
+                let header = document.RootElement
 
-        let contentRoot =
-            templateEntry.FullName.Substring(0, templateEntry.FullName.Length - ".template.config/template.json".Length)
+                if header.ValueKind <> JsonValueKind.Object then
+                    refuse "catalog.templateDeclarationRefused" "Template declarations must be objects."
 
-        use template =
-            templateEntry
-            |> readEntry
-            |> fun raw -> JsonDocument.Parse(ReadOnlyMemory<byte>(raw))
+                for key in [ "identity"; "shortName" ] do
+                    if
+                        header.EnumerateObject()
+                        |> Seq.filter (fun field -> field.Name = key)
+                        |> Seq.length
+                        <> 1
+                    then
+                        refuse
+                            "catalog.templateDeclarationRefused"
+                            "Template identity/alias headers are missing or duplicated."
+
+                let identity = header.GetProperty("identity")
+                let aliases = header.GetProperty("shortName")
+
+                if
+                    identity.ValueKind <> JsonValueKind.String
+                    || String.IsNullOrEmpty(jsonString identity)
+                then
+                    refuse
+                        "catalog.templateDeclarationRefused"
+                        "Template identity must be an explicit nonempty string."
+
+                let names =
+                    match aliases.ValueKind with
+                    | JsonValueKind.String -> [ jsonString aliases ]
+                    | JsonValueKind.Array ->
+                        aliases.EnumerateArray()
+                        |> Seq.map (fun alias ->
+                            if alias.ValueKind <> JsonValueKind.String then
+                                refuse
+                                    "catalog.templateDeclarationRefused"
+                                    "Template aliases must be literal strings."
+
+                            jsonString alias)
+                        |> Seq.toList
+                    | _ -> refuse "catalog.templateDeclarationRefused" "Template aliases must be explicit strings."
+
+                if List.isEmpty names || names |> List.exists String.IsNullOrEmpty then
+                    refuse "catalog.templateDeclarationRefused" "Template aliases must be nonempty."
+
+                entry, jsonString identity, names)
+            |> Seq.toList
+
+        let templateEntry, identity, _ =
+            declarations
+            |> List.filter (fun (_, _, aliases) ->
+                aliases
+                |> List.exists (fun alias ->
+                    String.Equals(alias, selected.Descriptor.TemplateId, StringComparison.OrdinalIgnoreCase)))
+            |> function
+                | [ declaration ] -> declaration
+                | _ ->
+                    refuse
+                        "catalog.templateAssociationRefused"
+                        "The descriptor must select exactly one unambiguous template alias."
+
+        if
+            declarations
+            |> List.filter (fun (_, value, _) -> String.Equals(value, identity, StringComparison.OrdinalIgnoreCase))
+            |> List.length
+            <> 1
+        then
+            refuse "catalog.templateAssociationRefused" "The selected template identity is ambiguous."
+
+        let contentRootOf (entry: ZipArchiveEntry) =
+            entry.FullName.Substring(0, entry.FullName.Length - ".template.config/template.json".Length)
+
+        let contentRoot = contentRootOf templateEntry
+
+        if
+            declarations
+            |> List.exists (fun (entry, _, _) ->
+                entry.FullName <> templateEntry.FullName
+                && (contentRoot.StartsWith(contentRootOf entry, StringComparison.OrdinalIgnoreCase)
+                    || (contentRootOf entry).StartsWith(contentRoot, StringComparison.OrdinalIgnoreCase)))
+        then
+            refuse "catalog.templateAssociationRefused" "Nested or overlapping selected content roots are refused."
+
+        use template = JsonDocument.Parse(ReadOnlyMemory<byte>(readEntry templateEntry))
 
         let rec rejectDuplicateProperties (value: JsonElement) =
             match value.ValueKind with
@@ -319,6 +410,8 @@ module CatalogScaffoldEffects =
                             "shortName"
                             "preferNameDirectory"
                             "symbols"
+                            "classifications"
+                            "sources"
                         ])
             )
         then
@@ -348,6 +441,16 @@ module CatalogScaffoldEffects =
         then
             refuse "catalog.templatePostActionsRefused" "Template post-actions are outside the data-only profile."
 
+        let mutable classifications = Unchecked.defaultof<JsonElement>
+
+        if root.TryGetProperty("classifications", &classifications) then
+            if
+                classifications.ValueKind <> JsonValueKind.Array
+                || classifications.EnumerateArray()
+                   |> Seq.exists (fun item -> item.ValueKind <> JsonValueKind.String)
+            then
+                refuse "catalog.templateDeclarationRefused" "Classifications must be inert literal strings."
+
         let shortName = stringValue "shortName"
 
         if shortName <> selected.Descriptor.TemplateId then
@@ -355,7 +458,7 @@ module CatalogScaffoldEffects =
                 "catalog.templateAssociationRefused"
                 "Actual template short name differs from the selected descriptor."
 
-        for name in [ "sourceName"; "sources"; "primaryOutputs"; "constraints" ] do
+        for name in [ "sourceName"; "primaryOutputs"; "constraints" ] do
             let mutable unsupported = Unchecked.defaultof<JsonElement>
 
             if
@@ -366,11 +469,118 @@ module CatalogScaffoldEffects =
                     "catalog.templateBehaviorRefused"
                     "Custom path transformation and conditional source selection require another qualified transport profile."
 
+        let excluded = ResizeArray<string -> bool>()
+        let mutable sources = Unchecked.defaultof<JsonElement>
+
+        if root.TryGetProperty("sources", &sources) then
+            if sources.ValueKind <> JsonValueKind.Array || sources.GetArrayLength() <> 1 then
+                refuse "catalog.templateBehaviorRefused" "Exactly one static source mapping is supported."
+
+            let source = sources[0]
+
+            if
+                source.ValueKind <> JsonValueKind.Object
+                || not (
+                    Set.isSubset
+                        (source.EnumerateObject() |> Seq.map _.Name |> Set.ofSeq)
+                        (Set.ofList [ "source"; "target"; "exclude" ])
+                )
+            then
+                refuse "catalog.templateBehaviorRefused" "Only static source/target and exclusions are supported."
+
+            for key in [ "source"; "target" ] do
+                let mutable value = Unchecked.defaultof<JsonElement>
+
+                if
+                    source.TryGetProperty(key, &value)
+                    && (value.ValueKind <> JsonValueKind.String || jsonString value <> "./")
+                then
+                    refuse "catalog.templateBehaviorRefused" "Source and target must be omitted or exactly ./ ."
+
+            let mutable excludes = Unchecked.defaultof<JsonElement>
+
+            if source.TryGetProperty("exclude", &excludes) then
+                if excludes.ValueKind <> JsonValueKind.Array then
+                    refuse "catalog.templateBehaviorRefused" "Static exclusions must be a literal array."
+
+                for item in excludes.EnumerateArray() do
+                    if item.ValueKind <> JsonValueKind.String then
+                        refuse "catalog.templateBehaviorRefused" "Static exclusions must be strings."
+
+                    let pattern = jsonString item
+
+                    if
+                        pattern.StartsWith("**/", StringComparison.Ordinal)
+                        && pattern.EndsWith("/**", StringComparison.Ordinal)
+                    then
+                        let directory = pattern.Substring(3, pattern.Length - 6)
+
+                        let valid =
+                            directory = "[Bb]in"
+                            || directory = "[Oo]bj"
+                            || (directory.Length > 0
+                                && directory
+                                   |> Seq.forall (fun c -> Char.IsAsciiLetterOrDigit c || c = '.' || c = '_' || c = '-'))
+
+                        if not valid || directory = "." || directory = ".." then
+                            refuse "catalog.templateBehaviorRefused" "Unsupported directory exclusion pattern."
+
+                        excluded.Add(fun path ->
+                            let segments = path.Split('/')
+
+                            segments
+                            |> Array.take (max 0 (segments.Length - 1))
+                            |> Array.exists (fun segment ->
+                                match directory with
+                                | "[Bb]in" -> segment = "bin" || segment = "Bin"
+                                | "[Oo]bj" -> segment = "obj" || segment = "Obj"
+                                | name -> segment = name))
+                    elif pattern.StartsWith("**/*.", StringComparison.Ordinal) then
+                        let extension = pattern.Substring(5)
+
+                        if extension.Length = 0 || not (extension |> Seq.forall Char.IsAsciiLetterOrDigit) then
+                            refuse "catalog.templateBehaviorRefused" "Unsupported extension exclusion pattern."
+
+                        excluded.Add(fun path -> path.EndsWith("." + extension, StringComparison.Ordinal))
+                    else
+                        refuse "catalog.templateBehaviorRefused" "Unsupported static exclusion pattern."
+
         let parameters =
-            Collections.Generic.Dictionary<string, string option>(StringComparer.Ordinal)
+            Collections.Generic.Dictionary<string, ArchiveParameter>(StringComparer.Ordinal)
 
         let replacements = ResizeArray<string * string>()
+        let generated = ResizeArray<string * string>()
         let effective = Map.ofList selected.EffectiveParameters
+
+        let optionalString (key: string) (value: JsonElement) =
+            let mutable item = Unchecked.defaultof<JsonElement>
+
+            if value.TryGetProperty(key, &item) then
+                if item.ValueKind <> JsonValueKind.String then
+                    refuse "catalog.templateSymbolRefused" "Parameter metadata must be literal strings."
+
+                Some(jsonString item)
+            else
+                None
+
+        let requireKeys allowed (value: JsonElement) =
+            if
+                value.ValueKind <> JsonValueKind.Object
+                || not (Set.isSubset (value.EnumerateObject() |> Seq.map _.Name |> Set.ofSeq) (Set.ofList allowed))
+            then
+                refuse "catalog.templateBehaviorRefused" "Unsupported selected template symbol behavior."
+
+        let requiredString key value =
+            optionalString key value
+            |> Option.defaultWith (fun () ->
+                refuse "catalog.templateSymbolRefused" "Required literal symbol metadata is missing.")
+
+        let replacementToken value =
+            match optionalString "replaces" value with
+            | Some token when token.Length = 0 ->
+                refuse "catalog.templateSymbolRefused" "Replacement tokens must be nonempty."
+            | value -> value
+
         let mutable symbols = Unchecked.defaultof<JsonElement>
 
         if root.TryGetProperty("symbols", &symbols) then
@@ -378,78 +588,187 @@ module CatalogScaffoldEffects =
                 refuse "catalog.templateDeclarationRefused" "Template symbols must be an object."
 
             for symbol in symbols.EnumerateObject() do
-                let keys =
-                    symbol.Value.EnumerateObject()
-                    |> Seq.map (fun property -> property.Name)
-                    |> Set.ofSeq
+                let value = symbol.Value
 
-                if not (Set.isSubset keys (Set.ofList [ "type"; "datatype"; "replaces"; "defaultValue" ])) then
-                    refuse
-                        "catalog.templateBehaviorRefused"
-                        "Custom symbol behavior or host metadata requires another qualified profile."
+                match requiredString "type" value with
+                | "parameter" ->
+                    requireKeys
+                        [
+                            "type"
+                            "datatype"
+                            "replaces"
+                            "defaultValue"
+                            "description"
+                            "isRequired"
+                            "choices"
+                        ]
+                        value
 
-                let mutable dataType = Unchecked.defaultof<JsonElement>
+                    let dataType = optionalString "datatype" value |> Option.defaultValue "string"
 
-                if
-                    symbol.Value.TryGetProperty("datatype", &dataType)
-                    && jsonString (dataType) <> "string"
-                then
-                    refuse "catalog.templateSymbolRefused" "The first profile supports literal string parameters only."
+                    if not (List.contains dataType [ "text"; "string"; "choice" ]) then
+                        refuse
+                            "catalog.templateSymbolRefused"
+                            "Only literal text/string or single-valued choice parameters are supported."
 
-                let mutable kind = Unchecked.defaultof<JsonElement>
+                    let mutable requiredValue = Unchecked.defaultof<JsonElement>
 
-                if
-                    not (symbol.Value.TryGetProperty("type", &kind))
-                    || jsonString (kind) <> "parameter"
-                then
-                    refuse "catalog.templateSymbolRefused" "The first profile supports literal parameter symbols only."
+                    let required =
+                        if value.TryGetProperty("isRequired", &requiredValue) then
+                            if
+                                requiredValue.ValueKind <> JsonValueKind.True
+                                && requiredValue.ValueKind <> JsonValueKind.False
+                            then
+                                refuse "catalog.templateSymbolRefused" "Requiredness must be a literal boolean."
 
-                let mutable defaultValue = Unchecked.defaultof<JsonElement>
+                            requiredValue.GetBoolean()
+                        else
+                            false
 
-                let defaultText =
-                    if symbol.Value.TryGetProperty("defaultValue", &defaultValue) then
-                        if defaultValue.ValueKind <> JsonValueKind.String then
-                            refuse "catalog.templateSymbolRefused" "Parameter defaults must be literal strings."
+                    let defaultText = optionalString "defaultValue" value
+                    let description = optionalString "description" value |> Option.defaultValue ""
+                    let mutable choiceValue = Unchecked.defaultof<JsonElement>
 
-                        Some(jsonString (defaultValue))
-                    else
-                        None
+                    let choices =
+                        if value.TryGetProperty("choices", &choiceValue) then
+                            if dataType <> "choice" || choiceValue.ValueKind <> JsonValueKind.Array then
+                                refuse
+                                    "catalog.templateSymbolRefused"
+                                    "Choices must be an explicit single-valued choice array."
 
-                let mutable rename = Unchecked.defaultof<JsonElement>
+                            let rows = choiceValue.EnumerateArray() |> Seq.toList
 
-                if symbol.Value.TryGetProperty("fileRename", &rename) then
-                    refuse
-                        "catalog.templateBehaviorRefused"
-                        "Parameter-driven filename changes require another qualified transport profile."
+                            let pairs =
+                                rows
+                                |> List.map (fun row ->
+                                    requireKeys [ "choice"; "description" ] row
 
-                let mutable token = Unchecked.defaultof<JsonElement>
+                                    requiredString "choice" row,
+                                    (optionalString "description" row |> Option.defaultValue ""))
 
-                if symbol.Value.TryGetProperty("replaces", &token) then
+                            if
+                                List.isEmpty pairs
+                                || pairs |> List.exists (fst >> String.IsNullOrEmpty)
+                                || (pairs |> List.map fst |> Set.ofList |> Set.count) <> pairs.Length
+                            then
+                                refuse
+                                    "catalog.templateSymbolRefused"
+                                    "Choices must be nonempty, distinct literal values."
+
+                            Map.ofList pairs
+                        elif dataType = "choice" then
+                            refuse "catalog.templateSymbolRefused" "Choice parameters require an explicit inventory."
+                        else
+                            Map.empty
+
+                    let actual = Map.tryFind symbol.Name effective |> Option.orElse defaultText
+
+                    if required && actual |> Option.forall String.IsNullOrEmpty then
+                        refuse
+                            "catalog.templateParameterRefused"
+                            "A required actual template parameter has no nonempty effective value."
+
                     if
-                        token.ValueKind <> JsonValueKind.String
-                        || String.IsNullOrEmpty(jsonString (token))
+                        not choices.IsEmpty
+                        && (actual |> Option.exists (fun text -> not (Map.containsKey text choices)))
                     then
-                        refuse "catalog.templateSymbolRefused" "Literal replacement tokens must be nonempty strings."
+                        refuse
+                            "catalog.templateParameterRefused"
+                            "The effective value is outside the actual template choices."
 
-                    let value =
-                        Map.tryFind symbol.Name effective
-                        |> Option.orElse defaultText
-                        |> Option.defaultValue ""
+                    if
+                        not choices.IsEmpty
+                        && (defaultText |> Option.exists (fun text -> not (Map.containsKey text choices)))
+                    then
+                        refuse "catalog.templateSymbolRefused" "A choice default is outside its declared choices."
 
-                    replacements.Add(jsonString (token), value)
+                    match replacementToken value with
+                    | Some token -> replacements.Add(token, actual |> Option.defaultValue "")
+                    | None -> ()
 
-                if not (parameters.TryAdd(symbol.Name, defaultText)) then
-                    refuse "catalog.templateSymbolRefused" "Duplicate template parameter symbols are refused."
+                    parameters.Add(
+                        symbol.Name,
+                        {
+                            Default = defaultText
+                            DataType = dataType
+                            Description = description
+                            Required = required
+                            Choices = choices
+                        }
+                    )
+                | "generated" ->
+                    requireKeys [ "type"; "generator"; "parameters"; "replaces" ] value
+
+                    if requiredString "generator" value <> "regex" then
+                        refuse
+                            "catalog.templateSymbolRefused"
+                            "Only the fixed hyphen-to-underscore generator is supported."
+
+                    let generatorParameters = value.GetProperty("parameters")
+                    requireKeys [ "source"; "steps" ] generatorParameters
+                    let source = requiredString "source" generatorParameters
+                    let steps = generatorParameters.GetProperty("steps")
+
+                    if steps.ValueKind <> JsonValueKind.Array || steps.GetArrayLength() <> 1 then
+                        refuse "catalog.templateSymbolRefused" "The fixed generator requires exactly one literal step."
+
+                    let step = steps[0]
+                    requireKeys [ "regex"; "replacement" ] step
+
+                    if requiredString "regex" step <> "-" || requiredString "replacement" step <> "_" then
+                        refuse
+                            "catalog.templateSymbolRefused"
+                            "Only literal hyphen-to-underscore replacement is supported."
+
+                    let token =
+                        replacementToken value
+                        |> Option.defaultWith (fun () ->
+                            refuse
+                                "catalog.templateSymbolRefused"
+                                "The generated symbol requires a fixed replacement token.")
+
+                    generated.Add(source, token)
+                | _ -> refuse "catalog.templateSymbolRefused" "Unsupported template symbol kind."
+
+        for source, token in generated do
+            match parameters.TryGetValue source with
+            | true, parameter ->
+                let actual =
+                    Map.tryFind source effective
+                    |> Option.orElse parameter.Default
+                    |> Option.defaultValue ""
+
+                replacements.Add(token, actual.Replace("-", "_", StringComparison.Ordinal))
+            | _ ->
+                refuse
+                    "catalog.templateSymbolRefused"
+                    "Generated symbols must depend directly on a declared parameter, never another generator."
 
         for parameter in selected.Descriptor.Parameters do
-            if not (parameters.ContainsKey parameter.Key) then
-                refuse
-                    "catalog.templateParameterRefused"
-                    "A declared provider parameter is absent from the actual archive."
+            match parameters.TryGetValue parameter.Key with
+            | false, _ ->
+                refuse "catalog.templateParameterRefused" "A provider parameter is absent from the actual archive."
+            | true, actual ->
+                if actual.Required && not parameter.Required then
+                    refuse
+                        "catalog.templateParameterRefused"
+                        "The descriptor does not retain the actual template requiredness."
+
+                if
+                    not actual.Choices.IsEmpty
+                    && parameter.Values
+                       |> List.exists (fun text -> not (Map.containsKey text actual.Choices))
+                then
+                    refuse "catalog.templateParameterRefused" "Descriptor choices exceed the actual archive choices."
 
         {
             Identity = stringValue "identity"
             ShortName = shortName
+            Classifications =
+                if classifications.ValueKind = JsonValueKind.Array then
+                    classifications.EnumerateArray() |> Seq.map jsonString |> Seq.toList
+                else
+                    []
             Archive =
                 {
                     Id = association.PackageId
@@ -463,7 +782,11 @@ module CatalogScaffoldEffects =
                 |> Seq.filter (fun entry ->
                     entry.FullName.StartsWith(contentRoot, StringComparison.Ordinal)
                     && not (entry.FullName.EndsWith("/", StringComparison.Ordinal))
-                    && not (entry.FullName.StartsWith(contentRoot + ".template.config/", StringComparison.Ordinal)))
+                    && not (entry.FullName.StartsWith(contentRoot + ".template.config/", StringComparison.Ordinal))
+                    && not (
+                        excluded
+                        |> Seq.exists (fun matches -> matches (entry.FullName.Substring(contentRoot.Length)))
+                    ))
                 |> Seq.map (fun entry ->
                     let relative = entry.FullName.Substring(contentRoot.Length)
                     let raw = readEntry entry
@@ -826,8 +1149,23 @@ module CatalogScaffoldEffects =
         verifySdkMountInventory builtinMounts installed selectedMount mounted |> ignore
 
         if installed then
+            let allRows =
+                cache.RootElement.GetProperty("TemplateInfo").EnumerateArray() |> Seq.toList
+
+            if
+                allRows
+                |> List.filter (fun row ->
+                    row.GetProperty("ShortNameList").EnumerateArray()
+                    |> Seq.exists (fun alias ->
+                        String.Equals(jsonString alias, template.ShortName, StringComparison.OrdinalIgnoreCase)))
+                |> List.length
+                <> 1
+            then
+                refuse "catalog.templateAssociationRefused" "The selected alias is ambiguous in the actual SDK cache."
+
             let rows =
-                cache.RootElement.GetProperty("TemplateInfo").EnumerateArray()
+                allRows
+                |> Seq.ofList
                 |> Seq.filter (fun row -> jsonString (row.GetProperty("Identity")) = template.Identity)
                 |> Seq.toList
 
@@ -842,6 +1180,10 @@ module CatalogScaffoldEffects =
             if
                 jsonString (row.GetProperty("MountPointUri")) <> selectedMount
                 || jsonString (row.GetProperty("ConfigPlace")) <> template.ConfigPlace
+                || (row.GetProperty("Classifications").EnumerateArray()
+                    |> Seq.map jsonString
+                    |> Seq.toList)
+                   <> template.Classifications
                 || (row.GetProperty("ShortNameList").EnumerateArray()
                     |> Seq.map (fun item -> jsonString (item))
                     |> Seq.toList)
@@ -877,7 +1219,7 @@ module CatalogScaffoldEffects =
                     "catalog.templateParameterRefused"
                     "SDK parameter inventory differs from the complete actual template declaration."
 
-            for KeyValue(key, defaultText) in template.Parameters do
+            for KeyValue(key, declared) in template.Parameters do
                 let actual =
                     parameters
                     |> List.filter (fun parameter -> jsonString (parameter.GetProperty("Name")) = key)
@@ -895,7 +1237,7 @@ module CatalogScaffoldEffects =
                         else
                             None
 
-                    if observedDefault <> defaultText then
+                    if observedDefault <> declared.Default then
                         refuse
                             "catalog.templateParameterRefused"
                             "SDK parameter default differs from the literal archive declaration."
@@ -925,9 +1267,10 @@ module CatalogScaffoldEffects =
 
                     if
                         keys <> expectedKeys
-                        || parameter.GetProperty("Priority").GetInt32() <> 2
+                        || parameter.GetProperty("Priority").GetInt32()
+                           <> (if declared.Required then 0 else 2)
                         || jsonString (parameter.GetProperty("Type")) <> "parameter"
-                        || jsonString (parameter.GetProperty("DataType")) <> "string"
+                        || jsonString (parameter.GetProperty("DataType")) <> declared.DataType
                         || parameter.GetProperty("IsName").GetBoolean()
                         || parameter.GetProperty("AllowMultipleValues").GetBoolean()
                     then
@@ -936,16 +1279,42 @@ module CatalogScaffoldEffects =
                             "SDK parameter type/shape differs from the qualified literal profile."
 
                     for field in [ "Documentation"; "Description"; "DisplayName" ] do
-                        if parameter.GetProperty(field).GetString() <> "" then
+                        if
+                            parameter.GetProperty(field).GetString()
+                            <> (if field = "DisplayName" then "" else declared.Description)
+                        then
                             refuse
                                 "catalog.templateParameterRefused"
                                 "Unqualified parameter documentation mapping was observed."
 
-                    for field in [ "DefaultIfOptionWithoutValue"; "Choices" ] do
+                    for field in [ "DefaultIfOptionWithoutValue" ] do
                         if parameter.GetProperty(field).ValueKind <> JsonValueKind.Null then
                             refuse
                                 "catalog.templateParameterRefused"
                                 "Implicit value or choice transformations are outside the literal profile."
+
+                    let observedChoices = parameter.GetProperty("Choices")
+
+                    if declared.Choices.IsEmpty then
+                        if observedChoices.ValueKind <> JsonValueKind.Null then
+                            refuse "catalog.templateParameterRefused" "Unexpected SDK choice metadata."
+                    else
+                        if observedChoices.ValueKind <> JsonValueKind.Object then
+                            refuse "catalog.templateParameterRefused" "SDK choice metadata is absent."
+
+                        let choices =
+                            observedChoices.EnumerateObject()
+                            |> Seq.map (fun choice ->
+                                if choice.Value.GetProperty("DisplayName").GetString() <> "" then
+                                    refuse
+                                        "catalog.templateParameterRefused"
+                                        "Unsupported SDK choice display-name mapping."
+
+                                choice.Name, jsonString (choice.Value.GetProperty("Description")))
+                            |> Map.ofSeq
+
+                        if choices <> declared.Choices then
+                            refuse "catalog.templateParameterRefused" "SDK choices differ from the selected archive."
 
                     let precedence = parameter.GetProperty("Precedence")
 
@@ -961,9 +1330,10 @@ module CatalogScaffoldEffects =
                                 "IsRequired"
                                 "CanBeRequired"
                             ]
-                        || precedence.GetProperty("PrecedenceDefinition").GetInt32() <> 2
-                        || precedence.GetProperty("IsRequired").GetBoolean()
-                        || precedence.GetProperty("CanBeRequired").GetBoolean()
+                        || precedence.GetProperty("PrecedenceDefinition").GetInt32()
+                           <> (if declared.Required then 0 else 2)
+                        || precedence.GetProperty("IsRequired").GetBoolean() <> declared.Required
+                        || precedence.GetProperty("CanBeRequired").GetBoolean() <> declared.Required
                         || precedence.GetProperty("IsRequiredCondition").ValueKind <> JsonValueKind.Null
                         || precedence.GetProperty("IsEnabledCondition").ValueKind <> JsonValueKind.Null
                     then

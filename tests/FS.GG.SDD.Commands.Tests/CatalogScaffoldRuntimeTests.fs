@@ -464,6 +464,502 @@ module CatalogScaffoldRuntimeTests =
         finally
             Directory.Delete(root, true)
 
+    // Synthetic archives exercise the actual private parser without starting a provider.
+    let private inspectSelectedArchiveWith
+        (configure: Fsgg.ProviderCatalog.PreparedConfiguration -> Fsgg.ProviderCatalog.PreparedConfiguration)
+        (declaration: string)
+        (extraDeclarations: (string * string) list)
+        (payload: (string * string) list)
+        =
+        let root = TestSupport.tempDirectory ()
+        let input = request root (Path.Combine(root, "target"))
+
+        let prepared =
+            CatalogScaffoldWorkflow.prepare input.Selection
+            |> Result.defaultWith (fun d -> failwithf "%A" d)
+
+        let selected = prepared.Selected |> Option.get |> configure
+
+        let policy =
+            CatalogScaffoldPolicy.parse input.ExpectedPolicyDigest input.PolicyBytes
+            |> Result.defaultWith (fun d -> failwithf "%A" d)
+
+        use bytes = new MemoryStream()
+        use zip = new ZipArchive(bytes, ZipArchiveMode.Create, true)
+
+        let add name text =
+            use output = zip.CreateEntry(name).Open()
+            output.Write(Encoding.UTF8.GetBytes(text: string))
+
+        add
+            "fixture.nuspec"
+            "<package><metadata><id>FS.GG.SDD.Catalog.OpaqueFixture</id><version>1.0.1</version></metadata></package>"
+
+        add "content/.template.config/template.json" declaration
+
+        for name, text in extraDeclarations do
+            add name text
+
+        for name, text in payload do
+            add ("content/" + name) text
+
+        zip.Dispose()
+        let raw = bytes.ToArray()
+
+        let moduleType =
+            typeof<CatalogScaffoldEffects.HostSelection>.Assembly.GetType("FS.GG.SDD.Commands.CatalogScaffoldEffects")
+            |> nonNull
+
+        let method =
+            moduleType.GetMethod(
+                "archiveTemplate",
+                System.Reflection.BindingFlags.Static
+                ||| System.Reflection.BindingFlags.NonPublic
+            )
+            |> nonNull
+
+        method.Invoke(
+            null,
+            [|
+                box selected
+                box policy.Archives.Head
+                box (ProviderCatalogIntegrity.digest raw)
+                box raw
+            |]
+        )
+        |> nonNull
+
+    let private inspectSelectedArchive declaration extra payload =
+        inspectSelectedArchiveWith id declaration extra payload
+
+    let private opaqueDeclaration () =
+        File.ReadAllText(
+            Path.Combine(
+                TestSupport.repoRoot,
+                "tests/fixtures/provider-catalog-runtime/opaque-template/content/.template.config/template.json"
+            )
+        )
+
+    let private inspectedPayload (value: obj) =
+        let property =
+            value
+                .GetType()
+                .GetProperty(
+                    "ExpectedPayload",
+                    System.Reflection.BindingFlags.Instance
+                    ||| System.Reflection.BindingFlags.Public
+                    ||| System.Reflection.BindingFlags.NonPublic
+                )
+            |> nonNull
+
+        property.GetValue(value) |> nonNull :?> (string * byte array) list
+
+    [<Fact>]
+    let ``selected data archive permits unrelated legacy templates but refuses alias ambiguity`` () =
+        let legacy =
+            """{"identity":"legacy","shortName":["legacy-one","legacy-two"],"symbols":{"x":{"type":"generated","generator":"unsupported"}}}"""
+
+        let parsed =
+            inspectSelectedArchive
+                (opaqueDeclaration ())
+                [ "other/.template.config/template.json", legacy ]
+                [ "product.txt", "__RAW__" ]
+
+        Assert.Single(inspectedPayload parsed) |> ignore
+        let ambiguous = legacy.Replace("legacy-one", "FSGG-CATALOG-OPAQUE-FIXTURE")
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(
+            Action(fun () ->
+                inspectSelectedArchive (opaqueDeclaration ()) [ "other/.template.config/template.json", ambiguous ] []
+                |> ignore)
+        )
+        |> ignore
+
+    [<Fact>]
+    let ``selected data archive applies closed zero-directory exclusions and fixed generated substitution`` () =
+        let node = JsonNode.Parse(opaqueDeclaration ()) |> nonNull
+        node["classifications"] <- JsonNode.Parse("[\"data\",\"workspace\"]")
+
+        node["sources"] <-
+            JsonNode.Parse(
+                "[{\"source\":\"./\",\"target\":\"./\",\"exclude\":[\"**/target/**\",\"**/*.tgz\",\"**/[Bb]in/**\"]}]"
+            )
+
+        let symbols = node["symbols"] |> nonNull
+
+        symbols["derived"] <-
+            JsonNode.Parse(
+                "{\"type\":\"generated\",\"generator\":\"regex\",\"parameters\":{\"source\":\"code\",\"steps\":[{\"regex\":\"-\",\"replacement\":\"_\"}]},\"replaces\":\"__DERIVED__\"}"
+            )
+
+        let parsed =
+            inspectSelectedArchive
+                (node.ToJsonString())
+                []
+                [
+                    "target/remove.txt", "removed"
+                    "nested/target/remove.txt", "removed"
+                    "root.tgz", "removed"
+                    "Bin/remove.txt", "removed"
+                    "product.txt", "__DERIVED__"
+                ]
+
+        let paths = inspectedPayload parsed
+        Assert.Equal<int>(1, paths.Length)
+        Assert.Equal<string>("IndependentCode", Encoding.UTF8.GetString(snd paths.Head))
+
+        symbols["derived"]
+        |> nonNull
+        |> fun d -> (d["parameters"] |> nonNull)["source"] <- JsonValue.Create "derived"
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(
+            Action(fun () -> inspectSelectedArchive (node.ToJsonString()) [] [] |> ignore)
+        )
+        |> ignore
+
+    [<Fact>]
+    let ``selected text required description and literal choices preserve effective values`` () =
+        let node = JsonNode.Parse(opaqueDeclaration ()) |> nonNull
+        let raw = (node["symbols"] |> nonNull)["raw"] |> nonNull
+        raw["datatype"] <- JsonValue.Create "text"
+        raw["isRequired"] <- JsonValue.Create true
+        raw["description"] <- JsonValue.Create "Raw display only."
+        let literal = (node["symbols"] |> nonNull)["literal"] |> nonNull
+        literal["datatype"] <- JsonValue.Create "choice"
+
+        literal["choices"] <-
+            JsonNode.Parse(
+                "[{\"choice\":\"literal\"},{\"choice\":\"$(literal);& with spaces\",\"description\":\"literal argument\"}]"
+            )
+
+        let parsed =
+            inspectSelectedArchive (node.ToJsonString()) [] [ "product.txt", "__RAW__|__LITERAL__" ]
+
+        Assert.Equal<string>(
+            "Awkward name!?|$(literal);& with spaces",
+            Encoding.UTF8.GetString(snd (inspectedPayload parsed).Head)
+        )
+
+        literal["choices"] <- JsonNode.Parse("[{\"choice\":\"literal\"}]")
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(
+            Action(fun () -> inspectSelectedArchive (node.ToJsonString()) [] [] |> ignore)
+        )
+        |> ignore
+
+    [<Fact>]
+    let ``selected data archive refuses conditional sources path changes and unsupported generators`` () =
+        let variants =
+            [
+                "sources", "[{\"include\":[\"**/*\"]}]"
+                "sources", "[{\"source\":\"../\"}]"
+                "sources", "[{\"exclude\":[\"**/foo*/**\"]}]"
+                "symbols", "{\"x\":{\"type\":\"generated\",\"generator\":\"guid\"}}"
+                "symbols", "{\"x\":{\"type\":\"parameter\",\"fileRename\":\"unsafe\"}}"
+                "postActions", "[{\"actionId\":\"unadmitted\"}]"
+            ]
+
+        for key, json in variants do
+            let node = JsonNode.Parse(opaqueDeclaration ()) |> nonNull
+            node[key] <- JsonNode.Parse json
+
+            Assert.Throws<System.Reflection.TargetInvocationException>(
+                Action(fun () -> inspectSelectedArchive (node.ToJsonString()) [] [] |> ignore)
+            )
+            |> ignore
+
+        let duplicate =
+            """{"identity":"FsggSdd.Catalog.OpaqueFixture","shortName":"different"}"""
+
+        let nested = """{"identity":"nested","shortName":"different"}"""
+
+        for path, declaration in
+            [
+                "other/.template.config/template.json", duplicate
+                "content/child/.template.config/template.json", nested
+            ] do
+            Assert.Throws<System.Reflection.TargetInvocationException>(
+                Action(fun () -> inspectSelectedArchive (opaqueDeclaration ()) [ path, declaration ] [] |> ignore)
+            )
+            |> ignore
+
+    [<Fact>]
+    let ``actual cache check follows selected parameter metadata and excludes generated symbols`` () =
+        // Synthetic cache observations test the actual verifier; no SDK observation is claimed.
+        let node = JsonNode.Parse(opaqueDeclaration ()) |> nonNull
+        let symbols = node["symbols"] |> nonNull
+        let raw = symbols["raw"] |> nonNull
+        raw["datatype"] <- JsonValue.Create "text"
+        raw["isRequired"] <- JsonValue.Create true
+        raw["description"] <- JsonValue.Create "Raw display only."
+
+        symbols["generated"] <-
+            JsonNode.Parse(
+                "{\"type\":\"generated\",\"generator\":\"regex\",\"parameters\":{\"source\":\"code\",\"steps\":[{\"regex\":\"-\",\"replacement\":\"_\"}]},\"replaces\":\"__DERIVED__\"}"
+            )
+
+        let literal = symbols["literal"] |> nonNull
+        literal["datatype"] <- JsonValue.Create "choice"
+        literal["choices"] <- JsonNode.Parse("[{\"choice\":\"literal\"},{\"choice\":\"$(literal);& with spaces\"}]")
+        let parsed = inspectSelectedArchive (node.ToJsonString()) [] []
+
+        let archiveProperty =
+            parsed
+                .GetType()
+                .GetProperty(
+                    "Archive",
+                    System.Reflection.BindingFlags.Instance
+                    ||| System.Reflection.BindingFlags.Public
+                    ||| System.Reflection.BindingFlags.NonPublic
+                )
+            |> nonNull
+
+        let archive =
+            archiveProperty.GetValue(parsed) |> nonNull :?> CatalogScaffoldProvenance.ArchiveIdentity
+
+        let mount =
+            "/proc/self/fd/3/engine/packages/"
+            + archive.Id
+            + "."
+            + archive.Version
+            + ".nupkg"
+
+        let parameters = JsonArray()
+        parameters.Add(JsonNode.Parse("{\"Name\":\"name\"}"))
+
+        for key in [ "raw"; "packageIdentity"; "code"; "empty"; "literal" ] do
+            let declaration = symbols[key] |> nonNull
+            let required = key = "raw"
+            let description = if required then "Raw display only." else ""
+
+            let dataType =
+                if required then "text"
+                elif key = "literal" then "choice"
+                else "string"
+
+            let row =
+                JsonNode.Parse(
+                    "{\"Documentation\":\"\",\"Name\":\"\",\"Priority\":2,\"Precedence\":{\"PrecedenceDefinition\":2,\"IsRequiredCondition\":null,\"IsEnabledCondition\":null,\"IsRequired\":false,\"CanBeRequired\":false},\"Type\":\"parameter\",\"IsName\":false,\"DefaultValue\":\"\",\"DataType\":\"string\",\"DefaultIfOptionWithoutValue\":null,\"Choices\":null,\"Description\":\"\",\"DisplayName\":\"\",\"AllowMultipleValues\":false}"
+                )
+                |> nonNull
+
+            row["Name"] <- JsonValue.Create key
+            row["DefaultValue"] <- (declaration["defaultValue"] |> nonNull).DeepClone()
+            row["DataType"] <- JsonValue.Create dataType
+            row["Documentation"] <- JsonValue.Create description
+            row["Description"] <- JsonValue.Create description
+            row["Priority"] <- JsonValue.Create(if required then 0 else 2)
+            let precedence = row["Precedence"] |> nonNull
+            precedence["PrecedenceDefinition"] <- JsonValue.Create(if required then 0 else 2)
+            precedence["IsRequired"] <- JsonValue.Create required
+            precedence["CanBeRequired"] <- JsonValue.Create required
+
+            if key = "literal" then
+                let choices = JsonObject()
+
+                for value in [ "literal"; "$(literal);& with spaces" ] do
+                    choices[value] <- JsonNode.Parse("{\"DisplayName\":\"\",\"Description\":\"\"}")
+
+                row["Choices"] <- choices
+
+            parameters.Add row
+
+        let cache =
+            JsonNode.Parse(
+                "{\"MountPointsInfo\":{},\"TemplateInfo\":[{\"Identity\":\"FsggSdd.Catalog.OpaqueFixture\",\"MountPointUri\":\"\",\"ConfigPlace\":\"/content/.template.config/template.json\",\"ShortNameList\":[\"fsgg-catalog-opaque-fixture\"],\"Classifications\":[],\"HostData\":null,\"HostConfigPlace\":null,\"LocaleConfigPlace\":null,\"PostActions\":[],\"Constraints\":[]}]}"
+            )
+            |> nonNull
+
+        (cache["MountPointsInfo"] |> nonNull)[mount] <- JsonValue.Create "timestamp"
+        let installed = (cache["TemplateInfo"] |> nonNull)[0] |> nonNull
+        installed["MountPointUri"] <- JsonValue.Create mount
+        installed["Parameters"] <- parameters
+
+        let packages =
+            JsonNode.Parse(
+                "{\"Packages\":[{\"Details\":{\"PackageId\":\"FS.GG.SDD.Catalog.OpaqueFixture\",\"Version\":\"1.0.1\",\"LocalPackage\":\"True\"},\"MountPointUri\":\"\"}]}"
+            )
+            |> nonNull
+
+        ((packages["Packages"] |> nonNull)[0] |> nonNull)["MountPointUri"] <- JsonValue.Create mount
+
+        let captured path bytes : CatalogScaffoldLinux.CapturedFile =
+            {
+                Path = path
+                Bytes = bytes
+                Sha256 = archive.Digest
+            }
+
+        let method =
+            typeof<CatalogScaffoldEffects.HostSelection>.Assembly.GetType("FS.GG.SDD.Commands.CatalogScaffoldEffects")
+            |> nonNull
+            |> fun t ->
+                t.GetMethod(
+                    "verifyTransportCache",
+                    System.Reflection.BindingFlags.Static
+                    ||| System.Reflection.BindingFlags.NonPublic
+                )
+                |> nonNull
+
+        let verify () =
+            let files =
+                [
+                    captured
+                        "engine/dotnetcli/10.0.401/templatecache.json"
+                        (Encoding.UTF8.GetBytes(cache.ToJsonString()))
+                    captured "engine/packages.json" (Encoding.UTF8.GetBytes(packages.ToJsonString()))
+                    captured ("engine/packages/" + archive.Id + "." + archive.Version + ".nupkg") [||]
+                ]
+
+            method.Invoke(null, [| parsed; box Set.empty<string>; box true; box files |])
+            |> ignore
+
+        verify ()
+        (parameters[1] |> nonNull)["Description"] <- JsonValue.Create "changed"
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(Action verify)
+        |> ignore
+
+        (parameters[1] |> nonNull)["Description"] <- JsonValue.Create "Raw display only."
+
+        for parameter, field, replacement in
+            [
+                (parameters[1] |> nonNull), "DefaultValue", (JsonValue.Create "changed" |> nonNull) :> JsonNode
+                (parameters[1] |> nonNull), "DataType", (JsonValue.Create "string" |> nonNull) :> JsonNode
+                ((parameters[1] |> nonNull)["Precedence"] |> nonNull), "IsRequired", JsonValue.Create false :> JsonNode
+            ] do
+            let original = (parameter[field] |> nonNull).DeepClone()
+            parameter[field] <- replacement
+
+            Assert.Throws<System.Reflection.TargetInvocationException>(Action verify)
+            |> ignore
+
+            parameter[field] <- original
+
+        let originalChoices = ((parameters[5] |> nonNull)["Choices"] |> nonNull).DeepClone()
+
+        (parameters[5] |> nonNull)["Choices"] <-
+            JsonNode.Parse("{\"different\":{\"DisplayName\":\"\",\"Description\":\"\"}}")
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(Action verify)
+        |> ignore
+
+        (parameters[5] |> nonNull)["Choices"] <- originalChoices
+        let rows = (cache["TemplateInfo"] |> nonNull).AsArray()
+        let collision = installed.DeepClone()
+        collision["Identity"] <- JsonValue.Create "unrelated"
+        rows.Add collision
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(Action verify)
+        |> ignore
+
+        rows.RemoveAt 1
+        parameters.Add(JsonNode.Parse("{\"Name\":\"generated\"}"))
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(Action verify)
+        |> ignore
+
+    [<Fact>]
+    let ``actual Templates metadata selects bounded Node Go and Rust payload models`` () =
+        // Metadata bytes are copied unchanged from Templates14e7086; the archive and selection
+        // here are synthetic parser inputs, not provider or SDK execution evidence.
+        for language in [ "typescript"; "go"; "rust" ] do
+            let declaration =
+                File.ReadAllText(
+                    Path.Combine(
+                        TestSupport.repoRoot,
+                        "tests/fixtures/provider-catalog-runtime/selected-template-metadata/"
+                        + language
+                        + ".json"
+                    )
+                )
+
+            let node = JsonNode.Parse declaration |> nonNull
+            let symbols = (node["symbols"] |> nonNull).AsObject()
+
+            let values =
+                match language with
+                | "typescript" ->
+                    [
+                        "productName", "Awkward name!?"
+                        "packageIdentity", "chosen-node"
+                        "codeIdentifier", "ChosenNode"
+                        "lifecycle", "sdd"
+                    ]
+                | "go" ->
+                    [
+                        "productName", "Awkward name!?"
+                        "modulePath", "example.org/actual/module"
+                        "codeIdentifier", "ChosenGo"
+                        "lifecycle", "sdd"
+                    ]
+                | _ ->
+                    [
+                        "productName", "Awkward name!?"
+                        "crateName", "actual-rust-crate"
+                        "codeIdentifier", "actual_rust_code"
+                    ]
+
+            let configure (selected: Fsgg.ProviderCatalog.PreparedConfiguration) =
+                let parameters =
+                    values
+                    |> List.map (fun (key, _) ->
+                        let symbol = symbols[key] |> nonNull
+
+                        let defaultValue =
+                            match symbol["defaultValue"] with
+                            | null -> None
+                            | value -> Some(value.GetValue<string>())
+
+                        { selected.Descriptor.Parameters.Head with
+                            Key = key
+                            Required = (key = "modulePath")
+                            Default = defaultValue
+                            Values = []
+                            Kind = Fsgg.ProviderCatalog.String
+                        })
+
+                { selected with
+                    Descriptor =
+                        { selected.Descriptor with
+                            TemplateId = (node["shortName"] |> nonNull).GetValue<string>()
+                            Parameters = parameters
+                        }
+                    EffectiveParameters = values
+                }
+
+            let input, expected =
+                match language with
+                | "typescript" -> "RawProductName|example-node-cli|NodeProduct", "Awkward name!?|chosen-node|ChosenNode"
+                | "go" ->
+                    "Go CLI product|example.com/fsgg/cli|GoProduct", "Awkward name!?|example.org/actual/module|ChosenGo"
+                | _ ->
+                    "Rust CLI Product|rust-cli-crate|rust_cli_crate|rust_cli_code_identifier",
+                    "Awkward name!?|actual-rust-crate|actual_rust_crate|actual_rust_code"
+
+            let parsed =
+                inspectSelectedArchiveWith
+                    configure
+                    declaration
+                    []
+                    [
+                        "product.txt", input
+                        "node_modules/excluded.txt", "excluded"
+                        "dist/excluded.txt", "excluded"
+                        "target/excluded.txt", "excluded"
+                    ]
+
+            let actual = inspectedPayload parsed |> Map.ofList
+            Assert.Equal<string>(expected, Encoding.UTF8.GetString actual["product.txt"])
+
+            let excluded =
+                if language = "rust" then
+                    "target/excluded.txt"
+                else
+                    "dist/excluded.txt"
+
+            Assert.False(actual.ContainsKey excluded)
+
     let private host: CatalogScaffoldEffects.HostSelection =
         {
             Mode = CatalogScaffoldEffects.LocalLinux
