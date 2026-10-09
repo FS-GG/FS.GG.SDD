@@ -104,7 +104,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("2.2.x", entry.SddVersionLine)
+        Assert.Equal("2.3.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE

@@ -222,3 +222,15 @@ actual selected package hashes, command, log and observed outcome. Maintain one 
 current-state summary with owners, next actions and blockers; keep superseded states in history.
 Report completed work, active parallel lanes and problems every 30 minutes during active work.
 The [validation guide](../validation/catalog-runtime.md) gives the maintained harness interface.
+
+## Coherent producer source preparation
+
+The isolated source candidate selects shared SDD 2.3.0 for Artifacts, Commands, CLI and
+Knowledge, with ordinary package references to published Contracts 7.6.0. The
+Contracts producer retains its independent version and tests; its published archive
+is reused rather than rebuilt for this SDD release. Config 0.3.0 remains the explicitly
+local candidate awaiting distribution, so local qualification does not establish a
+normal fresh-clone restore or public availability. The original Config and SDD 2.2.0
+qualification archives remain immutable. C1+C2, exact new release qualification,
+feed readback and the unknown original ReferenceGateSet 1.8.0 custody remain release
+requirements; this source preparation does not admit publication or close C2/C4.
