@@ -41,3 +41,19 @@ existing/appearing target preservation, policy/archive refusal, missing binding,
 nonzero tool exit, stream/aggregate output limits, explicit SIGINT and product deadline controls.
 This establishes local behavior; it does not establish distributable package availability or
 hosted acceptance of the final combined source.
+
+## C3.1 bounded typed authoring example
+
+- [x] C3.1-01 Add example signatures and immediately compile public typed catalog/policy calls
+  from a disposable package-only project using the explicit retained compatibility closure.
+- [x] C3.1-02 Implement deterministic emit and strict check with independent inputs; qualify double
+  emission, path/link/no-replace refusals and malformed policy through the actual sample.
+- [ ] C3.1-03 Join the optional maintained driver producer interface and qualify actual CLI→Verify
+  with independently selected final local2.3 archives. No public distribution or whole C3 closure.
+
+Local C3.1-01/02 qualification used only explicitly selected retained2.2 packages: cold restore
+and compilation passed after one retained FS0193 summary-write error; 12 actual assets are package
+libraries. Ten actual sample commands passed their expected outcomes, including byte-identical
+catalog/archive emissions with changed creation order/mtimes, existing-output preservation, input
+refusals and strict real schema2 check. These task results do not close C3.1-03 or C3.1; final2.3
+archive/CLI→Verify qualification, protected source delivery and distribution remain separate.

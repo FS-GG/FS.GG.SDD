@@ -245,3 +245,19 @@ After verified public distribution, regenerate and check SDD locks against the
 actual published Config bytes before normal source delivery. Config availability
 alone establishes neither SDD publication nor Governance runtime-carrier,
 ReferenceGateSet or Templates adoption.
+
+## C3.1 selected authoring example slice — 2026-10-09
+
+Source-ready after accepted actual C2.2/C2.3 integration: one nonpackable typed package-only
+[authoring example](../../examples/provider-authoring/README.md), under
+[spec132](../../specs/132-polyglot-provider-catalog/spec.md#sdd928-c31--package-only-authoring-example).
+It reuses public canonicalizers, policy/admission and strict provenance codec, independently supplied
+inputs and the maintained CLI/Verify drivers. Retained qualified2.2 archives support immediate
+compatibility compile; final2.3 archive qualification and actual receiver journey remain required.
+No new SDK package, installed verb, schema, release default or publication is selected. C3.1 remains
+open beyond this bounded example slice; C4 distribution stays separate.
+
+Local authoring preparation now has actual cold2.2 package-only compilation (12 package assets,
+no ProjectReference) and ten sample-command controls, including deterministic catalog/archive bytes,
+input/output refusal and real strict schema2 reading. Final2.3 archive/CLI→Verify qualification
+remains pending; this evidence does not mark C3.1 or distribution complete.

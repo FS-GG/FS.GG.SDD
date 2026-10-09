@@ -101,3 +101,20 @@ ABI-only C fixture, then separately qualify pidfd/fd-cwd/no-replace primitives w
 fixture owner and managed coexistence. SDK procfd-root/cache/alias behavior is another gate; the
 previous ordinary absolute-path fixture acceptance does not establish it. No new package/helper,
 policy schema or alternate execution authority is introduced.
+
+## SDD928-C3.1 — package-only authoring example
+
+Tier 1 sample contract; installed CLI, public library APIs and schemas stay unchanged.
+- FR-016: A nonpackable F# example uses only actual package APIs to author and seal a generic
+  test-handoff catalog. Require an explicit exact SddPackageVersion; no default public pin.
+- FR-017: Independently supplied policy, absolute fixture executable, raw test input and copied
+  template data produce the existing CLI fixture manifest. No test assembly, reflection, sibling
+  source, SDK probe promotion or copied canonicalization is permitted.
+- FR-018: Emit ordinal archive entries with fixed ZIP timestamps, attributes and compression.
+  Reject links, escaping/duplicate paths and existing output. Equal input bytes yield equal catalog
+  and archive hashes despite input creation order or mtimes. Strict check uses the production codec.
+
+Acceptance: immediate cold package-only typed compile, deterministic double emission, invalid policy
+refusal and actual CLI/Governance journey through the maintained drivers. Retained SDD2.2 packages
+are explicit early-compile inputs only; final local2.3 qualification awaits independently supplied
+qualified archives. This bounded slice does not close C3.1, distribution or provider certification.

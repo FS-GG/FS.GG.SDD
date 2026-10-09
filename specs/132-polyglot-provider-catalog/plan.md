@@ -112,3 +112,21 @@ older process-only qualification ordering; the product acceptance criteria remai
 See [validation commands and recovery behavior](../../docs/validation/catalog-runtime.md).
 Compilation, helper tests and native fixture acceptance are reported separately. C2.2 remains
 open until the real CLI acceptance passes; C3/C4 publication and adoption remain separate.
+
+## C3.1 typed authoring example slice
+
+Implement examples/provider-authoring with IsPackable=false and package references only. Specify
+Authoring.fsi before the pure catalog/sealing/admission helpers; compile typed calls immediately
+in a disposable copied project with selected private feed and empty cache. The independent policy
+is parsed by CatalogScaffoldPolicy and the complete declaration passes the existing adapter.
+
+The sample edge emits the existing request.json manifest and a deterministic archive from explicitly
+copied opaque-template data plus unchanged raw test input. Its check entry uses the actual schema2
+codec and current driver summary. Program's small init/update/effect boundary selects these sample
+operations; no installed command is added. The existing acceptance driver optionally consumes the
+producer/check command, preserving its test-helper default and original total budget.
+
+Use retained qualified2.2/publishedContracts7.6/localConfig closure for early compatibility compile;
+never interpret it as final2.3/public availability. Final2.3 archive selection, actual CLI→Verify
+acceptance and publication remain independent root-owned joins. Determinism and negative input
+controls use the actual example executable; reuse unchanged C2.2/C2.3 failure evidence within scope.
