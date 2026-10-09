@@ -15,6 +15,9 @@ def check(text):
     require(gates in candidate and gates in jobs.get('locate-artifacts',''),'candidate lacks a package/source test prerequisite')
     require('tests/FS.GG.SDD.Commands.Tests/FS.GG.SDD.Commands.Tests.fsproj' in jobs.get('commands-tests',''),'Commands authored API/tests are not gated')
     require("needs.resolve-versions.outputs.push == 'false'" in candidate,'candidate is not no-push only')
+    require('--no-push-observation artifacts/packages/occupancy-observation.json' in candidate,
+            'no-push candidate does not retain truthful occupancy observations')
+    require('--no-push-observation' not in publish, 'publisher uses candidate-only unknown allowance')
     require('dotnet nuget push' not in candidate and 'NuGet/login' not in candidate,'candidate performs publication')
     require('dotnet pack src/FS.GG.Contracts' not in text,'reused Contracts must not be packed')
     require('dotnet nuget push "artifacts/packages/FS.GG.Contracts' not in text,'reused Contracts must not be pushed')
