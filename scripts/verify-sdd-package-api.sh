@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compare existing shipped SDD assemblies; the new Knowledge package has no baseline yet.
+# Compare shipped 2.2 APIs; Commands has no standalone package baseline. Cold-consume its actual candidate.
 set -euo pipefail
 candidate="${1:?candidate package directory required}"
 version="${2:?candidate version required}"
@@ -19,9 +19,9 @@ python3 - "$scratch" "$candidate" "$version" <<'PY'
 from pathlib import Path
 import sys, urllib.request, zipfile
 scratch, candidate = map(Path, sys.argv[1:3]); version = sys.argv[3]
-for id in ['FS.GG.SDD.Artifacts', 'FS.GG.SDD.Cli']:
-    url = f'https://api.nuget.org/v3-flatcontainer/{id.lower()}/2.0.3/{id.lower()}.2.0.3.nupkg'
-    baseline = scratch / f'{id}.2.0.3.nupkg'
+for id in ['FS.GG.SDD.Artifacts', 'FS.GG.SDD.Cli', 'FS.GG.SDD.Knowledge']:
+    url = f'https://api.nuget.org/v3-flatcontainer/{id.lower()}/2.2.0/{id.lower()}.2.2.0.nupkg'
+    baseline = scratch / f'{id}.2.2.0.nupkg'
     urllib.request.urlretrieve(url, baseline)
     for side, archive in [('left', baseline), ('right', candidate / f'{id}.{version}.nupkg')]:
         with zipfile.ZipFile(archive) as z:
@@ -60,5 +60,30 @@ done
 compare \
   -l "$scratch/left/FS.GG.SDD.Artifacts/lib/net10.0/FS.GG.SDD.Artifacts.dll" \
   -r "$scratch/right/FS.GG.SDD.Artifacts/lib/net10.0/FS.GG.SDD.Artifacts.dll"
-printf '%s\n' 'ApiCompat compared the four shipped tool assemblies and standalone Artifacts against public 2.0.3.' \
-  'Knowledge is a new package with no published API baseline; it was not classified as compared.'
+compare \
+  -l "$scratch/left/FS.GG.SDD.Knowledge/lib/net10.0/FS.GG.SDD.Knowledge.dll" \
+  -r "$scratch/right/FS.GG.SDD.Knowledge/lib/net10.0/FS.GG.SDD.Knowledge.dll"
+# The source Commands test gate checks authored .fsi and reflection baselines.
+# This cold package consumer proves its standalone package is usable without source project references.
+python3 - "$scratch" "$candidate" "$version" <<'PYCONSUMER'
+from pathlib import Path
+import sys, xml.etree.ElementTree as E
+scratch,candidate=map(Path,sys.argv[1:3]);version=sys.argv[3]
+consumer=scratch/'commands-consumer';consumer.mkdir()
+project=E.Element('Project',Sdk='Microsoft.NET.Sdk');properties=E.SubElement(project,'PropertyGroup')
+for name,value in [('TargetFramework','net10.0'),('OutputType','Exe')]: E.SubElement(properties,name).text=value
+items=E.SubElement(project,'ItemGroup');E.SubElement(items,'Compile',Include='Program.fs')
+E.SubElement(items,'PackageReference',Include='FS.GG.SDD.Commands',Version='['+version+']')
+E.SubElement(items,'PackageReference',Include='FS.GG.Contracts',Version='[7.6.0]')
+E.ElementTree(project).write(consumer/'consumer.fsproj',encoding='unicode')
+(consumer/'Program.fs').write_text('open FS.GG.SDD.Commands\nif CommandHelp.commandEntries.IsEmpty then failwith "actual Commands public API unavailable"\nprintfn "Commands cold consumer passed"\n')
+config=E.Element('configuration');sources=E.SubElement(config,'packageSources');E.SubElement(sources,'clear')
+E.SubElement(sources,'add',key='candidate',value=str(candidate));E.SubElement(sources,'add',key='public',value='https://api.nuget.org/v3/index.json')
+mapping=E.SubElement(config,'packageSourceMapping');local=E.SubElement(mapping,'packageSource',key='candidate');E.SubElement(local,'package',pattern='FS.GG.SDD.*')
+public=E.SubElement(mapping,'packageSource',key='public');E.SubElement(public,'package',pattern='*')
+E.ElementTree(config).write(consumer/'NuGet.Config',encoding='unicode')
+PYCONSUMER
+dotnet restore "$scratch/commands-consumer/consumer.fsproj" --configfile "$scratch/commands-consumer/NuGet.Config" --no-http-cache
+dotnet run --project "$scratch/commands-consumer/consumer.fsproj" -c Release --no-restore
+printf '%s\n' 'ApiCompat compared previously shipped tool assemblies and standalone Artifacts/Knowledge against public 2.2.0.' \
+  'Commands has no observed standalone package baseline; authored public-surface tests and a cold actual-package consumer gate retention.'

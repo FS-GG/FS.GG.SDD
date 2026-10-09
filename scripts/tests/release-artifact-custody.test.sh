@@ -1,151 +1,75 @@
 #!/usr/bin/env bash
-# Mutation tests for exact archive custody from dry-run artifact to tag publication.
-set -uo pipefail
-
+# Actual verifier controls with synthetic archives; no build, feed or publication.
+set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-verifier="$repo/scripts/verify-release-candidate.sh"
-fail=0
-head_sha="0123456789abcdef0123456789abcdef01234567"
-version="2.1.0"
-contracts_version="7.6.0"
-
-make_package() {
-  local path="$1" id="$2" timestamp="$3" selected_version="$version"
-  [ "$id" != FS.GG.Contracts ] || selected_version="$contracts_version"
-  python3 - "$path" "$id" "$selected_version" "$head_sha" "$timestamp" <<'PY'
-import sys, zipfile
-path, package_id, version, head, timestamp = sys.argv[1:]
-year = int(timestamp)
-info = zipfile.ZipInfo(f"{package_id}.nuspec", (year, 1, 1, 0, 0, 0))
-dependencies = '<dependencies><group targetFramework="net10.0"><dependency id="FS.GG.Contracts" version="7.6.0" /></group></dependencies>' if package_id == "FS.GG.SDD.Artifacts" else ""
-body = f'''<?xml version="1.0"?><package><metadata><id>{package_id}</id><version>{version}</version><repository type="git" commit="{head}" />{dependencies}</metadata></package>'''.encode()
-with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
-    archive.writestr(info, body)
-    if package_id == "FS.GG.Contracts":
-        for member in ["api-surface/Provider.fsi", "lib/net10.0/FS.GG.Contracts.dll"]:
-            archive.writestr(member, b"synthetic Contracts fixture")
-    if package_id == "FS.GG.SDD.Cli":
-        archive.writestr("tools/net10.0/any/FS.GG.Contracts.dll", b"synthetic Contracts fixture")
-    if package_id == "FS.GG.SDD.Knowledge":
-        for member in ["api-surface/Store.fsi", "api-surface/Workspace.fsi", "lib/net10.0/FS.GG.SDD.Knowledge.dll"]:
-            archive.writestr(member, b"synthetic custody fixture")
-PY
-}
-
-seed_candidate() {
-  local root="$1" timestamp="$2"
-  mkdir -p "$root"
-  make_package "$root/FS.GG.Contracts.$contracts_version.nupkg" FS.GG.Contracts "$timestamp"
-  make_package "$root/FS.GG.SDD.Artifacts.$version.nupkg" FS.GG.SDD.Artifacts "$timestamp"
-  make_package "$root/FS.GG.SDD.Cli.$version.nupkg" FS.GG.SDD.Cli "$timestamp"
-  make_package "$root/FS.GG.SDD.Knowledge.$version.nupkg" FS.GG.SDD.Knowledge "$timestamp"
-  printf '%s\n' \
-    'schema=fsgg.sdd.release-candidate/v3' \
-    "head=$head_sha" \
-    "version=$version" \
-    "contracts_version=$contracts_version" \
-    'packages=FS.GG.Contracts,FS.GG.SDD.Artifacts,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge' > "$root/candidate.env"
-  (cd "$root" && sha256sum FS.GG.Contracts.*.nupkg FS.GG.SDD.Artifacts.*.nupkg FS.GG.SDD.Cli.*.nupkg FS.GG.SDD.Knowledge.*.nupkg | LC_ALL=C sort -k2 > pre-push.sha256)
-}
-
-run_case() {
-  local name="$1" root="$2" expected="$3" observed
-  "$verifier" "$root" "$head_sha" "$version" "$contracts_version" >/dev/null 2>&1
-  observed=$?
-  if [ "$observed" -eq "$expected" ]; then
-    printf '  ok   %-38s -> exit %s\n' "$name" "$observed"
-  else
-    printf '  FAIL %-38s expected exit %s, got %s\n' "$name" "$expected" "$observed"
-    fail=1
-  fi
-}
-
-root="$(mktemp -d)"
-trap 'rm -rf "$root"' EXIT
-
-positive="$root/positive"
-seed_candidate "$positive" 2020
-run_case "exact retained artifact passes" "$positive" 0
-
-wrong_head="$root/wrong-head"
-cp -R "$positive" "$wrong_head"
-sed -i 's/^head=.*/head=ffffffffffffffffffffffffffffffffffffffff/' "$wrong_head/candidate.env"
-run_case "head substitution reds" "$wrong_head" 1
-
-wrong_hash="$root/wrong-hash"
-cp -R "$positive" "$wrong_hash"
-printf 'changed-after-qualification\n' >> "$wrong_hash/FS.GG.SDD.Cli.$version.nupkg"
-run_case "post-handoff byte mutation reds" "$wrong_hash" 1
-
-# Back-to-back container inversion: equal extracted payloads do not imply equal nupkg bytes.
-pack_a="$root/pack-a"
-pack_b="$root/pack-b"
-seed_candidate "$pack_a" 2020
-seed_candidate "$pack_b" 2021
-sha_a="$(sha256sum "$pack_a/FS.GG.SDD.Cli.$version.nupkg" | cut -d' ' -f1)"
-sha_b="$(sha256sum "$pack_b/FS.GG.SDD.Cli.$version.nupkg" | cut -d' ' -f1)"
-if [ "$sha_a" != "$sha_b" ] && diff -u \
-    <(unzip -p "$pack_a/FS.GG.SDD.Cli.$version.nupkg" '*.nuspec') \
-    <(unzip -p "$pack_b/FS.GG.SDD.Cli.$version.nupkg" '*.nuspec') >/dev/null; then
-  printf '  ok   %-38s\n' "back-to-back containers differ"
-else
-  printf '  FAIL %-38s\n' "back-to-back containers differ"
-  fail=1
-fi
-
-substituted="$root/substituted"
-cp -R "$pack_a" "$substituted"
-cp "$pack_b/FS.GG.SDD.Cli.$version.nupkg" "$substituted/FS.GG.SDD.Cli.$version.nupkg"
-run_case "equal-payload archive swap reds" "$substituted" 1
-
-missing="$root/missing-knowledge"
-cp -R "$pack_a" "$missing"
-rm "$missing/FS.GG.SDD.Knowledge.$version.nupkg"
-run_case "missing Knowledge archive reds" "$missing" 1
-
-extra="$root/extra"
-cp -R "$pack_a" "$extra"
-cp "$extra/FS.GG.SDD.Cli.$version.nupkg" "$extra/Unexpected.$version.nupkg"
-run_case "extra archive reds" "$extra" 1
-
-wrong="$root/wrong-version"
-cp -R "$pack_a" "$wrong"
-mv "$wrong/FS.GG.SDD.Knowledge.$version.nupkg" "$wrong/FS.GG.SDD.Knowledge.2.0.3.nupkg"
-run_case "Knowledge version skew reds" "$wrong" 1
-
-missing_contracts="$root/missing-contracts"
-cp -R "$positive" "$missing_contracts"
-rm "$missing_contracts/FS.GG.Contracts.$contracts_version.nupkg"
-run_case "missing Contracts refuses" "$missing_contracts" 1
-wrong_contracts="$root/wrong-contracts"
-cp -R "$positive" "$wrong_contracts"
-sed -i 's/^contracts_version=.*/contracts_version=7.5.2/' "$wrong_contracts/candidate.env"
-run_case "independent Contracts version refuses" "$wrong_contracts" 1
-mutate_and_rehash() {
-  python3 - "$1" "$2" "$version" "$contracts_version" <<'PYCONTROL'
+python3 - "$repo" <<'PY'
 from pathlib import Path
-import hashlib,sys,zipfile
-root,role,version,contracts=sys.argv[1:];root=Path(root)
-id={'dependency':'FS.GG.SDD.Artifacts','embedded':'FS.GG.SDD.Cli','source':'FS.GG.Contracts'}[role]
-path=root/f'{id}.{contracts if role=="source" else version}.nupkg'
-with zipfile.ZipFile(path) as z: entries={n:z.read(n) for n in z.namelist()}
-if role=='embedded':entries['tools/net10.0/any/FS.GG.Contracts.dll']=b'different compiler payload'
-elif role=='dependency':entries[id+'.nuspec']=entries[id+'.nuspec'].replace(b'version="7.6.0"',b'version="7.5.2"')
-else:entries[id+'.nuspec']=entries[id+'.nuspec'].replace(b'commit="0123456789abcdef0123456789abcdef01234567"',b'commit="ffffffffffffffffffffffffffffffffffffffff"')
-with zipfile.ZipFile(path,'w') as z:
-    for name,raw in entries.items():z.writestr(name,raw)
-(root/'pre-push.sha256').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(root.glob('*.nupkg'))))
-PYCONTROL
-}
-for role in dependency embedded source; do
-  target="$root/semantic-$role"
-  cp -R "$positive" "$target"
-  mutate_and_rehash "$target" "$role"
-  run_case "rehashed $role substitution refuses" "$target" 1
-done
-
-if [ "$fail" -ne 0 ]; then
-  echo "release-artifact-custody.test.sh: FAILURES" >&2
-  exit 1
-fi
-echo "release-artifact-custody.test.sh: all passed"
+import hashlib,io,json,shutil,subprocess,sys,tempfile,zipfile
+repo=Path(sys.argv[1]);head='0123456789abcdef0123456789abcdef01234567';version='2.3.0';contracts='7.6.0'
+ids=['FS.GG.SDD.Artifacts','FS.GG.SDD.Commands','FS.GG.SDD.Cli','FS.GG.SDD.Knowledge'];dll=b'synthetic published Contracts';commands=b'synthetic Commands'
+source='cf2f046a10497a336d6243c9a314c3f91fb15771'
+def package(id,year=2020):
+    stream=io.BytesIO();v=contracts if id=='FS.GG.Contracts' else version;h=source if id=='FS.GG.Contracts' else head
+    dependency='<dependencies><group targetFramework="net10.0"><dependency id="FS.GG.Contracts" version="[7.6.0]" /></group></dependencies>' if id in ['FS.GG.SDD.Artifacts','FS.GG.SDD.Commands'] else ''
+    entries={id+'.nuspec':f'<package><metadata><id>{id}</id><version>{v}</version><repository commit="{h}"/>{dependency}</metadata></package>'.encode()}
+    if id=='FS.GG.Contracts': entries['lib/net10.0/FS.GG.Contracts.dll']=dll
+    elif id=='FS.GG.SDD.Cli': entries.update({'tools/net10.0/any/FS.GG.Contracts.dll':dll,'tools/net10.0/any/FS.GG.SDD.Commands.dll':commands})
+    else: entries[f'lib/net10.0/{id}.dll']=commands if id=='FS.GG.SDD.Commands' else b'actual fixture DLL'
+    if id=='FS.GG.SDD.Knowledge': entries.update({'api-surface/Store.fsi':b'fixture Store','api-surface/Workspace.fsi':b'fixture Workspace'})
+    with zipfile.ZipFile(stream,'w') as z:
+        for name,raw in entries.items(): z.writestr(zipfile.ZipInfo(name,(year,1,1,0,0,0)),raw)
+    return stream.getvalue()
+def rehash(root):
+    (root/'pre-push.sha256').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(root.glob('*.nupkg'))))
+with tempfile.TemporaryDirectory() as td:
+    work=Path(td);scripts=work/'scripts';scripts.mkdir();raw=package('FS.GG.Contracts')
+    for name in ['verify-release-candidate.sh','check-sdd-release-occupancy.py','sdd-release-packages.txt']: shutil.copyfile(repo/'scripts'/name,scripts/name)
+    # Substitute only the reviewed identity constants for a disclosed synthetic dependency.
+    # The real source retains its fixed published identities; no test switch enters the rail.
+    adapter=scripts/'check-sdd-release-occupancy.py'
+    adapter.write_text(adapter.read_text().replace('b1df3ebd6251f5b18aaece4dd0c5449a7825dc7056f925cf2516febc35f9dfc5',hashlib.sha256(raw).hexdigest()).replace('91f484d28416c5d860a375a91ed70cdda1d3b6d85d504c15ea21e08a9af727ee',hashlib.sha256(dll).hexdigest()))
+    verifier=scripts/'verify-release-candidate.sh'
+    def invoke(root,record=False):
+        args=['bash',str(verifier)]+(['--record-contracts',str(root),contracts] if record else [str(root),head,version,contracts])
+        return subprocess.run(args,capture_output=True,text=True)
+    def seed(name,year=2020):
+        root=work/name;(root/'dependencies').mkdir(parents=True)
+        (root/'dependencies'/f'FS.GG.Contracts.{contracts}.nupkg').write_bytes(raw)
+        for id in ids: (root/f'{id}.{version}.nupkg').write_bytes(package(id,year))
+        assert invoke(root,True).returncode==0
+        (root/'candidate.env').write_text(f'schema=fsgg.sdd.release-candidate/v4\nhead={head}\nversion={version}\ncontracts_version={contracts}\npackages={",".join(ids)}\n')
+        rehash(root);return root
+    positive=seed('positive');count=0
+    def check(label,root,expected):
+        global count
+        result=invoke(root);assert (result.returncode==0)==expected,(label,result.stdout,result.stderr)
+        count+=1;print('PASS',label)
+    def changed(label,action):
+        root=work/label;shutil.copytree(positive,root);action(root);check(label,root,False)
+    def mutate(root,id,entry,new):
+        path=root/f'{id}.{version}.nupkg'
+        with zipfile.ZipFile(path) as z: entries={name:z.read(name) for name in z.namelist()}
+        entries[entry]=new(entries[entry])
+        with zipfile.ZipFile(path,'w') as z:
+            for name,data in entries.items(): z.writestr(name,data)
+        rehash(root)
+    check('exact four SDD archives plus reused dependency',positive,True)
+    changed('head',(lambda r:(r/'candidate.env').write_text((r/'candidate.env').read_text().replace(head,'f'*40))))
+    changed('historical-v3',(lambda r:(r/'candidate.env').write_text((r/'candidate.env').read_text().replace('/v4','/v3'))))
+    changed('byte-mutation',(lambda r:(r/f'FS.GG.SDD.Cli.{version}.nupkg').write_bytes(b'changed')))
+    other=seed('other',2021)
+    assert (positive/f'FS.GG.SDD.Cli.{version}.nupkg').read_bytes()!=(other/f'FS.GG.SDD.Cli.{version}.nupkg').read_bytes()
+    changed('equal-payload-container-swap',(lambda r:shutil.copyfile(other/f'FS.GG.SDD.Cli.{version}.nupkg',r/f'FS.GG.SDD.Cli.{version}.nupkg')))
+    changed('missing-commands',(lambda r:(r/f'FS.GG.SDD.Commands.{version}.nupkg').unlink()))
+    changed('extra-release-contracts',(lambda r:shutil.copyfile(r/'dependencies'/f'FS.GG.Contracts.{contracts}.nupkg',r/f'FS.GG.Contracts.{contracts}.nupkg')))
+    changed('missing-reused-contracts',(lambda r:(r/'dependencies'/f'FS.GG.Contracts.{contracts}.nupkg').unlink()))
+    changed('dependency-source-metadata',(lambda r:(r/'contracts-reuse.json').write_text((r/'contracts-reuse.json').read_text().replace(source,'f'*40))))
+    changed('dependency-payload-metadata',(lambda r:(r/'contracts-reuse.json').write_text((r/'contracts-reuse.json').read_text().replace('"payloadSha256": "','"payloadSha256": "x'))))
+    changed('rehashed-commands-source',(lambda r:mutate(r,'FS.GG.SDD.Commands','FS.GG.SDD.Commands.nuspec',lambda b:b.replace(head.encode(),b'f'*40))))
+    changed('rehashed-commands-dependency',(lambda r:mutate(r,'FS.GG.SDD.Commands','FS.GG.SDD.Commands.nuspec',lambda b:b.replace(b'[7.6.0]',b'[7.5.2]'))))
+    changed('rehashed-tool-contracts',(lambda r:mutate(r,'FS.GG.SDD.Cli','tools/net10.0/any/FS.GG.Contracts.dll',lambda _:b'rebuilt equal-version DLL')))
+    changed('rehashed-tool-commands',(lambda r:mutate(r,'FS.GG.SDD.Cli','tools/net10.0/any/FS.GG.SDD.Commands.dll',lambda _:b'different Commands')))
+    changed('repacked-reused-dependency',(lambda r:(r/'dependencies'/f'FS.GG.Contracts.{contracts}.nupkg').write_bytes(package('FS.GG.Contracts',2021))))
+    assert invoke(positive,True).returncode!=0 # Metadata is written once; an existing record is not overwritten.
+    print(f'Archive custody: {count} controls passed; metadata overwrite refused; no live package execution.')
+PY

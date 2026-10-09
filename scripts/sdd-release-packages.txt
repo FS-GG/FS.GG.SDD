@@ -1,3 +1,4 @@
 FS.GG.SDD.Artifacts
+FS.GG.SDD.Commands
 FS.GG.SDD.Cli
 FS.GG.SDD.Knowledge
