@@ -1,4 +1,21 @@
+FS.GG.SDD.Commands.CatalogScaffoldEffects.observe
+FS.GG.SDD.Commands.CatalogScaffoldEffects.prepare
+FS.GG.SDD.Commands.CatalogScaffoldEffects.release
+FS.GG.SDD.Commands.CatalogScaffoldEffects.run
+FS.GG.SDD.Commands.CatalogScaffoldEffects.waitForSettled
+FS.GG.SDD.Commands.CatalogScaffoldPolicy.parse
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.commitOutcome
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.diagnostics
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.init
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.outcome
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.phase
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.preflightObservation
 FS.GG.SDD.Commands.CatalogScaffoldWorkflow.prepare
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.provenance
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.request
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.templateObservation
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.update
+FS.GG.SDD.Commands.CatalogScaffoldWorkflow.verifiedInputs
 FS.GG.SDD.Commands.CommandEffects.driveToReport
 FS.GG.SDD.Commands.CommandEffects.interpret
 FS.GG.SDD.Commands.CommandEffects.interpretAll
@@ -163,3 +180,5 @@ FS.GG.SDD.Commands.LintEngine.detectKind
 FS.GG.SDD.Commands.LintEngine.grammarPointer
 FS.GG.SDD.Commands.LintEngine.lint
 FS.GG.SDD.Commands.ProcessSkillManifest.build
+FS.GG.SDD.Commands.ProviderCapabilityAdmission.request
+FS.GG.SDD.Commands.ProviderCapabilityAdmission.resolve

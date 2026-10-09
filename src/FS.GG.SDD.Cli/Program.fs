@@ -381,7 +381,12 @@ let run args =
     | "registry" :: "skill-manifest" :: rest -> FS.GG.SDD.Cli.RegistrySkillManifest.run rest
     | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
     | "catalog" :: rest -> FS.GG.SDD.Cli.Catalog.run rest
-    | "scaffold" :: rest when hasFlag "--catalog" rest -> FS.GG.SDD.Cli.Catalog.unavailable rest
+    | "scaffold" :: rest when
+        rest |> List.exists(fun arg ->
+            List.contains arg ["--catalog"; "--catalog-sha256"; "--template-archive"; "--template-sha256"
+                               "--admission-policy"; "--admission-policy-sha256"; "--platform"
+                               "--transport-executable"; "--preflight-timeout-seconds"; "--scaffold-timeout-seconds"]) ->
+        FS.GG.SDD.Cli.Catalog.scaffold rest
     | "knowledge" :: rest -> FS.GG.SDD.Cli.Knowledge.run rest
     | "typed-sdd" :: rest -> FS.GG.SDD.Cli.TypedSdd.run rest
     | commandValue :: rest ->

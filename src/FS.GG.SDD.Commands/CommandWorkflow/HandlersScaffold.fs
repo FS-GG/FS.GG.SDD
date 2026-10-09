@@ -413,7 +413,7 @@ module internal HandlersScaffold =
     /// authored content; SDD only supplies the lifecycle fragment that was intentionally staged
     /// before the `dotnet new` invocation. This avoids both a blanket provider `--force` and a
     /// lossy line-normalizing "merge".
-    let private composeRootGitignore typedKnowledge (providerBytes: byte array option) =
+    let composeRootGitignoreBytes typedKnowledge (providerBytes: byte array option) =
         let prefix = System.Text.Encoding.UTF8.GetBytes gitignoreSeedText
 
         let composed =
@@ -428,6 +428,9 @@ module internal HandlersScaffold =
                 composed
 
         finalBytes
+
+    let private composeRootGitignore typedKnowledge providerBytes =
+        composeRootGitignoreBytes typedKnowledge providerBytes
         |> System.Convert.ToBase64String
         |> fun encoded -> "\uDC00fsgg-sdd-atomic-bytes:" + encoded
 

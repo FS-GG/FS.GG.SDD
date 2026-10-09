@@ -18,3 +18,26 @@ Verify raw/semantic tamper, sorted declarations versus literal argv, Unicode/con
 - [x] C2.1-03 Add the schema-2 codec and versioned ownership readers with mutation refusal tests.
 - [x] C2.1-04 Record durable schema contracts and additive authored API baselines.
 - [ ] C2.1-05 Qualify compiled surfaces, focused tests and the repository full gate at exact hosted head; land through root.
+
+## C2.2 staged local candidate
+
+- [x] C2.2-01 Specify policy/admission/workflow contracts and exercise public API shape with actual Config and Contracts7.6.
+- [x] C2.2-02 Author semantic refusal, literal-argv, phase/custody and source-bundle tests before implementation.
+- [x] C2.2-03 Implement actual resolver adapter, MVU and owning edge; reuse scaffold ownership/materialization.
+- [x] C2.2-04 Join the explicit production CLI and producer/source-bundle provenance capture.
+- [ ] C2.2-05 Qualify one actual local package fixture, full negative controls, surfaces and coherent exact-head route under root admission.
+- [ ] C2.2-06 Land only a release-compatible coherent source outcome; publication/installed adoption remain separate.
+
+C2.2-01..05 follow the [cooperative local execution profile](../../docs/roadmaps/sdd-928-provider-catalog.md#cooperative-local-execution-profile--2026-10-09):
+compile the integrated CLI after small changes, run affected ordinary tests, then prove actual
+workspace creation and principal failures through the maintained harness. Native prerequisites
+apply to their affected operations, not to compilation. Shared harness changes are tested once
+with their affected integrations; unchanged components do not require repeated qualification.
+The remaining delivery tasks require final coherent source/package acceptance. Pure or
+component tests alone do not close CLI, coherent release or adoption acceptance.
+
+The local candidate has passed actual CLI creation, strict provenance readback, literal arguments,
+existing/appearing target preservation, policy/archive refusal, missing binding, reserved writes,
+nonzero tool exit, stream/aggregate output limits, explicit SIGINT and product deadline controls.
+This establishes local behavior; it does not establish distributable package availability or
+hosted acceptance of the final combined source.

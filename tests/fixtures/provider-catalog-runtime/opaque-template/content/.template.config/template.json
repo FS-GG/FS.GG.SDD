@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD synthetic runtime fixture",
+  "identity": "FsggSdd.Catalog.OpaqueFixture",
+  "name": "Catalog opaque data fixture",
+  "shortName": "fsgg-catalog-opaque-fixture",
+  "preferNameDirectory": false,
+  "symbols": {
+    "raw": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "__RAW__",
+      "defaultValue": "raw"
+    },
+    "packageIdentity": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "__PACKAGE__",
+      "defaultValue": "packageIdentity"
+    },
+    "code": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "__CODE__",
+      "defaultValue": "code"
+    },
+    "empty": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "__EMPTY__",
+      "defaultValue": "empty"
+    },
+    "literal": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "__LITERAL__",
+      "defaultValue": "literal"
+    }
+  }
+}

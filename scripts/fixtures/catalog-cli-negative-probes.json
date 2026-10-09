@@ -1,0 +1,140 @@
+{
+  "schema": "fsgg.catalog-cli-negative-probes/v1",
+  "purpose": "Data-only real CLI acceptance probes under the existing cooperative profile.",
+  "execution": "Driver selects one resolved absolute Python executable as the independently owned policy tool and passes literal argv [-c, pythonCode]. The transport remains the real selected dotnet installation.",
+  "substitutions": {
+    "{{VERSION}}": "Exact declared provider tool version; JSON/string escape before insertion.",
+    "{{TARGET}}": "One complete JSON-escaped Python string literal for the case target; substitute without extra quotes."
+  },
+  "policyRequirements": [
+    "Replace only the selected tool probe executable and arguments; preserve the provider tool association and all admission obligations.",
+    "Regenerate and verify independent raw policy digest with the existing public producer/parser.",
+    "Retain the real fixture catalog/archive and their exact digest joins."
+  ],
+  "harnessRequirements": [
+    "Require known direct CLI terminal, EOF and harness cleanup.",
+    "Expected CLI nonzero is a negative business case, not failed namespace cleanup.",
+    "Reject outer timeout, cancellation, output-limit or namespace-kill as evidence of product handling.",
+    "Require original absent target remains absent and no published provenance; existing target bytes must stay unchanged if the case supplies one."
+  ],
+  "productionEvidence": {
+    "knownNonzero": "CatalogScaffoldEffects.invoke: catalog.commandFailed after known child settlement",
+    "unexpectedStderr": "CatalogScaffoldEffects.invoke: catalog.commandDiagnostics after exit 0",
+    "wrongVersion": "CatalogScaffoldEffects.probeTools: catalog.toolVersionRefused",
+    "deadlineAndCancellation": "CatalogScaffoldLinux.checkWork: catalog.workStopped",
+    "outputLimit": "CatalogScaffoldLinux.reader stops useful work; snapshot emits catalog.outputLimit"
+  },
+  "cases": [
+    {
+      "name": "probe-nonzero-7",
+      "pythonCode": "import sys; sys.exit(7)",
+      "expectedDiagnosticAnyOf": [
+        "catalog.commandFailed"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": true,
+      "provenanceAbsent": true,
+      "notes": "The real policy tool exits 7; the CLI reports its own failed operation with exit 1. This is not CLI exit 7 or namespace timeout."
+    },
+    {
+      "name": "probe-per-stream-output-limit",
+      "pythonCode": "import sys; sys.stdout.buffer.write(b\"x\" * 1100000); sys.stdout.buffer.flush()",
+      "expectedDiagnosticAnyOf": [
+        "catalog.outputLimit",
+        "catalog.workStopped"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": true,
+      "provenanceAbsent": true,
+      "notes": "Finite 1.1MB output exceeds the 1MiB stdout ceiling while remaining below the 2MiB phase ceiling. Reader overflow stops useful work; actual scheduling may expose outputLimit or workStopped first. Empty diagnostics and outer harness failures are not accepted."
+    },
+    {
+      "name": "probe-output-limit",
+      "pythonCode": "import sys; sys.stdout.buffer.write(b\"x\" * 2200000); sys.stdout.buffer.flush()",
+      "expectedDiagnosticAnyOf": [
+        "catalog.diagnosticLimit",
+        "catalog.outputLimit",
+        "catalog.workStopped"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": true,
+      "provenanceAbsent": true,
+      "notes": "Finite 2.2MB output exceeds the 1MiB per-stream and 2MiB phase limits. Once aggregate output spends the phase budget, the already-paid fixed catalog.diagnosticLimit marker truthfully preserves refusal; earlier outputLimit or workStopped may remain. Empty diagnostics are not accepted. Outer harness output-limit or namespace termination cannot count as product refusal."
+    },
+    {
+      "name": "probe-product-deadline",
+      "pythonCode": "import time; time.sleep(60)",
+      "expectedDiagnosticAnyOf": [
+        "catalog.workStopped"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": true,
+      "provenanceAbsent": true,
+      "notes": "Use the admitted 30-second product preflight budget and an outer deadline exceeding product cleanup. The product deadline, not harness namespace termination, must stop this probe."
+    },
+    {
+      "name": "probe-product-sigint",
+      "pythonCode": "import os, signal, time; os.kill(os.getppid(), signal.SIGINT); time.sleep(1)",
+      "expectedDiagnosticAnyOf": [
+        "catalog.workStopped"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": true,
+      "provenanceAbsent": true,
+      "notes": "The actual directly launched policy probe signals its original CLI parent. This exercises Console.CancelKeyPress and the product token; no second process controller or harness cancellation event is used."
+    },
+    {
+      "name": "probe-unexpected-stderr",
+      "pythonCode": "import sys; print(\"{{VERSION}}\"); print(\"unexpected fixture stderr\", file=sys.stderr)",
+      "expectedDiagnosticAnyOf": [
+        "catalog.commandDiagnostics"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": true,
+      "provenanceAbsent": true,
+      "notes": "Stdout is the exact declared tool version plus newline; nonempty stderr differs from the explicitly accepted SDK workload warning."
+    },
+    {
+      "name": "probe-wrong-version",
+      "pythonCode": "print(\"0.0.0-fixture-mismatch\")",
+      "expectedDiagnosticAnyOf": [
+        "catalog.toolVersionRefused"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": true,
+      "provenanceAbsent": true,
+      "notes": "Known exit 0, EOF on both streams and bounded stdout do not establish the declared tool version."
+    },
+    {
+      "name": "probe-appearing-target",
+      "pythonCode": "from pathlib import Path; target = Path({{TARGET}}); target.mkdir(); (target / \"keep.txt\").write_text(\"appearing-target-fixture\\n\", encoding=\"utf-8\"); print(\"{{VERSION}}\")",
+      "expectedDiagnosticAnyOf": [
+        "catalog.commitRefused"
+      ],
+      "expectedExitCode": 1,
+      "expectedStatus": "failed",
+      "expectedOwnership": "Settled",
+      "targetUnchanged": false,
+      "expectedTargetState": "fixture-sentinel",
+      "expectedTargetFiles": {
+        "keep.txt": "appearing-target-fixture\n"
+      },
+      "provenanceAbsent": true,
+      "notes": "The policy probe runs after createPrivateRoot checked target absence. It introduces one caller-owned target with known sentinel bytes. Require no-replace publication refusal and exact sentinel preservation, not equality to the initially absent snapshot. No second process controller or concurrent fixture thread is used."
+    }
+  ]
+}

@@ -7,6 +7,9 @@
     <Compile Include="../Shared/TestShared.fs" />
     <Compile Include="TestSupport.fs" />
     <Compile Include="CatalogScaffoldWorkflowTests.fs" />
+    <Compile Include="CatalogScaffoldRuntimeTests.fs" />
+    <Compile Include="CatalogScaffoldLinuxIdentityTests.fs" />
+    <Compile Include="ProviderCapabilityAdmissionTests.fs" />
     <Compile Include="GenerationSourceSnapshotTests.fs" />
     <Compile Include="GenerationSourceRaceCharacterizationTests.fs" />
     <Compile Include="GenerationSelectedFileSnapshotTests.fs" />

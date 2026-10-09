@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CatalogScaffoldPolicy.fsi" />
+    <Compile Include="CatalogScaffoldPolicy.fs" />
+    <Compile Include="ProviderCapabilityAdmission.fsi" />
+    <Compile Include="ProviderCapabilityAdmission.fs" />
     <Compile Include="CatalogScaffoldWorkflow.fsi" />
     <Compile Include="CatalogScaffoldWorkflow.fs" />
     <Compile Include="CommandTypes.fsi" />
@@ -56,6 +60,10 @@
     <Compile Include="CommandWorkflow/HandlersRefresh.fs" />
     <Compile Include="CommandWorkflow/ScaffoldMutation.fs" />
     <Compile Include="CommandWorkflow/HandlersScaffold.fs" />
+    <Compile Include="CatalogScaffoldLinux.fsi" />
+    <Compile Include="CatalogScaffoldLinux.fs" />
+    <Compile Include="CatalogScaffoldEffects.fsi" />
+    <Compile Include="CatalogScaffoldEffects.fs" />
     <Compile Include="CommandWorkflow/HandlersDoctor.fs" />
     <Compile Include="CommandWorkflow/HandlersUpgrade.fs" />
     <Compile Include="CommandWorkflow/HandlersLint.fs" />
@@ -174,6 +182,7 @@
     <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <ProjectReference Include="../FS.GG.SDD.Knowledge/FS.GG.SDD.Knowledge.fsproj" />
     <PackageReference Include="FSharp.Core" />
+    <PackageReference Include="FS.GG.Governance.Config" />
     <PackageReference Include="FS.GG.Drivers" GeneratePathProperty="true" />
     <PackageReference Include="FS.GG.Game.Skills" GeneratePathProperty="true" />
     <PackageReference Include="FS.GG.Rendering.Skills" GeneratePathProperty="true" />

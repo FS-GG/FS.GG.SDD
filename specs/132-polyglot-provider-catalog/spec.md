@@ -40,3 +40,64 @@ See [wire contract](contracts/catalog.md), [plan](plan.md), and [tasks](tasks.md
 Add explicit digest-checked `catalog inspect`, canonical semantic digest projections and closed schema-2 provenance reading/ownership projection. Preserve C1 parser/resolve and every legacy constructor. No runtime Governance reference or invocation is introduced. Inspection reports prepared declarations only, reads the explicitly selected local file and never writes or probes tools. `scaffold --catalog` refuses as unavailable before effects.
 
 Verify raw/semantic tamper, sorted declarations versus literal argv, Unicode/control byte goldens, explicit parameter identities/defaults, schema-1 parity, complete synthetic schema-2 ownership correspondence, and malformed/unsupported provenance blocking refresh/lifecycle mutation. Real executable provider qualification remains C2.2 under root admission.
+
+## SDD928-C2.2 — local candidate staged creation
+
+Tier 1 additive explicit catalog scaffold route, under the existing owning plan. The selected
+Config 0.3.0 archive is a locally qualified candidate awaiting the protected coherent release
+join, not a published dependency or adoption pin. Legacy callers and schema-1 workspaces retain
+their contracts. Quint remains the sole lifecycle/semantic acceptance authority.
+
+- FR-008: Resolve the original complete capability declarations through the actual selected
+  Config package, with independently selected policy, immediately before dispatch. Reject missing
+  required bindings and unsupported exact evidence mappings; caller-supplied resolved sets confer
+  no authority. Descriptor protocol 3.0.0 maps explicitly to neutral capability contract 1.0.0.
+- FR-009: Observe selected platform, every selected-platform tool and exact transport version
+  through bounded literal process invocations. Policy controls executable/version parsing, supported
+  formats/environments and budget ceilings; declarations cannot widen them.
+- FR-010: Consume the exact selected local template archive into isolated qualified transport
+  state, without template updates, discovery or network fallback. Preserve ordinal effective argv
+  values, including empty strings and metacharacters; reject transport-option collisions.
+- FR-011: Require an absent target and existing parent, with no force. Compose the whole workspace
+  in a sibling owned staging directory, validate physical containment and full ownership/skill union,
+  then perform atomic no-replace commit. Failure writes no success envelope and preserves target.
+- FR-012: Use separate monotonic whole-phase preflight/scaffold deadlines, cancellation, bounded
+  output and explicit environment admission. Retire owned children and staging only. Unknown cleanup
+  or commit outcomes stay unknown and block retry.
+- FR-013: Emit complete schema-2 declaration/actual observation/ownership only after observed
+  success. Canonical provenance uses root roles and relative paths, with no clocks, staging randomness
+  or physical machine paths. Identical normalized declarations/observed outputs yield identical bytes.
+- FR-014: Select and physically capture the recognized scaffold provenance source in both producer
+  work-model selection and closed WorkModelSourceBundle validation. Tampering changes revision-bound
+  source identity; provenance supplies no alternate lifecycle or semantic acceptance.
+- FR-015: Route the real explicit scaffold CLI through the production MVU/edge. Dry run uses the
+  same preparation with observations absent. No catalog flags without catalog silently select legacy.
+
+Acceptance is one generic local package fixture through that real caller: exact archive/argv/cwd/tool
+observations, awkward values, deterministic repeat, complete ownership/skills, and no-target-change
+negatives for bad bindings/policy/maps/tools, drift, reserved writes, collisions, deadlines/cancellation
+and cleanup. Pure effects or synthetic records cannot establish real execution. Runtime fixture
+qualification is separately admitted by root. C2.3 Verify, C3 SDK and C4 release/adoption remain open.
+
+## C2.2 first-host mechanism addendum
+
+The explicit catalog route adds `--transport-executable <fully-qualified-file>`. The host supplies
+LocalLinux selection independently of provider bytes and policy probe IDs. Unsupported host,
+CI/Release requirements, missing ABI/exports or unqualified transport behavior refuse before launch.
+The first profile uses Linux-x64/glibc, pidfd_spawn and held directory descriptors. Atomic
+renameat2 NOREPLACE publishes into the held parent object and preserves an appearing target.
+The supported cooperative namespace excludes adversarial pathname ABA, hostile mounts and escaping
+descendants; pathname relocation can leave requested-path commit Unknown. No sandbox is claimed.
+
+The caller holds an opaque Operation before any acquisition. Pure prepare performs no native
+observation; run consumes it once. Every phase ceiling includes cancellation/drain/cleanup, with
+1MiB per stream/2MiB whole-phase output and separately bounded8MiB raw transport state. Unsettled
+launch, readers, children or commit remain owned and block retry/commit/deletion. CLI reports the
+original failure/unknown once, then passively retains the owner; bounded reporting does not promise
+bounded process exit. Late facts do not upgrade the report or renew filesystem cleanup authority.
+
+Before managed body or SDK transport, qualify exact native ABI/exports/offsets with a finite
+ABI-only C fixture, then separately qualify pidfd/fd-cwd/no-replace primitives with a real outer
+fixture owner and managed coexistence. SDK procfd-root/cache/alias behavior is another gate; the
+previous ordinary absolute-path fixture acceptance does not establish it. No new package/helper,
+policy schema or alternate execution authority is introduced.

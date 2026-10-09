@@ -1,0 +1,11 @@
+{
+  "sourceRoot": "/absolute/path/to/FS.GG.SDD",
+  "identityPaths": ["src/*.fs", "src/*.fsi", "src/*.fsproj", "*.props", "*.targets", "global.json", "nuget.config", ".claude/skills/**"],
+  "fixtureManifest": "/absolute/path/to/private-fixture/request.json",
+  "transportExecutable": "/usr/share/dotnet/dotnet",
+  "cliCommand": ["/usr/share/dotnet/dotnet", "exec", "--fx-version", "10.0.12", "/absolute/path/to/FS.GG.SDD/src/FS.GG.SDD.Cli/bin/Release/net10.0/FS.GG.SDD.Cli.dll"],
+  "verifyCommand": ["/usr/share/dotnet/dotnet", "fsi", "--exec", "/absolute/path/to/FS.GG.SDD/scripts/fixtures/catalog-cli-fixture.fsx", "verify", "/absolute/path/to/FS.GG.SDD/src/FS.GG.SDD.Cli/bin/Release/net10.0/FS.GG.SDD.Artifacts.dll"],
+  "runtime": {"mode": "native-runtime", "backend": "pid-namespace", "timeoutSeconds": 150, "cleanupSeconds": 15, "outputBytes": 8388608},
+  "verification": {"mode": "ordinary", "timeoutSeconds": 30, "cleanupSeconds": 10, "outputBytes": 1048576},
+  "totalSeconds": 300
+}

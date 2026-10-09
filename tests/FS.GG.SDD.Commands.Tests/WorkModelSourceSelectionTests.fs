@@ -50,5 +50,5 @@ module WorkModelSourceSelectionTests =
 
         Assert.Equal("sourceSnapshots: []\nevidence:\n  - id: E-1\n", selected.Text)
         Assert.Equal(selected.Text, (selectedEvidence second).Text)
-        Assert.NotEqual(selected.Text, (selectedEvidence changedEvidence).Text)
+        Assert.NotEqual<string>(selected.Text, (selectedEvidence changedEvidence).Text)
         Assert.Equal(SchemaVersion.sha256Text selected.Text, SchemaVersion.sha256Text (selectedEvidence second).Text)
