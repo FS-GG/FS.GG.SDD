@@ -208,3 +208,16 @@ other declared substitutions. Conditions, source renames, arbitrary generators a
 refuse. Synthetic parser/cache tests do not qualify actual SDK matching or a language provider;
 the real Node vertical must use its owner's exact once-packed multi-template archive through
 the maintained driver and namespace backend. Public contracts and custody remain unchanged.
+
+
+For an explicitly selected real provider, `fixtureExpectations` replaces only the opaque
+fixture's product-file and produced-skill assertions. It requires `files` (each with a
+contained `path` and exactly one literal UTF8 `text` or lowercase raw `sha256`),
+`absentPaths`, and `producedSkillPaths` (neutral `.agents/skills/.../SKILL.md` paths).
+Positive files and skills are mandatory; each inventory is limited to16 entries, expected
+text to1MiB total, and each actual file read to1MiB. Links, escaping paths, missing
+files, changed bytes, pre-existing excluded outputs and missing produced skills refuse.
+Omitting the field preserves the existing opaque defaults. The common strict provenance,
+archive/tool/literal argv, target/staging, mirrored/SDD-owned paths and executable-mode
+checks still run. These assertions configure the maintained driver; they confer no
+provider execution authority or evidence-decoder qualification.
