@@ -78,7 +78,10 @@ def verified_contracts_payloads(public, org, package_name="reused Contracts"):
         raise ValueError(f'{package_name} normalized payload differs between feeds')
 
 
-def preflight(version, ids, github_index, github_download, public_download, token, actor, candidate=None, contracts_version=None, github_api="https://api.github.com"):
+def preflight(version, ids, github_index, github_download, public_download, token, actor, candidate=None, contracts_version=None, github_api="https://api.github.com", no_push_observation=None):
+    if no_push_observation is not None and candidate is not None:
+        raise ValueError("candidate-only observation cannot be combined with publisher --candidate")
+    observations = []
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
         raise ValueError("invalid stable release version")
     if not token or not actor:
@@ -162,6 +165,12 @@ def preflight(version, ids, github_index, github_download, public_download, toke
             name = urllib.parse.quote(package_id.lower(), safe="")
             data = read(f"{github_api}/orgs/FS-GG/packages/nuget/{name}/versions?per_page=100&page={page}", api=True)
             if data is None:
+                # Commands is the newly introduced standalone release member. A
+                # missing first-page namespace remains Unknown, never Absent.
+                # This only permits read-only no-push qualification; publishing
+                # continues to require the original strict scoped-version proof.
+                if no_push_observation is not None and package_id == "FS.GG.SDD.Commands" and page == 1:
+                    return False
                 raise ValueError(f"{package_id}: scoped GitHub versions unreadable; occupancy unknown")
             if len(data) > 4 * 1024 * 1024:
                 raise ValueError("scoped GitHub version response exceeds bounded population")
@@ -171,7 +180,7 @@ def preflight(version, ids, github_index, github_download, public_download, toke
             if any(e["name"] == selected_version for e in entries):
                 raise ValueError(f"{package_id} {selected_version} is listed but archive unreadable")
             if len(entries) < 100:
-                return
+                return True
         raise ValueError("scoped GitHub version population incomplete; occupancy unknown")
 
     for package_id in ids:
@@ -187,11 +196,25 @@ def preflight(version, ids, github_index, github_download, public_download, toke
                 if expected is None:
                     raise ValueError(f"{package_id} {selected_version} occupied on {feed}; refusing substitution")
                 verified_contracts_payloads(expected, data, package_id)
+                observations.append(dict(packageId=package_id, version=selected_version, feed=feed, status="MatchedRetainedPayload"))
                 print(f"{package_id} {selected_version} {feed}: exact retained payload already present")
             else:
-                if feed == "github":
-                    prove_org_absence(package_id, selected_version)
-                print(f"{package_id} {selected_version} {feed}: absent")
+                if feed == "github" and not prove_org_absence(package_id, selected_version):
+                    observations.append(dict(packageId=package_id, version=selected_version, feed=feed,
+                                             status="Unknown", reason="scoped package versions first page unavailable (HTTP404)"))
+                    print(f"{package_id} {selected_version} {feed}: Unknown; no-push qualification only, publication blocked")
+                else:
+                    observations.append(dict(packageId=package_id, version=selected_version, feed=feed, status="Absent"))
+                    print(f"{package_id} {selected_version} {feed}: absent")
+
+    if no_push_observation is not None:
+        observation = dict(mode="no-push-candidate", version=version, contractsVersion=contracts_version,
+                           publicationAuthorized=False, observations=observations)
+        # Retain once; neither successful qualification nor a later caller may
+        # overwrite the original occupancy observation or infer publication.
+        with no_push_observation.open("x", encoding="utf-8") as output:
+            json.dump(observation, output, indent=2)
+            output.write("\n")
 
 
 def main():
@@ -199,11 +222,13 @@ def main():
     parser.add_argument("version")
     parser.add_argument("--candidate", type=Path)
     parser.add_argument("--contracts-version", required=True)
+    parser.add_argument("--no-push-observation", type=Path, help="retain candidate-only occupancy observations; cannot be used with --candidate")
     args = parser.parse_args()
     ids = Path(__file__).with_name("sdd-release-packages.txt").read_text().splitlines()
     preflight(args.version, ids, "https://nuget.pkg.github.com/FS-GG/index.json",
               "https://nuget.pkg.github.com/FS-GG/download", "https://api.nuget.org/v3-flatcontainer",
-              os.environ.get("GH_TOKEN", ""), os.environ.get("GITHUB_ACTOR", ""), args.candidate, args.contracts_version)
+              os.environ.get("GH_TOKEN", ""), os.environ.get("GITHUB_ACTOR", ""), args.candidate, args.contracts_version,
+              no_push_observation=args.no_push_observation)
 
 
 if __name__ == "__main__":

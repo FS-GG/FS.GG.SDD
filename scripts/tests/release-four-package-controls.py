@@ -14,7 +14,7 @@ count=0
 def verdict(action,expected):
     global count
     try:action()
-    except (ValueError,FileNotFoundError):
+    except (ValueError,FileNotFoundError,FileExistsError):
         assert not expected
     else:assert expected
     count+=1
@@ -62,15 +62,48 @@ class Opener:
         status,raw=responses.get(request.full_url,(404,b''))
         if status!=200:raise urllib.error.HTTPError(request.full_url,status,'synthetic',None,None)
         return io.BytesIO(raw)
-def check(expected,candidate=None,contracts='7.6.0',token='synthetic'):
+def check(expected,candidate=None,contracts='7.6.0',token='synthetic',observation=None):
     with patch.object(occupancy.urllib.request,'build_opener',return_value=Opener()), contextlib.redirect_stdout(io.StringIO()):
-        verdict(lambda:occupancy.preflight('2.3.0',ids,'https://fixture/index','https://fixture/org','https://fixture/public',token,'fixture',candidate,contracts,github_api='https://fixture/api'),expected)
+        verdict(lambda:occupancy.preflight('2.3.0',ids,'https://fixture/index','https://fixture/org','https://fixture/public',token,'fixture',candidate,contracts,github_api='https://fixture/api',no_push_observation=observation),expected)
 seed();check(True);check(False,token='');check(False,contracts=None);check(False,contracts='7.6-preview')
 api='https://fixture/api/orgs/FS-GG/packages/nuget/fs.gg.sdd.commands/versions?per_page=100&page=1'
 responses[api]=(403,b'');check(False)
 responses[api]=(404,b'');check(False)
 responses[api]=(200,b'{"not":"population"}');check(False)
 responses[api]=(200,b'[{"name":"2.3.0"}]');check(False)
+# Candidate-only qualification retains missing new Commands namespace as Unknown.
+# The same observation cannot grant publisher permission or conceal other defects.
+with tempfile.TemporaryDirectory() as td:
+    root=Path(td)
+    seed();responses[api]=(404,b'')
+    observed=root/'unknown.json'
+    check(True,observation=observed)
+    document=json.loads(observed.read_text())
+    assert document['mode']=='no-push-candidate' and document['publicationAuthorized'] is False
+    assert len(document['observations'])==8
+    unknown=[row for row in document['observations'] if row['status']=='Unknown']
+    assert len(unknown)==1 and unknown[0]['packageId']=='FS.GG.SDD.Commands' and unknown[0]['feed']=='github'
+    assert not any(row['packageId']=='FS.GG.SDD.Commands' and row['feed']=='github' and row['status']=='Absent' for row in document['observations'])
+    count+=1
+    original=observed.read_bytes();check(False,observation=observed);assert observed.read_bytes()==original;count+=1
+    check(False)  # Publisher/default strict path still refuses this exact404.
+    check(False,candidate=root,observation=root/'publisher.json')
+    assert not (root/'publisher.json').exists();count+=1
+    responses[api]=(403,b'');check(False,observation=root/'denied.json');assert not (root/'denied.json').exists();count+=1
+    responses[api]=(200,b'{"not":"population"}');check(False,observation=root/'malformed.json')
+    # A missing later page is incomplete enumeration, not a new namespace.
+    responses[api]=(200,json.dumps([{'name':'2.2.0'}]*100).encode())
+    check(False,observation=root/'partial.json');assert not (root/'partial.json').exists();count+=1
+    seed();other='https://fixture/api/orgs/FS-GG/packages/nuget/fs.gg.sdd.artifacts/versions?per_page=100&page=1'
+    responses[other]=(404,b'');check(False,observation=root/'other.json')
+    seed();responses[api]=(404,b'')
+    responses['https://fixture/org/fs.gg.sdd.cli/2.3.0/fs.gg.sdd.cli.2.3.0.nupkg']=(200,package('FS.GG.SDD.Cli','2.3.0'))
+    check(False,observation=root/'occupied.json');assert not (root/'occupied.json').exists();count+=1
+    seed();responses[api]=(200,b'[{"name":"2.3.0"}]');check(False,observation=root/'listed.json')
+    seed();check(True,observation=root/'absent.json')
+    assert all(row['status']=='Absent' for row in json.loads((root/'absent.json').read_text())['observations']);count+=1
+verdict(lambda:static.check(text.replace('--no-push-observation artifacts/packages/occupancy-observation.json','')),False)
+verdict(lambda:static.check(text.replace('--candidate artifacts/packages','--candidate artifacts/packages --no-push-observation bad.json')),False)
 seed()
 with tempfile.TemporaryDirectory() as td:
     root=Path(td)

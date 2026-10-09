@@ -272,10 +272,12 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Verify the new version is unused on both feeds with native credentials
+      - name: Observe both-feed occupancy for no-push qualification
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/check-sdd-release-occupancy.py "${{ needs.resolve-versions.outputs.cli_version }}" --contracts-version "${{ needs.resolve-versions.outputs.contracts_version }}"
+        run: |
+          mkdir -p artifacts/packages
+          python3 scripts/check-sdd-release-occupancy.py "${{ needs.resolve-versions.outputs.cli_version }}" --contracts-version "${{ needs.resolve-versions.outputs.contracts_version }}" --no-push-observation artifacts/packages/occupancy-observation.json
 
       - name: Restore (locked)
         uses: ./.github/actions/locked-restore

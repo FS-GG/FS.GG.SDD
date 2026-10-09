@@ -69,6 +69,23 @@ Contracts is never pushed. Occupied versions permit only signature-aware exact
 payload equality, never overwrite. GitHub archive404 needs complete scoped
 version enumeration; inaccessible or incomplete observations refuse.
 
+## Candidate-only unresolved new namespace
+
+The no-push candidate retains `packages/occupancy-observation.json` using the
+checker's exclusive `--no-push-observation` output. For the newly introduced
+standalone Commands package only, a missing first page of scoped versions may
+remain `Unknown` while packing and package qualification proceed. This never
+means `Absent` or publication authorization. All other access errors, malformed
+or incomplete enumeration, known occupied versions, and reused dependency or
+baseline authenticity failures still refuse.
+
+The mode cannot be combined with publisher `--candidate` and is called only by
+the no-push job. The publisher repeats its unchanged strict occupancy/collision
+checks: promotion remains blocked until authoritative Commands visibility and
+absence or exact retained-payload equality are established. Qualification of
+these original bytes cannot substitute for that observation. The candidate
+artifact retains the observation with the existing archive receipts.
+
 ## Actual qualification and readback
 
 Candidate API checks compare Artifacts, Knowledge and prior CLI-bundled public
