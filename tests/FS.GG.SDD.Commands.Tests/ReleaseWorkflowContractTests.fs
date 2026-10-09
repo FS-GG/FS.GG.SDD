@@ -51,14 +51,14 @@ module ReleaseWorkflowContractTests =
         Assert.Equal(1, count "\n  publish-artifacts:\n" workflow)
 
         Assert.Contains(
-            "needs: [resolve-versions, contracts-tests, artifacts-tests, cli-tests, knowledge-tests]",
+            "needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]",
             workflow
         )
 
         Assert.Contains("target: tests/FS.GG.SDD.Artifacts.Tests/FS.GG.SDD.Artifacts.Tests.fsproj", workflow)
         Assert.Contains("run: tests/fixtures/typed-specifications/run-clean-consumer.sh", workflow)
         Assert.Contains("artifacts_version: ${{ steps.ver.outputs.artifacts_version }}", workflow)
-        Assert.Contains("$artifacts_version\" != \"$cli_version", workflow)
+        Assert.Contains("all four SDD projects must share one coherent version", workflow)
 
         let start = workflow.IndexOf("\n  publish-artifacts:\n", StringComparison.Ordinal)
 
@@ -78,18 +78,24 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("done < scripts/sdd-release-packages.txt", job)
 
         Assert.Equal(
-            [| "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Cli"; "FS.GG.SDD.Knowledge" |],
+            [| "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli"; "FS.GG.SDD.Knowledge" |],
             File.ReadAllLines(Path.Combine(TestSupport.repoRoot, "scripts", "sdd-release-packages.txt"))
         )
 
         Assert.DoesNotContain("-p:Version=", job)
         Assert.DoesNotContain("-p:PackageVersion=", job)
         Assert.Contains("-p:RepositoryCommit=\"$GITHUB_SHA\"", job)
-        Assert.Contains("packages=FS.GG.Contracts,FS.GG.SDD.Artifacts,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge", job)
+        Assert.Contains("packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Commands,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge", job)
         Assert.Contains("coherent-sdd-packages-${{ github.sha }}", job)
         Assert.Contains("needs.resolve-versions.outputs.push == 'false'", job)
         Assert.Contains("scripts/verify-release-candidate.sh", job)
         Assert.Contains("candidate.env", job)
+        Assert.Contains("release-candidate/v4", job)
+        Assert.Contains("--record-contracts", job)
+        Assert.Contains("packages/dependencies/FS.GG.Contracts.", job)
+        Assert.DoesNotContain("dotnet pack src/FS.GG.Contracts", workflow)
+        Assert.DoesNotContain("dotnet nuget push \"artifacts/packages/FS.GG.Contracts", workflow)
+        Assert.Contains("target: tests/FS.GG.SDD.Commands.Tests/FS.GG.SDD.Commands.Tests.fsproj", workflow)
         Assert.DoesNotContain("dotnet nuget push", job)
 
         let custody = workflow.Substring(locate, finish - locate)
@@ -108,6 +114,7 @@ module ReleaseWorkflowContractTests =
         Assert.DoesNotContain("dotnet pack src/FS.GG.SDD.Artifacts", publish)
         Assert.DoesNotContain("dotnet pack src/FS.GG.SDD.Cli", publish)
         Assert.Equal(8, count "dotnet nuget push" publish)
+        Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Commands.*.nupkg\"" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg\"" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Cli.*.nupkg\"" publish)
         Assert.Equal(2, count "dotnet nuget push \"artifacts/packages/FS.GG.SDD.Knowledge.*.nupkg\"" publish)

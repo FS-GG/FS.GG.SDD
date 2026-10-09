@@ -1,20 +1,10 @@
 name: release
 
-# Producer of the cross-repo auto-update fabric. On a release of FS.GG.SDD (or a pushed
-# v* tag, or a manual dispatch), a single run publishes FOUR packages to the org GitHub
-# Packages feed (nuget.pkg.github.com/FS-GG): FS.GG.Contracts (the org-shared contracts
-# line), FS.GG.SDD.Artifacts (the independently consumable lifecycle/specification contracts),
-# FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool), and FS.GG.SDD.Knowledge (the findings SDK).
-# Versions come from each project's own version properties. All four push with
-# --skip-duplicate using the run-scoped GITHUB_TOKEN (packages: write, no
-# PAT), only from the canonical repo.
-#
-# THE CONTRACT for triggers + version-resolution + gating + the four-package scope is
-# specs/044-publish-cli-tool/contracts/release-workflow.md (it supersedes feature 039's
-# single-package producer contract). This YAML is its implementation, not folklore. Each
-# package's published version is its EVALUATED fsproj <Version> (msbuild -getProperty); a
-# release tag checks the independent Contracts or coherent SDD line, never supplies the
-# source (research Decisions 2-3; FR-014 reconciliation).
+# One retained coherent set: Artifacts, Commands, CLI and Knowledge share their
+# source-evaluated version. Published Contracts 7.6.0 is an independently qualified
+# dependency from its original source, never packed or pushed by this rail.
+# Candidate custody is v4; v3 Contracts-plus-three-SDD artifacts remain historical.
+# Contract: specs/044-publish-cli-tool/contracts/release-workflow.md.
 
 on:
   release:
@@ -24,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Explicit FS.GG.Contracts version to publish. Omit for a pack-only dry run."
+        description: "Explicit coherent FS.GG.SDD version to publish. Omit for a pack-only dry run."
         type: string
         required: false
       readback_version:
@@ -45,16 +35,17 @@ concurrency:
 
 jobs:
   # Shared version-resolution state machine — see the contract's version-resolution table.
-  # Evaluates the independent Contracts and coherent SDD fsproj <Version>s (msbuild -getProperty, not a grep) and applies the
-  # at-least-one-line tag guard, then hands contracts_version / cli_version / push to the
+  # Reads the exact published Contracts dependency pin and evaluates all four SDD project versions.
+  # The event version must match the coherent SDD source, then contracts_version / cli_version / push go to the
   # retained publisher. Fork events never satisfy the repo guard ⇒ no publish path runs.
   resolve-versions:
-    name: Resolve Contracts and coherent SDD versions
+    name: Resolve published Contracts and four coherent SDD versions
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
       artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
+      commands_version: ${{ steps.ver.outputs.commands_version }}
       cli_version: ${{ steps.ver.outputs.cli_version }}
       knowledge_version: ${{ steps.ver.outputs.knowledge_version }}
       push: ${{ steps.ver.outputs.push }}
@@ -74,9 +65,8 @@ jobs:
           # no per-job component, so caching here would share and poison the deterministic
           # gate's key (#92 / NU1403). Release runs rarely; a fresh restore is fine.
 
-      # Source of truth is the EVALUATED fsproj <Version> for each line. The release/tag
-      # event's tag checks the independent Contracts and shared SDD versions, never supplies them. A
-      # version-bearing tag must match AT LEAST ONE evaluated version (research Decision 2).
+      # Source versions are evaluated, never supplied by a tag or manual override.
+      # Published Contracts stays on its independently selected exact package pin.
       - name: Resolve versions
         id: ver
         env:
@@ -89,70 +79,46 @@ jobs:
 
           strip_v() { printf '%s' "${1#v}"; }
 
-          contracts_version="$(dotnet msbuild src/FS.GG.Contracts/FS.GG.Contracts.fsproj -getProperty:Version)"
-          contracts_version="$(printf '%s' "$contracts_version" | tr -d '[:space:]')"
+          contracts_version="$(python3 - <<'PYCONTRACTS'
+          import xml.etree.ElementTree as E
+          rows=[item.get('Version') for item in E.parse('Directory.Packages.local.props').getroot().iter('PackageVersion') if item.get('Include')=='FS.GG.Contracts']
+          if rows != ['[7.6.0]']: raise SystemExit('release requires the exact selected published Contracts package pin')
+          print(rows[0][1:-1])
+          PYCONTRACTS
+          )"
           artifacts_version="$(dotnet msbuild src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj -getProperty:Version)"
           artifacts_version="$(printf '%s' "$artifacts_version" | tr -d '[:space:]')"
           cli_version="$(dotnet msbuild src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -getProperty:Version)"
           cli_version="$(printf '%s' "$cli_version" | tr -d '[:space:]')"
 
+          commands_version="$(dotnet msbuild src/FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj -getProperty:Version)"
+          commands_version="$(printf '%s' "$commands_version" | tr -d '[:space:]')"
           knowledge_version="$(dotnet msbuild src/FS.GG.SDD.Knowledge/FS.GG.SDD.Knowledge.fsproj -getProperty:Version)"
           knowledge_version="$(printf '%s' "$knowledge_version" | tr -d '[:space:]')"
 
-          if [ -z "$artifacts_version" ] || [ "$artifacts_version" != "$cli_version" ] || [ "$knowledge_version" != "$cli_version" ]; then
-            echo "::error::FS.GG.SDD.Artifacts ($artifacts_version) and FS.GG.SDD.Cli ($cli_version) and FS.GG.SDD.Knowledge ($knowledge_version) must share one coherent-set version."
-            exit 1
-          fi
-
-          push=""
-
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+          for resolved in "$artifacts_version" "$commands_version" "$cli_version" "$knowledge_version"; do
+            [[ "$resolved" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::invalid source version $resolved"; exit 1; }
+            [ "$resolved" = "$cli_version" ] || { echo "::error::all four SDD projects must share one coherent version"; exit 1; }
+          done
+          push="true"
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
             if [ -n "${INPUT_VERSION:-}" ]; then
-              # Manual override: publish exactly the requested Contracts version; the CLI
-              # always tracks its evaluated version (the `version` input is Contracts-scoped).
-              contracts_version="$(strip_v "$INPUT_VERSION")"
-              if [ -z "$cli_version" ]; then
-                echo "::error::could not read <Version> from FS.GG.SDD.Cli.fsproj (build defect)."
-                exit 1
-              fi
-              push="true"
+              [ "$(strip_v "$INPUT_VERSION")" = "$cli_version" ] || { echo '::error::manual SDD version differs from source'; exit 1; }
             else
-              # Intentional dry run: retain all three SDD members, push nothing (FR-004).
-              if [ -z "$contracts_version" ] || [ -z "$artifacts_version" ] || [ -z "$cli_version" ]; then
-                echo "::error::could not read <Version> from one of the fsprojs (build defect)."
-                exit 1
-              fi
               push="false"
-              echo "::notice::dry run — packing FS.GG.Contracts $contracts_version and FS.GG.SDD.Cli $cli_version but NOT pushing (manual dispatch with no version input)."
+              echo "::notice::dry run: pack four SDD members; reuse Contracts $contracts_version; no push"
             fi
           else
-            # release: published  OR  push: tags v*  — a real publish from the fsproj versions.
-            # Unreadable version is a defect: fail, never silently degrade to a dry run (FR-006).
-            if [ -z "$contracts_version" ] || [ -z "$artifacts_version" ] || [ -z "$cli_version" ]; then
-              echo "::error::could not read <Version> from one of the fsprojs on a $EVENT_NAME event (build defect); refusing to silently skip the publish."
-              exit 1
-            fi
-
             tag="$RELEASE_TAG"
-            [ -z "$tag" ] && tag="$REF_NAME"
-
-            # At-least-one-line guard: a version-bearing tag (v<semver>) must equal the
-            # Contracts, Artifacts, OR CLI evaluated version. A non-version-bearing tag is fine — the
-            # fsprojs are authoritative. Each package then publishes its own retained resolved version
-            # regardless of which line the tag matched (FR-005; research Decision 2).
+            [ -n "$tag" ] || tag="$REF_NAME"
             if printf '%s' "$tag" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+'; then
-              tag_version="$(strip_v "$tag")"
-              if [ "$tag_version" != "$contracts_version" ] && [ "$tag_version" != "$artifacts_version" ] && [ "$tag_version" != "$cli_version" ]; then
-                echo "::error::release tag '$tag' (version $tag_version) matches none of the evaluated package versions: Contracts=$contracts_version Artifacts=$artifacts_version CLI=$cli_version. The fsprojs are the source of truth; reconcile the tag or a fsproj before releasing."
-                exit 1
-              fi
+              [ "$(strip_v "$tag")" = "$cli_version" ] || { echo '::error::release tag differs from coherent SDD source'; exit 1; }
             fi
-
-            push="true"
           fi
 
           echo "contracts_version=$contracts_version" >> "$GITHUB_OUTPUT"
           echo "artifacts_version=$artifacts_version" >> "$GITHUB_OUTPUT"
+          echo "commands_version=$commands_version" >> "$GITHUB_OUTPUT"
           echo "cli_version=$cli_version" >> "$GITHUB_OUTPUT"
           echo "knowledge_version=$knowledge_version" >> "$GITHUB_OUTPUT"
           echo "push=$push" >> "$GITHUB_OUTPUT"
@@ -183,7 +149,7 @@ jobs:
         with:
           target: tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj
 
-      # The gate (FR-003): publish-contracts `needs` this job, so a red run never reaches the push.
+      # Source Contracts tests remain a prerequisite; this dependency is not packed or published.
       - name: Test (FS.GG.Contracts)
         run: dotnet test tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj -c Release --no-restore
 
@@ -210,6 +176,24 @@ jobs:
 
       - name: Verify clean package consumption
         run: tests/fixtures/typed-specifications/run-clean-consumer.sh
+
+  commands-tests:
+    name: Commands tests and authored public surface (publish gate)
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore (locked)
+        uses: ./.github/actions/locked-restore
+        with:
+          target: tests/FS.GG.SDD.Commands.Tests/FS.GG.SDD.Commands.Tests.fsproj
+      - name: Test (FS.GG.SDD.Commands)
+        run: dotnet test tests/FS.GG.SDD.Commands.Tests/FS.GG.SDD.Commands.Tests.fsproj -c Release --no-restore
 
   cli-tests:
     name: CLI tests (publish gate)
@@ -270,8 +254,8 @@ jobs:
 
 
   publish-artifacts:
-    name: Build and retain Contracts and coherent FS.GG.SDD candidate once
-    needs: [resolve-versions, contracts-tests, artifacts-tests, cli-tests, knowledge-tests]
+    name: Build and retain four coherent SDD archives once; reuse published Contracts
+    needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
     # run promotes this run's retained artifact; it must never pack another container (#944).
@@ -298,17 +282,18 @@ jobs:
         with:
           target: src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj
 
-      - name: Restore Contracts (locked)
-        uses: ./.github/actions/locked-restore
-        with:
-          target: src/FS.GG.Contracts/FS.GG.Contracts.fsproj
+      - name: Capture the selected published Contracts dependency
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/packages/dependencies
+          curl --fail --location --silent --show-error \
+            "https://api.nuget.org/v3-flatcontainer/fs.gg.contracts/${{ needs.resolve-versions.outputs.contracts_version }}/fs.gg.contracts.${{ needs.resolve-versions.outputs.contracts_version }}.nupkg" \
+            -o "artifacts/packages/dependencies/FS.GG.Contracts.${{ needs.resolve-versions.outputs.contracts_version }}.nupkg"
+          bash scripts/verify-release-candidate.sh --record-contracts artifacts/packages "${{ needs.resolve-versions.outputs.contracts_version }}"
 
       - name: Pack the reviewed coherent set once
         run: |
           set -euo pipefail
-          dotnet pack src/FS.GG.Contracts/FS.GG.Contracts.fsproj -c Release \
-            -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
-            --no-restore -o artifacts/packages
           while IFS= read -r id; do
             dotnet pack "src/$id/$id.fsproj" -c Release \
               -p:RepositoryCommit="$GITHUB_SHA" -p:SourceRevisionId="$GITHUB_SHA" \
@@ -321,7 +306,7 @@ jobs:
           shopt -s nullglob
           packages=(artifacts/packages/*.nupkg)
           if [ ${#packages[@]} -ne 4 ]; then
-            echo "::error::candidate must contain exactly Contracts, Artifacts, CLI and Knowledge."
+            echo "::error::candidate must contain exactly Artifacts, Commands, CLI and Knowledge."
             exit 1
           fi
           for package in "${packages[@]}"; do
@@ -333,11 +318,11 @@ jobs:
             sha256sum *.nupkg | LC_ALL=C sort -k2 > pre-push.sha256
           )
           printf '%s\n' \
-            'schema=fsgg.sdd.release-candidate/v3' \
+            'schema=fsgg.sdd.release-candidate/v4' \
             "head=$GITHUB_SHA" \
             "version=${{ needs.resolve-versions.outputs.cli_version }}" \
             "contracts_version=${{ needs.resolve-versions.outputs.contracts_version }}" \
-            'packages=FS.GG.Contracts,FS.GG.SDD.Artifacts,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge' \
+            'packages=FS.GG.SDD.Artifacts,FS.GG.SDD.Commands,FS.GG.SDD.Cli,FS.GG.SDD.Knowledge' \
             > artifacts/packages/candidate.env
           bash scripts/verify-release-candidate.sh \
             artifacts/packages "$GITHUB_SHA" "${{ needs.resolve-versions.outputs.cli_version }}" "${{ needs.resolve-versions.outputs.contracts_version }}"
@@ -347,7 +332,7 @@ jobs:
           FSGG_SDD_PACKAGE_DIR: artifacts/packages
         run: bash scripts/verify-cli-tool.sh
 
-      - name: Compare the packed SDD APIs against public 2.0.3
+      - name: Compare shipped APIs against public 2.2 and cold-consume Commands
         run: bash scripts/verify-sdd-package-api.sh artifacts/packages "${{ needs.resolve-versions.outputs.cli_version }}"
 
       - name: Qualify the packed Knowledge CLI and SDK
@@ -363,13 +348,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coherent-sdd-packages-${{ github.sha }}
-          path: artifacts/packages/*
+          path: artifacts/packages/
+          include-hidden-files: false
           if-no-files-found: error
           retention-days: 30
 
   locate-artifacts:
     name: Preflight retained candidate custody
-    needs: [resolve-versions, contracts-tests, artifacts-tests, cli-tests, knowledge-tests]
+    needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
     permissions:
@@ -452,7 +438,7 @@ jobs:
       - name: Publish the coherent set to GitHub Packages first
         run: |
           set -euo pipefail
-          dotnet nuget push "artifacts/packages/FS.GG.Contracts.${{ needs.resolve-versions.outputs.contracts_version }}.nupkg" \
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Commands.*.nupkg" \
             --source https://nuget.pkg.github.com/FS-GG/index.json \
             --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
           dotnet nuget push "artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg" \
@@ -475,7 +461,7 @@ jobs:
         run: |
           set -euo pipefail
           (cd artifacts/packages && sha256sum --check --strict pre-push.sha256)
-          dotnet nuget push "artifacts/packages/FS.GG.Contracts.${{ needs.resolve-versions.outputs.contracts_version }}.nupkg" \
+          dotnet nuget push "artifacts/packages/FS.GG.SDD.Commands.*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
             --api-key ${{ steps.nuget-login-sdd.outputs.NUGET_API_KEY }} --skip-duplicate
           dotnet nuget push "artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg" \
@@ -492,15 +478,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
-          CONTRACTS_VERSION: ${{ needs.resolve-versions.outputs.contracts_version }}
         run: |
           set -euo pipefail
           mkdir -p artifacts/feed-readback
-          for id in fs.gg.contracts fs.gg.sdd.artifacts fs.gg.sdd.cli fs.gg.sdd.knowledge; do
+          for id in fs.gg.sdd.artifacts fs.gg.sdd.commands fs.gg.sdd.cli fs.gg.sdd.knowledge; do
             package_version="$VERSION"
-            [ "$id" != fs.gg.contracts ] || package_version="$CONTRACTS_VERSION"
             case "$id" in
-              fs.gg.contracts) local_package="artifacts/packages/FS.GG.Contracts.$package_version.nupkg" ;;
+              fs.gg.sdd.commands) local_package="artifacts/packages/FS.GG.SDD.Commands.$VERSION.nupkg" ;;
               fs.gg.sdd.artifacts) local_package="artifacts/packages/FS.GG.SDD.Artifacts.$VERSION.nupkg" ;;
               fs.gg.sdd.cli) local_package="artifacts/packages/FS.GG.SDD.Cli.$VERSION.nupkg" ;;
               fs.gg.sdd.knowledge) local_package="artifacts/packages/FS.GG.SDD.Knowledge.$VERSION.nupkg" ;;
@@ -540,6 +524,8 @@ jobs:
           "$scratch/tool/fsgg-sdd" --version | grep -F "$VERSION"
           dotnet new classlib -o "$scratch/consumer" --no-restore
           dotnet add "$scratch/consumer" package FS.GG.SDD.Artifacts --version "$VERSION" \
+            --source https://api.nuget.org/v3/index.json --no-restore
+          dotnet add "$scratch/consumer" package FS.GG.SDD.Commands --version "$VERSION" \
             --source https://api.nuget.org/v3/index.json --no-restore
           dotnet restore "$scratch/consumer" --source https://api.nuget.org/v3/index.json --no-http-cache
 
@@ -596,6 +582,9 @@ jobs:
           name: sdd-${{ needs.resolve-versions.outputs.cli_version }}-dual-feed-receipt-${{ github.sha }}
           path: |
             artifacts/packages/pre-push.sha256
+            artifacts/packages/candidate.env
+            artifacts/packages/contracts-reuse.json
+            artifacts/packages/dependencies/*.nupkg
             artifacts/packages/*.nupkg.entries
             artifacts/packages/*.nupkg.payloads
             artifacts/feed-readback/*.payloads
