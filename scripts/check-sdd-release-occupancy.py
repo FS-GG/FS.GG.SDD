@@ -54,27 +54,28 @@ def contracts_metadata(data, version):
                 payloadSha256=hashlib.sha256(normalized).hexdigest(), dllSha256=CONTRACTS_DLL_SHA256)
 
 
-def verified_contracts_payloads(public, org):
+def verified_contracts_payloads(public, org, package_name="reused Contracts"):
     # Exact selected public bytes need no exclusion. A changed envelope only
     # permits excluding signatures after the SDK has verified every signed input.
     if public == org:
+        payload(public)  # Equal bytes still require a structurally valid archive.
         return
     for data in [public, org]:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             signed = '.signature.p7s' in archive.namelist()
         if signed:
-            with tempfile.TemporaryDirectory(prefix='sdd-contracts-signature-') as directory:
-                path = Path(directory) / 'FS.GG.Contracts.7.6.0.nupkg'
+            with tempfile.TemporaryDirectory(prefix='sdd-package-signature-') as directory:
+                path = Path(directory) / 'selected.nupkg'
                 path.write_bytes(data)
                 try:
                     result = subprocess.run(['dotnet', 'nuget', 'verify', str(path), '--all'],
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30, check=False)
                 except (OSError, subprocess.TimeoutExpired) as error:
-                    raise ValueError('reused Contracts signature verification unavailable or timed out') from error
+                    raise ValueError(f'{package_name} signature verification unavailable or timed out') from error
                 if result.returncode != 0:
-                    raise ValueError('reused Contracts signature verification refused')
+                    raise ValueError(f'{package_name} signature verification refused')
     if payload(public) != payload(org):
-        raise ValueError('reused Contracts normalized payload differs between feeds')
+        raise ValueError(f'{package_name} normalized payload differs between feeds')
 
 
 def preflight(version, ids, github_index, github_download, public_download, token, actor, candidate=None, contracts_version=None, github_api="https://api.github.com"):
@@ -139,8 +140,9 @@ def preflight(version, ids, github_index, github_download, public_download, toke
         if metadata.findtext('.//{*}id', '').lower() != known or metadata.findtext('.//{*}version') != '2.2.0':
             raise ValueError(f"known baseline {known} identity/version mismatch")
         public_baseline = read(public_download.rstrip('/') + suffix)
-        if public_baseline is None or payload(public_baseline) != observed:
-            raise ValueError(f"known baseline {known} differs from its public normalized payload")
+        if public_baseline is None:
+            raise ValueError(f"known baseline {known} public archive unreadable")
+        verified_contracts_payloads(public_baseline, baseline, known)
     suffix = f'/fs.gg.contracts/{contracts_version}/fs.gg.contracts.{contracts_version}.nupkg'
     public_contracts = read(public_download.rstrip('/') + suffix)
     org_contracts = read(github_download.rstrip('/') + suffix, True)
@@ -176,14 +178,15 @@ def preflight(version, ids, github_index, github_download, public_download, toke
         selected_version = versions[package_id]
         lower = package_id.lower()
         suffix = f"/{lower}/{selected_version}/{lower}.{selected_version}.nupkg"
-        expected = payload((candidate / f"{package_id}.{selected_version}.nupkg").read_bytes()) if candidate else None
+        expected = (candidate / f"{package_id}.{selected_version}.nupkg").read_bytes() if candidate else None
         for feed, base, authenticated in [
             ("github", github_download, True), ("nuget", public_download, False)
         ]:
             data = read(base.rstrip("/") + suffix, authenticated)
             if data is not None:
-                if expected is None or payload(data) != expected:
+                if expected is None:
                     raise ValueError(f"{package_id} {selected_version} occupied on {feed}; refusing substitution")
+                verified_contracts_payloads(expected, data, package_id)
                 print(f"{package_id} {selected_version} {feed}: exact retained payload already present")
             else:
                 if feed == "github":

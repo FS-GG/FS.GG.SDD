@@ -111,10 +111,15 @@ model or framework is required. Initial source/control effort cap30 minutes;
 warm checks target under60 seconds. Hosted savings remain unmeasured.
 
 This source change selects no live pack, registry promotion or runtime authority.
-The accepted C1+C2 fence, original Config/ReferenceGateSet custody, actual API,
-installed candidate/public readback, and separate root release admission remain
-mandatory. No C1-only publication. Historical candidate schemas remain evidence,
-not qualification for v4.
+A new four-package SDD release requires actual C1+C2/C2.3 acceptance, independently
+verified Config distribution with published Contracts 7.6.0, the ordinary package/API
+and installed gates, exact candidate custody, both-feed collision/readback checks,
+and separate root release admission. It neither consumes nor clears the historical
+ReferenceGateSet 1.8.0 candidate or any original unknown operation. First neutral-catalog
+adoption, Governance runtime-carrier/ReferenceGateSet delivery, Templates adoption and
+full C4 completion retain their applicable prerequisites. The generated optional
+ReferenceGateSet 1.6.0 route stays unchanged. No C1-only publication. Historical
+candidate schemas remain evidence, not qualification for v4.
 
 ## Historical SDD928-C4 retained Contracts extension (v3)
 

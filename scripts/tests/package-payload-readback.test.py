@@ -64,7 +64,7 @@ def check(label, entries, expected, diagnostic=None, corrupt=False, missing=Fals
 
 check("equal archives", original, 0)
 check("entry order is immaterial", list(reversed(original)), 0)
-check("repository signature alone is excluded", [(n, d) for n, d in original if n != ".signature.p7s"] + [(".signature.p7s", b"new signature")], 0)
+check("unverifiable repository signature refuses", [(n, d) for n, d in original if n != ".signature.p7s"] + [(".signature.p7s", b"new signature")], 1, "signature verification")
 check("literal Content_Types mutation refuses", [(n, b"changed metadata" if n == "[Content_Types].xml" else d) for n, d in original], 1, "[Content_Types].xml")
 check("ordinary entry mutation refuses", [(n, b"changed ordinary payload" if n == ordinary else d) for n, d in original], 1, ordinary)
 check("missing ordinary entry refuses", [(n, d) for n, d in original if n != ordinary], 1, "missing=")
@@ -77,4 +77,14 @@ check("unreadable malformed ZIP refuses", [], 1, "File is not a zip file", corru
 check("missing archive refuses", [], 1, "No such file", missing=True)
 check("newline entry refuses ambiguous receipt", original + [("injected\nname", b"payload")], 1, "newlines")
 check("third archive mutation refuses", original, 1, "changed=", third=[(n, b"changed third archive" if n == ordinary else d) for n, d in original])
+if len(sys.argv) > 2:
+    # Genuine retained signed/unsigned archives; never synthesize a valid signature.
+    with tempfile.TemporaryDirectory() as directory:
+        import shutil
+        paths = [Path(directory) / "selected.nupkg", Path(directory) / "signed.nupkg"]
+        for source, target in zip(sys.argv[1:3], paths): shutil.copyfile(source, target)
+        result = subprocess.run([sys.executable, str(command), *map(str, paths)], capture_output=True, text=True)
+        assert result.returncode == 0, (result.stdout, result.stderr)
+        passed += 1
+        print("PASS genuine verified signed payload equality")
 print(f"Literal package readback: {passed} controls passed")

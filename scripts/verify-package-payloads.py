@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Compare literal package entries; repository signatures are the sole exclusion."""
 import argparse
+import importlib.util
 import hashlib
 from pathlib import Path
 import sys
 import zipfile
+
+sys.dont_write_bytecode = True
+_spec = importlib.util.spec_from_file_location("release_occupancy", Path(__file__).with_name("check-sdd-release-occupancy.py"))
+_occupancy = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_occupancy)
 
 
 def payloads(path):
@@ -30,7 +36,10 @@ def main():
     if len(args.packages) < 2:
         parser.error("at least two package archives are required")
     try:
+        # Validate literal ZIP structure first; excluding a differing signature
+        # requires the same bounded SDK verification used by occupancy.
         manifests = [(path, payloads(path)) for path in args.packages]
+        original_bytes = args.packages[0].read_bytes()
         original_path, original = manifests[0]
         for path, manifest in manifests[1:]:
             if manifest != original:
@@ -44,6 +53,8 @@ def main():
                     f"{path}: payload differs from {original_path}; "
                     f"missing={missing}, extra={extra}, changed={changed}"
                 )
+        for path in args.packages[1:]:
+            _occupancy.verified_contracts_payloads(original_bytes, path.read_bytes(), "package readback")
         # Read and compare every archive before emitting receipt maps.
         for path, manifest in manifests:
             Path(str(path) + ".entries").write_text(

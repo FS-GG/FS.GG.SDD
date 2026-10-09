@@ -121,7 +121,7 @@ Later Governance Verify receives explicit provider context: original normalized 
 
 **C3 authoring SDK and harness outline — SDD928-C3.1.** After C2.2/C2.3 real acceptance, expose authoring helpers for canonical catalog sealing, fixture packaging, declared-tool/policy inputs and package-only qualification. Reuse the same production caller; no alternate executor or success-from-declaration shortcut. Qualify positive/failure controls, exact version/tool mismatches, awkward names, skill acceptance and cleanup. Templates#441 owns the four concrete language providers and actual product build/lint/test/entry-point/package/security evidence. Their outcome is not inferred from the generic fixture. This becomes executable when the qualified transport/runtime artifacts and actual Verify route are pinned; then extend only the next bounded harness window.
 
-**C4 publication and adoption stays the original outline.** Root coordinates GOV-423-C3 with SDD928-C4: actual runtime distribution, the retained ReferenceGateSet 1.8.0 content artifact (with original custody), compatible Contracts/SDD versions and then Templates publication. Select release versions from the actual source/package delta; no future CLI version is reserved here. Pack once, verify source/tag/manifests and byte-identical archives on both required feeds, then independently install without sibling checkouts. No C1-only publication.
+**C4 distribution is a partial outcome.** Root may select a new four-package SDD release after actual C1+C2/C2.3 acceptance, verified Config distribution with published Contracts 7.6.0, ordinary package/API/installed gates, exact candidate custody and both-feed collision/readback checks. This release does not consume or clear the retained ReferenceGateSet 1.8.0 content artifact or any original unknown operation. First neutral-catalog adoption, Governance runtime-carrier/ReferenceGateSet delivery, Templates adoption and full C4 completion retain their applicable prerequisites. Preserve the optional generated ReferenceGateSet 1.6.0 route. Pack the selected source once, retain its exact archives and independently install without sibling checkouts. No C1-only publication.
 
 ## Exact first reservation and later dependency boundary
 
@@ -228,13 +228,19 @@ The [validation guide](../validation/catalog-runtime.md) gives the maintained ha
 The isolated source candidate selects shared SDD 2.3.0 for Artifacts, Commands, CLI and
 Knowledge, with ordinary package references to published Contracts 7.6.0. The
 Contracts producer retains its independent version and tests; its published archive
-is reused rather than rebuilt for this SDD release. Config 0.3.0 remains the explicitly
-local candidate awaiting distribution, so local qualification does not establish a
-normal fresh-clone restore or public availability. The original Config and SDD 2.2.0
-qualification archives remain immutable. C1+C2, exact new release qualification,
-feed readback and the unknown original ReferenceGateSet 1.8.0 custody remain SDD
-release requirements under the [release contract](../../specs/044-publish-cli-tool/contracts/release-workflow.md);
-this source preparation does not admit SDD publication or close C2/C4.
+is reused rather than rebuilt for this SDD release. Config 0.3.0 was independently
+verified on public NuGet after publication run 37930935334 at Governance source
+`8b3a6d4100bc6964d0213482252a84dbdf71f1d8`; its verified repository-signed payload
+matches that run's retained archive, and the cold public-only resolver/legacy-loader
+consumer passed with Contracts 7.6.0. SDD default locks still require refresh and
+verification against those published bytes. The original Config and SDD 2.2.0
+qualification archives remain immutable. Actual C1+C2/C2.3 acceptance, verified Config distribution, final 2.3 package
+qualification, ordinary gates and both-feed readback remain requirements under the
+[release contract](../../specs/044-publish-cli-tool/contracts/release-workflow.md).
+A new four-package release has no historical ReferenceGateSet 1.8.0 dependency or
+effect; its missing original custody still fences that candidate's recovery/adoption
+and any claim clearing its operation. All original unknowns remain held. This source
+preparation does not admit publication or close C2/C4.
 
 A separate Config-only distribution step may unblock the normal dependency restore
 after Governance records its narrow release-contract amendment and qualifies the

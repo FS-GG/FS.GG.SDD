@@ -80,6 +80,15 @@ with tempfile.TemporaryDirectory() as td:
         for f in ['org','public']:
             lower=i.lower();responses[f'https://fixture/{f}/{lower}/{versions[i]}/{lower}.{versions[i]}.nupkg']=(200,raw)
     check(True,root)
+    for member in ids:
+        member_key=f'https://fixture/public/{member.lower()}/2.3.0/{member.lower()}.2.3.0.nupkg'
+        raw=responses[member_key][1]
+        responses[member_key]=(200,package(member,'2.3.0',signature=b'unverified-envelope'))
+        with patch.object(occupancy.subprocess,'run',return_value=subprocess.CompletedProcess([],1)):check(False,root)
+        with patch.object(occupancy.subprocess,'run',return_value=subprocess.CompletedProcess([],0)) as verify:
+            check(True,root)
+            assert verify.call_count==1 and verify.call_args.kwargs['timeout']==30
+        responses[member_key]=(200,raw)
     key='https://fixture/org/fs.gg.contracts/7.6.0/fs.gg.contracts.7.6.0.nupkg'
     responses[key]=(200,package('FS.GG.Contracts','7.6.0',signature=b'signing-envelope'))
     with patch.object(occupancy.subprocess,'run',return_value=subprocess.CompletedProcess([],0)) as verify:
