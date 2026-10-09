@@ -263,7 +263,9 @@ module CatalogScaffoldEffects =
                         "catalog.archiveAssociationRefused"
                         "The selected archive must contain exactly one nuspec and template declaration."
 
-        let nuspec = unique ".nuspec" |> readEntry |> utf8.GetString |> XDocument.Parse
+        // Parse the original XML bytes so its declared encoding and UTF-8 BOM are handled by XML.
+        use nuspecInput = new MemoryStream(unique ".nuspec" |> readEntry, false)
+        let nuspec = XDocument.Load nuspecInput
 
         let values (name: string) =
             nuspec.Descendants()
@@ -1860,7 +1862,7 @@ module CatalogScaffoldEffects =
                     "catalog.toolSelectionRefused"
                     "The tool probe must select an absolute executable; PATH discovery is not admitted."
 
-            captureInputFile operation budget probe.Executable (64 * 1024 * 1024) |> ignore
+            captureInputFile operation budget probe.Executable (128 * 1024 * 1024) |> ignore
             revalidateInputs operation budget
 
             let observed =

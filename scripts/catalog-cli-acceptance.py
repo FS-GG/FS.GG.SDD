@@ -20,6 +20,72 @@ spec.loader.exec_module(harness)
 EXPECTED_PRODUCT = b'raw=Awkward name!?\npackage=example.org/explicit/module\ncode=IndependentCode\nempty=\nliteral=$(literal);& with spaces\n'
 
 
+def fixture_expectations(config):
+    selected = config.get('fixtureExpectations')
+    if selected is None:
+        return {'files': [{'path': 'product.txt', 'text': EXPECTED_PRODUCT.decode('utf-8')}],
+                'absentPaths': [], 'producedSkillPaths': ['.agents/skills/opaque-fixture/SKILL.md']}
+    if not isinstance(selected, dict) or set(selected) != {'files', 'absentPaths', 'producedSkillPaths'}:
+        raise ValueError('fixtureExpectations requires files, absentPaths and producedSkillPaths')
+    for key in selected:
+        if not isinstance(selected[key], list) or len(selected[key]) > 16:
+            raise ValueError('fixture expectation inventories are bounded lists (maximum16)')
+    if not selected['files'] or not selected['producedSkillPaths']:
+        raise ValueError('selected fixture requires positive file and produced-skill assertions')
+    def relative(value):
+        if (not isinstance(value, str) or not value or '\\' in value or ':' in value or '\0' in value
+                or any(part in ('', '.', '..') for part in value.split('/'))):
+            raise ValueError('fixture expectation paths must be explicit contained relative paths')
+    paths = []
+    text_bytes = 0
+    for item in selected['files']:
+        if not isinstance(item, dict) or set(item) not in ({'path', 'text'}, {'path', 'sha256'}):
+            raise ValueError('a file check requires path and exactly one literal text or sha256')
+        relative(item['path']); paths.append(item['path'])
+        if 'text' in item:
+            if not isinstance(item['text'], str): raise ValueError('expected text must be literal UTF8')
+            text_bytes += len(item['text'].encode('utf-8'))
+        elif (not isinstance(item['sha256'], str) or len(item['sha256']) != 64
+                or any(c not in '0123456789abcdef' for c in item['sha256'])):
+            raise ValueError('expected sha256 must be64 lowercase hex characters')
+    if len(set(paths)) != len(paths) or text_bytes > 1048576:
+        raise ValueError('file checks must be distinct with at most1MiB aggregate expected text')
+    for key in ['absentPaths', 'producedSkillPaths']:
+        for value in selected[key]: relative(value)
+        if len(set(selected[key])) != len(selected[key]): raise ValueError('fixture paths must be distinct')
+    if set(paths).intersection(selected['absentPaths']): raise ValueError('a file cannot be expected both present and absent')
+    for value in selected['producedSkillPaths']:
+        if not value.startswith('.agents/skills/') or not value.endswith('/SKILL.md'):
+            raise ValueError('expected produced skills must name their neutral SKILL.md path')
+    return selected
+
+
+def check_fixture_product(target, record, expected):
+    # This varies fixture assertions only; product provenance, publication and process
+    # assertions stay in the common driver path. Reads are bounded and never follow links.
+    def path_for(relative):
+        path = target
+        for part in relative.split('/'):
+            path = path / part
+            assert not path.is_symlink(), 'fixture expectation encounters a symbolic link: ' + relative
+        return path
+    for item in expected['files']:
+        path = path_for(item['path'])
+        assert path.is_file(), 'expected product file missing: ' + item['path']
+        with path.open('rb') as stream:
+            raw = stream.read(1048577)
+        assert len(raw) <= 1048576, 'fixture product check exceeds1MiB: ' + item['path']
+        if 'text' in item:
+            assert raw == item['text'].encode('utf-8'), 'product text differs: ' + item['path']
+        else:
+            assert hashlib.sha256(raw).hexdigest() == item['sha256'], 'product digest differs: ' + item['path']
+    for relative in expected['absentPaths']:
+        assert not path_for(relative).exists(), 'excluded/generated path already exists: ' + relative
+    for relative in expected['producedSkillPaths']:
+        assert relative in record['producedPaths'], 'expected provider skill missing from provenance: ' + relative
+        assert path_for(relative).is_file(), 'expected provider skill missing from target: ' + relative
+
+
 def target_snapshot(root):
     if not root.exists():
         return None
@@ -97,6 +163,7 @@ def main():
     report = {'sourceTreeSha256': before, 'cases': [], 'passed': False,
               'productEnvironmentQualified': False, 'acceptanceScope': args.case}
     try:
+        expectations = fixture_expectations(config)
         fixture_manifest = fixture_input(config, args.output, original_end, report)
         fixture = json.loads(fixture_manifest.read_text())
         fixture['transportExecutable'] = config['transportExecutable']
@@ -192,7 +259,6 @@ def main():
             if name == 'positive':
                 assert actual['passed'] and projection['status'] == 'succeeded' and projection['ownership'] == 'Settled', \
                     'positive CLI refused: ' + ', '.join(d['code'] for d in projection['diagnostics'])
-                assert (target / 'product.txt').read_bytes() == EXPECTED_PRODUCT
                 provenance = target / '.fsgg/scaffold-provenance.json'
                 assert provenance.is_file()
                 summary = args.output / 'provenance-summary.json'
@@ -221,7 +287,7 @@ def main():
                 parameters = [item for key, value in record['effectiveParameters'] for item in ['--' + key, value]]
                 assert creation[0]['arguments'] == prefix + parameters
                 assert creation[0]['executable'] == 'dotnet'
-                assert '.agents/skills/opaque-fixture/SKILL.md' in record['producedPaths']
+                check_fixture_product(target, record, expectations)
                 assert '.config/dotnet-tools.json' in record['sddOwnedPaths']
                 executable_paths = ['scripts/check-claim-generation.py', 'tools/routine-delivery.py']
                 case['executableModes'] = {path: oct((target / path).stat().st_mode & 0o777) for path in executable_paths}

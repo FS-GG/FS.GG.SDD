@@ -134,6 +134,46 @@ class DriverTests(unittest.TestCase):
                 self.assertEqual([],report['cases']);self.assertEqual(actual,report['fixturePreparation'])
                 self.assertIn('input production failed',report['firstFailure'])
 
+    def test_generic_and_selected_product_assertions_preserve_real_bytes_and_skills(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            skill = '.agents/skills/opaque-fixture/SKILL.md'
+            (target / skill).parent.mkdir(parents=True)
+            (target / skill).write_text('skill')
+            (target / 'product.txt').write_bytes(driver.EXPECTED_PRODUCT)
+            record = {'producedPaths': [skill]}
+            driver.check_fixture_product(target, record, driver.fixture_expectations({}))
+            config = {'fixtureExpectations': {'files': [{'path': 'product.txt', 'sha256': hashlib.sha256(driver.EXPECTED_PRODUCT).hexdigest()}],
+                'absentPaths': ['node_modules', 'reports'], 'producedSkillPaths': [skill]}}
+            expected = driver.fixture_expectations(config)
+            driver.check_fixture_product(target, record, expected)
+            (target / 'product.txt').write_text('changed')
+            with self.assertRaisesRegex(AssertionError, 'digest differs'):driver.check_fixture_product(target, record, expected)
+            (target / 'product.txt').write_bytes(driver.EXPECTED_PRODUCT)
+            (target / 'reports').mkdir()
+            with self.assertRaisesRegex(AssertionError, 'already exists'):driver.check_fixture_product(target, record, expected)
+            (target / 'reports').rmdir()
+            with self.assertRaisesRegex(AssertionError, 'provenance'):driver.check_fixture_product(target, {'producedPaths': []}, expected)
+
+    def test_selected_product_configuration_refuses_bypass_paths_and_unbounded_checks(self):
+        base = {'files': [{'path': 'name.txt', 'text': 'literal'}], 'absentPaths': [], 'producedSkillPaths': ['.agents/skills/selected/SKILL.md']}
+        for change in [{'files': []}, {'producedSkillPaths': []}, {'absentPaths': ['/outside']},
+                       {'absentPaths': ['a/../outside']}, {'files': [{'path': 'name.txt', 'text': 'x' * 1048577}]},
+                       {'files': [{'path': 'name.txt', 'sha256': 'invalid'}]},
+                       {'files': [{'path': 'name.txt', 'text': 'literal', 'sha256': '0' * 64}]},
+                       {'absentPaths': ['name.txt']}]:
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                driver.fixture_expectations({'fixtureExpectations': dict(base, **change)})
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            expected = driver.fixture_expectations({'fixtureExpectations': base})
+            (target / 'name.txt').write_bytes(b'x' * 1048577)
+            with self.assertRaisesRegex(AssertionError, 'exceeds'):driver.check_fixture_product(target, {'producedPaths': []}, expected)
+            (target / 'name.txt').unlink()
+            (target / 'name.txt').symlink_to('/etc/passwd')
+            with self.assertRaisesRegex(AssertionError, 'symbolic link'):driver.check_fixture_product(target, {'producedPaths': []}, expected)
+
     def test_target_snapshot_observes_byte_changes_and_new_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
