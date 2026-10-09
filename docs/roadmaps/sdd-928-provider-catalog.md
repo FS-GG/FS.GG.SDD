@@ -232,5 +232,16 @@ is reused rather than rebuilt for this SDD release. Config 0.3.0 remains the exp
 local candidate awaiting distribution, so local qualification does not establish a
 normal fresh-clone restore or public availability. The original Config and SDD 2.2.0
 qualification archives remain immutable. C1+C2, exact new release qualification,
-feed readback and the unknown original ReferenceGateSet 1.8.0 custody remain release
-requirements; this source preparation does not admit publication or close C2/C4.
+feed readback and the unknown original ReferenceGateSet 1.8.0 custody remain SDD
+release requirements under the [release contract](../../specs/044-publish-cli-tool/contracts/release-workflow.md);
+this source preparation does not admit SDD publication or close C2/C4.
+
+A separate Config-only distribution step may unblock the normal dependency restore
+after Governance records its narrow release-contract amendment and qualifies the
+actual C1+C2/C2.3 journey, the selected Config archive with published Contracts 7.6.0,
+both-feed collision checks and installed readback. That new Config operation does
+not consume or clear the historical ReferenceGateSet 1.8.0 archive or operation.
+After verified public distribution, regenerate and check SDD locks against the
+actual published Config bytes before normal source delivery. Config availability
+alone establishes neither SDD publication nor Governance runtime-carrier,
+ReferenceGateSet or Templates adoption.
