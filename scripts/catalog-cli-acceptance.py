@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Actual compiled CLI acceptance through the maintained execution harness.
 
-Fixture generation and strict provenance verification call the existing compiled
-F# fixture/helper API. This script contains no package or digest canonicalizer.
+Fixture generation and strict provenance verification use literal selected
+commands, either the compiled test helper or the typed package-only example. This script contains no package or digest canonicalizer.
 """
 import argparse
 import hashlib
@@ -51,6 +51,35 @@ def replace_value(argv, flag, value):
     return result
 
 
+def fixture_input(config, output, original_end, report):
+    if 'producerCommand' not in config:
+        if 'producerArguments' in config:
+            raise ValueError('producerArguments requires producerCommand')
+        return Path(config['fixtureManifest'])
+    producer = config['producerCommand']
+    if 'fixtureManifest' in config:
+        raise ValueError('select fixtureManifest or producerCommand, not both')
+    arguments = config.get('producerArguments', [])
+    if (not isinstance(producer, list) or not producer
+            or not isinstance(arguments, list)
+            or any(not isinstance(value, str) or '\0' in value for value in producer + arguments)
+            or not producer[0] or any(value == '--out' or value.startswith('--out=') for value in producer + arguments)):
+        raise ValueError('producer commands require literal argv without the reserved --out option')
+    remaining = original_end - time.monotonic()
+    if remaining <= 0:
+        raise ValueError('original acceptance budget expired before fixture production')
+    inputs = output / 'authoring-inputs'
+    # The producer owns creation of this absent directory and the existing manifest.
+    command = dict(config['verification'], name='authoring-inputs',
+        argv=producer + arguments + ['--out', str(inputs)],
+        timeoutSeconds=min(config['verification'].get('timeoutSeconds', 30), remaining))
+    actual = harness.run_command(command, output / 'authoring-prepare')
+    report['fixturePreparation'] = actual
+    if not actual['passed'] or actual['cleanup'] != 'direct-child-reaped-streams-eof':
+        raise ValueError('typed authoring input production failed; CLI not selected')
+    return inputs / 'request.json'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', type=Path, required=True)
@@ -58,19 +87,31 @@ def main():
     parser.add_argument('--case', choices=['positive', 'negatives', 'probes', 'variants', 'all'], default='positive')
     args = parser.parse_args()
     config = json.loads(args.config.read_text())
-    fixture = json.loads(Path(config['fixtureManifest']).read_text())
-    fixture['transportExecutable'] = config['transportExecutable']
-    args.output.mkdir(parents=True, exist_ok=False)
-    source = Path(config['sourceRoot']).resolve()
-    before = harness.tree_identity(source, config.get('identityPaths'))
-    report = {'sourceTreeSha256': before, 'cases': [], 'passed': False,
-              'productEnvironmentQualified': False, 'acceptanceScope': args.case,
-              'generatorAssemblySha256': fixture['generatorAssemblySha256'],
-              'cliAssemblySha256': hashlib.sha256(Path(config['cliCommand'][-1]).read_bytes()).hexdigest(),
-              'archiveSha256': hashlib.sha256(Path(fixture['archive']).read_bytes()).hexdigest()}
     base = dict(config['runtime'])
     if base.get('mode') != 'native-runtime' or base.get('backend') != 'pid-namespace':
         parser.error('actual CLI cases require explicit native-runtime PID namespace backend')
+    args.output.mkdir(parents=True, exist_ok=False)
+    source = Path(config['sourceRoot']).resolve()
+    before = harness.tree_identity(source, config.get('identityPaths'))
+    original_end = time.monotonic() + config.get('totalSeconds', 300)
+    report = {'sourceTreeSha256': before, 'cases': [], 'passed': False,
+              'productEnvironmentQualified': False, 'acceptanceScope': args.case}
+    try:
+        fixture_manifest = fixture_input(config, args.output, original_end, report)
+        fixture = json.loads(fixture_manifest.read_text())
+        fixture['transportExecutable'] = config['transportExecutable']
+        report.update(generatorAssemblySha256=fixture['generatorAssemblySha256'],
+            cliAssemblySha256=hashlib.sha256(Path(config['cliCommand'][-1]).read_bytes()).hexdigest(),
+            archiveSha256=hashlib.sha256(Path(fixture['archive']).read_bytes()).hexdigest())
+    except (AssertionError, OSError, ValueError, KeyError) as error:
+        report['firstFailure'] = type(error).__name__ + ': ' + str(error)
+        report['sourceTreeSha256After'] = harness.tree_identity(source, config.get('identityPaths'))
+        report['sourceIdentityStable'] = before == report['sourceTreeSha256After']
+        report['casesPassed'] = False
+        (args.output / 'acceptance.json').write_text(json.dumps(report, indent=2) + '\n')
+        for owner in harness.INCOMPLETE_OWNERS:
+            owner.wait()
+        return 1
     original_archive = Path(fixture['archive']).read_bytes()
     tampered = args.output / 'tampered.nupkg'
     tampered.write_bytes(original_archive + b'tampered-fixture-control')
@@ -92,7 +133,6 @@ def main():
         cases += [(name, None) for name in probe_cases]
     variants = config.get('fixtureVariants', {}) if args.case in ('variants', 'all') else {}
     cases += [(name, None) for name in variants]
-    original_end = time.monotonic() + config.get('totalSeconds', 300)
     try:
         for name, changed_flag in cases:
             remaining = original_end - time.monotonic()
@@ -121,7 +161,7 @@ def main():
                 policy_path.write_text(json.dumps(policy, ensure_ascii=False))
                 manifest = args.output / (name + '-request.json')
                 preparation = harness.run_command(dict(config['verification'], name=name + '-seal-policy',
-                    argv=config['sealPolicyCommand'] + [str(config['fixtureManifest']), str(policy_path), str(manifest)],
+                    argv=config['sealPolicyCommand'] + [str(fixture_manifest), str(policy_path), str(manifest)],
                     timeoutSeconds=min(30, original_end - time.monotonic())), args.output / (name + '-prepare'))
                 assert preparation['passed'], name + ': production policy parser refused fixture'
                 selected_fixture = json.loads(manifest.read_text())

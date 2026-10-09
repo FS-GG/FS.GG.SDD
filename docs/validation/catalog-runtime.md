@@ -142,3 +142,54 @@ The default ordinary route runs one parser test and skips the native case;
 the selected namespace route runs both. Both routes passed against the actual
 compiled test assembly. This regression covers the child identity/lifecycle
 join, separately from complete template/SDK/CLI acceptance.
+
+## Package-only typed authoring input
+
+The optional `examples/provider-authoring` sample can produce the same fixture
+manifest without a test assembly or reflection. Build and qualify the sample
+against explicitly selected package archives before selecting its output for an
+actual CLI run. The example is nonpackable; `emit` and `check` are sample entry
+points, not installed `fsgg-sdd` commands.
+
+In the existing acceptance config, replace `fixtureManifest` with literal
+`producerCommand` and `producerArguments`. Retain the existing runtime,
+verification, source identity and CLI selections. For example:
+
+```json
+{
+  "producerCommand": ["/usr/share/dotnet/dotnet", "/qualified/Authoring.dll", "emit"],
+  "producerArguments": [
+    "--template-root", "/inputs/copied-opaque-template",
+    "--fixture-executable", "/qualified/TestHandoffFixture",
+    "--test-input", "/inputs/test-input.txt",
+    "--policy", "/inputs/independent-policy.json"
+  ],
+  "verifyCommand": ["/usr/share/dotnet/dotnet", "/qualified/Authoring.dll", "check"]
+}
+```
+
+This fragment extends the existing config; it is not a standalone runner config.
+`fixtureManifest` and `producerCommand` are mutually exclusive. The driver
+appends `--out <fresh-result-root>/authoring-inputs` and reads its `request.json`.
+Do not supply `--out` yourself. Arguments are passed literally, including empty
+strings, spaces and metacharacters. The manifest keeps its existing catalog,
+archive, policy, independent names and test-handoff fields;
+`generatorAssemblySha256` identifies the actual Authoring assembly.
+
+Input production runs through the unchanged maintained harness using the
+existing `verification` settings, capped by the original `totalSeconds` and
+verification timeout. Its result is recorded as `fixturePreparation`. A failed
+command, incomplete cleanup or missing/malformed manifest stops before CLI
+execution and cannot qualify the product environment. Strict readback invokes
+`verifyCommand <provenance-path> <summary-path>`; the sample's production parser
+writes the same summary consumed by the existing assertions. The default
+compiled test-helper `fixtureManifest` route remains available unchanged.
+
+Run the focused driver controls with
+`python3 scripts/tests/catalog-cli-acceptance.test.py`. They mock selected
+commands and exercise the actual driver's default/typed input selection,
+literal arguments, original budget, refusal before launch, and failed-preparation
+reporting. These controls do not compile the sample, qualify fresh archives,
+invoke the SDK or establish the actual authoring-to-CLI-to-Verify journey. That
+integration requires the separately selected qualified package/runtime inputs
+and the existing SDD and Governance acceptance drivers.
