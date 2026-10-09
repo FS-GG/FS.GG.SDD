@@ -221,3 +221,10 @@ Omitting the field preserves the existing opaque defaults. The common strict pro
 archive/tool/literal argv, target/staging, mirrored/SDD-owned paths and executable-mode
 checks still run. These assertions configure the maintained driver; they confer no
 provider execution authority or evidence-decoder qualification.
+
+The supported selected-tool profile captures each independently selected probe executable
+up to128MiB, retaining its exact bytes and digest for revalidation. This covers the selected
+Node24.8.0 executable (129,318,464 bytes). Larger opened files refuse before byte allocation;
+archive, produced-payload and command-output limits are unchanged. Nuspec XML is parsed
+from its original bounded bytes, including standard UTF8 BOM handling; package identity,
+dependency refusal and the raw archive digest remain mandatory.

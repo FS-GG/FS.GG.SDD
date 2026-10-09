@@ -224,3 +224,60 @@ module CatalogScaffoldLinuxIdentityTests =
                 GC.KeepAlive(custody)
 
             reraise ()
+
+    [<CatalogNamespaceFact>]
+    let ``opened sparse input over selected tool ceiling refuses before payload allocation`` () =
+        Assert.True(OperatingSystem.IsLinux())
+
+        let namespaceRow =
+            File.ReadAllLines("/proc/self/status")
+            |> Array.find (fun line -> line.StartsWith("NSpid:", StringComparison.Ordinal))
+
+        let namespacePids =
+            namespaceRow.Substring(6).Split([| ' '; '\t' |], StringSplitOptions.RemoveEmptyEntries)
+
+        Assert.True(namespacePids.Length > 1, "Run the native regression through the maintained namespace backend.")
+        let workingRoot = TestSupport.tempDirectory ()
+        let maximumBytes = 128 * 1024 * 1024
+        let oversizedLength = int64 maximumBytes + 1L
+        let path = Path.Combine(workingRoot, "oversized-tool")
+        // SetLength creates the boundary fixture without allocating/writing 128 MiB.
+        do
+            use fixture =
+                new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None)
+
+            fixture.SetLength oversizedLength
+
+        let custody = Linux.createCustody ()
+        let budget = Linux.beginPhase 15 CancellationToken.None
+        let mutable released = false
+
+        try
+            Linux.observeAbi custody budget
+            |> Result.defaultWith (fun errors -> failwithf "ABI refused: %A" errors)
+            |> ignore
+
+            let root = Linux.openDirectory custody budget workingRoot
+
+            let error =
+                Assert.Throws<Linux.Refused>(fun () ->
+                    Linux.readFile custody budget root "oversized-tool" maximumBytes |> ignore)
+
+            match (error :> exn) with
+            | Linux.Refused diagnostics -> Assert.Contains(diagnostics, fun item -> item.Code = "catalog.inputSize")
+            | _ -> failwith "Expected the original opened-file byte ceiling refusal."
+
+            Assert.Equal(oversizedLength, FileInfo(path).Length)
+            Assert.True(Linux.settled custody)
+            Linux.releaseKnown budget custody
+            released <- true
+            Directory.Delete(workingRoot, true)
+        with error ->
+            eprintfn "Opened-file bound regression failed: %s" (error.ToString())
+
+            if not released then
+                use retained = new ManualResetEventSlim(false)
+                retained.Wait()
+                GC.KeepAlive(custody)
+
+            reraise ()

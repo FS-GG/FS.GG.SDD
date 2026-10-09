@@ -465,8 +465,9 @@ module CatalogScaffoldRuntimeTests =
             Directory.Delete(root, true)
 
     // Synthetic archives exercise the actual private parser without starting a provider.
-    let private inspectSelectedArchiveWith
+    let private inspectSelectedArchiveWithNuspec
         (configure: Fsgg.ProviderCatalog.PreparedConfiguration -> Fsgg.ProviderCatalog.PreparedConfiguration)
+        (nuspec: string)
         (declaration: string)
         (extraDeclarations: (string * string) list)
         (payload: (string * string) list)
@@ -491,9 +492,7 @@ module CatalogScaffoldRuntimeTests =
             use output = zip.CreateEntry(name).Open()
             output.Write(Encoding.UTF8.GetBytes(text: string))
 
-        add
-            "fixture.nuspec"
-            "<package><metadata><id>FS.GG.SDD.Catalog.OpaqueFixture</id><version>1.0.1</version></metadata></package>"
+        add "fixture.nuspec" nuspec
 
         add "content/.template.config/template.json" declaration
 
@@ -529,6 +528,14 @@ module CatalogScaffoldRuntimeTests =
         )
         |> nonNull
 
+    let private inspectSelectedArchiveWith configure declaration extra payload =
+        inspectSelectedArchiveWithNuspec
+            configure
+            "<package><metadata><id>FS.GG.SDD.Catalog.OpaqueFixture</id><version>1.0.1</version></metadata></package>"
+            declaration
+            extra
+            payload
+
     let private inspectSelectedArchive declaration extra payload =
         inspectSelectedArchiveWith id declaration extra payload
 
@@ -553,6 +560,23 @@ module CatalogScaffoldRuntimeTests =
             |> nonNull
 
         property.GetValue(value) |> nonNull :?> (string * byte array) list
+
+    [<Fact>]
+    let ``selected archive parses UTF8 BOM nuspec without changing identity checks`` () =
+        let xml =
+            "<package><metadata><id>FS.GG.SDD.Catalog.OpaqueFixture</id><version>1.0.1</version></metadata></package>"
+
+        let inspect nuspec =
+            inspectSelectedArchiveWithNuspec id nuspec (opaqueDeclaration ()) [] [ "product.txt", "__RAW__" ]
+
+        let ordinary = inspect xml |> inspectedPayload
+        let withBom = inspect ("\uFEFF" + xml) |> inspectedPayload
+        Assert.True((ordinary = withBom))
+
+        Assert.Throws<System.Reflection.TargetInvocationException>(
+            Action(fun () -> inspect ("\uFEFF" + xml.Replace("1.0.1", "9.0.0")) |> ignore)
+        )
+        |> ignore
 
     [<Fact>]
     let ``selected data archive permits unrelated legacy templates but refuses alias ambiguity`` () =
