@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Synthetic, no-network controls for actual workflow and both-version occupancy."""
-import contextlib,hashlib,importlib.util,io,json,os,subprocess,tempfile,urllib.error,zipfile
+import contextlib,hashlib,importlib.util,io,json,os,subprocess,sys,tempfile,urllib.error,zipfile
+sys.dont_write_bytecode=True
 from pathlib import Path
 from unittest.mock import patch
 repo=Path(__file__).parents[2]
@@ -109,4 +110,8 @@ with tempfile.TemporaryDirectory() as td:
         assert (result.returncode==0)==expected, result.stderr
         if expected:assert 'push='+push in output.read_text() and 'contracts_version=7.6.0' in output.read_text()
         count+=1
+    props.write_text('<Project><ItemGroup><PackageVersion Include="FS.GG.Contracts" Version="7.6.0" /></ItemGroup></Project>')
+    result=subprocess.run(['bash','-c',block],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    assert result.returncode!=0 and b'exact selected published Contracts package pin' in result.stderr
+    count+=1
 print(f'actual resolver controls included: {count} total passed; stub evaluation only')
