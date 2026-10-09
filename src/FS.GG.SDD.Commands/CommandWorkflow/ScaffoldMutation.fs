@@ -164,14 +164,17 @@ module internal ScaffoldMutation =
             let utf8 = UTF8Encoding(false, true)
             let originalText = utf8.GetString capturedBytes
             use document = JsonDocument.Parse originalText
+
             let rec uniqueObjectNames (element: JsonElement) =
                 match element.ValueKind with
                 | JsonValueKind.Object ->
                     let names = System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
+
                     element.EnumerateObject()
                     |> Seq.forall (fun property -> names.Add property.Name && uniqueObjectNames property.Value)
                 | JsonValueKind.Array -> element.EnumerateArray() |> Seq.forall uniqueObjectNames
                 | _ -> true
+
             if not (uniqueObjectNames document.RootElement) then
                 Error "tool manifest contains duplicate JSON property names"
             else

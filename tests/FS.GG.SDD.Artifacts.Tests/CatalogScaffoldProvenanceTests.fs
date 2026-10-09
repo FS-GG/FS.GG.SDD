@@ -257,28 +257,50 @@ module CatalogScaffoldProvenanceTests =
     [<Fact>]
     let ``cumulative invocation bounds permit the independently longer preflight phase`` () =
         let original = synthetic ()
+
         let budgets: Budgets =
-            { RequestedPreflightSeconds = 120
-              RequestedScaffoldSeconds = 60
-              AdmittedPreflightSeconds = 120
-              AdmittedScaffoldSeconds = 60 }
+            {
+                RequestedPreflightSeconds = 120
+                RequestedScaffoldSeconds = 60
+                AdmittedPreflightSeconds = 120
+                AdmittedScaffoldSeconds = 60
+            }
+
         let invocation: Invocation =
-            { original.Observation.Invocations.Head with TimeoutSeconds = 120 }
+            { original.Observation.Invocations.Head with
+                TimeoutSeconds = 120
+            }
+
         let record: CatalogScaffoldProvenanceRecord =
             { original with
-                Declaration = { original.Declaration with Budgets = budgets }
-                Observation = { original.Observation with Invocations = [ invocation ] } }
+                Declaration =
+                    { original.Declaration with
+                        Budgets = budgets
+                    }
+                Observation =
+                    { original.Observation with
+                        Invocations = [ invocation ]
+                    }
+            }
         // These synthetic codec controls confer no execution/phase-timing evidence.
         Assert.True(Result.isOk (serialize record))
+
         let over: CatalogScaffoldProvenanceRecord =
             { record with
                 Observation =
                     { record.Observation with
-                        Invocations = [ { invocation with TimeoutSeconds = 121 } ] } }
+                        Invocations = [ { invocation with TimeoutSeconds = 121 } ]
+                    }
+            }
+
         Assert.True(Result.isError (serialize over))
+
         let zero: CatalogScaffoldProvenanceRecord =
             { record with
                 Observation =
                     { record.Observation with
-                        Invocations = [ { invocation with TimeoutSeconds = 0 } ] } }
+                        Invocations = [ { invocation with TimeoutSeconds = 0 } ]
+                    }
+            }
+
         Assert.True(Result.isError (serialize zero))

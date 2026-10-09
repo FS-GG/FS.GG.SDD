@@ -53,7 +53,13 @@ module internal WorkModelSourceBundle =
         && path |> Seq.forall (fun c -> not (Char.IsControl c))
 
     let private allowedPath workId performancePaths path =
-        let config = [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; ScaffoldProvenance.provenancePath ]
+        let config =
+            [
+                ".fsgg/project.yml"
+                ".fsgg/sdd.yml"
+                ".fsgg/agents.yml"
+                ScaffoldProvenance.provenancePath
+            ]
 
         let work =
             [
@@ -354,9 +360,9 @@ module internal WorkModelSourceBundle =
                 ]
 
             let optional =
-                ScaffoldProvenance.provenancePath ::
-                    ([ "clarifications.md"; "checklist.md"; "plan.md"; "tasks.yml"; "evidence.yml" ]
-                     |> List.map (fun name -> $"work/{workId}/{name}"))
+                ScaffoldProvenance.provenancePath
+                :: ([ "clarifications.md"; "checklist.md"; "plan.md"; "tasks.yml"; "evidence.yml" ]
+                    |> List.map (fun name -> $"work/{workId}/{name}"))
 
             let captureRequired path =
                 match GenerationSourceSnapshot.captureSelectedFile workspaceRoot path with

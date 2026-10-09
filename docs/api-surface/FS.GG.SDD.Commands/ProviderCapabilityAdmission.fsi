@@ -8,6 +8,7 @@ module ProviderCapabilityAdmission =
         selectedPlatform: string ->
         descriptor: Fsgg.ProviderCatalog.Descriptor ->
             Result<FS.GG.Governance.Config.CapabilityBindings.ResolutionRequest, Fsgg.ProviderCatalog.Diagnostic list>
+
     /// Recompute the complete request through actual Config.resolve; never accepts a supplied ResolvedSet.
     val resolve:
         policy: CatalogScaffoldPolicy.Policy ->

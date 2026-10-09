@@ -65,7 +65,9 @@ module WorkItem =
 
     let sourceIdentity (snapshot: FileSnapshot) kind =
         let source = sourceArtifact snapshot.Path kind
-        let ordinaryCompatibility = rawSchemaVersion snapshot kind |> SchemaVersion.classifyRaw
+
+        let ordinaryCompatibility =
+            rawSchemaVersion snapshot kind |> SchemaVersion.classifyRaw
 
         // Only the recognized provenance artifact has the strict legacy/catalog schema
         // contract. Other lifecycle sources retain the existing schema-1 classification.
@@ -83,11 +85,13 @@ module WorkItem =
                         Version = Some(SchemaVersion.create version)
                         Status = SchemaVersion.Current
                         SupportedRange = "1, 2"
-                        MigrationHint = None }
+                        MigrationHint = None
+                    }
                 | Error _ ->
                     let actualFutureSchema =
                         try
                             use document = JsonDocument.Parse(snapshot.Text: string)
+
                             let versions =
                                 document.RootElement.EnumerateObject()
                                 |> Seq.filter (fun property -> property.Name = "schemaVersion")
@@ -96,6 +100,7 @@ module WorkItem =
                             match versions with
                             | [ property ] when property.Value.ValueKind = JsonValueKind.Number ->
                                 let mutable version = 0
+
                                 property.Value.TryGetInt32(&version)
                                 && property.Value.GetRawText() = string version
                                 && version > 2
@@ -106,9 +111,15 @@ module WorkItem =
 
                     { ordinaryCompatibility with
                         Status =
-                            if actualFutureSchema then SchemaVersion.Future else SchemaVersion.Malformed
+                            if actualFutureSchema then
+                                SchemaVersion.Future
+                            else
+                                SchemaVersion.Malformed
                         SupportedRange = "1, 2"
-                        MigrationHint = Some "Correct the provenance using its strict schema-1 or schema-2 codec; no legacy fallback is permitted." }
+                        MigrationHint =
+                            Some
+                                "Correct the provenance using its strict schema-1 or schema-2 codec; no legacy fallback is permitted."
+                    }
             else
                 ordinaryCompatibility
 

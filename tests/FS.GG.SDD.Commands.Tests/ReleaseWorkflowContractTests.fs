@@ -78,7 +78,12 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("done < scripts/sdd-release-packages.txt", job)
 
         Assert.Equal(
-            [| "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli"; "FS.GG.SDD.Knowledge" |],
+            [|
+                "FS.GG.SDD.Artifacts"
+                "FS.GG.SDD.Commands"
+                "FS.GG.SDD.Cli"
+                "FS.GG.SDD.Knowledge"
+            |],
             File.ReadAllLines(Path.Combine(TestSupport.repoRoot, "scripts", "sdd-release-packages.txt"))
         )
 

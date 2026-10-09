@@ -7,11 +7,14 @@ module Authoring =
     val validate: policyBytes: byte array -> catalogBytes: byte array -> unit
 
     type Inputs =
-        { TemplateRoot: string
-          FixtureExecutable: string
-          TestInput: string
-          Policy: string
-          Output: string }
+        {
+            TemplateRoot: string
+            FixtureExecutable: string
+            TestInput: string
+            Policy: string
+            Output: string
+        }
+
     /// Writes an existing manifest shape into an absent output directory; no provider execution.
     val emit: inputs: Inputs -> unit
     /// Reads strict production schema2 and writes the maintained driver's summary.

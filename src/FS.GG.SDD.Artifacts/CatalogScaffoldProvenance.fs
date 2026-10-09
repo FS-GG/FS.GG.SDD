@@ -699,8 +699,13 @@ module CatalogScaffoldProvenance =
 
             // A cumulative observation has no invocation-phase tag. Structural bounds
             // cover either requested phase; the edge owns the original per-phase ends.
-            if i.TimeoutSeconds <= 0 || i.TimeoutSeconds > max b.RequestedPreflightSeconds b.RequestedScaffoldSeconds then
-                bad "$.observation.invocations.timeoutSeconds" "Invocation timeout exceeds both requested phase budgets."
+            if
+                i.TimeoutSeconds <= 0
+                || i.TimeoutSeconds > max b.RequestedPreflightSeconds b.RequestedScaffoldSeconds
+            then
+                bad
+                    "$.observation.invocations.timeoutSeconds"
+                    "Invocation timeout exceeds both requested phase budgets."
 
             if not (List.contains i.WorkingRoot [ "operation"; "staging" ]) then
                 bad "$.observation.invocations.workingRoot" "Unknown root role."
