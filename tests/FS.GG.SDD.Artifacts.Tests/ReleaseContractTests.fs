@@ -177,7 +177,7 @@ module ReleaseContractTests =
         Assert.Contains($"currently **`{release.Identity.Version}`**", rawDoc)
 
         Assert.Contains(
-            ($"current release is `{releaseChannelValue release.Identity.Channel}`").ToLowerInvariant(),
+            ($"prepared version selects `{releaseChannelValue release.Identity.Channel}`").ToLowerInvariant(),
             doc
         )
 
