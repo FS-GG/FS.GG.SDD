@@ -171,12 +171,12 @@ def main():
                 assert record['rawCatalogDigest'] == fixture['catalogDigest']
                 assert record['policyDigest'] == fixture['policyDigest']
                 assert record['archiveDigest'] == fixture['archiveDigest']
-                assert any(tool['id'] == 'opaque-tool' and tool['version'] == '10.0.401' for tool in record['tools'])
+                assert any(tool['id'] == fixture.get('toolId', 'opaque-tool') and tool['version'] == fixture.get('toolVersion', '10.0.401') for tool in record['tools'])
                 assert record['invocationCount'] > 0 and record['mirroredPaths'] and record['sddOwnedPaths']
                 assert dict(record['effectiveParameters']) == dict(fixture['overrides'])
                 creation = [inv for inv in record['invocations'] if '--output' in inv['arguments']]
                 assert len(creation) == 1 and creation[0]['exitCode'] == 0
-                prefix = ['new', 'fsgg-catalog-opaque-fixture', '--output', 'workspace',
+                prefix = ['new', fixture.get('templateId', 'fsgg-catalog-opaque-fixture'), '--output', 'workspace',
                           '--no-update-check', '--debug:custom-hive', 'engine']
                 parameters = [item for key, value in record['effectiveParameters'] for item in ['--' + key, value]]
                 assert creation[0]['arguments'] == prefix + parameters
@@ -186,6 +186,19 @@ def main():
                 executable_paths = ['scripts/check-claim-generation.py', 'tools/routine-delivery.py']
                 case['executableModes'] = {path: oct((target / path).stat().st_mode & 0o777) for path in executable_paths}
                 assert all((target / path).stat().st_mode & 0o111 == 0o111 for path in executable_paths)
+                if fixture.get('requiredProducedPath'):
+                    path = fixture['requiredProducedPath']
+                    assert path in record['producedPaths']
+                    assert hashlib.sha256((target / path).read_bytes()).hexdigest() == fixture['requiredProducedSha256']
+                    assert (target / fixture['requiredAbsentOutput']).parent.is_dir()
+                    assert not (target / fixture['requiredAbsentOutput']).exists()
+                    declared = [command for command in record['declaredCommands'] if command['capabilityId'] == fixture['requiredCapabilityId']]
+                    assert len(declared) == 1
+                    assert declared[0]['executable'] == fixture['fixtureExecutable']
+                    assert declared[0]['arguments'] == fixture['fixtureArguments']
+                    assert declared[0]['workingDirectory'] == '.'
+                    assert any(evidence['format'] == fixture['requiredEvidenceFormat'] and evidence['path'] == fixture['requiredAbsentOutput'] for evidence in record['declaredEvidence'])
+                    assert hashlib.sha256(Path(fixture['fixtureExecutable']).read_bytes()).hexdigest() == fixture['fixtureExecutableSha256']
                 case['provenance'] = record
             elif name == 'dryrun':
                 assert actual['passed'] and projection['status'] == 'prepared' and projection['ownership'] == 'Settled'

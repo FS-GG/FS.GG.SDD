@@ -156,6 +156,92 @@ module CatalogScaffoldRuntimeTests =
           PolicyBytes=policy; ExpectedPolicyDigest=ProviderCatalogIntegrity.digest policy
           SelectedPlatform=platform; PreflightTimeoutSeconds=30; ScaffoldTimeoutSeconds=60; DryRun=false }
 
+    // Synthetic declarations; the CLI must independently observe this selected real executable.
+    let private testHandoffRequest root target (executable: string) (inputBytes: byte array) =
+        if not (Path.IsPathFullyQualified executable) then invalidArg "executable" "Select the absolute fixture apphost."
+        let original = request root target
+        do
+            use zip = ZipFile.Open(original.TemplateArchive, ZipArchiveMode.Update)
+            let write name (bytes: byte array) =
+                use output = zip.CreateEntry(name, CompressionLevel.NoCompression).Open()
+                output.Write(bytes, 0, bytes.Length)
+            write "content/inputs/tests.json" inputBytes
+            write "content/out/.gitkeep" [||]
+        let sourceSelection = original.Selection
+        let catalog =
+            match ProviderCatalogIntegrity.verify sourceSelection.ExpectedRawDigest sourceSelection.CatalogBytes with
+            | Ok value -> value
+            | Error diagnostics -> failwithf "Original fixture declaration failed: %A" diagnostics
+        let command: Fsgg.Provider.DeclaredCommand =
+            { Executable = executable
+              Arguments = ["run"; "--input"; "inputs/tests.json"; "--output"; "out/governance-handoff.json"; ""; "with spaces"; "$(literal);&"] }
+        let declared =
+            { catalog.Providers.Head with
+                Id = "governance-test-fixture"
+                DescriptorId = "governance-test-fixture-descriptor"
+                Tools = [{ Id = "governance-test-fixture"; Version = "1.0.0"; Platforms = [platform] }]
+                Capabilities =
+                    [{ Id = "test:test"; Required = true; Platforms = [platform]
+                       ToolIds = ["governance-test-fixture"]; EvidenceIds = ["fixture-handoff"]
+                       Binding = Fsgg.ProviderCatalog.Command(command,
+                           { WorkingDirectory = "."; TimeoutSeconds = 30; CostClass = "cheap"; EnvironmentIds = ["fixture-local"] }) }]
+                Evidence = [{ Id = "fixture-handoff"; Format = "fsgg.governance-handoff@2.0.0"
+                              Path = "out/governance-handoff.json"; Required = true }] }
+        let descriptor = { declared with DescriptorDigest = ProviderCatalogIntegrity.digest(ProviderCatalogIntegrity.descriptorBytes declared) }
+        let canonical = ProviderCatalogIntegrity.catalogBytes { catalog with Providers = [descriptor] }
+        let node = JsonNode.Parse(Encoding.UTF8.GetString canonical) |> nonNull
+        node["digest"] <- JsonValue.Create(ProviderCatalogIntegrity.digest canonical)
+        let catalogBytes = Encoding.UTF8.GetBytes(node.ToJsonString())
+        let mappings = "[{\"format\":\"fsgg.governance-handoff@2.0.0\",\"id\":\"fsgg.governance-handoff\",\"version\":\"2.0.0\"}]"
+        let policy = JsonNode.Parse(Encoding.UTF8.GetString original.PolicyBytes) |> nonNull
+        policy["requiredCapabilityIds"] <- JsonNode.Parse("[\"test:test\"]")
+        (policy["evidenceMap"] |> nonNull)["mappings"] <- JsonNode.Parse mappings
+        (policy["evidenceMap"] |> nonNull)["digest"] <- JsonValue.Create(ProviderCatalogIntegrity.digest(Encoding.UTF8.GetBytes mappings))
+        policy["supportedEvidenceFormats"] <- JsonNode.Parse("[{\"id\":\"fsgg.governance-handoff\",\"version\":\"2.0.0\"}]")
+        let probe = (policy["toolProbes"] |> nonNull)[0] |> nonNull
+        probe["id"] <- JsonValue.Create "governance-test-fixture"
+        probe["executable"] <- JsonValue.Create executable
+        probe["versionPrefix"] <- JsonValue.Create "gov423-test-fixture "
+        let selectedPolicy = Encoding.UTF8.GetBytes(policy.ToJsonString())
+        { original with
+            Selection = { sourceSelection with CatalogBytes = catalogBytes; ExpectedRawDigest = ProviderCatalogIntegrity.digest catalogBytes; Provider = Some descriptor.Id }
+            ExpectedArchiveDigest = ProviderCatalogIntegrity.digest(File.ReadAllBytes original.TemplateArchive)
+            PolicyBytes = selectedPolicy; ExpectedPolicyDigest = ProviderCatalogIntegrity.digest selectedPolicy }
+
+    [<Fact>]
+    let ``synthetic handoff fixture declares actual test command and independent handoff format`` () =
+        let root = Path.Combine(Path.GetTempPath(), "sdd-handoff-declaration-" + Guid.NewGuid().ToString("N"))
+        Directory.CreateDirectory root |> ignore
+        try
+            let executable = Path.Combine(root, "fixture-apphost")
+            let input = Encoding.UTF8.GetBytes "{\"schemaVersion\":1}"
+            let selected = testHandoffRequest root (Path.Combine(root, "target")) executable input
+            let prepared =
+                match CatalogScaffoldWorkflow.prepare selected.Selection with
+                | Ok preview ->
+                    match preview.Selected with
+                    | Some value -> value
+                    | None -> failwith "The fixture must select its exact declared provider."
+                | Error diagnostics -> failwithf "Actual declaration prepare refused: %A" diagnostics
+            let policy =
+                match CatalogScaffoldPolicy.parse selected.ExpectedPolicyDigest selected.PolicyBytes with
+                | Ok value -> value
+                | Error diagnostics -> failwithf "Actual independent policy parser refused: %A" diagnostics
+            match ProviderCapabilityAdmission.resolve policy platform prepared.Descriptor with
+            | Error diagnostics -> failwithf "Actual whole admission refused: %A" diagnostics
+            | Ok resolved -> Assert.Equal<int>(1, resolved.Bindings.Length)
+            Assert.Equal<string>("test:test", prepared.Descriptor.Capabilities.Head.Id)
+            Assert.Equal<string>("fsgg.governance-handoff@2.0.0", prepared.Descriptor.Evidence.Head.Format)
+            Assert.Equal<string>(executable, policy.ToolProbes.Head.Executable)
+            use archive = ZipFile.OpenRead selected.TemplateArchive
+            use contents = (archive.GetEntry("content/inputs/tests.json") |> nonNull).Open()
+            use copied = new MemoryStream()
+            contents.CopyTo copied
+            Assert.True((input = copied.ToArray()))
+            Assert.Null(archive.GetEntry("content/out/governance-handoff.json"))
+        finally
+            Directory.Delete(root, true)
+
     let private host: CatalogScaffoldEffects.HostSelection =
         { Mode = CatalogScaffoldEffects.LocalLinux
           TransportExecutable = "/usr/share/dotnet/dotnet" }

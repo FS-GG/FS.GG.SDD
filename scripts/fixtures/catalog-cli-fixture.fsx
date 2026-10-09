@@ -56,14 +56,19 @@ match args[0] with
     manifest["policy"] <- JsonValue.Create(Path.GetFullPath args[3])
     manifest["policyDigest"] <- JsonValue.Create policyDigest
     File.WriteAllText(args[4], manifest.ToJsonString(JsonSerializerOptions(WriteIndented=true)))
-| "generate" | "generate-missing-binding" | "generate-reserved-write" ->
+| "generate" | "generate-missing-binding" | "generate-reserved-write" | "generate-test-handoff" ->
     let root = Path.GetFullPath args[2]
     let target = Path.GetFullPath args[3]
     Directory.CreateDirectory root |> ignore
     let moduleType = assembly.GetType("FS.GG.SDD.Commands.Tests.CatalogScaffoldRuntimeTests", true)
-    let method = moduleType.GetMethod("request", flags)
+    let method = moduleType.GetMethod((if args[0] = "generate-test-handoff" then "testHandoffRequest" else "request"), flags)
     if isNull method then failwith "Compiled original fixture request method is unavailable."
-    let originalRequest = method.Invoke(null, [|box root;box target|])
+    let originalRequest =
+        if args[0] = "generate-test-handoff" then
+            let executable = Path.GetFullPath args[5]
+            if not(File.Exists executable) then failwith "Select the already built real fixture apphost."
+            method.Invoke(null, [|box root;box target;box executable;box(File.ReadAllBytes args[6])|])
+        else method.Invoke(null, [|box root;box target|])
     let request =
         if args[0] = "generate-reserved-write" then
             let archive = text "TemplateArchive" originalRequest
@@ -113,6 +118,21 @@ match args[0] with
                          preflightSeconds=field "PreflightTimeoutSeconds" request :?> int;
                          scaffoldSeconds=field "ScaffoldTimeoutSeconds" request :?> int;
                          overrides=overrides |})
+    if args[0] = "generate-test-handoff" then
+        let manifest = JsonNode.Parse(File.ReadAllText args[4])
+        let executable = Path.GetFullPath args[5]
+        manifest["toolId"] <- JsonValue.Create "governance-test-fixture"
+        manifest["toolVersion"] <- JsonValue.Create "1.0.0"
+        manifest["templateId"] <- JsonValue.Create "fsgg-catalog-opaque-fixture"
+        manifest["fixtureExecutable"] <- JsonValue.Create executable
+        manifest["fixtureExecutableSha256"] <- JsonValue.Create(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes executable)).ToLowerInvariant())
+        manifest["requiredProducedPath"] <- JsonValue.Create "inputs/tests.json"
+        manifest["requiredProducedSha256"] <- JsonValue.Create(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes args[6])).ToLowerInvariant())
+        manifest["requiredAbsentOutput"] <- JsonValue.Create "out/governance-handoff.json"
+        manifest["requiredCapabilityId"] <- JsonValue.Create "test:test"
+        manifest["requiredEvidenceFormat"] <- JsonValue.Create "fsgg.governance-handoff@2.0.0"
+        manifest["fixtureArguments"] <- JsonNode.Parse("[\"run\",\"--input\",\"inputs/tests.json\",\"--output\",\"out/governance-handoff.json\",\"\",\"with spaces\",\"$(literal);&\"]")
+        File.WriteAllText(args[4], manifest.ToJsonString(JsonSerializerOptions(WriteIndented=true)))
 | "verify" ->
     let moduleType = assembly.GetType("FS.GG.SDD.Artifacts.CatalogScaffoldProvenance", true)
     let parsed = moduleType.GetMethod("parse", flags).Invoke(null, [|box(File.ReadAllText args[2])|])
@@ -123,12 +143,25 @@ match args[0] with
     let paths name = (field name ownership :?> IEnumerable) |> Seq.cast<obj> |> Seq.map(fun p -> text "Path" p) |> Seq.toArray
     let tools = (field "Tools" observation :?> IEnumerable) |> Seq.cast<obj> |> Seq.map(fun tool -> {| id=text "Id" tool;version=text "Version" tool;executable=text "Executable" tool |}) |> Seq.toArray
     let declaration = field "Declaration" record
+    let descriptor = field "Descriptor" declaration
+    let declaredCommands =
+        (field "Capabilities" descriptor :?> IEnumerable) |> Seq.cast<obj> |> Seq.choose(fun capability ->
+            let binding = field "Binding" capability
+            let case, values = FSharpValue.GetUnionFields(binding, binding.GetType())
+            if case.Name <> "Command" then None
+            else Some {| capabilityId=text "Id" capability; executable=text "Executable" values[0]
+                         arguments=(field "Arguments" values[0] :?> IEnumerable) |> Seq.cast<obj> |> Seq.map string |> Seq.toArray
+                         workingDirectory=text "WorkingDirectory" values[1] |}) |> Seq.toArray
+    let declaredEvidence =
+        (field "Evidence" descriptor :?> IEnumerable) |> Seq.cast<obj> |> Seq.map(fun evidence ->
+            {| id=text "Id" evidence;format=text "Format" evidence;path=text "Path" evidence |}) |> Seq.toArray
     let parameters = (field "EffectiveParameters" declaration :?> IEnumerable) |> Seq.cast<obj> |> Seq.map(fun pair -> [|text "Item1" pair;text "Item2" pair|]) |> Seq.toArray
     let invocations = (field "Invocations" observation :?> IEnumerable) |> Seq.cast<obj> |> Seq.map(fun invocation ->
         {| executable=text "Executable" invocation
            arguments=(field "Arguments" invocation :?> IEnumerable) |> Seq.cast<obj> |> Seq.map string |> Seq.toArray
            exitCode=field "ExitCode" invocation :?> int |}) |> Seq.toArray
-    write args[3] (box {| effectiveParameters=parameters;invocations=invocations;
+    write args[3] (box {| declaredCommands=declaredCommands;declaredEvidence=declaredEvidence;
+                         effectiveParameters=parameters;invocations=invocations;
                          rawCatalogDigest=text "RawCatalogDigest" declaration;
                          policyDigest=field "Policy" declaration |> text "Digest";
                          archiveDigest=field "Archive" declaration |> text "Digest";
@@ -136,4 +169,4 @@ match args[0] with
                          platform=text "Platform" observation; result=text "Result" observation;
                          producedPaths=paths "ProducedPaths";mirroredPaths=paths "MirroredPaths";sddOwnedPaths=paths "SddOwnedPaths";
                          tools=tools; invocationCount=(field "Invocations" observation :?> IEnumerable |> Seq.cast<obj> |> Seq.length) |})
-| _ -> failwith "Expected generate, generate-missing-binding, generate-reserved-write, seal-policy or verify mode."
+| _ -> failwith "Expected generate, generate-missing-binding, generate-reserved-write, generate-test-handoff, seal-policy or verify mode."
