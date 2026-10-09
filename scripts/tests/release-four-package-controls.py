@@ -81,7 +81,18 @@ with tempfile.TemporaryDirectory() as td:
             lower=i.lower();responses[f'https://fixture/{f}/{lower}/{versions[i]}/{lower}.{versions[i]}.nupkg']=(200,raw)
     check(True,root)
     key='https://fixture/org/fs.gg.contracts/7.6.0/fs.gg.contracts.7.6.0.nupkg'
-    responses[key]=(200,package('FS.GG.Contracts','7.6.0',signature=b'signing-envelope'));check(True,root)
+    responses[key]=(200,package('FS.GG.Contracts','7.6.0',signature=b'signing-envelope'))
+    with patch.object(occupancy.subprocess,'run',return_value=subprocess.CompletedProcess([],0)) as verify:
+        check(True,root)
+        assert verify.call_count==1 and verify.call_args.kwargs['timeout']==30
+        assert verify.call_args.kwargs['stdout']==subprocess.DEVNULL and verify.call_args.kwargs['stderr']==subprocess.DEVNULL
+    with patch.object(occupancy.subprocess,'run',return_value=subprocess.CompletedProcess([],1)):check(False,root)
+    with patch.object(occupancy.subprocess,'run',side_effect=subprocess.TimeoutExpired('dotnet',30)):check(False,root)
+    with patch.object(occupancy.subprocess,'run',side_effect=FileNotFoundError('dotnet')):check(False,root)
+    with patch.object(occupancy.subprocess,'run',return_value=subprocess.CompletedProcess([],0)):
+        responses[key]=(200,package('FS.GG.Contracts','7.6.0',body=b'conflict',signature=b'valid-envelope'));check(False,root)
+    responses[key]=(200,contracts)
+    with patch.object(occupancy.subprocess,'run',side_effect=AssertionError('exact raw equality must not launch verifier')):check(True,root)
     responses[key]=(200,package('FS.GG.Contracts','7.6.0',body=b'conflict'));check(False,root)
     responses[key]=(403,b'');check(False,root)
 seed()

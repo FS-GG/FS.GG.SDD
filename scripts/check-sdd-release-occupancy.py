@@ -9,6 +9,8 @@ import os
 from pathlib import Path
 import re
 import sys
+import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 import urllib.parse
@@ -50,6 +52,29 @@ def contracts_metadata(data, version):
     return dict(schema='fsgg.sdd.reused-dependency/v1', packageId='FS.GG.Contracts', version=version,
                 sourceHead=CONTRACTS_SOURCE, archiveSha256=CONTRACTS_ARCHIVE_SHA256,
                 payloadSha256=hashlib.sha256(normalized).hexdigest(), dllSha256=CONTRACTS_DLL_SHA256)
+
+
+def verified_contracts_payloads(public, org):
+    # Exact selected public bytes need no exclusion. A changed envelope only
+    # permits excluding signatures after the SDK has verified every signed input.
+    if public == org:
+        return
+    for data in [public, org]:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            signed = '.signature.p7s' in archive.namelist()
+        if signed:
+            with tempfile.TemporaryDirectory(prefix='sdd-contracts-signature-') as directory:
+                path = Path(directory) / 'FS.GG.Contracts.7.6.0.nupkg'
+                path.write_bytes(data)
+                try:
+                    result = subprocess.run(['dotnet', 'nuget', 'verify', str(path), '--all'],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30, check=False)
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    raise ValueError('reused Contracts signature verification unavailable or timed out') from error
+                if result.returncode != 0:
+                    raise ValueError('reused Contracts signature verification refused')
+    if payload(public) != payload(org):
+        raise ValueError('reused Contracts normalized payload differs between feeds')
 
 
 def preflight(version, ids, github_index, github_download, public_download, token, actor, candidate=None, contracts_version=None, github_api="https://api.github.com"):
@@ -122,8 +147,7 @@ def preflight(version, ids, github_index, github_download, public_download, toke
     if public_contracts is None or org_contracts is None:
         raise ValueError("reused Contracts must already be available on both feeds")
     contracts_metadata(public_contracts, contracts_version)
-    if payload(public_contracts) != payload(org_contracts):
-        raise ValueError("reused Contracts normalized payload differs between feeds")
+    verified_contracts_payloads(public_contracts, org_contracts)
     if candidate is not None:
         retained = candidate / 'dependencies' / f'FS.GG.Contracts.{contracts_version}.nupkg'
         if retained.read_bytes() != public_contracts:

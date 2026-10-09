@@ -50,7 +50,12 @@ and DLL SHA-256 is
 `91f484d28416c5d860a375a91ed70cdda1d3b6d85d504c15ea21e08a9af727ee`.
 The verifier checks these original identities plus a signature-aware payload
 hash; it must not rewrite dependency provenance to the new SDD commit.
-Both feeds must already have matching normalized Contracts payloads. Dependency
+Both feeds must already have matching normalized Contracts payloads. Exact raw
+equality with the independently pinned public archive needs no exclusion. Any
+different archive requires `dotnet nuget verify --all` for every signed input
+before excluding `.signature.p7s`; failure, unavailable verifier or 30-second
+timeout refuses. Verifier stdout/stderr are discarded, so retained output is
+bounded to zero bytes. Unsigned archives have no signature to exclude. Dependency
 metadata is created once and a repeated record attempt refuses overwrite.
 Artifacts/Commands declare that selected dependency; the CLI embeds its DLL and
 the exact retained standalone Commands DLL.
