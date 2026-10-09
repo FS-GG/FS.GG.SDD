@@ -8,7 +8,7 @@
   <ItemGroup>
     <!-- Reuse the published org contract; do not rebuild an equal-version dependency. -->
     <PackageVersion Include="FS.GG.Contracts" Version="[7.6.0]" />
-    <!-- Explicit C2.2 local candidate; protected release/normal default adoption is pending. -->
+    <!-- Use published Config0.3.0; SDD release and downstream adoption remain separate. -->
     <PackageVersion Include="FS.GG.Governance.Config" Version="0.3.0" />
     <PackageVersion Include="FsQuint" Version="[0.1.0]" />
     <!-- The coordination kit as a versioned package (ADR-0062, .github#1262). Referenced by

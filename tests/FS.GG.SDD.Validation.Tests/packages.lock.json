@@ -161,9 +161,9 @@
         "type": "CentralTransitive",
         "requested": "[0.3.0, )",
         "resolved": "0.3.0",
-        "contentHash": "OIQjHT3DIdOoLMdUEtZn4XBBhYDQmT+Ep8Gn4/tk6ZiDPAibHhgYsRiRylaOJkKyXSqinjna7HHqOGGHzrITeg==",
+        "contentHash": "b4+NGANr4wLkrh+OEphAahsbjXtQMhU9mZZFOd/QGPcgcmXm/Y2wFtP2PkWLBqDTFRxQchiQ/QNbUVNUtGKBaQ==",
         "dependencies": {
-          "FS.GG.Contracts": "7.5.2",
+          "FS.GG.Contracts": "7.6.0",
           "FSharp.Core": "10.1.401",
           "YamlDotNet": "18.1.0"
         }
