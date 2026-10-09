@@ -106,13 +106,13 @@ class SddObservationSourceTests(unittest.TestCase):
         self.assertIn("FSGG_V2_SOURCE_PROFILE: sdd-v1", workflow)
         self.assertEqual(2, workflow.count("persist-credentials: false"))
         self.assertIn("python3 tools/v2-ci-ordinary-observe.py produce", workflow)
-        self.assertIn("python3 tools/v2-ci-ordinary-observe.py verify", workflow)
+        self.assertIn("python3 tools/v2-ci-ordinary-observe.py verify-main", workflow)
         self.assertIn("EXPECTED_RECEIPT_SHA256: ${{ needs.preflight.outputs.receipt_sha256 }}", workflow)
-        self.assertIn("PACKAGE_VERSION: 0.1.6", workflow)
-        self.assertIn("PACKAGE_SHA256: 0f5d92799af84acb8663df0f524dc2ccfe54cfcc0bc6ad2183e867c8cdd47730", workflow)
+        self.assertIn("PACKAGE_VERSION: 0.3.0", workflow)
+        self.assertIn("PACKAGE_SHA256: a8cd6d602e1203257e1241df0b5dfdb9d867334b46dc406d8cdaa8e6d2b3019c", workflow)
         self.assertIn("--configfile", workflow)
         self.assertIn("--no-cache", workflow)
-        self.assertIn("ordinary-settlement execute", workflow)
+        self.assertIn("ordinary-settlement execute-main", workflow)
         for name in ("V2_ORDINARY_APP_ID", "V2_ORDINARY_APP_PRIVATE_KEY",
                      "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY"):
             self.assertIn("${{ secrets." + name + " }}", workflow)
@@ -136,8 +136,8 @@ class SddObservationSourceTests(unittest.TestCase):
                           "V2_ORDINARY_AUTHORIZER_PRIVATE_KEY"}, set(observation["secretNames"]))
         self.assertEqual("published-verified",
                          policy["packagePin"]["status"])
-        self.assertEqual("0.1.6", policy["packagePin"]["version"])
-        self.assertEqual("0f5d92799af84acb8663df0f524dc2ccfe54cfcc0bc6ad2183e867c8cdd47730", policy["packagePin"]["sha256"])
+        self.assertEqual("0.3.0", policy["packagePin"]["version"])
+        self.assertEqual("a8cd6d602e1203257e1241df0b5dfdb9d867334b46dc406d8cdaa8e6d2b3019c", policy["packagePin"]["sha256"])
         self.assertTrue(policy["packagePin"]["servedPackageVerified"])
         self.assertEqual(3, len(policy["credentialInventory"]))
         self.assertTrue(all(item["provisioned"] for item in policy["credentialInventory"]))
