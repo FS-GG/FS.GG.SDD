@@ -130,3 +130,22 @@ Use retained qualified2.2/publishedContracts7.6/localConfig closure for early co
 never interpret it as final2.3/public availability. Final2.3 archive selection, actual CLI→Verify
 acceptance and publication remain independent root-owned joins. Determinism and negative input
 controls use the actual example executable; reuse unchanged C2.2/C2.3 failure evidence within scope.
+
+
+## Selected-template data transport follow-up
+
+The accepted Templates441/SDD928 join extends only the private data transport:
+select one exact descriptor TemplateId from a multi-template archive, reject alias/identity
+ambiguity and nested content roots, and admit inert classifications/descriptions, literal
+text/string and single-valued choices with boolean requiredness. One static source mapping
+uses only the closed exclusion forms of the selected payload. The sole generated form is
+a declared parameter followed by literal hyphen-to-underscore replacement; no regex engine,
+conditions, file renames, callbacks or dependency acquisition are admitted. Generated values
+are payload substitutions, never CLI parameters. SDK metadata/cache association must match
+the same declaration, and the complete generated payload must match captured expected bytes.
+
+Public signatures, descriptor/schema contracts, Linux custody, original budgets and atomic
+no-replace publication remain unchanged. Compile Commands immediately after integration;
+focused pure archive/cache controls precede the separately selected real Node CLI vertical.
+Identifier grammar, portable tool carrier and other-language evidence remain explicit gaps.
+No package publication/default activation is selected by this source window.

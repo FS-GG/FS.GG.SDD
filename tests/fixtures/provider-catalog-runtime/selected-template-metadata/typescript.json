@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS-GG",
+  "classifications": [
+    "Typescript",
+    "CLI",
+    "Workspace"
+  ],
+  "identity": "FS.GG.Workspace.TypescriptCli",
+  "name": "FS.GG Typescript ESM CLI",
+  "shortName": "fs-gg-typescript-cli",
+  "preferNameDirectory": true,
+  "symbols": {
+    "productName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Node CLI",
+      "description": "Raw display/product name; independent of package and code identifiers.",
+      "replaces": "RawProductName"
+    },
+    "packageIdentity": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "example-node-cli",
+      "description": "Explicit lowercase npm package identity; no derivation from display name.",
+      "replaces": "example-node-cli"
+    },
+    "codeIdentifier": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "NodeProduct",
+      "description": "Explicit JavaScript/TypeScript exported identifier.",
+      "replaces": "NodeProduct"
+    },
+    "lifecycle": {
+      "type": "parameter",
+      "datatype": "choice",
+      "defaultValue": "sdd",
+      "description": "Forwarded lifecycle choice; SDD owns lifecycle files.",
+      "choices": [
+        {
+          "choice": "none"
+        },
+        {
+          "choice": "sdd"
+        },
+        {
+          "choice": "typed-sdd"
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        "**/.template.config/**",
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/reports/**",
+        "**/*.tgz",
+        "**/.npm/**"
+      ]
+    }
+  ]
+}

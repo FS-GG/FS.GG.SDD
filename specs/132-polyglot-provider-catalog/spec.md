@@ -118,3 +118,30 @@ Acceptance: immediate cold package-only typed compile, deterministic double emis
 refusal and actual CLI/Governance journey through the maintained drivers. Retained SDD2.2 packages
 are explicit early-compile inputs only; final local2.3 qualification awaits independently supplied
 qualified archives. This bounded slice does not close C3.1, distribution or provider certification.
+
+
+## Selected-template data transport follow-up
+
+This bounded internal transport extension implements the accepted Templates441/SDD928
+join under FR-010. Public signatures, schema2/descriptor3, independent admission and
+FR-011–FR-015 remain unchanged; no publication or default activation is implied.
+
+- FR-019: Select exactly one explicit descriptor alias from a multi-template archive;
+  refuse selected alias/identity ambiguity, including legacy alias arrays and nested
+  content roots. Unselected templates do not gain execution authority.
+- FR-020: Preserve captured classifications, parameter descriptions/defaults, literal
+  text/string and single-valued choices, and boolean requiredness. Check effective
+  values and descriptor restrictions against the actual selected declaration.
+- FR-021: Permit one static source mapping with omitted or exactly ./ source/target;
+  only closed directory and extension exclusions are admitted, with zero-directory **
+  semantics. Exclusions determine the complete expected payload inventory.
+- FR-022: Permit only a direct declared-parameter, single literal hyphen-to-underscore
+  generated substitution and fixed nonempty token. Generated symbols are not CLI
+  parameters. Other generators, conditions, path renames and dependency cycles refuse.
+- FR-023: Installed SDK cache identity/configuration/alias and parameter metadata must
+  match this same actual declaration. Keep archive integrity, exact mount inventory,
+  literal long-option checks and complete output-byte comparison.
+
+Acceptance separates synthetic actual-parser/cache tests from the separately selected
+real Node vertical using its owner's exact multi-template archive. Other-language
+evidence, general identifier grammars and portable tool carriers remain explicit gaps.

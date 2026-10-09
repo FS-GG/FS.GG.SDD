@@ -266,3 +266,22 @@ Local authoring preparation now has actual cold2.2 package-only compilation (12 
 no ProjectReference) and ten sample-command controls, including deterministic catalog/archive bytes,
 input/output refusal and real strict schema2 reading. Final2.3 archive/CLI→Verify qualification
 remains pending; this evidence does not mark C3.1 or distribution complete.
+
+
+## Selected-template data transport follow-up
+
+The accepted Templates441/SDD928 join extends only the private data transport:
+select one exact descriptor TemplateId from a multi-template archive, reject alias/identity
+ambiguity and nested content roots, and admit inert classifications/descriptions, literal
+text/string and single-valued choices with boolean requiredness. One static source mapping
+uses only the closed exclusion forms of the selected payload. The sole generated form is
+a declared parameter followed by literal hyphen-to-underscore replacement; no regex engine,
+conditions, file renames, callbacks or dependency acquisition are admitted. Generated values
+are payload substitutions, never CLI parameters. SDK metadata/cache association must match
+the same declaration, and the complete generated payload must match captured expected bytes.
+
+Public signatures, descriptor/schema contracts, Linux custody, original budgets and atomic
+no-replace publication remain unchanged. Compile Commands immediately after integration;
+focused pure archive/cache controls precede the separately selected real Node CLI vertical.
+Identifier grammar, portable tool carrier and other-language evidence remain explicit gaps.
+No package publication/default activation is selected by this source window.

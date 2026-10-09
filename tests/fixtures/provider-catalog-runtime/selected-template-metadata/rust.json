@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS-GG",
+  "classifications": [
+    "Rust",
+    "CLI",
+    "Workspace"
+  ],
+  "identity": "FS.GG.Workspace.RustCli",
+  "name": "FS.GG Rust CLI workspace",
+  "shortName": "fs-gg-rust-cli",
+  "preferNameDirectory": true,
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        "**/.template.config/**",
+        "**/target/**",
+        "**/[Bb]in/**",
+        "**/[Oo]bj/**",
+        "**/*.filelist",
+        "**/*.user",
+        "**/node_modules/**",
+        "**/.nuget/**"
+      ]
+    }
+  ],
+  "symbols": {
+    "productName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Rust CLI Product",
+      "replaces": "Rust CLI Product",
+      "description": "Display name only; never a crate or source identifier."
+    },
+    "crateName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "rust-cli-crate",
+      "replaces": "rust-cli-crate",
+      "description": "Validated Rust crate name supplied by the provider."
+    },
+    "crateCodeName": {
+      "type": "generated",
+      "generator": "regex",
+      "parameters": {
+        "source": "crateName",
+        "steps": [
+          {
+            "regex": "-",
+            "replacement": "_"
+          }
+        ]
+      },
+      "replaces": "rust_cli_crate"
+    },
+    "codeIdentifier": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "rust_cli_code_identifier",
+      "replaces": "rust_cli_code_identifier",
+      "description": "Separate validated snake_case Rust module identifier."
+    }
+  }
+}
