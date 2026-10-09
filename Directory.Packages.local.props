@@ -6,6 +6,10 @@
        NU1504/NU1011 on a duplicate PackageVersion). ManagePackageVersionsCentrally
        is owned by the canonical file and is intentionally not re-set here. -->
   <ItemGroup>
+    <!-- Reuse the published org contract; do not rebuild an equal-version dependency. -->
+    <PackageVersion Include="FS.GG.Contracts" Version="[7.6.0]" />
+    <!-- Use published Config0.3.0; SDD release and downstream adoption remain separate. -->
+    <PackageVersion Include="FS.GG.Governance.Config" Version="0.3.0" />
     <PackageVersion Include="FsQuint" Version="[0.1.0]" />
     <!-- The coordination kit as a versioned package (ADR-0062, .github#1262). Referenced by
          .config/kit/FS.GG.Kit.receiver.proj, which materializes the kit onto disk; Renovate bumps

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>FS.GG.SDD.Catalog.OpaqueFixture</id>
+    <version>1.0.1</version>
+    <authors>FS.GG.SDD test fixture</authors>
+    <description>Synthetic language-neutral template data; no build, restore or post-actions.</description>
+    <packageTypes><packageType name="Template" /></packageTypes>
+  </metadata>
+</package>

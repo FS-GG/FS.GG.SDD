@@ -68,7 +68,10 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.2.0.nupkg")
+                Directory.GetFiles(
+                    outputDirectory,
+                    ($"FS.GG.SDD.Artifacts.{(FS.GG.SDD.Artifacts.SchemaVersion.currentGeneratorVersion ()).Version}.nupkg")
+                )
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -104,8 +107,8 @@ module PackedDependencyContractTests =
                 |> Option.map _.Value
                 |> Option.defaultWith (fun () -> failwith "the Contracts dependency has no version")
 
-            Assert.Equal("2.2.0", packageVersion)
-            Assert.Equal("7.6.0", dependencyVersion)
+            Assert.Equal((FS.GG.SDD.Artifacts.SchemaVersion.currentGeneratorVersion ()).Version, packageVersion)
+            Assert.Equal("[7.6.0]", dependencyVersion)
             Assert.DoesNotContain(packageVersion, dependency.ToString())
         finally
             Directory.Delete(outputDirectory, true)
@@ -121,7 +124,10 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.2.0.nupkg")
+                Directory.GetFiles(
+                    outputDirectory,
+                    ($"FS.GG.SDD.Artifacts.{(FS.GG.SDD.Artifacts.SchemaVersion.currentGeneratorVersion ()).Version}.nupkg")
+                )
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package
@@ -174,7 +180,10 @@ module PackedDependencyContractTests =
             packProject outputDirectory
 
             let package =
-                Directory.GetFiles(outputDirectory, "FS.GG.SDD.Artifacts.2.2.0.nupkg")
+                Directory.GetFiles(
+                    outputDirectory,
+                    ($"FS.GG.SDD.Artifacts.{(FS.GG.SDD.Artifacts.SchemaVersion.currentGeneratorVersion ()).Version}.nupkg")
+                )
                 |> Array.exactlyOne
 
             use archive = ZipFile.OpenRead package

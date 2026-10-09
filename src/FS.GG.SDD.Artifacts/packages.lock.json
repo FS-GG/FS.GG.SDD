@@ -2,6 +2,15 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "FS.GG.Contracts": {
+        "type": "Direct",
+        "requested": "[7.6.0, 7.6.0]",
+        "resolved": "7.6.0",
+        "contentHash": "0qn8dQ0gtv/LuLfRxC3Ju+KkPciTKg0d+TRo4jgdpeyAOJJt3I9mp3EH60BPtchmjql82hlMOo9PLB46PPg3bg==",
+        "dependencies": {
+          "FSharp.Core": "10.1.401"
+        }
+      },
       "FSharp.Core": {
         "type": "Direct",
         "requested": "[10.1.401, )",
@@ -22,12 +31,6 @@
         "requested": "[18.1.0, )",
         "resolved": "18.1.0",
         "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
-      },
-      "fs.gg.contracts": {
-        "type": "Project",
-        "dependencies": {
-          "FSharp.Core": "[10.1.401, )"
-        }
       }
     }
   }

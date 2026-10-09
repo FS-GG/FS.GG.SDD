@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
 open System.Reflection
+open System.Runtime.CompilerServices
 open FS.GG.SDD.Commands
 open FS.GG.SDD.TestShared
 open Xunit
@@ -16,7 +17,9 @@ module SurfaceBaselineTests =
             |> Array.filter (fun t -> t.Namespace = "FS.GG.SDD.Commands" && t.IsClass && t.IsAbstract && t.IsSealed)
             |> Array.collect (fun t ->
                 t.GetMethods(BindingFlags.Public ||| BindingFlags.Static ||| BindingFlags.DeclaredOnly)
-                |> Array.filter (fun method -> not method.IsSpecialName)
+                |> Array.filter (fun method ->
+                    not method.IsSpecialName
+                    && not (method.IsDefined(typeof<CompilerGeneratedAttribute>, false)))
                 |> Array.map (fun method -> $"{t.FullName}.{method.Name}"))
             |> Array.sort
 

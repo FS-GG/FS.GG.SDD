@@ -157,6 +157,33 @@ module internal ScaffoldMutation =
         with :? JsonException as error ->
             Error $"tool manifest is not valid JSON: {error.Message}"
 
+    /// The catalog route requires one unambiguous captured JSON meaning before reusing
+    /// the legacy shared merge. Existing legacy callers keep their original behavior.
+    let mergeCatalogToolManifestBytes (sddVersion: string) (capturedBytes: byte array) =
+        try
+            let utf8 = UTF8Encoding(false, true)
+            let originalText = utf8.GetString capturedBytes
+            use document = JsonDocument.Parse originalText
+
+            let rec uniqueObjectNames (element: JsonElement) =
+                match element.ValueKind with
+                | JsonValueKind.Object ->
+                    let names = System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
+
+                    element.EnumerateObject()
+                    |> Seq.forall (fun property -> names.Add property.Name && uniqueObjectNames property.Value)
+                | JsonValueKind.Array -> element.EnumerateArray() |> Seq.forall uniqueObjectNames
+                | _ -> true
+
+            if not (uniqueObjectNames document.RootElement) then
+                Error "tool manifest contains duplicate JSON property names"
+            else
+                mergeToolManifestText sddVersion originalText
+                |> Result.map (Option.map (fun (text: string) -> utf8.GetBytes text))
+        with
+        | :? DecoderFallbackException -> Error "tool manifest contains invalid UTF8"
+        | :? JsonException -> Error "tool manifest is not valid JSON"
+
     let toolManifestText (version: string) =
         let quotedVersion = JsonSerializer.Serialize(version)
         let quotedCoordVersion = JsonSerializer.Serialize(coordinationToolVersion)

@@ -937,6 +937,7 @@ module internal ViewGeneration =
                         snapshot ".fsgg/project.yml" model
                         snapshot ".fsgg/sdd.yml" model
                         snapshot ".fsgg/agents.yml" model
+                        snapshot ScaffoldProvenance.provenancePath model
                         snapshot (specPath workId) model
                         snapshot (clarificationPath workId) model
                         snapshot (checklistPath workId) model
@@ -996,6 +997,7 @@ module internal ViewGeneration =
             snapshot ".fsgg/project.yml" model
             snapshot ".fsgg/sdd.yml" model
             snapshot ".fsgg/agents.yml" model
+            snapshot ScaffoldProvenance.provenancePath model
             specText
             |> Option.map (fun text ->
                 {

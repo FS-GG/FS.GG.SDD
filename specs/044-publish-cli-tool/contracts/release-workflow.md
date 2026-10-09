@@ -1,101 +1,127 @@
-# Contract: `release.yml` four-package publish workflow
+# Contract: `release.yml` four-SDD-package publish workflow
 
-The external interface is a CI/release-engineering contract. It extends the feature-039
-single-package producer to publish four independently consumable packages in one run:
-`FS.GG.Contracts`, `FS.GG.SDD.Artifacts`, the `FS.GG.SDD.Cli` (`fsgg-sdd`) tool, and
-`FS.GG.SDD.Knowledge`. This document
-is authoritative; `.github/workflows/release.yml` is its implementation.
+The release set contains four independently consumable packages:
+`FS.GG.SDD.Artifacts`, `FS.GG.SDD.Commands`, `FS.GG.SDD.Cli` (`fsgg-sdd`),
+and `FS.GG.SDD.Knowledge`. They share one source-evaluated version.
+`FS.GG.Contracts` 7.6.0 is an already published dependency, never a member to
+repack or push. This contract governs `.github/workflows/release.yml`.
 
-## Triggers and version resolution
+## Triggers and source versions
 
-The workflow runs for published releases, pushed `v*` tags, and manual dispatch. Its optional
-`version` input remains Contracts-scoped. An empty manual input is the only package-candidate build:
-it runs every package gate, packs Contracts and the coherent SDD set once, writes a commit/version/inventory/hash
-manifest, and retains that exact artifact without publishing. A non-empty input or tag/release event
-enables publication and overrides only `contracts_version`, but it MUST locate a unique successful
-no-push candidate run at the exact event commit; it never rebuilds any of the four archives.
-
-`resolve-versions` evaluates all four project `<Version>` properties with MSBuild and outputs
-`contracts_version`, `artifacts_version`, `cli_version`, `knowledge_version`, and `push`. Artifacts, CLI, and Knowledge are one
-coherent product line and MUST have equal, non-empty versions. On a release or tag event, a
-version-bearing tag MUST match at least one of the four evaluated versions. The retained SDD set uses the coherent resolved version; Contracts keeps its independent version.
+Manual dispatch without `version` runs all gates and packs a no-push candidate.
+A supplied manual version must equal the coherent SDD source version; it cannot
+override source properties. A version-bearing event tag must match that same
+SDD version. Contracts is resolved from the exact central package pin `[7.6.0]`,
+not the Contracts producer project. All four SDD project versions must agree.
+Publishing events locate exactly one successful retained no-push candidate at
+the exact event commit; they do not rebuild it.
 
 ## Jobs and gates
 
-| Job | Gate and responsibility |
-|-----|-------------------------|
-| `resolve-versions` | Canonical-repository guard; resolve the independent Contracts and coherent SDD versions and publish intent. |
-| `contracts-tests` | Locked restore and Release tests for `FS.GG.Contracts`. |
-| `artifacts-tests` | Locked restore, Release tests, and clean-package-consumer proof for `FS.GG.SDD.Artifacts`. |
-| `cli-tests` | Locked restore and Release tests for `FS.GG.SDD.Cli`. |
-| `knowledge-tests` | Locked restore and Release tests for `FS.GG.SDD.Knowledge`. |
-| `publish-artifacts` | No-push dispatch only: needs resolver + Contracts/Artifacts/CLI/Knowledge tests; pack all four members once, verify/install them, write the identity/hash manifest, and retain the only publishable bytes. |
-| `locate-artifacts` | Publish events only: find exactly one successful, unexpired no-push artifact at the exact release commit; zero or multiple candidates fail closed. |
-| `publish-cli` | Download the retained run artifact by run id, re-verify commit/version/inventory/hashes, then publish the same four files to both feeds and read them back. |
+| Job | Responsibility |
+|-----|----------------|
+| `resolve-versions` | Canonical repository guard, exact published dependency pin, four coherent SDD versions and publish intent. |
+| `contracts-tests` | Existing source Contracts tests; these do not authorize publishing its producer. |
+| `artifacts-tests` | Locked Release tests and genuine clean package consumer. |
+| `commands-tests` | Locked Release tests, authored public surface and existing reflection contracts. |
+| `cli-tests` | Locked Release CLI tests. |
+| `knowledge-tests` | Locked Release Knowledge tests. |
+| `publish-artifacts` | Needs all five test jobs and resolver; packs four SDD members once, qualifies them, retains exact bytes without push. |
+| `locate-artifacts` | Requires the same gates; selects one unexpired same-head no-push candidate, refusing ambiguous custody. |
+| `publish-cli` | Verifies retained source, archive hashes and feed occupancy before credentials; publishes the same four archives to both feeds and reads them back. |
 
-Every job is guarded to `FS-GG/FS.GG.SDD`; fork events cannot reach a publish path. Top-level
-permissions are `contents: read`. Each publish job alone adds `packages: write` and
-`id-token: write`.
+Forks cannot reach these jobs. Top-level permissions remain read-only. Only the
+publisher has package-write and OIDC authority. No independent Contracts publisher exists.
 
-## Pack and dual-feed publish
+## Candidate v4 and reused dependency custody
 
-Only the no-push `publish-artifacts` job packs, using both independent source version lines.
-It uploads exactly four nupkgs with `candidate.env` and
-`pre-push.sha256` in an immutable Actions artifact named for the source commit. A later publishing
-run locates exactly one successful, unexpired workflow-dispatch artifact for its own `GITHUB_SHA`,
-downloads it by source run id, and verifies the manifest, exact filenames/versions, nuspec source
-commit, and SHA-256 values before any feed credential is used. It never invokes `dotnet pack`.
+`scripts/sdd-release-packages.txt` is exactly the four SDD members above.
+`candidate.env` uses `fsgg.sdd.release-candidate/v4`, selected SDD source head,
+shared version, separate `contracts_version`, and that ordered inventory.
+`pre-push.sha256` covers exactly the four once-packed release archives. Each
+nuspec must bind its package/version to the selected SDD source commit.
+Global `Version` or `PackageVersion` pack overrides are prohibited.
 
-When `push == true`, the publisher pushes each retained `.nupkg` first to
-`https://nuget.pkg.github.com/FS-GG/index.json` with the run-scoped `GITHUB_TOKEN`, then pushes the
-same bytes to `https://api.nuget.org/v3/index.json` using a short-lived key minted by
-`NuGet/login@v1` through OIDC. Both pushes use `--skip-duplicate`; there is no repack between feeds.
-Any non-duplicate failure fails the run.
+The dependency archive is retained separately under `packages/dependencies`,
+with `contracts-reuse.json`. Its published original source is
+`cf2f046a10497a336d6243c9a314c3f91fb15771`, archive SHA-256 is
+`b1df3ebd6251f5b18aaece4dd0c5449a7825dc7056f925cf2516febc35f9dfc5`,
+and DLL SHA-256 is
+`91f484d28416c5d860a375a91ed70cdda1d3b6d85d504c15ea21e08a9af727ee`.
+The verifier checks these original identities plus a signature-aware payload
+hash; it must not rewrite dependency provenance to the new SDD commit.
+Both feeds must already have matching normalized Contracts payloads. Exact raw
+equality with the independently pinned public archive needs no exclusion. Any
+different archive requires `dotnet nuget verify --all` for every signed input
+before excluding `.signature.p7s`; failure, unavailable verifier or 30-second
+timeout refuses. Verifier stdout/stderr are discarded, so retained output is
+bounded to zero bytes. Unsigned archives have no signature to exclude. Dependency
+metadata is created once and a repeated record attempt refuses overwrite.
+Artifacts/Commands declare that selected dependency; the CLI embeds its DLL and
+the exact retained standalone Commands DLL.
 
-Whole nupkg SHA-256 is a custody identity, not a reproducible-build claim. Two independent packs may
-contain byte-identical payload entries while differing as ZIP containers. The retained manifest
-authorizes one four-member archive set; substituting a fresh pack—even with equal extracted payloads—must fail
-hash verification.
+Archive SHA-256 is custody identity, not reproducible-build proof. Equal payload
+entries in a different ZIP container cannot replace the retained archive.
+The publisher has no pack command, downloads by retained run id, rechecks exact
+identity and hashes before credentials, pushes GitHub first, rechecks hashes,
+then pushes the same archives publicly. Eight push calls cover the four members;
+Contracts is never pushed. Occupied versions permit only signature-aware exact
+payload equality, never overwrite. GitHub archive404 needs complete scoped
+version enumeration; inaccessible or incomplete observations refuse.
 
-The Artifacts job must not pass a global `Version` or `PackageVersion` override. The resolver has
-already proved that the source-evaluated Artifacts, CLI, and Knowledge versions are equal, so pack consumes that
-source identity directly. Both command-line properties propagate into NuGet's separate
-project-reference version evaluation and would incorrectly replace the independently versioned
-`FS.GG.Contracts` dependency. With no override, the Artifacts nuspec retains both the source package
-version and the producer-declared Contracts dependency. A real-pack
-metadata test and the static workflow contract guard this boundary.
+## Actual qualification and readback
 
-The Artifacts package glob in both push steps MUST be
-`artifacts/packages/FS.GG.SDD.Artifacts.*.nupkg`. It may never target the CLI package. Before the
-Artifacts publish job can run, `artifacts-tests` MUST execute
-`tests/fixtures/typed-specifications/run-clean-consumer.sh`, proving that the package works without
-a source-tree project reference.
+Candidate API checks compare Artifacts, Knowledge and prior CLI-bundled public
+surfaces against published 2.2.0. There is no fabricated standalone Commands
+2.2 baseline: Commands instead requires authored source surface tests and a
+cold candidate-package consumer using published Contracts7.6. Default dependency
+restore must work, including Config; private caches are not release proof.
+The actual tool install/smoke and NuGet Knowledge qualifier remain mandatory.
+API comparison, cold restore and installed validation run against retained bytes
+before handoff; custody verification runs again afterward.
 
-The CLI package MUST contain its full runtime closure. Its publish job installs the just-packed
-tool from the local package directory and runs the standalone validation smoke before either push.
+Both feeds are read back for all four SDD members. Non-signature entry maps must
+match the retained archives. The durable receipt includes archive/payload maps,
+candidate manifest, original dependency archive and reuse metadata. Public clean
+consumers include standalone Commands. Read-only historical recovery uses the
+selected source tag's inventory without changing old schemas or inferring new
+qualification from an old candidate.
 
-## Conformance checks
+## Conformance and source preflight
 
-- **C1** — Manual dispatch without `version` runs all gates, packs Contracts and the coherent SDD set once, retains its manifest-bound artifact, and pushes none.
-- **C2** — A version-bearing event tag matching neither the independent Contracts nor coherent SDD line fails; a match publishes all four at their resolved versions.
-- **C3** — Re-running an already published version succeeds only when its non-signature payloads match the retained candidate, then uses `--skip-duplicate`.
-- **C4** — A failing package test gate prevents its corresponding publish job.
-- **C5** — Both feeds list `fs.gg.contracts`, `fs.gg.sdd.artifacts`, `fs.gg.sdd.cli`, and `fs.gg.sdd.knowledge` at the published versions.
-- **C6** — The just-packed CLI passes its isolated install-and-run smoke.
-- **C7** — The just-packed Artifacts package passes the clean-consumer fixture.
-- **C8** — Static contract tests require two exact Artifacts pushes and reject a CLI glob inside `publish-artifacts`.
-- **C9** — Packing Artifacts from the source-resolved coherent line retains both the evaluated SDD version and independently declared `FS.GG.Contracts` dependency; adding either a `Version` or `PackageVersion` override fails tests.
-- **C10** — A publish event with zero, multiple, expired, wrong-head, wrong-version, wrong-inventory, or hash-mismatched candidate artifacts fails before feed credentials; one exact candidate is downloaded by source run id and no pack command exists in the publishing path.
-- **C11** — Back-to-back equal-payload/different-container packages have different hashes, and substituting the second archive into the first candidate handoff fails verification.
+C1: no-push dispatch packs four SDD archives once and separately retains the
+published dependency. C2: source-mismatched manual/tag versions refuse. C3:
+occupied archives accept only exact non-signature payloads. C4: every package
+source test gate precedes retention/promotion. C5: readback covers four SDD IDs.
+C6/C7: actual installed CLI and clean package consumers pass. C8: two push calls
+per member and none for Contracts. C9: source versions and exact dependency pin
+survive packing without overrides. C10: ambiguous/expired/wrong-head/version/
+inventory/hash candidates refuse before credentials. C11: equal-payload archive
+substitution refuses. C12: wrong reused source/archive/payload/DLL or mismatched
+CLI embedding refuses.
 
-The reviewed `scripts/sdd-release-packages.txt` inventory governs coherent packing. Before retention,
-actual native credentials must establish unused versions on both feeds; inaccessible reads refuse.
-Before promotion, occupied members are allowed only when their extracted non-signature payloads
-match the retained archives exactly. The packed APIs are compared with public 2.0.3, and the
-installed CLI and NuGet-resolved Knowledge SDK must pass the same qualifier locally and after public
-readback. The new Knowledge package has no historical API baseline and is not classified as compared.
+The existing static/synthetic checks are proportionate to this sequential
+handoff: `python3 scripts/check-release-custody.py`,
+`python3 scripts/tests/release-four-package-controls.py`,
+`bash scripts/tests/release-artifact-custody.test.sh`,
+`python3 scripts/tests/sdd-release-occupancy.test.py`, and
+`python3 scripts/tests/package-payload-readback.test.py`. Actual resolver controls
+execute the workflow shell with a stub evaluator, not a CLR or live feed. No new
+model or framework is required. Initial source/control effort cap30 minutes;
+warm checks target under60 seconds. Hosted savings remain unmeasured.
 
-## SDD928-C4 retained Contracts extension (source preparation)
+This source change selects no live pack, registry promotion or runtime authority.
+A new four-package SDD release requires actual C1+C2/C2.3 acceptance, independently
+verified Config distribution with published Contracts 7.6.0, the ordinary package/API
+and installed gates, exact candidate custody, both-feed collision/readback checks,
+and separate root release admission. It neither consumes nor clears the historical
+ReferenceGateSet 1.8.0 candidate or any original unknown operation. First neutral-catalog
+adoption, Governance runtime-carrier/ReferenceGateSet delivery, Templates adoption and
+full C4 completion retain their applicable prerequisites. The generated optional
+ReferenceGateSet 1.6.0 route stays unchanged. No C1-only publication. Historical
+candidate schemas remain evidence, not qualification for v4.
+
+## Historical SDD928-C4 retained Contracts extension (v3)
 
 A new dry-run candidate uses `fsgg.sdd.release-candidate/v3`: the existing three
 SDD members keep their shared evaluated version, while FS.GG.Contracts retains its

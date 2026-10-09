@@ -1029,3 +1029,87 @@ evidence:
                 Error(Bundle.InvalidSelectionPath "work/sample/Spec.md"),
                 Bundle.verify "sample" (selected @ [ alias ]) physical candidate
             ))
+
+    let private withSyntheticProvenanceSource action =
+        fixtureWithPerformance "tests/performance.txt" (fun root selected physical candidate ->
+            let path = ScaffoldProvenance.provenancePath
+            // Synthetic raw source bytes only: this test proves capture/identity, not provenance parsing.
+            let body = "{\"synthetic\":\"source identity only\"}\n"
+            File.WriteAllText(Path.Combine(root, path), body)
+
+            let snapshot: FileSnapshot =
+                {
+                    Path = path
+                    Text = body
+                    RawBytes = Some(Encoding.UTF8.GetBytes body)
+                }
+
+            let selection = selected @ [ snapshot ]
+
+            let candidate: Bundle.Candidate =
+                { candidate with
+                    Sources =
+                        candidate.Sources
+                        @ [
+                            {
+                                Path = path
+                                Digest = SchemaVersion.sha256Text body
+                            }
+                        ]
+                }
+
+            action root selection candidate)
+
+    [<Fact>]
+    let ``recognized provenance source is selected and captured with unchanged closed core join`` () =
+        if OperatingSystem.IsLinux() then
+            withSyntheticProvenanceSource (fun root selected candidate ->
+                match Bundle.verifyFromPinnedCoreSources root "sample" selected candidate with
+                | Ok files -> Assert.Contains(files, fun file -> file.Path = ScaffoldProvenance.provenancePath)
+                | Error refusal -> failwithf "recognized source refused: %A" refusal)
+
+    [<Fact>]
+    let ``provenance byte tampering changes revision bound source identity`` () =
+        if OperatingSystem.IsLinux() then
+            withSyntheticProvenanceSource (fun root selected candidate ->
+                File.WriteAllText(Path.Combine(root, ScaffoldProvenance.provenancePath), "changed source bytes")
+
+                Assert.Equal(
+                    Error(Bundle.RawDrift ScaffoldProvenance.provenancePath),
+                    Bundle.verifyFromPinnedCoreSources root "sample" selected candidate
+                ))
+
+    [<Fact>]
+    let ``physically present provenance cannot be omitted from selected source closure`` () =
+        if OperatingSystem.IsLinux() then
+            withSyntheticProvenanceSource (fun root selected candidate ->
+                let selected =
+                    selected
+                    |> List.filter (fun source -> source.Path <> ScaffoldProvenance.provenancePath)
+
+                let candidate =
+                    { candidate with
+                        Sources =
+                            candidate.Sources
+                            |> List.filter (fun source -> source.Path <> ScaffoldProvenance.provenancePath)
+                    }
+
+                Assert.Equal(
+                    Error(Bundle.UnexpectedPhysical ScaffoldProvenance.provenancePath),
+                    Bundle.verifyFromPinnedCoreSources root "sample" selected candidate
+                ))
+
+    [<Fact>]
+    let ``recognized provenance retains nofollow selected file capture`` () =
+        if OperatingSystem.IsLinux() then
+            withSyntheticProvenanceSource (fun root selected candidate ->
+                let path = Path.Combine(root, ScaffoldProvenance.provenancePath)
+                File.Delete path
+
+                File.CreateSymbolicLink(path, Path.Combine(root, "work/sample/spec.md"))
+                |> ignore
+
+                Assert.Equal(
+                    Error(Bundle.Physical(Symlink ScaffoldProvenance.provenancePath)),
+                    Bundle.verifyFromPinnedCoreSources root "sample" selected candidate
+                ))

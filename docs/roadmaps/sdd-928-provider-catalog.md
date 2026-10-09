@@ -5,6 +5,11 @@ Campaign: `unified-roadmap-20261003`; Unified part: [§9.8 language-independent 
 Architecture: [ADR-0092 and linked implementation design](https://github.com/FS-GG/.github/blob/main/docs/adr/0092-descriptor-driven-polyglot-workspace-providers.md).
 The original issue and accepted architecture retain authority; this plan adds the first executable window.
 
+Current execution policy: C2.2 follows the [cooperative local profile and delivery sequence](#cooperative-local-execution-profile--2026-10-09).
+Compile and test the integrated CLI immediately, then validate one complete generic package path.
+Earlier stage plans below retain their product contracts and historical context; their process-only
+ordering is superseded by that profile. C2.2 acceptance and C3/C4 publication remain separate.
+
 Reuse the existing schema-v1 Provider records/registry, generic scaffold invocation, default overrides,
 legacy F# identifier route, scaffold provenance and reserved-tree/skill-union boundaries. Descriptor
 protocol 2.0.0 remains knowledge admission; it is not the new catalog protocol.
@@ -56,11 +61,16 @@ unknown. No usage counter or publication is inferred.
 
 # SDD928 C2/C3: catalog preview to admitted creation
 
-Decision draft, 2026-10-05. Owning repository: FS-GG/FS.GG.SDD; canonical issue: [SDD#928](https://github.com/FS-GG/FS.GG.SDD/issues/928). Extend `docs/roadmaps/sdd-928-provider-catalog.md` in its next implementation PR; this private draft is not another completion ledger. Named Unified §9.8 part: [Language-independent workspaces / V2-LANG-01](https://github.com/FS-GG/.github/blob/main/docs/2026-09-07-154210-fs-gg-unified-development-roadmap.md#98-feature-parts-and-subroadmap-index). Stage: source integration, before installed adoption. Preserve ADR-0092 and the existing C1, C2, C3, C4 identities.
+Accepted design baseline, 2026-10-05. Owning repository: FS-GG/FS.GG.SDD; canonical issue: [SDD#928](https://github.com/FS-GG/FS.GG.SDD/issues/928). Current execution follows the cooperative local profile below; this design baseline is not a current-state ledger. Named Unified §9.8 part: [Language-independent workspaces / V2-LANG-01](https://github.com/FS-GG/.github/blob/main/docs/2026-09-07-154210-fs-gg-unified-development-roadmap.md#98-feature-parts-and-subroadmap-index). Stage: source integration, before installed adoption. Preserve ADR-0092 and the existing C1, C2, C3, C4 identities.
 
-The next implementable window is **SDD928-C2.1**: an explicit, digest-checked catalog preview with safe provenance readers. It needs no unpublished Governance dependency. The subsequent scaffold window is designed below, but its runtime reference cannot be committed or qualified until an actual Config package has been packed, inspected and selected. Root owns that package join; the existing `sdd_provider_catalog` owner implements the SDD source windows after parent acceptance, using the installed work-roadmap skill and routine route.
+The first window selected in the 2026-10-05 baseline was **SDD928-C2.1**: an explicit, digest-checked catalog preview with safe provenance readers. It needs no unpublished Governance dependency. The subsequent scaffold window is designed below, but its runtime reference cannot be committed or qualified until an actual Config package has been packed, inspected and selected. Root owns that package join; the existing `sdd_provider_catalog` owner implements the SDD source windows after parent acceptance, using the installed work-roadmap skill and routine route.
 
-## Evidence and remaining gaps
+## Historical evidence and gaps at the 2026-10-05 baseline
+
+The observations below explain the accepted design. They are historical: the current local
+candidate uses the qualified Config archive identified in the feature plan, includes the
+provenance readers/source-bundle join, and has exercised the real CLI. Distribution and coherent
+delivery remain separate acceptance boundaries.
 
 SDD C1 is delivered by PR1097, merge `3ebbb191d7c2c60e93d04f7702051c0e079c9f87`, with exact-head checks at `bc6634db0f1f6131cbd0f61eb7017152a49b6b39`. Its schema-2 catalog, descriptor protocol exactly `3.0.0`, BCL-only `Fsgg.ProviderCatalog` and Artifacts parser resolve declarations and explicit identities. Existing `specs/132-polyglot-provider-catalog` covers C1 only. Correct the owning roadmap's stale C1 pending/unchecked prose in the C2.1 source outcome; do not re-open or re-qualify C1 as a new item.
 
@@ -111,7 +121,7 @@ Later Governance Verify receives explicit provider context: original normalized 
 
 **C3 authoring SDK and harness outline — SDD928-C3.1.** After C2.2/C2.3 real acceptance, expose authoring helpers for canonical catalog sealing, fixture packaging, declared-tool/policy inputs and package-only qualification. Reuse the same production caller; no alternate executor or success-from-declaration shortcut. Qualify positive/failure controls, exact version/tool mismatches, awkward names, skill acceptance and cleanup. Templates#441 owns the four concrete language providers and actual product build/lint/test/entry-point/package/security evidence. Their outcome is not inferred from the generic fixture. This becomes executable when the qualified transport/runtime artifacts and actual Verify route are pinned; then extend only the next bounded harness window.
 
-**C4 publication and adoption stays the original outline.** Root coordinates GOV-423-C3 with SDD928-C4: actual runtime distribution, the retained ReferenceGateSet 1.8.0 content artifact (with original custody), compatible Contracts/SDD versions and then Templates publication. Select release versions from the actual source/package delta; no future CLI version is reserved here. Pack once, verify source/tag/manifests and byte-identical archives on both required feeds, then independently install without sibling checkouts. No C1-only publication.
+**C4 distribution is a partial outcome.** Root may select a new four-package SDD release after actual C1+C2/C2.3 acceptance, verified Config distribution with published Contracts 7.6.0, ordinary package/API/installed gates, exact candidate custody and both-feed collision/readback checks. This release does not consume or clear the retained ReferenceGateSet 1.8.0 content artifact or any original unknown operation. First neutral-catalog adoption, Governance runtime-carrier/ReferenceGateSet delivery, Templates adoption and full C4 completion retain their applicable prerequisites. Preserve the optional generated ReferenceGateSet 1.6.0 route. Pack the selected source once, retain its exact archives and independently install without sibling checkouts. No C1-only publication.
 
 ## Exact first reservation and later dependency boundary
 
@@ -128,3 +138,131 @@ C2.1 adds an explicit preview only; installed users change only after SDD public
 Proposed §9.8 link text, appended to the existing language-independent-workspaces row without replacing prior links: `SDD928 C2/C3: digest-checked preview ready; admitted creation depends on actual Config artifact qualification; SDK and public adoption follow` linking to the canonical SDD roadmap. Root updates §0 only after actual closure, in its immediate asynchronous projection. No planning-only PR or new issue is needed.
 
 Invalidation requiring bounded replan: a transport cannot isolate exact template bytes or suppress implicit acquisition; no usable actual Config distribution can be selected; required environment limits cannot be enforced; no-replace commit cannot preserve the target; or a downstream consumer requires incompatible schema/API changes. These fence their affected runtime window, not independent C2.1 work. Detailed parser wire tests and routine naming are implementation decisions within this plan, not user permission questions.
+
+## C2.2 first-host mechanism addendum
+
+The explicit catalog route adds `--transport-executable <fully-qualified-file>`. The host supplies
+LocalLinux selection independently of provider bytes and policy probe IDs. Unsupported host,
+CI/Release requirements, missing ABI/exports or unqualified transport behavior refuse before launch.
+The first profile uses Linux-x64/glibc, pidfd_spawn and held directory descriptors. Atomic
+renameat2 NOREPLACE publishes into the held parent object and preserves an appearing target.
+The supported cooperative namespace excludes adversarial pathname ABA, hostile mounts and escaping
+descendants; pathname relocation can leave requested-path commit Unknown. No sandbox is claimed.
+
+The caller holds an opaque Operation before any acquisition. Pure prepare performs no native
+observation; run consumes it once. Every phase ceiling includes cancellation/drain/cleanup, with
+1MiB per stream/2MiB whole-phase output and separately bounded8MiB raw transport state. Unsettled
+launch, readers, children or commit remain owned and block retry/commit/deletion. CLI reports the
+original failure/unknown once, then passively retains the owner; bounded reporting does not promise
+bounded process exit. Late facts do not upgrade the report or renew filesystem cleanup authority.
+
+Compile the integrated CLI and run ordinary semantic tests as soon as signatures and their
+callers are connected. Native ABI/export/offset checks and SDK procfd-root/cache/alias checks
+remain focused prerequisites for the affected runtime operations, not for compilation. Reuse
+unchanged qualification evidence only for its actual source and environment; rerun changed
+helpers and their affected integrations. Use the maintained execution harness below for these
+checks and the real CLI fixture. No alternate product executor is introduced.
+
+
+## Cooperative local execution profile — 2026-10-09
+
+This profile freezes the first delivery's supported failure model. It supersedes earlier
+process-only sequencing and copied qualification recipes, including any requirement to finish
+the native qualification chain before compiling the integrated implementation. The C2.2 product
+acceptance criteria above remain authoritative.
+
+**Guarantees.** Preserve existing and concurrently appearing targets; build the complete result
+in owned staging and publish atomically with no replacement. Preserve literal arguments, exact
+archive integrity, independently selected policy validation, bounded captured output and truthful
+process/cleanup reporting. A successful report requires observed completion, provenance and
+publication; declaration, elapsed time or an absent process is insufficient evidence.
+
+**Supported failures.** Cooperative local tools may fail to start, return nonzero, produce invalid
+or excessive output, encounter ordinary I/O errors, receive cancellation, or exceed an observed
+monotonic deadline. Deadlines stop new work after expiry is observed and bound the permitted
+cleanup interval; they do not promise hard real-time preemption of every syscall or managed
+instruction. Retain the original failure and report unresolved acquisition, child, reader or commit
+outcomes as unknown. Do not extend an expired cleanup budget or silently retry a consumed owner.
+
+**Excluded conditions.** This first profile does not guarantee recovery from hostile descendants,
+competing external reapers, adversarial pathname ABA or mount replacement, kernel/host failure,
+unbounded resource exhaustion, or arbitrary asynchronous exceptions injected at every instruction.
+It is not an OS sandbox or an OOM-proof execution contract. Findings inside the supported model
+must be fixed; proposals to expand the model require a separate explicit profile rather than an
+unbounded extension of this delivery. Ordinary ownership and cleanup defects remain in scope.
+
+**Recovery.** Future runtime validation that requires whole-family teardown runs inside a fresh,
+independently owned process-lifetime boundary. A PID namespace or equivalent backend must be
+observed working with the actual runtime's environment requirements before that integration is
+accepted. A process-group signal alone cannot cover children that create independent sessions.
+Process teardown does not prove filesystem cleanup or undo a publication; inspect those results
+separately. If the backend is unavailable or incompatible, report the blocked runtime check and
+continue compilation and ordinary tests. Existing uncertain runs retain their original unknown
+state; never infer their cleanup from a new boundary, elapsed time or process absence.
+
+**One maintained harness.** Use `scripts/catalog-runtime-validation.py` for filesystem, child,
+SDK and CLI validation, varying commands and fixtures. The harness owns literal execution,
+output bounds, deadlines/cancellation and concise outcomes. Product code remains the execution
+authority under test. Qualify a harness change once and test its affected integrations. Do not
+copy launchers, guardians or review packets into new per-stage frameworks. Keep useful existing
+fixtures and historical evidence without making the old orchestration a new prerequisite.
+
+**Delivery sequence.** Compile the actual CLI early and after small changes; run ordinary affected
+tests immediately. Then prove one complete generic package fixture through the actual CLI:
+preparation, admission, install/create in staging, ownership/skill composition, strict provenance
+readback, atomic publication and cleanup. Exercise existing/appearing target preservation, bad
+archive or policy, missing bindings/wrong tools, reserved writes, nonzero execution, output limits,
+explicit cancellation and timeout through the same path. Inspect target bytes and owned staging
+as well as the exit status. Test counts alone do not close this acceptance window.
+
+**Scheduling and evidence.** Run disjoint source edits, reviews and ordinary checks in parallel
+without exclusive CPU leases. Bound concurrency for heavy native experiments when resource needs
+justify it. Each result records the source revision plus dirty-source digest when applicable,
+actual selected package hashes, command, log and observed outcome. Maintain one authoritative
+current-state summary with owners, next actions and blockers; keep superseded states in history.
+Report completed work, active parallel lanes and problems every 30 minutes during active work.
+The [validation guide](../validation/catalog-runtime.md) gives the maintained harness interface.
+
+## Coherent producer source preparation
+
+The isolated source candidate selects shared SDD 2.3.0 for Artifacts, Commands, CLI and
+Knowledge, with ordinary package references to published Contracts 7.6.0. The
+Contracts producer retains its independent version and tests; its published archive
+is reused rather than rebuilt for this SDD release. Config 0.3.0 was independently
+verified on public NuGet after publication run 37930935334 at Governance source
+`8b3a6d4100bc6964d0213482252a84dbdf71f1d8`; its verified repository-signed payload
+matches that run's retained archive, and the cold public-only resolver/legacy-loader
+consumer passed with Contracts 7.6.0. Seven SDD solution locks now use those public
+bytes; two independent cold restores, a clean solution build and 59 affected tests
+passed. The original Config and SDD 2.2.0
+qualification archives remain immutable. Actual C1+C2/C2.3 acceptance, verified Config distribution, final 2.3 package
+qualification, ordinary gates and both-feed readback remain requirements under the
+[release contract](../../specs/044-publish-cli-tool/contracts/release-workflow.md).
+A new four-package release has no historical ReferenceGateSet 1.8.0 dependency or
+effect; its missing original custody still fences that candidate's recovery/adoption
+and any claim clearing its operation. All original unknowns remain held. This source
+preparation does not admit publication or close C2/C4.
+
+The separate Config-only publisher completed both feed pushes; independent public
+payload verification and a cold consumer passed. Independent org-feed archive
+readback remains open. That operation does not consume or clear the historical
+ReferenceGateSet 1.8.0 archive or operation. The normal SDD public dependency is
+qualified for source delivery. Config availability
+alone establishes neither SDD publication nor Governance runtime-carrier,
+ReferenceGateSet or Templates adoption.
+
+## C3.1 selected authoring example slice — 2026-10-09
+
+Source-ready after accepted actual C2.2/C2.3 integration: one nonpackable typed package-only
+[authoring example](../../examples/provider-authoring/README.md), under
+[spec132](../../specs/132-polyglot-provider-catalog/spec.md#sdd928-c31--package-only-authoring-example).
+It reuses public canonicalizers, policy/admission and strict provenance codec, independently supplied
+inputs and the maintained CLI/Verify drivers. Retained qualified2.2 archives support immediate
+compatibility compile; final2.3 archive qualification and actual receiver journey remain required.
+No new SDK package, installed verb, schema, release default or publication is selected. C3.1 remains
+open beyond this bounded example slice; C4 distribution stays separate.
+
+Local authoring preparation now has actual cold2.2 package-only compilation (12 package assets,
+no ProjectReference) and ten sample-command controls, including deterministic catalog/archive bytes,
+input/output refusal and real strict schema2 reading. Final2.3 archive/CLI→Verify qualification
+remains pending; this evidence does not mark C3.1 or distribution complete.

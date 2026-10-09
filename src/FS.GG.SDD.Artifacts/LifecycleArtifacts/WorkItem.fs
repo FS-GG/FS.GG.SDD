@@ -65,7 +65,63 @@ module WorkItem =
 
     let sourceIdentity (snapshot: FileSnapshot) kind =
         let source = sourceArtifact snapshot.Path kind
-        let compatibility = rawSchemaVersion snapshot kind |> SchemaVersion.classifyRaw
+
+        let ordinaryCompatibility =
+            rawSchemaVersion snapshot kind |> SchemaVersion.classifyRaw
+
+        // Only the recognized provenance artifact has the strict legacy/catalog schema
+        // contract. Other lifecycle sources retain the existing schema-1 classification.
+        let compatibility =
+            if snapshot.Path = ScaffoldProvenance.provenancePath then
+                match ScaffoldProvenanceDocument.parse snapshot.Text with
+                | Ok document ->
+                    let version =
+                        match document with
+                        | ScaffoldProvenanceDocument.Legacy _ -> 1
+                        | ScaffoldProvenanceDocument.Catalog _ -> 2
+
+                    { ordinaryCompatibility with
+                        RawValue = string version
+                        Version = Some(SchemaVersion.create version)
+                        Status = SchemaVersion.Current
+                        SupportedRange = "1, 2"
+                        MigrationHint = None
+                    }
+                | Error _ ->
+                    let actualFutureSchema =
+                        try
+                            use document = JsonDocument.Parse(snapshot.Text: string)
+
+                            let versions =
+                                document.RootElement.EnumerateObject()
+                                |> Seq.filter (fun property -> property.Name = "schemaVersion")
+                                |> Seq.toList
+
+                            match versions with
+                            | [ property ] when property.Value.ValueKind = JsonValueKind.Number ->
+                                let mutable version = 0
+
+                                property.Value.TryGetInt32(&version)
+                                && property.Value.GetRawText() = string version
+                                && version > 2
+                            | _ -> false
+                        with
+                        | :? JsonException -> false
+                        | :? InvalidOperationException -> false
+
+                    { ordinaryCompatibility with
+                        Status =
+                            if actualFutureSchema then
+                                SchemaVersion.Future
+                            else
+                                SchemaVersion.Malformed
+                        SupportedRange = "1, 2"
+                        MigrationHint =
+                            Some
+                                "Correct the provenance using its strict schema-1 or schema-2 codec; no legacy fallback is permitted."
+                    }
+            else
+                ordinaryCompatibility
 
         {
             Artifact = source
@@ -216,10 +272,26 @@ module WorkItem =
             normalized
             |> List.filter (fun snapshot ->
                 (not (snapshot.Path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                 || Set.contains snapshot.Path performanceArtifactPaths)
+                 || Set.contains snapshot.Path performanceArtifactPaths
+                 || snapshot.Path = ScaffoldProvenance.provenancePath)
                 && not (snapshot.Path.EndsWith("manifest.yml", StringComparison.OrdinalIgnoreCase)))
             |> List.map (fun snapshot -> sourceIdentity snapshot (kindFor snapshot.Path))
             |> List.sortBy (fun source -> source.Artifact.Path)
+
+        let provenanceDiagnostics =
+            match Map.tryFind ScaffoldProvenance.provenancePath byPath with
+            | None -> []
+            | Some snapshot ->
+                match ScaffoldProvenanceDocument.parse snapshot.Text with
+                | Ok _ -> []
+                | Error diagnostics ->
+                    diagnostics
+                    |> List.map (fun diagnostic ->
+                        Diagnostics.workModelInconsistent
+                            (sourceArtifact snapshot.Path (kindFor snapshot.Path))
+                            $"Scaffold provenance is invalid at '{diagnostic.Path}': {diagnostic.Message}"
+                            "Correct the recognized provenance document using its strict schema-1 or schema-2 codec."
+                            [ diagnostic.Code ])
 
         let generatedViews =
             normalized
@@ -281,4 +353,5 @@ module WorkItem =
                 @ selectedWorkItemDiagnostics
                 @ taskDiagnostics
                 @ evidenceDiagnostics
+                @ provenanceDiagnostics
         }
