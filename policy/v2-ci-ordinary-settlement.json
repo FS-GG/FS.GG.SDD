@@ -10,10 +10,10 @@
     "repositoryId": 1274272672
   },
   "sourceImplementation": {
-    "repository": "FS-GG/FS.GG.Net",
-    "commit": "94c2d0acb7addb416615110949afa984a5219b12",
-    "adaptation": "sdd-v1-code-owned-source-profile",
-    "observerSha256": "6e63f6f724fb267e77ef02f41b4c58a833e0dc5b08c003f07fd16c89e4f7fd55",
+    "repository": "FS-GG/FS.GG.Coordination",
+    "commit": "8eef1ab7f205132553632e03dc650e7ecdd03679",
+    "adaptation": "sdd-v1-code-owned-source-profile; main-storage extension with local profile preserved",
+    "observerSha256": "7f5500d810ab9169d967f8c19fbcb01d706ebf82fdeea6e4a6927b0b19eef29a",
     "qualificationSha256": "54d375cf1c85cb94650d990c7156be6370f2e2b6875726067b2508d811db28ed"
   },
   "operationClass": "ordinary-post-merge-delivery-settlement",
@@ -121,18 +121,14 @@
   },
   "packagePin": {
     "status": "published-verified",
-    "version": "0.1.6",
-    "sha256": "0f5d92799af84acb8663df0f524dc2ccfe54cfcc0bc6ad2183e867c8cdd47730",
+    "version": "0.3.0",
+    "sha256": "a8cd6d602e1203257e1241df0b5dfdb9d867334b46dc406d8cdaa8e6d2b3019c",
+    "sourceCommit": "8eef1ab7f205132553632e03dc650e7ecdd03679",
     "servedPackageVerified": true,
-    "sourceCommit": "275cccb30a5c9ade4b3bba344ede13d7df446d13",
-    "releaseTag": "v0.1.6",
-    "publisherRunId": 36457989575,
-    "requiredCapability": "sdd-v1 selected source",
     "requiredBeforeActivation": true,
-    "tagProtectionRulesetId": 21633398,
-    "githubReleaseImmutableFlag": false,
-    "githubPackagesReadback": "successful-protected-publisher",
-    "nugetOrgReadback": "independent-anonymous-payload-and-install"
+    "requiredCapability": "sdd-v1 selected source",
+    "publisherRunId": 37983508705,
+    "releaseTag": "v0.3.0"
   },
   "credentialInventory": [
     {

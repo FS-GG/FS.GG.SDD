@@ -148,9 +148,9 @@ class SddQualificationTests(unittest.TestCase):
         self.assertEqual(3, len(self.policy["credentialInventory"]))
         self.assertEqual("published-verified",
                          self.policy["packagePin"]["status"])
-        self.assertEqual("0.1.6", self.policy["packagePin"]["version"])
-        self.assertEqual("0f5d92799af84acb8663df0f524dc2ccfe54cfcc0bc6ad2183e867c8cdd47730", self.policy["packagePin"]["sha256"])
-        self.assertEqual("275cccb30a5c9ade4b3bba344ede13d7df446d13", self.policy["packagePin"]["sourceCommit"])
+        self.assertEqual("0.3.0", self.policy["packagePin"]["version"])
+        self.assertEqual("a8cd6d602e1203257e1241df0b5dfdb9d867334b46dc406d8cdaa8e6d2b3019c", self.policy["packagePin"]["sha256"])
+        self.assertEqual("8eef1ab7f205132553632e03dc650e7ecdd03679", self.policy["packagePin"]["sourceCommit"])
         self.assertTrue(self.policy["packagePin"]["servedPackageVerified"])
         self.assertEqual(["OpenV2"], self.policy["unchangedGates"])
         self.assertEqual({"v1Admission": False, "receiverStateImport": False},
