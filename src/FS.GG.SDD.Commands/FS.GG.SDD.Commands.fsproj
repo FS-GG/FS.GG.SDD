@@ -178,7 +178,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../FS.GG.Contracts/FS.GG.Contracts.fsproj" />
+    <PackageReference Include="FS.GG.Contracts" />
     <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <ProjectReference Include="../FS.GG.SDD.Knowledge/FS.GG.SDD.Knowledge.fsproj" />
     <PackageReference Include="FSharp.Core" />

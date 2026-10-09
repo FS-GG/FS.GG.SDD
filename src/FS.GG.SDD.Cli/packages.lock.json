@@ -2,6 +2,15 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "FS.GG.Contracts": {
+        "type": "Direct",
+        "requested": "[7.6.0, 7.6.0]",
+        "resolved": "7.6.0",
+        "contentHash": "0qn8dQ0gtv/LuLfRxC3Ju+KkPciTKg0d+TRo4jgdpeyAOJJt3I9mp3EH60BPtchmjql82hlMOo9PLB46PPg3bg==",
+        "dependencies": {
+          "FSharp.Core": "10.1.401"
+        }
+      },
       "FSharp.Core": {
         "type": "Direct",
         "requested": "[10.1.401, )",
@@ -22,16 +31,10 @@
         "resolved": "0.57.2",
         "contentHash": "Y1+u73shwP+JYHmrkdN6bSt2kaGBEAafhi2nrecczbXdFRey+k7J/WF9YPfcB0rqivv2S8fmif6FSBq9m/AFvw=="
       },
-      "fs.gg.contracts": {
-        "type": "Project",
-        "dependencies": {
-          "FSharp.Core": "[10.1.401, )"
-        }
-      },
       "fs.gg.sdd.artifacts": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[7.6.0, )",
+          "FS.GG.Contracts": "[7.6.0, 7.6.0]",
           "FSharp.Core": "[10.1.401, )",
           "FsQuint": "[0.1.0, 0.1.0]",
           "YamlDotNet": "[18.1.0, )"
@@ -41,12 +44,13 @@
         "type": "Project",
         "dependencies": {
           "FS.GG.Audio.Skills": "[0.1.0, )",
-          "FS.GG.Contracts": "[7.6.0, )",
+          "FS.GG.Contracts": "[7.6.0, 7.6.0]",
           "FS.GG.Drivers": "[0.98.0, )",
           "FS.GG.Game.Skills": "[0.9.0, )",
+          "FS.GG.Governance.Config": "[0.3.0, )",
           "FS.GG.Rendering.Skills": "[0.2.0, )",
-          "FS.GG.SDD.Artifacts": "[2.2.0, )",
-          "FS.GG.SDD.Knowledge": "[2.2.0, )",
+          "FS.GG.SDD.Artifacts": "[2.3.0, )",
+          "FS.GG.SDD.Knowledge": "[2.3.0, )",
           "FSharp.Core": "[10.1.401, )"
         }
       },
@@ -59,8 +63,8 @@
       "fs.gg.sdd.validation": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.SDD.Artifacts": "[2.2.0, )",
-          "FS.GG.SDD.Commands": "[2.2.0, )",
+          "FS.GG.SDD.Artifacts": "[2.3.0, )",
+          "FS.GG.SDD.Commands": "[2.3.0, )",
           "FSharp.Core": "[10.1.401, )"
         }
       },
@@ -81,6 +85,17 @@
         "requested": "[0.9.0, )",
         "resolved": "0.9.0",
         "contentHash": "qA3f2ypjVVoaNwmwvrBsJx4VFSx1tUZ3zqv+lAd2nNaWL4nA3dNor9rS449+hRBDFr+UAzZnPBzkyrUEUrn+qg=="
+      },
+      "FS.GG.Governance.Config": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, )",
+        "resolved": "0.3.0",
+        "contentHash": "OIQjHT3DIdOoLMdUEtZn4XBBhYDQmT+Ep8Gn4/tk6ZiDPAibHhgYsRiRylaOJkKyXSqinjna7HHqOGGHzrITeg==",
+        "dependencies": {
+          "FS.GG.Contracts": "7.5.2",
+          "FSharp.Core": "10.1.401",
+          "YamlDotNet": "18.1.0"
+        }
       },
       "FS.GG.Rendering.Skills": {
         "type": "CentralTransitive",
