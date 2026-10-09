@@ -232,8 +232,9 @@ is reused rather than rebuilt for this SDD release. Config 0.3.0 was independent
 verified on public NuGet after publication run 37930935334 at Governance source
 `8b3a6d4100bc6964d0213482252a84dbdf71f1d8`; its verified repository-signed payload
 matches that run's retained archive, and the cold public-only resolver/legacy-loader
-consumer passed with Contracts 7.6.0. SDD default locks still require refresh and
-verification against those published bytes. The original Config and SDD 2.2.0
+consumer passed with Contracts 7.6.0. Seven SDD solution locks now use those public
+bytes; two independent cold restores, a clean solution build and 59 affected tests
+passed. The original Config and SDD 2.2.0
 qualification archives remain immutable. Actual C1+C2/C2.3 acceptance, verified Config distribution, final 2.3 package
 qualification, ordinary gates and both-feed readback remain requirements under the
 [release contract](../../specs/044-publish-cli-tool/contracts/release-workflow.md).
@@ -242,13 +243,11 @@ effect; its missing original custody still fences that candidate's recovery/adop
 and any claim clearing its operation. All original unknowns remain held. This source
 preparation does not admit publication or close C2/C4.
 
-A separate Config-only distribution step may unblock the normal dependency restore
-after Governance records its narrow release-contract amendment and qualifies the
-actual C1+C2/C2.3 journey, the selected Config archive with published Contracts 7.6.0,
-both-feed collision checks and installed readback. That new Config operation does
-not consume or clear the historical ReferenceGateSet 1.8.0 archive or operation.
-After verified public distribution, regenerate and check SDD locks against the
-actual published Config bytes before normal source delivery. Config availability
+The separate Config-only publisher completed both feed pushes; independent public
+payload verification and a cold consumer passed. Independent org-feed archive
+readback remains open. That operation does not consume or clear the historical
+ReferenceGateSet 1.8.0 archive or operation. The normal SDD public dependency is
+qualified for source delivery. Config availability
 alone establishes neither SDD publication nor Governance runtime-carrier,
 ReferenceGateSet or Templates adoption.
 
