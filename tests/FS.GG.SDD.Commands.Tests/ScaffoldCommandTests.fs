@@ -268,7 +268,7 @@ providers:
             Array.append (Encoding.UTF8.GetBytes Foundation.gitignoreSeedText) providerBytes
 
         let actual = File.ReadAllBytes(Path.Combine(root, ".gitignore"))
-        Assert.Equal<byte array>(expected, actual)
+        Assert.Equal<byte>(expected, actual)
 
         Assert.Contains(
             model.InterpretedEffects,
@@ -936,7 +936,7 @@ providers:
             let fromInit =
                 File.ReadAllBytes(Path.Combine(initRoot, path.Replace('/', Path.DirectorySeparatorChar)))
 
-            Assert.Equal<byte[]>(fromInit, fromScaffold)
+            Assert.Equal<byte>(fromInit, fromScaffold)
 
     // T017 (P5, P6 / FR-006 / SC-004): two identical runs into clean targets yield
     // byte-identical provenance and byte-identical --json; provenance has sorted paths,
@@ -1080,7 +1080,7 @@ providers:
 
     let private assertByteIdenticalAcrossRoots root name =
         match runtimeRoots name |> List.map (bytesAt root) with
-        | [ claude; agents ] -> Assert.Equal<byte[]>(claude, agents)
+        | [ claude; agents ] -> Assert.Equal<byte>(claude, agents)
         | _ -> failwith "expected exactly two runtime roots"
 
     // 056 T012 (US2 / FR-001 / SC-002 / P1): a provider write into the whole-root-reserved

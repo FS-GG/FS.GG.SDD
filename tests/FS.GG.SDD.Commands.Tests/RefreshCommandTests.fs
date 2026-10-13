@@ -957,12 +957,12 @@ module RefreshCommandTests =
                 $"expected {r} co-tenant copy"
             )
 
-        Assert.Equal<byte[]>(
+        Assert.Equal<byte>(
             bytesAt ".agents/skills/fs-gg-elmish/SKILL.md",
             bytesAt ".claude/skills/fs-gg-elmish/SKILL.md"
         )
 
-        Assert.Equal<byte[]>(
+        Assert.Equal<byte>(
             bytesAt ".agents/skills/fs-gg-elmish/SKILL.md",
             bytesAt ".claude/skills/fs-gg-elmish/SKILL.md"
         )
@@ -973,7 +973,7 @@ module RefreshCommandTests =
             "expected the seeded .agents copy refilled"
         )
 
-        Assert.Equal<byte[]>(
+        Assert.Equal<byte>(
             bytesAt $".claude/skills/{seededName}/SKILL.md",
             bytesAt $".agents/skills/{seededName}/SKILL.md"
         )

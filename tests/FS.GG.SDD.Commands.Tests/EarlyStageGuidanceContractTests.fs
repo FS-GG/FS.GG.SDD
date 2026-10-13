@@ -249,4 +249,4 @@ module EarlyStageGuidanceContractTests =
             TestSupport.initializeProject dir
             File.ReadAllBytes(Path.Combine(dir, ".fsgg", "early-stage-guidance.md"))
 
-        Assert.Equal<byte[]>(mk (), mk ())
+        Assert.Equal<byte>(mk (), mk ())

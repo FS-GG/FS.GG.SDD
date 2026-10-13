@@ -158,3 +158,42 @@ will encode the true dependency graph.
 | New `tests/Shared/TestShared.fs` linked into 6 projects | Removes 4× `findRepoRoot` / 2× `writeRelative` duplication and gives US3's `SurfaceBaseline.verify` a single home. | A new shared `.fsproj` is heavier (sln + packaging) than the linked-file pattern the repo already uses; per-project duplication is exactly what we're removing. |
 | `ProcessGlobalEnv` meta-guard test | Without it, the race silently returns the first time a new process-spawning class forgets the collection attribute. | A comment/convention is not enforced; the whole point of #75 is that silent test-infra drift caused this. |
 | Keeping library `Rich→text` (not making Rich emit ANSI) | Emitting true Spectre ANSI would add a Spectre dependency to the validation library and reverse research Decision 6 — a Tier-1 change. The Rich ANSI guarantee is already held by `ValidateCommandTests`. | "Fully genuine" Rich cell isn't worth a Tier-1 architectural reversal that duplicates an existing guarantee. FR-009 narrowed to match. |
+
+## V2-PROC-01.3 implementation window
+
+The shared process owning plan selects this later test-only integration. Replace
+ChildProcess.runCore with ProcessSessions.createFactoryWithRetirement
+BestEffortProcessTree and retain its prepared IProcessSession/Run task in the
+existing test-assembly lifetime. Prepare literal absolute executable resolution,
+ArgumentList, working directory, snapshotted replacement environment and closed
+stdin; require only BoundedReturnWithRetainedCustody. Observe exit and both EOF
+results separately, use Budget.create for the original work+5000ms total and
+refuse incomplete output or unresolved local release as success.
+
+The immutable candidate pair is original source
+c6764ac0cd62cb14372c89c14234292315000380, hosted preparation 38274623070/a1,
+artifact 11759090717. ZIP SHA256
+6aedfb7e4eda796fdea3fc0326003a6f90f859352d7394d311f4c5d867687819; Contracts
+nupkg 62b1f85b8622d6719f086d73f4dbf29bd251dbb083a9b9588535d6b86531665d;
+Processes nupkg 20d09f3bc71c78c46809931a8d1f7b4009d381fb0c4f203db2d7c846266e4f41.
+These are exact 0.2.0 test-only dependencies added coherently to the six linked
+projects and their lockfiles. No consumer source fallback, candidate repack or
+public publication is part of this window. The branch remains local until the
+public dependency is genuinely available and protected ordinary restore can pass.
+
+Qualification is serial under the existing repository test route and assigned
+ordinary workload bounds: no shared compiler/build servers, one build/test lane,
+4 CPU/8 GiB host with a 4 GiB lane RSS ceiling and finite command timeouts. Preserve
+first failures and independent diagnostics. Initial supported profile is Linux;
+retain the unchanged portable runner for non-Linux consumers. This partial
+selection does not remove existing support or close whole .3, and does not
+retroactively rewrite feature 067's historical
+cross-platform acceptance or the old 0.1 pair's 40 native tests. Source, operational
+adoption, publication and installed consumer proof remain separate.
+
+The compatibility validation-report caller explicitly selects 192KiB stdout and
+64KiB stderr; its measured complete JSON stdout is 157820 bytes and its stderr
+contract covers bounded CLI user-input diagnostics. Generic callers retain the
+128KiB/128KiB allocation and the existing 131072-byte stderr-flood acceptance.
+Both profiles allocate 256KiB combined and charge at most 512KiB; omitted output
+remains a distinct capture failure. This is not a larger producer limit.

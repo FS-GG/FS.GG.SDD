@@ -80,7 +80,7 @@ module InitCommandTests =
 
         let first = File.ReadAllBytes(Path.Combine(firstRoot, rel))
         let second = File.ReadAllBytes(Path.Combine(secondRoot, rel))
-        Assert.Equal<byte[]>(first, second)
+        Assert.Equal<byte>(first, second)
 
     [<Fact>]
     let ``init preserves existing scaffold provenance while re-supplying the lifecycle skeleton`` () =
@@ -305,7 +305,7 @@ module InitCommandTests =
         let second =
             File.ReadAllBytes(Path.Combine(secondRoot, ".fsgg", "early-stage-guidance.md"))
 
-        Assert.Equal<byte[]>(first, second)
+        Assert.Equal<byte>(first, second)
 
     // T017 (US3 AC3 / FR-008): an author-edited early-stage guidance is refused on re-init
     // (bytes preserved, unsafeOverwrite surfaced); a byte-identical file is an idempotent
@@ -397,4 +397,4 @@ module InitCommandTests =
 
         let first = File.ReadAllBytes(Path.Combine(firstRoot, ".fsgg", "constitution.md"))
         let second = File.ReadAllBytes(Path.Combine(secondRoot, ".fsgg", "constitution.md"))
-        Assert.Equal<byte[]>(first, second)
+        Assert.Equal<byte>(first, second)
