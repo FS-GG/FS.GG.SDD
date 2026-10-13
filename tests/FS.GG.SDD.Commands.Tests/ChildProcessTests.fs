@@ -104,6 +104,7 @@ module ChildProcessTests =
 
         Assert.Contains("pipes were still held", ex.Message)
         Assert.Equal(TestShared.ChildProcess.PipesHeldAfterExit, ex.Reason)
+        if OperatingSystem.IsLinux() then Assert.True(ex.Data["ChildProcessSessionRetained"] :?> bool)
 
         Assert.True(
             elapsed.ElapsedMilliseconds < 20_000L,
@@ -183,6 +184,79 @@ module ChildProcessTests =
 
         Assert.Equal("clean-result", cleanValue)
         Assert.True(cleanFailure.IsNone)
+
+    // Literal arguments/environment and nonzero exits exercise the actual package
+    // session path; shell policy remains explicit in this synthetic command.
+    [<Fact; Trait("tier", "slow")>]
+    let ``shared session preserves literal argv environment and nonzero exit`` () =
+        let before = TestShared.ChildProcess.retainedSessionCount ()
+        let info = ProcessStartInfo "sh"
+        info.ArgumentList.Add "-c"
+        info.ArgumentList.Add "printf '%s|%s|%s' \"$1\" \"$SDD_PROCESS_LITERAL\" \"${HOME+x}\"; printf 'literal-stderr' >&2; exit 7"
+        info.ArgumentList.Add "synthetic"
+        info.ArgumentList.Add "space ; $value"
+        info.Environment.Clear()
+        info.Environment["SDD_PROCESS_LITERAL"] <- "environment $literal"
+        let completion = TestShared.ChildProcess.runBounded 5_000 info
+        Assert.Equal(7, completion.ExitCode)
+        Assert.Equal("space ; $value|environment $literal|", completion.StandardOutput)
+        Assert.Equal("literal-stderr", completion.StandardError)
+        Assert.Equal(before, TestShared.ChildProcess.retainedSessionCount ())
+
+    // Preserve the ordinary StreamReader BOM contract after shared byte capture.
+    // The input is finite synthetic UTF-8 output from the actual child process.
+    [<Fact; Trait("tier", "slow")>]
+    let ``shared byte capture preserves the existing BOM-aware text decoder`` () =
+        let info = ProcessStartInfo "sh"
+        info.ArgumentList.Add "-c"
+        info.ArgumentList.Add "printf '\\357\\273\\277decoded-text'"
+        let completion = TestShared.ChildProcess.runBounded 5_000 info
+        Assert.Equal("decoded-text", completion.StandardOutput)
+
+    // One byte beyond the per-stream allocation must refuse complete capture;
+    // silently returning a truncated successful Completion would corrupt callers.
+    [<Fact; Trait("tier", "slow")>]
+    let ``output omitted by finite shared capture is never a successful completion or live app timeout`` () =
+        if OperatingSystem.IsLinux() then
+            let info = stderrFlood false
+            info.ArgumentList.Clear()
+            info.ArgumentList.Add "-c"
+            info.ArgumentList.Add "i=0; while [ $i -lt 128 ]; do printf '%01024d' 0; i=$((i+1)); done >&2; printf X >&2; sleep 3600"
+            let elapsed = Stopwatch.StartNew()
+            let failure =
+                Assert.Throws<TestShared.ChildProcess.ChildProcessCaptureFailure>(fun () ->
+                    TestShared.ChildProcess.runBounded 5_000 info |> ignore)
+            elapsed.Stop()
+            Assert.Contains("bounded capture", failure.Message)
+            Assert.Contains("[truncated]", failure.Message)
+            Assert.True(failure.Message.Length < 35_000)
+            Assert.False(failure.Data["ChildProcessSessionRetained"] :?> bool)
+            Assert.True(elapsed.ElapsedMilliseconds < 10_000L)
+
+    // A finite child can exit with its overflow in the final observation. Complete
+    // exit/EOF must never turn that omitted byte into a successful result.
+    [<Fact; Trait("tier", "slow")>]
+    let ``finite child overflow remains capture failure after exit and release`` () =
+        if OperatingSystem.IsLinux() then
+            let info = ProcessStartInfo "sh"
+            info.ArgumentList.Add "-c"
+            info.ArgumentList.Add "i=0; while [ $i -lt 128 ]; do printf '%01024d' 0; i=$((i+1)); done; printf X"
+            let failure =
+                Assert.Throws<TestShared.ChildProcess.ChildProcessCaptureFailure>(fun () ->
+                    TestShared.ChildProcess.runBounded 5_000 info |> ignore)
+            Assert.Contains("bounded capture", failure.Message)
+            Assert.Contains("[truncated]", failure.Message)
+            Assert.False(failure.Data["ChildProcessSessionRetained"] :?> bool)
+
+    // Command validation occurs before any session launch and never guesses the
+    // shell/Windows quoting semantics of ProcessStartInfo.Arguments.
+    [<Fact>]
+    let ``raw argument strings are refused before a bounded child launch`` () =
+        if OperatingSystem.IsLinux() then
+            let before = TestShared.ChildProcess.retainedSessionCount ()
+            let info = ProcessStartInfo("sh", "-c exit")
+            Assert.True((TestShared.ChildProcess.tryRunBounded 5_000 info).IsNone)
+            Assert.Equal(before, TestShared.ChildProcess.retainedSessionCount ())
 
     [<Fact>]
     let ``browser selection honors declarations and only missing executables select another driver`` () =

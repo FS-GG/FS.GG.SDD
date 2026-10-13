@@ -231,3 +231,45 @@ helpers; each exists in a single shared location and the former copies are gone.
 - xUnit collection/parallelization semantics are the mechanism for env isolation; the exact grouping is an implementation/plan decision, not a spec constraint.
 - No new external dependency, tool, or CI service is required — this is contained to existing test projects, fixtures, and contract-neutral internal edits to the `src/FS.GG.SDD.Validation` harness (items 4–5).
 - The 2026-07-02 review report (@ 8881620) is the authoritative inventory of defects; any additional test-infra defect discovered during implementation may be folded in only if it does not change the Tier-2, no-contract-change boundary.
+
+## V2-PROC-01.3 bounded Linux test-runner adoption
+
+The selected routine consumer replaces only TestShared.ChildProcess launch,
+stream capture, work deadline and best-effort retirement with the shared
+FS.GG.Execution.Contracts/Processes 0.2.0 session boundary. This is an internal
+test-infrastructure change; shipped product signatures, workspace defaults and
+lifecycle artifacts remain unchanged. Initial acceptance is .NET 10 on Linux.
+The existing portable runner remains the default on other operating systems;
+only the Linux adapter is selected here. Its pass cannot remove previously
+supported behavior or close all portable consumer obligations.
+
+A successful Completion retains complete stdout/stderr and the real exit code.
+Generic streams retain 128KiB each; the explicit validation-report profile
+retains 192KiB stdout and 64KiB stderr. Both allocate 256KiB combined; charged
+workload/evidence has a 512KiB ceiling. Omitted output or reader failure raises a distinct capture failure,
+never ChildOutlivedBound (which smoke callers may interpret as live-app success).
+Missing executables retain the existing None/failed-start behavior. Raw argument
+strings, custom non-UTF-8 decoders and redirected caller stdin are refused before
+launch; inspected shared-runner callers use literal ArgumentList and closed stdin.
+
+One monotonic work timeout plus 5000ms cleanup reserve bounds the whole call.
+A known early child exit starts an EOF grace at its actual observation timestamp,
+clipped to that same original total. Work timeout and inherited held pipes remain
+distinct. The caller retains the actual session and Run task before returning
+a failure when lawful local release is unresolved; at most 16 retained calls can
+occupy this assembly owner, and exhausted custody refuses further launches.
+No descendant containment, reaping, resource enforcement or background reaper
+is claimed. Real attached-descendant/native containment acceptance is separate.
+
+Acceptance exercises existing ChildProcess/browser fixtures plus literal argv/env
+and nonzero exit, finite overflow refusal, prelaunch raw-argument rejection and
+retained held-pipe custody. Compile all six linking test roots and exercise their
+affected caller routes. Candidate-only local qualification uses immutable original
+package bytes; public dependency adoption waits for accepted publication.
+
+The compatibility validation-report caller explicitly selects 192KiB stdout and
+64KiB stderr; its measured complete JSON stdout is 157820 bytes and its stderr
+contract covers bounded CLI user-input diagnostics. Generic callers retain the
+128KiB/128KiB allocation and the existing 131072-byte stderr-flood acceptance.
+Both profiles allocate 256KiB combined and charge at most 512KiB; omitted output
+remains a distinct capture failure. This is not a larger producer limit.

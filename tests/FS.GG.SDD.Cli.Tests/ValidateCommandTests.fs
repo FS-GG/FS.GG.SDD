@@ -36,16 +36,20 @@ module ValidateCommandTests =
     // out a wedge, not police the runtime.
     let private validateTimeoutMs = 300_000
 
+    // Compatibility report stdout is157820bytes in this source window. Its stderr
+    // is limited to CLI user-input diagnostics (including the existing --out errors),
+    // so select192KiB/64KiB explicitly. Generic children retain128KiB/128KiB.
+    // Larger output is still a capture failure, never truncated success.
     let private runCli (args: string list) =
         let completion =
-            TestShared.ChildProcess.runBounded validateTimeoutMs (validateStartInfo args)
+            TestShared.ChildProcess.runBoundedWithCapture TestShared.ChildProcess.StdoutReport validateTimeoutMs (validateStartInfo args)
 
         completion.StandardOutput, completion.ExitCode
 
     /// As `runCli` but also returns captured stderr — for the user-input diagnostic path (#68).
     let private runCliFull (args: string list) =
         let completion =
-            TestShared.ChildProcess.runBounded validateTimeoutMs (validateStartInfo args)
+            TestShared.ChildProcess.runBoundedWithCapture TestShared.ChildProcess.StdoutReport validateTimeoutMs (validateStartInfo args)
 
         completion.StandardOutput, completion.StandardError, completion.ExitCode
 
@@ -56,7 +60,7 @@ module ValidateCommandTests =
         let startInfo = validateStartInfo args
         startInfo.WorkingDirectory <- workDir
 
-        let completion = TestShared.ChildProcess.runBounded validateTimeoutMs startInfo
+        let completion = TestShared.ChildProcess.runBoundedWithCapture TestShared.ChildProcess.StdoutReport validateTimeoutMs startInfo
         completion.StandardOutput, completion.StandardError, completion.ExitCode
 
     // `--matrix compatibility` is the cheapest matrix (no per-state lifecycle builds).
@@ -203,7 +207,7 @@ module ValidateCommandTests =
         startInfo.Environment["FORCE_COLOR"] <- "1"
         startInfo.Environment.Remove "NO_COLOR" |> ignore
 
-        let completion = TestShared.ChildProcess.runBounded validateTimeoutMs startInfo
+        let completion = TestShared.ChildProcess.runBoundedWithCapture TestShared.ChildProcess.StdoutReport validateTimeoutMs startInfo
         completion.StandardOutput, completion.ExitCode
 
     [<Fact; Trait("tier", "slow")>]

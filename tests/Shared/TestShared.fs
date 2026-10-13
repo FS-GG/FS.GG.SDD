@@ -151,6 +151,13 @@ module TestShared =
     /// outlives `timeoutMs` is killed (whole tree) and reported as a failure, not a hang.
     module ChildProcess =
 
+        open System.Collections.Generic
+        open System.Security.Cryptography
+        open System.Text
+        open System.Threading
+        open FS.GG.Execution.Contracts
+        open FS.GG.Execution.Processes
+
         /// A child that ran to completion within its bound.
         type Completion =
             {
@@ -164,7 +171,8 @@ module TestShared =
         /// `ChildOutlivedBound` as the healthy answer, whereas `PipesHeldAfterExit` means the
         /// child is already gone and its exit code was never observed — never a success.
         type TimeoutReason =
-            /// The child never exited within `timeoutMs`. It was killed (whole tree) and reaped.
+            /// The child never exited within `timeoutMs`; best-effort retirement was requested.
+            /// The exception carries any unresolved caller custody independently.
             | ChildOutlivedBound
             /// The child exited, but an orphaned grandchild still held its output pipes when the
             /// drain grace elapsed, so the captured streams — and the exit code they belong to —
@@ -189,18 +197,6 @@ module TestShared =
         /// i.e. the number a call site writes would stop being the number enforced. Worst case here
         /// is `timeoutMs + drainGraceMs`.
         let private drainGraceMs = 5_000
-
-        /// Start the child, folding both failure shapes into `Error`: a missing executable *throws*
-        /// (`Win32Exception`) rather than returning null, and a misconfigured `ProcessStartInfo`
-        /// throws `InvalidOperationException`. The reason is preserved — "no such file" and "exec
-        /// bit stripped" are different bugs and a triager needs to tell them apart.
-        let private tryStart (startInfo: ProcessStartInfo) : Result<Process, exn> =
-            try
-                match Process.Start startInfo with
-                | null -> Error(exn "Process.Start returned null.")
-                | proc -> Ok proc
-            with ex ->
-                Error ex
 
         /// Keep an action failure primary when resource cleanup also fails. A returned
         /// value carries a cleanup failure separately so callers can retain both diagnostics.
@@ -234,11 +230,241 @@ module TestShared =
 
                 reraise ()
 
+        /// An output or custody failure is distinct from a work timeout: smoke callers
+        /// sometimes interpret ChildOutlivedBound as the expected live-app result.
+        type ChildProcessCaptureFailure(message: string) =
+            inherit exn(message)
+
+        type private RetainedCall =
+            { Session: IProcessSession
+              mutable RunTask: Task<ExecutionResult> option }
+
+        // Sessions own their native handles and outstanding tasks. Failed local release
+        // remains visible for this test assembly's lifetime instead of detaching a reaper.
+        let private retained = Dictionary<Guid, RetainedCall>()
+        let private retentionGate = obj()
+        let private maximumRetainedCalls = 16
+        let private factory =
+            ProcessSessions.createFactoryWithRetirement RetirementPolicy.BestEffortProcessTree
+
+        let private release (call: RetainedCall) =
+            match call.RunTask with
+            | None -> false
+            | Some run when not run.IsCompleted -> false
+            | Some _ ->
+                match call.Session.TryRelease() with
+                | ResourcesReleased ->
+                    lock retentionGate (fun () -> retained.Remove call.Session.Identity.InvocationId |> ignore)
+                    true
+                | ReleaseRefused _ -> false
+
+        /// Actual caller-owned sessions still awaiting lawful local release. This is
+        /// test-lifetime custody, not a count of descendants or containment proof.
+        let retainedSessionCount () = lock retentionGate (fun () -> retained.Count)
+
+        let private resolveExecutable (name: string) =
+            let candidates =
+                if Path.IsPathFullyQualified name then [ name ]
+                elif name.Contains(Path.DirectorySeparatorChar) then [ Path.GetFullPath name ]
+                else
+                    let path = Environment.GetEnvironmentVariable "PATH" |> Option.ofObj |> Option.defaultValue ""
+                    path.Split(Path.PathSeparator)
+                    |> Array.map (fun directory -> Path.GetFullPath(Path.Combine(directory, name)))
+                    |> Array.toList
+
+            candidates
+            |> List.tryFind File.Exists
+            |> Option.defaultWith (fun () ->
+                raise (System.ComponentModel.Win32Exception(2, $"Executable was not found: {name}")))
+
+        let private sourceDigest () =
+            File.ReadAllBytes(Path.Combine(repoRoot, "tests", "Shared", "TestShared.fs"))
+            |> SHA256.HashData
+            |> Convert.ToHexStringLower
+
+        /// Fixed retained-byte allocations within the producer's combined256KiB cap.
+        type CaptureProfile =
+            | Balanced
+            | StdoutReport
+
+        let private commandSpec profile (info: ProcessStartInfo) =
+            if not (String.IsNullOrEmpty info.Arguments) then
+                invalidArg "startInfo" "Bounded test commands require a literal ArgumentList."
+
+            if info.RedirectStandardInput then
+                invalidArg "startInfo" "Bounded test commands require closed standard input."
+
+            for encoding in [ info.StandardOutputEncoding; info.StandardErrorEncoding ] do
+                match Option.ofObj encoding with
+                | Some value when value.CodePage <> Encoding.UTF8.CodePage ->
+                    invalidArg "startInfo" "Bounded test command capture requires UTF-8."
+                | _ -> ()
+
+            let stdoutBytes, stderrBytes =
+                match profile with
+                | Balanced -> 128 * 1024, 128 * 1024
+                | StdoutReport -> 192 * 1024, 64 * 1024
+            { Executable = resolveExecutable info.FileName
+              Arguments = List.ofSeq info.ArgumentList
+              WorkingDirectory =
+                if String.IsNullOrEmpty info.WorkingDirectory then Environment.CurrentDirectory
+                else Path.GetFullPath info.WorkingDirectory
+              Environment =
+                info.Environment
+                |> Seq.choose (fun pair -> pair.Value |> Option.ofObj |> Option.map (fun value -> pair.Key, value))
+                |> Map.ofSeq |> Replace
+              Input = Closed
+              Capture =
+                { TotalBytes = 512L * 1024L; TerminalReserveBytes = 2048
+                  StdoutPrefixBytes = stdoutBytes; StdoutTailBytes = 0
+                  StderrPrefixBytes = stderrBytes; StderrTailBytes = 0
+                  ReadChunkBytes = 4096; MaximumFrameBytes = 16384; MaximumIncompleteLineBytes = 16384 }
+              Capabilities = [ { Capability = BoundedReturnWithRetainedCustody; Required = true } ]
+              Resources =
+                { MemoryBytes = None; CpuQuota = None; CpuAffinity = None
+                  MaxKernelTasks = None; MaxOwnedProcesses = None; MaxClrProcesses = None } }
+
+        let private runPrepared timeoutMs (command: CommandSpec) =
+            let domain = { Id = Guid.NewGuid(); Frequency = Stopwatch.Frequency }
+            let clock =
+                { new IMonotonicClock with
+                    member _.Now() = { Domain = domain; Ticks = Stopwatch.GetTimestamp() } }
+            let budget =
+                match Budget.create (clock.Now()) (TimeSpan.FromMilliseconds(float (int64 timeoutMs + int64 drainGraceMs)))
+                                      (TimeSpan.FromMilliseconds(float drainGraceMs)) with
+                | Ok value -> value
+                | Error reason -> invalidArg "timeoutMs" ($"Invalid child budget: {reason}")
+            let description = Budget.describe budget
+            let profile = $"sdd-test-bcl-tree-v1;work+5000ms;stdout={command.Capture.StdoutPrefixBytes};stderr={command.Capture.StderrPrefixBytes};256KiB-retained;512KiB-charged;retained-custody"
+            let identity =
+                { InvocationId = Guid.NewGuid(); Execution = None; LaunchOrdinal = 0UL
+                  SourceDigest = sourceDigest(); ProfileId = "sdd-test-bcl-tree-v1"
+                  ProfileDigest = Encoding.UTF8.GetBytes profile |> SHA256.HashData |> Convert.ToHexStringLower }
+            let owner =
+                { OwnerId = $"sdd-test-assembly:{Environment.ProcessId}"
+                  Evidence = { Kind = "caller-lifetime"; Reference = identity.InvocationId.ToString("D"); Digest = None } }
+            let prepared =
+                lock retentionGate (fun () ->
+                    // Reserve caller custody before preparation, so a full registry
+                    // never discards a prepared session, even without a launch effect.
+                    let releasable = retained.Values |> Seq.toArray
+                    for previous in releasable do release previous |> ignore
+                    if retained.Count >= maximumRetainedCalls then
+                        raise (ChildProcessCaptureFailure "Test assembly has unresolved child custody; launch refused.")
+                    match factory.Prepare(command, identity, budget, clock, owner) with
+                    | Error errors -> Error(exn ($"Child command preparation refused: {errors}"))
+                    | Ok session ->
+                        let call = { Session = session; RunTask = None }
+                        retained.Add(identity.InvocationId, call)
+                        Ok call)
+            match prepared with
+            | Error error -> Error error
+            | Ok call ->
+                let session = call.Session
+                call.RunTask <- Some(session.RunAsync CancellationToken.None)
+                let mutable observed = session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+                let mutable released = false
+                let mutable doneWaiting = false
+                let mutable earlyExit: (int * int64) option = None
+                let mutable captureFailure = false
+                let mutable workTimedOut = false
+                let observeExit () =
+                    match observed.Exit with
+                    | Known(Exited code, stamp) when earlyExit.IsNone ->
+                        match stamp.At with
+                        | Some at when at.Ticks <= description.WorkExpiresAt -> earlyExit <- Some(code, at.Ticks)
+                        | _ -> ()
+                    | _ -> ()
+                while not doneWaiting do
+                    let now = clock.Now()
+                    observeExit ()
+                    if earlyExit.IsSome then workTimedOut <- false
+                    let omitted = observed.Stdout.Totals.Omitted > 0L || observed.Stderr.Totals.Omitted > 0L
+                    let explicitCaptureFailure =
+                        match observed.Stop with
+                        | Requested(OutputLimit, _) | Requested(SinkFailure, _) -> true
+                        | _ -> false
+                    if (omitted || explicitCaptureFailure) && not workTimedOut then
+                        captureFailure <- true
+                        session.RequestStopAsync(OutputLimit, CancellationToken.None).GetAwaiter().GetResult() |> ignore
+                    if earlyExit.IsNone && now.Ticks >= description.WorkExpiresAt && not captureFailure
+                       && (match observed.Launch with Started _ -> true | _ -> false) then
+                        workTimedOut <- true
+                    released <- release call
+                    if released then
+                        // Completion may settle between this poll and TryRelease.
+                        // Classify the final authoritative observation, never a stale poll.
+                        observed <- session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+                        observeExit ()
+                        if earlyExit.IsSome then workTimedOut <- false
+                    let drainExpired =
+                        match earlyExit with
+                        | Some(_, at) -> float (now.Ticks - at) / float domain.Frequency * 1000.0 >= float drainGraceMs
+                        | None -> false
+                    doneWaiting <- released || drainExpired || now.Ticks >= description.TotalExpiresAt
+                                   || (match observed.Launch with Ambiguous _ -> true | _ -> false)
+                    if not doneWaiting then
+                        Thread.Sleep 5
+                        observed <- session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+
+                // The last successful release can reveal output arriving between polls.
+                // Recheck capture refusal on that final snapshot before any success result.
+                match observed.Stop with
+                | Requested(OutputLimit, _) | Requested(SinkFailure, _) ->
+                    // The producer retains the first stop cause. A polling deadline
+                    // cannot relabel an earlier output failure as a live-app timeout.
+                    captureFailure <- true
+                    workTimedOut <- false
+                | _ ->
+                    captureFailure <- captureFailure || observed.Stdout.Totals.Omitted > 0L || observed.Stderr.Totals.Omitted > 0L
+                let text (capture: StreamCapture) =
+                    use bytes = new MemoryStream(capture.Prefix.ToArray(), false)
+                    use reader = new StreamReader(bytes, Encoding.UTF8, true)
+                    reader.ReadToEnd()
+                let prefix (capture: StreamCapture) =
+                    let value = text capture
+                    let truncated = value.Length > 16384 || capture.Totals.Omitted > 0L
+                    value.Substring(0, min 16384 value.Length) + (if truncated then " [truncated]" else "")
+                let diagnostic = $"\nstdout: {prefix observed.Stdout}\nstderr: {prefix observed.Stderr}"
+                let fail (error: exn) =
+                    error.Data["ChildProcessSessionRetained"] <- not released
+                    error.Data["ChildProcessCleanup"] <- observed.Cleanup.Disposition.ToString()
+                    observed.FirstFailure |> Option.iter (fun cause ->
+                        error.Data["ChildProcessFirstCause"] <- cause.Diagnostic.Code)
+                    raise error
+                if workTimedOut then
+                    fail (ChildProcessTimeout(ChildOutlivedBound, $"Child process timed out after {timeoutMs} ms: {command.Executable}" + diagnostic))
+                elif captureFailure then
+                    fail (ChildProcessCaptureFailure("Child output exceeded bounded capture or a reader failed." + diagnostic))
+                else
+                    match observed.Launch with
+                    | Refused refusal when released -> Error(exn ($"{refusal.Code}: {refusal.Message}"))
+                    | _ ->
+                        let eof capture = match capture.Reader with Known(Eof, _) -> true | _ -> false
+                        match earlyExit with
+                        | Some(code, _) when eof observed.Stdout && eof observed.Stderr && released ->
+                            Ok { ExitCode = code; StandardOutput = text observed.Stdout; StandardError = text observed.Stderr }
+                        | Some _ when not (eof observed.Stdout && eof observed.Stderr) ->
+                            fail (ChildProcessTimeout(PipesHeldAfterExit, $"Child process exited but its output pipes were still held {drainGraceMs} ms later: {command.Executable}"))
+                        | _ -> fail (ChildProcessCaptureFailure("Child outcome or local release remains unresolved." + diagnostic))
+
+        /// Start the child, folding both failure shapes into `Error`: a missing executable *throws*
+        /// (`Win32Exception`) rather than returning null, and a misconfigured `ProcessStartInfo`
+        /// throws `InvalidOperationException`. The reason is preserved — "no such file" and "exec
+        /// bit stripped" are different bugs and a triager needs to tell them apart.
+        let private tryStart (startInfo: ProcessStartInfo) : Result<Process, exn> =
+            try
+                match Process.Start startInfo with
+                | null -> Error(exn "Process.Start returned null.")
+                | proc -> Ok proc
+            with ex ->
+                Error ex
+
         /// Run `startInfo`'s child to completion under `timeoutMs`, capturing both streams.
         /// `Error` only when the child could not be *started*; a child that cannot be bounded raises
         /// `ChildProcessTimeout`. Redirection is forced on here so a caller cannot opt out of the
         /// concurrent drain that makes the bound reachable.
-        let private runCore (timeoutMs: int) (startInfo: ProcessStartInfo) : Result<Completion, exn> =
+        let private legacyRunCore (timeoutMs: int) (startInfo: ProcessStartInfo) : Result<Completion, exn> =
             startInfo.RedirectStandardOutput <- true
             startInfo.RedirectStandardError <- true
             startInfo.UseShellExecute <- false
@@ -325,6 +551,25 @@ module TestShared =
                         StandardError = stderr.Result
                     }
 
+        /// Run the shared session while preserving the public start/timeout/held-pipe
+        /// adapter. A successful result requires complete capture and lawful local release.
+        let private runSharedCore profile (timeoutMs: int) (startInfo: ProcessStartInfo) : Result<Completion, exn> =
+            let command =
+                try
+                    if timeoutMs <= 0 then invalidArg "timeoutMs" "Child work timeout must be positive."
+                    Ok(commandSpec profile startInfo)
+                with error -> Error error
+            match command with
+            | Error error -> Error error
+            | Ok value -> runPrepared timeoutMs value
+
+        // The producer's qualified profile is Linux-only. Retain the previously
+        // supported portable runner until those platforms have their own accepted
+        // session backend; a Linux pass cannot remove their existing behavior.
+        let private runCore timeoutMs startInfo =
+            if OperatingSystem.IsLinux() then runSharedCore Balanced timeoutMs startInfo
+            else legacyRunCore timeoutMs startInfo
+
         /// Run a child under `timeoutMs`. `None` when it could not be started — the shape a caller
         /// that wants to *probe* for an executable needs.
         let tryRunBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion option =
@@ -335,6 +580,16 @@ module TestShared =
         /// is carried through, not flattened.
         let runBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion =
             match runCore timeoutMs startInfo with
+            | Ok completion -> completion
+            | Error ex -> raise (exn ($"Failed to start `{startInfo.FileName}`: {ex.Message}", ex))
+
+        /// Select an explicit output contract without changing the balanced default.
+        /// Omitted bytes remain a failure; this never grants a larger combined allocation.
+        let runBoundedWithCapture profile timeoutMs (startInfo: ProcessStartInfo) : Completion =
+            let result =
+                if OperatingSystem.IsLinux() then runSharedCore profile timeoutMs startInfo
+                else legacyRunCore timeoutMs startInfo
+            match result with
             | Ok completion -> completion
             | Error ex -> raise (exn ($"Failed to start `{startInfo.FileName}`: {ex.Message}", ex))
 
