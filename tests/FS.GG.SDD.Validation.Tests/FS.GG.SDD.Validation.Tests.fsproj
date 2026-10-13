@@ -23,6 +23,8 @@
     <ProjectReference Include="../../src/FS.GG.SDD.Validation/FS.GG.SDD.Validation.fsproj" />
     <ProjectReference Include="../../src/FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj" />
     <ProjectReference Include="../../src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
+    <PackageReference Include="FS.GG.Execution.Contracts" />
+    <PackageReference Include="FS.GG.Execution.Processes" />
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />

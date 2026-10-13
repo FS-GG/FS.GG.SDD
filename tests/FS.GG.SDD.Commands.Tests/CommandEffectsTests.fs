@@ -412,7 +412,7 @@ module CommandEffectsTests =
         Assert.False result.Succeeded
 
         // The prior bytes are untouched — a refused write writes nothing.
-        Assert.Equal<byte array>(undecodableBytes, File.ReadAllBytes(absolute root))
+        Assert.Equal<byte>(undecodableBytes, File.ReadAllBytes(absolute root))
         Assert.Empty(residue root)
 
         match result.Diagnostic with
