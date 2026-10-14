@@ -200,7 +200,7 @@ module internal HandlersDoctor =
         elif List.isEmpty unemitted then Some []
         else Some unemitted
 
-    let skillReadGate model =
+    let private skillOnlyReadGate model =
         // Phase 1 (#726): enumerate the skill roots. Until the listings are interpreted, the file
         // set of each copy is unknown, so there is no complete set of bodies to ask for yet.
         match phase skillRootEnumerations model with
@@ -223,6 +223,11 @@ module internal HandlersDoctor =
             |> List.distinct
             |> List.map ReadFile
             |> fun reads -> phase reads model
+
+    let skillReadGate model =
+        match ownerGuidanceReadGate (selectedOwnerGuidanceFiles model) model with
+        | Some effects -> Some effects
+        | None -> skillOnlyReadGate model
 
     // The read body of every skill copy FILE (seeded expected paths + product copies + every
     // auxiliary the roots carry) keyed by path — the content-addressed input to `Drift.compute`. A
@@ -309,14 +314,57 @@ module internal HandlersDoctor =
         // and the wrong remedy for a file that is present and byte-identical to its siblings. The
         // same set still blocks the coherence verdict in `computeDoctorNext`; this stops it ALSO
         // being reported as drift.
-        Drift.computeObserved
-            provenance
-            descriptor
-            (resolveWorkspaceFloor model)
-            model.Request.GeneratorVersion.Version
-            (presentArtifacts model)
-            (skillBodies model)
-            (unreadableSubjects model)
+        let drift =
+            Drift.computeObserved
+                provenance
+                descriptor
+                (resolveWorkspaceFloor model)
+                model.Request.GeneratorVersion.Version
+                (presentArtifacts model)
+                (skillBodies model)
+                (unreadableSubjects model)
+
+        let guidance = ownerGuidancePlan (selectedOwnerGuidanceFiles model) model
+
+        let targets =
+            guidance.MissingTargets @ (guidance.Writes |> List.map (fun w -> w.Path))
+            |> List.distinct
+
+        let steps =
+            if List.isEmpty targets then
+                drift.Steps
+            else
+                let prior =
+                    drift.Steps
+                    |> List.tryFind (fun s -> s.StepId = ReconciliationStepId.ArtifactReSeed)
+
+                let paths =
+                    targets
+                    @ (prior |> Option.map (fun s -> s.TargetPaths) |> Option.defaultValue [])
+                    |> List.distinct
+                    |> List.sort
+
+                let step =
+                    {
+                        StepId = ReconciliationStepId.ArtifactReSeed
+                        Kind = ReconciliationStepId.ArtifactReSeed
+                        DiffPreview =
+                            (prior |> Option.map (fun s -> s.DiffPreview + "\n") |> Option.defaultValue "")
+                            + (targets
+                               |> List.map (fun p -> "~ " + p + " (owner guidance block)")
+                               |> String.concat "\n")
+                        Outcome = ReconciliationOutcome.WouldApply
+                        TargetPaths = paths
+                    }
+
+                (drift.Steps
+                 |> List.filter (fun s -> s.StepId <> ReconciliationStepId.ArtifactReSeed))
+                @ [ step ]
+
+        { drift with
+            Steps = steps
+            IsCoherent = drift.IsCoherent && List.isEmpty targets && List.isEmpty guidance.Problems
+        }
 
     let doctorSummaryOf (drift: Drift.DriftReport) : DoctorSummary =
         {
@@ -381,6 +429,9 @@ module internal HandlersDoctor =
 
                 { model with
                     Doctor = Some summary
-                    Diagnostics = model.Diagnostics @ diagnostics
+                    Diagnostics =
+                        model.Diagnostics
+                        @ diagnostics
+                        @ ownerGuidanceDiagnostics DiagnosticWarning (selectedOwnerGuidanceFiles model) model
                 },
                 []

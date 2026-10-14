@@ -548,6 +548,7 @@ module internal HandlersScaffold =
                     match effectPath effect with
                     | Some path -> keptPaths.Contains path
                     | None -> true)
+            VerifiedFiles = outcome.VerifiedFiles |> Map.filter (fun path _ -> keptPaths.Contains path)
             ProvenancePaths = kept
             MaterializedIds =
                 kept
@@ -1971,27 +1972,68 @@ module internal HandlersScaffold =
                     // Init planned, awaiting interpretation.
                     model, []
                 else
-                    // TICK C — init interpreted or skipped: set the terminal summary once.
-                    let summary, diagnostics =
-                        finalizePostInstantiation
-                            model
-                            descriptor
-                            outcome
-                            producedPaths
-                            mirroredPaths
-                            probeProcess
-                            effective
+                    let files = plannedDriverOutcome producedPaths |> ownerGuidanceFiles
+                    let guidanceEffects = ownerGuidanceWriteEffects files model
 
-                    // Feature 052 (US2): merge the non-blocking CLI-coherence advisory on the
-                    // success path too, so the advisory appears in every descriptor-resolved outcome.
-                    { model with
-                        Scaffold = Some summary
-                        Diagnostics =
-                            model.Diagnostics
-                            @ diagnostics
-                            @ cliCoherenceDiagnostics descriptor model.Request
-                    },
-                    []
+                    let pendingGuidance =
+                        guidanceEffects
+                        |> List.filter (fun e -> not (hasInterpreted (effectKey e) model))
+
+                    let activationGate =
+                        match ownerGuidanceReadGate files model with
+                        | Some effects -> Some effects
+                        | None when not (List.isEmpty pendingGuidance) ->
+                            Some(pendingGuidance |> List.filter (fun e -> not (hasPlanned (effectKey e) model)))
+                        | None -> None
+
+                    match activationGate with
+                    | Some effects ->
+                        { model with
+                            PendingEffects = model.PendingEffects @ effects
+                        },
+                        effects
+                    | None ->
+                        // TICK C — init interpreted or skipped: set the terminal summary once.
+                        let summary, diagnostics =
+                            finalizePostInstantiation
+                                model
+                                descriptor
+                                outcome
+                                producedPaths
+                                mirroredPaths
+                                probeProcess
+                                effective
+
+                        let guidanceDiagnostics = ownerGuidanceDiagnostics DiagnosticError files model
+
+                        let failedGuidance =
+                            guidanceEffects
+                            |> List.exists (fun effect ->
+                                model.InterpretedEffects
+                                |> List.exists (fun result ->
+                                    effectKey result.Effect = effectKey effect && not result.Succeeded))
+
+                        let summary =
+                            if List.isEmpty guidanceDiagnostics && not failedGuidance then
+                                summary
+                            else
+                                { summary with
+                                    Outcome = "incomplete"
+                                    NextActionHint =
+                                        "Owner guidance activation is incomplete; inspect ownerGuidance diagnostics and run doctor/upgrade."
+                                }
+
+                        // Feature 052 (US2): merge the non-blocking CLI-coherence advisory on the
+                        // success path too, so the advisory appears in every descriptor-resolved outcome.
+                        { model with
+                            Scaffold = Some summary
+                            Diagnostics =
+                                model.Diagnostics
+                                @ diagnostics
+                                @ guidanceDiagnostics
+                                @ cliCoherenceDiagnostics descriptor model.Request
+                        },
+                        []
 
     // ----- staged driver entry (called from nextLifecycleEffects) -----
 

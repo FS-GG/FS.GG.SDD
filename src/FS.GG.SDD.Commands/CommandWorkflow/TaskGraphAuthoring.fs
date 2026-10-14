@@ -789,7 +789,8 @@ module internal TaskGraphAuthoring =
         (derived: WorkTask list)
         : WorkTask list =
         match policy with
-        | SectionMerge _ -> prior
+        | SectionMerge _
+        | ObservedMerge _ -> prior
         | StructuredMerge -> mergeStructuredTaskState liveIds prior derived
 
     let taskFrontMatterText request workId (existingFrontMatter: TaskFrontMatter option) =

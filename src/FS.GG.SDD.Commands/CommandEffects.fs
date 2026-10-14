@@ -147,6 +147,81 @@ module CommandEffects =
             with ex ->
                 IoRefusal ex.Message
 
+    // Owner guidance must not follow authored links or escape through a parent directory.
+    // This is a preflight/recheck boundary, not a race-free openat/renameat protocol.
+    let private containedFileRefusal projectRoot path =
+        if not (OwnerGuidance.isContainedPath path) then
+            Some "unsafe relative path"
+        else
+            try
+                let root = Path.GetFullPath projectRoot
+                let mutable current = root
+                let mutable refusal = None
+
+                for part in path.Split('/') do
+                    current <- Path.Combine(current, part)
+                    let info = FileInfo current
+
+                    if not (isNull info.LinkTarget) then
+                        refusal <- Some "symbolic links are not permitted"
+                    elif
+                        (File.Exists current || Directory.Exists current)
+                        && (File.GetAttributes current &&& FileAttributes.ReparsePoint)
+                           <> enum<FileAttributes> 0
+                    then
+                        refusal <- Some "linked path components are not permitted"
+
+                if Directory.Exists current then
+                    Some "target is not a regular file"
+                elif Option.isSome refusal then
+                    refusal
+                elif OperatingSystem.IsLinux() && File.Exists current then
+                    let buffer = System.Runtime.InteropServices.Marshal.AllocHGlobal 256
+
+                    try
+                        // Reuse the existing Linux statx binding: FileAttributes cannot distinguish FIFO.
+                        if GenerationSourceSnapshot.statx (-100, current, 0x100, 1u, buffer) <> 0 then
+                            Some "file type could not be observed"
+                        elif
+                            (int (uint16 (System.Runtime.InteropServices.Marshal.ReadInt16(buffer, 28))))
+                            &&& 0xf000
+                            <> 0x8000
+                        then
+                            Some "target is not a regular file"
+                        else
+                            None
+                    finally
+                        System.Runtime.InteropServices.Marshal.FreeHGlobal buffer
+                elif not (OperatingSystem.IsLinux() || OperatingSystem.IsWindows()) then
+                    Some "regular-file containment is unsupported on this platform"
+                else
+                    refusal
+            with ex ->
+                Some ex.Message
+
+    let private observedMergeRefusal projectRoot path existing expected prerequisites =
+        let checks =
+            (path, expected)
+            :: (prerequisites |> List.map (fun (p, bytes) -> p, Some bytes))
+
+        checks
+        |> List.tryPick (fun (p, bytes) ->
+            match containedFileRefusal projectRoot p with
+            | Some reason -> Some(p, reason)
+            | None ->
+                let actual =
+                    if p = path then
+                        existing
+                    else
+                        match readFile projectRoot p with
+                        | Body snapshot -> Some snapshot
+                        | _ -> None
+
+                match bytes, actual with
+                | None, None -> None
+                | Some wanted, Some snapshot when snapshot.RawBytes = Some wanted -> None
+                | _ -> Some(p, "bytes changed or could not be verified since preflight"))
+
     /// The file read, as the states the core actually has (FS.GG.SDD#745, decision #754).
     ///
     /// The whole point is the third arm. `File.Exists` answers from `stat`, which succeeds on a
@@ -778,6 +853,42 @@ module CommandEffects =
             // fold downstream must treat them identically; they are two different DIAGNOSTICS
             // because the operator must not. This is the one place in the program that can tell
             // them apart, and it is the one place the difference does any good.
+            | ReadContainedFile(path, _) ->
+                match containedFileRefusal projectRoot path with
+                | Some reason ->
+                    {
+                        Effect = effect
+                        Succeeded = true
+                        Read = Unreadable(path, reason)
+                        Snapshot = None
+                        Process = None
+                        Confirmed = None
+                        Diagnostic = Some(Diagnostics.unreadableFile path reason)
+                    }
+                | None ->
+                    match readFile projectRoot path with
+                    | Body snapshot -> success effect (Bytes snapshot)
+                    | Missing -> success effect Absent
+                    | IoRefusal reason ->
+                        {
+                            Effect = effect
+                            Succeeded = true
+                            Read = Unreadable(path, reason)
+                            Snapshot = None
+                            Process = None
+                            Confirmed = None
+                            Diagnostic = Some(Diagnostics.unreadableFile path reason)
+                        }
+                    | DecodeRefusal offset ->
+                        {
+                            Effect = effect
+                            Succeeded = true
+                            Read = Unreadable(path, undecodableReason offset)
+                            Snapshot = None
+                            Process = None
+                            Confirmed = None
+                            Diagnostic = Some(Diagnostics.undecodableFile path offset)
+                        }
             | ReadFile path ->
                 match readFile projectRoot path with
                 | Body snapshot -> success effect (Bytes snapshot)
@@ -880,7 +991,15 @@ module CommandEffects =
                 // So this arm matches `readFile` rather than `tryRead`: `tryRead` has already
                 // collapsed both causes into one `Unreadable`, which is right for every FOLD and
                 // wrong for the only two callers that choose a diagnostic.
-                match readFile projectRoot path with
+                let writeRead =
+                    match kind with
+                    | HybridArtifact(ObservedMerge _) ->
+                        match containedFileRefusal projectRoot path with
+                        | Some reason -> IoRefusal reason
+                        | None -> readFile projectRoot path
+                    | _ -> readFile projectRoot path
+
+                match writeRead with
                 | IoRefusal reason ->
                     failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)
                 | DecodeRefusal byteOffset ->
@@ -918,14 +1037,44 @@ module CommandEffects =
                         | Some snapshot, None -> snapshot.Text = text
                         | None, _ -> false
 
-                    if canOverwrite kind existing text then
+                    let guardRefusal =
+                        match kind with
+                        | HybridArtifact(ObservedMerge(expected, prerequisites)) ->
+                            observedMergeRefusal projectRoot path existing expected prerequisites
+                        | _ -> None
+
+                    if Option.isSome guardRefusal then
+                        let subject, reason = Option.get guardRefusal
+
+                        failure
+                            effect
+                            existingRead
+                            (FS.GG.SDD.Artifacts.Diagnostics.create
+                                "ownerGuidance.concurrentChange"
+                                FS.GG.SDD.Artifacts.Diagnostics.DiagnosticError
+                                None
+                                None
+                                $"Owner guidance write refused: {subject}: {reason}."
+                                "Re-run doctor/scaffold to read current bytes; preserve authored changes."
+                                [])
+                    elif canOverwrite kind existing text then
                         if not dryRun && not unchanged then
                             let absolute = fullPath projectRoot path
                             Directory.CreateDirectory(parentDirectory absolute) |> ignore
 
                             match rawBytes with
                             | Some bytes -> writeBytesAtomic absolute bytes
-                            | None -> writeFileAtomic absolute text
+                            | None ->
+                                match kind, existing with
+                                | HybridArtifact(ObservedMerge _), Some snapshot when
+                                    snapshot.RawBytes
+                                    |> Option.exists (fun bytes ->
+                                        bytes.Length >= 3 && bytes.[0..2] = [| 0xEFuy; 0xBBuy; 0xBFuy |])
+                                    ->
+                                    writeBytesAtomic
+                                        absolute
+                                        (Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes text))
+                                | _ -> writeFileAtomic absolute text
 
                         success effect existingRead
                     else

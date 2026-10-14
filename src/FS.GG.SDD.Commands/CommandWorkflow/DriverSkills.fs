@@ -145,6 +145,8 @@ module internal DriverSkills =
     type DriverOutcome =
         {
             Writes: CommandEffect list
+            // Raw selected transport bytes, kept separate from read-seam provenance digests.
+            VerifiedFiles: Map<string, byte array>
             ProvenancePaths: (string * string) list
             MaterializedIds: string list
             // The declared `scope` of each materialized driver id (from its manifest row), so a
@@ -159,6 +161,7 @@ module internal DriverSkills =
     let empty =
         {
             Writes = []
+            VerifiedFiles = Map.empty
             ProvenancePaths = []
             MaterializedIds = []
             MaterializedScopes = Map.empty
@@ -327,6 +330,17 @@ module internal DriverSkills =
                     // Value-identical for every file shipped today: all 17 in `FS.GG.Drivers` 0.8.3
                     // are LF with no BOM, so raw and canonical coincide and no scaffold's provenance
                     // changes. This buys the CRLF/BOM case a correct answer at no migration cost.
+                    VerifiedFiles =
+                        classified.Materializable
+                        |> List.collect (fun (entry, verified) ->
+                            [
+                                for root in Fsgg.Schemas.agentSkillRoots do
+                                    for file, _ in verified do
+                                        yield
+                                            $"{root}/skills/{entry.Id}/{file.Path}",
+                                            Map.find (entry.Id, file.Path) files
+                            ])
+                        |> Map.ofList
                     ProvenancePaths =
                         materializedFiles
                         |> List.map (fun (path, body, _) -> path, Fsgg.SkillMirror.sha256 body)
@@ -472,5 +486,10 @@ module internal DriverSkills =
         | Ok(writes, provenance) ->
             { skills with
                 Writes = skills.Writes @ writes
+                VerifiedFiles =
+                    Map.fold
+                        (fun acc path bytes -> Map.add path bytes acc)
+                        skills.VerifiedFiles
+                        (workspaceEmbeddedFiles ())
                 ProvenancePaths = skills.ProvenancePaths @ provenance
             }
