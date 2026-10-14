@@ -44,6 +44,8 @@ module CommandTypes =
     type MergePolicy =
         | SectionMerge of ensured: string list * rederived: string list * appended: string list
         | StructuredMerge
+        /// Recheck exact target and prerequisite bytes before a preserving root merge.
+        | ObservedMerge of expected: byte array option * prerequisites: (string * byte array) list
 
     /// How a written path is owned, and therefore whether the interpreter may overwrite it.
     /// `AuthoredSource` is never written by the tool; `HybridArtifact` is a merge result whose
@@ -996,6 +998,8 @@ module CommandTypes =
         /// at the edge by a stdin read when `IsInteractive`; the pure `update` re-derives
         /// the next step from the confirmed results in the interpreted-effect log.
         | Confirm of stepId: string * prompt: string
+        /// Read a regular file through contained, non-linked path components.
+        | ReadContainedFile of path: string * observationId: string
 
     /// Captured outcome of a `RunProcess` effect at the edge. `Started = false` means the
     /// process could not be launched (engine/command absent); its exit code is meaningless

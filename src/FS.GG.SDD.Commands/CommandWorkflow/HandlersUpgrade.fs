@@ -331,8 +331,17 @@ module internal HandlersUpgrade =
         match step.StepId with
         | ReconciliationStepId.CliSelfUpdate -> Ok [ selfUpdateEffect ]
         | ReconciliationStepId.ArtifactReSeed ->
+            let files = selectedOwnerGuidanceFiles model
+
+            let presentGuidanceTargets =
+                ownerGuidancePlan files model
+                |> fun p -> p.Writes |> List.map (fun w -> w.Path) |> Set.ofList
+
             ownerBackfillEffects model step.TargetPaths
-            |> Result.map (fun effects -> reSeedEffects request step.TargetPaths @ effects)
+            |> Result.map (fun effects ->
+                reSeedEffects request (step.TargetPaths |> List.filter (presentGuidanceTargets.Contains >> not))
+                @ effects
+                @ ownerGuidanceWriteEffects files model)
         // templateRePin is `noTarget` in this feature (R6) and never actionable.
         | ReconciliationStepId.TemplateRePin -> Ok []
 
@@ -690,6 +699,7 @@ module internal HandlersUpgrade =
             || not (List.isEmpty failed)
             || List.contains ReconciliationStepId.CliSelfUpdate applied
             || not (List.isEmpty unrepairedSkillDrift)
+            || not (List.isEmpty (ownerGuidancePlan (selectedOwnerGuidanceFiles model) model).Problems)
 
         // FS.GG.SDD#745 AC3. A step whose apply effects were refused because a TARGET could not be
         // READ is not a tool defect, and `upgradeStepFailed` is `markToolDefect` — i.e. exit 2,
@@ -700,7 +710,7 @@ module internal HandlersUpgrade =
         // the file and the reason, which is strictly more informative than a step id, and
         // `FailedStepIds` / `residualDrift` still report the step as failed. What is dropped is
         // only the second, less specific diagnostic — and with it the exit-2 escalation. Exit 1.
-        let failedOnUnreadableTarget stepId =
+        let failedOnReadOrIdentityRefusal stepId =
             actionable
             |> List.filter (fun step -> step.StepId = stepId)
             |> List.collect (fun step -> applyEffectsFor model request step |> Result.defaultValue [])
@@ -718,7 +728,9 @@ module internal HandlersUpgrade =
                         // enumeration). A truncated LISTING is not a refused write target, so it
                         // could not be why a step failed, and claiming it was would suppress a
                         // `upgradeStepFailed` that is genuinely owed.
-                        | Truncated _ -> false)))
+                        | Truncated _ ->
+                            result.Diagnostic
+                            |> Option.exists (fun diagnostic -> diagnostic.Id = "ownerGuidance.concurrentChange"))))
 
         let diagnostics =
             if not (List.isEmpty failed) then
@@ -726,7 +738,7 @@ module internal HandlersUpgrade =
                 |> List.choose (fun stepId ->
                     if stepId = ReconciliationStepId.CliSelfUpdate then
                         Some(upgradeSelfUpdateFailed (selfUpdateExitCode model))
-                    elif failedOnUnreadableTarget stepId then
+                    elif failedOnReadOrIdentityRefusal stepId then
                         None
                     else
                         Some(upgradeStepFailed (reconciliationStepIdValue stepId)))
@@ -763,7 +775,10 @@ module internal HandlersUpgrade =
 
         { model with
             Upgrade = Some summary
-            Diagnostics = model.Diagnostics @ diagnostics
+            Diagnostics =
+                model.Diagnostics
+                @ diagnostics
+                @ ownerGuidanceDiagnostics DiagnosticWarning (selectedOwnerGuidanceFiles model) model
         },
         []
 
@@ -836,6 +851,12 @@ module internal HandlersUpgrade =
                     },
                     []
                 elif List.isEmpty actionable then
+                    let model =
+                        { model with
+                            Diagnostics =
+                                model.Diagnostics
+                                @ ownerGuidanceDiagnostics DiagnosticWarning (selectedOwnerGuidanceFiles model) model
+                        }
                     // 058/ADR-0014 P1: the only drift is advisory content drift (a divergent/
                     // hash-mismatched copy or product-skill loss) with NO applicable step. There is
                     // nothing to confirm or `--yes`, so this is NOT a non-interactive refusal — it is

@@ -68,7 +68,8 @@ provider-declared `minimumFsggSdd` — live wins — and the workspace's own `sd
 
 With no `.fsgg/scaffold-provenance.json` (a bare `init` skeleton or plain repo), `doctor`
 reports "no scaffold provenance — nothing to reconcile" and exits 0 — unless the workspace
-declares a floor the installed CLI does not meet (below).
+declares a floor the installed CLI does not meet (below), or the selected verified owner
+payload declares root guidance to reconcile.
 
 ### Two floors, one CLI axis
 
@@ -115,7 +116,7 @@ is shown as a diff and applied only after its own confirmation (or all at once u
 |---|---|---|
 | `cliSelfUpdate` | `dotnet tool update` at the process edge | the CLI installation (takes effect on the *next* invocation) |
 | `templateRePin` | value-agnostic; currently a recognized-but-usually-inert step | consumer-owned `.fsgg/providers.yml` only |
-| `artifactReSeed` | re-materializes the **missing** seeded artifacts via `init`'s no-clobber seeding | the missing seeded skeleton paths only |
+| `artifactReSeed` | re-materializes missing artifacts and merges declared owner guidance after preflight | missing skeleton/owner paths and declared root blocks |
 
 `upgrade` is the **only** command permitted to mutate the CLI installation or consumer
 artifacts for remediation — no other command (`scaffold`, `refresh`, `agents`, a lifecycle
@@ -181,3 +182,18 @@ authoring accident, not a broken tool — and is held to the same rule (FS-GG/FS
 | A write refused because its target's bytes do not decode (`undecodableWriteTarget`) | n/a | 1 |
 | Non-interactive without `--yes` | n/a | 1 |
 | A confirmed step failed to apply (for any other reason) | n/a | 2 |
+
+## Optional owner guidance
+
+A selected verified owner payload may declare [managed root guidance](owner-guidance.md).
+`doctor` reads its descriptor, fragments, prerequisites and configured roots through
+contained observations. Missing or stale blocks make the report incoherent and appear in
+the `artifactReSeed` preview; malformed markers or differing owner prerequisites are named
+as `ownerGuidance.incomplete` and are preserved.
+
+After its existing confirmation or `--yes`, `upgrade` seeds a missing declared root and
+rechecks it before merging the declared block. It preserves the surrounding authored prose,
+Knowledge records, Atlas history and custom files. Present owner prerequisites are never
+replaced to make a guidance declaration appear active. Guarded writes refuse changed bytes
+between preflight and the effect edge; a failed write leaves residual drift. Subsequent
+coherent runs emit no guidance writes. This adds no silent migration to `refresh`.

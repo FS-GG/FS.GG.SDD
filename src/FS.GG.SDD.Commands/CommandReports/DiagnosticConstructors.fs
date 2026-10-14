@@ -1535,6 +1535,7 @@ module internal DiagnosticConstructors =
                     DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue []
                 }
         | ReadFile _
+        | ReadContainedFile _
         | EnumerateDirectory _
         | RunProcess _
         | ReadPackageSurface _

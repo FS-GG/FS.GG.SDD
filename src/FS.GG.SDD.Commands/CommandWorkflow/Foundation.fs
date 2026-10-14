@@ -1298,6 +1298,7 @@ nuget-cache/
     let effectKey effect =
         match effect with
         | ReadFile path -> "read:" + normalizeRelativePath path
+        | ReadContainedFile(path, observationId) -> "contained-read:" + observationId + ":" + normalizeRelativePath path
         | EnumerateDirectory path -> "enumerate:" + normalizeRelativePath path
         | CreateDirectory path -> "mkdir:" + normalizeRelativePath path
         | WriteFile(path, _, kind) -> $"write:{normalizeRelativePath path}:{writeKindValue kind}"
@@ -1474,6 +1475,7 @@ nuget-cache/
         model.PendingEffects
         |> List.filter (function
             | ReadFile _
+            | ReadContainedFile _
             | EnumerateDirectory _ -> true
             | _ -> false)
         |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
@@ -1640,3 +1642,183 @@ nuget-cache/
         @ (present (specPath workId) "specify")
         @ (present (clarificationPath workId) "clarify")
         @ (present (checklistPath workId) "checklist")
+
+    // Use the materializer's verified selected bytes, including declared skill auxiliaries.
+    // Workspace files alone cannot establish custody of skill/helper prerequisites.
+    let ownerGuidanceFiles (outcome: DriverSkills.DriverOutcome) = outcome.VerifiedFiles
+
+    let selectedOwnerGuidanceFiles model =
+        let provenance =
+            snapshot ScaffoldProvenance.provenancePath model
+            |> Option.bind (fun observed -> ScaffoldProvenance.tryParse observed.Text)
+
+        match provenance with
+        | None -> Map.empty
+        | Some record when ScaffoldProvenance.isDevRepo record -> Map.empty
+        | Some record ->
+            let presentIds =
+                SeededSkills.skillNames
+                @ (Drift.productSkillEntries (Some record) |> List.map fst)
+                |> Set.ofList
+
+            DriverSkills.plan presentIds |> ownerGuidanceFiles
+
+    let ownerGuidanceObservationId model =
+        if
+            model.Request.Command = Upgrade
+            && (model.InterpretedEffects
+                |> List.exists (fun r ->
+                    match r.Effect with
+                    | WriteFile(_, _, AgentGuidanceTarget) -> r.Succeeded
+                    | _ -> false))
+        then
+            "after-reseed"
+        else
+            "initial"
+
+    let ownerGuidanceReadEffect path model =
+        ReadContainedFile(path, ownerGuidanceObservationId model)
+
+    let containedReadOf path model =
+        let key = effectKey (ownerGuidanceReadEffect path model)
+
+        model.InterpretedEffects
+        |> List.tryPick (fun r -> if effectKey r.Effect = key then Some r.Read else None)
+
+    let ownerGuidanceAgents model =
+        match containedReadOf ".fsgg/agents.yml" model with
+        | Some(Bytes snap) ->
+            match parseAgentGuidanceConfig snap with
+            | Ok agents -> Ok agents
+            | Error _ -> Error "owner-guidance: malformed agent configuration"
+        | _ -> Error "owner-guidance: agent configuration is missing or unreadable"
+
+    let ownerGuidanceReadGate files model =
+        let phase reads =
+            let outstanding =
+                reads |> List.filter (fun e -> not (hasInterpreted (effectKey e) model))
+
+            if List.isEmpty outstanding then
+                None
+            else
+                Some(outstanding |> List.filter (fun e -> not (hasPlanned (effectKey e) model)))
+
+        if not (Map.containsKey FS.GG.SDD.Commands.OwnerGuidance.descriptorPath files) then
+            None
+        else
+            match phase [ ownerGuidanceReadEffect ".fsgg/agents.yml" model ] with
+            | Some reads -> Some reads
+            | None ->
+                match ownerGuidanceAgents model with
+                | Error _ -> None
+                | Ok agents ->
+                    match FS.GG.SDD.Commands.OwnerGuidance.requiredReads files agents with
+                    | Error _ -> None
+                    | Ok paths -> paths |> List.map (fun p -> ownerGuidanceReadEffect p model) |> phase
+
+    let ownerGuidancePlan (files: Map<string, byte array>) model =
+        let descriptorDigest =
+            Map.tryFind FS.GG.SDD.Commands.OwnerGuidance.descriptorPath files
+            |> Option.map (fun bytes ->
+                System.Security.Cryptography.SHA256.HashData bytes
+                |> System.Convert.ToHexString
+                |> fun value -> value.ToLowerInvariant())
+
+        let empty: FS.GG.SDD.Commands.OwnerGuidance.Plan =
+            {
+                Writes = []
+                Problems = []
+                DescriptorDigest = descriptorDigest
+                FragmentDigests = []
+                MissingTargets = []
+            }
+
+        if not (Map.containsKey FS.GG.SDD.Commands.OwnerGuidance.descriptorPath files) then
+            empty
+        else
+            match ownerGuidanceAgents model with
+            | Error reason -> { empty with Problems = [ reason ] }
+            | Ok agents ->
+                let observed =
+                    match FS.GG.SDD.Commands.OwnerGuidance.requiredReads files agents with
+                    | Error _ -> Map.empty
+                    | Ok paths ->
+                        paths
+                        |> List.map (fun path ->
+                            let value =
+                                match containedReadOf path model with
+                                | Some(Bytes snap) -> Ok(Some snap)
+                                | Some Absent -> Ok None
+                                | Some(Unreadable(_, reason)) -> Error reason
+                                | _ -> Error "not observed"
+
+                            path, value)
+                        |> Map.ofList
+
+                FS.GG.SDD.Commands.OwnerGuidance.plan files agents observed
+
+    let ownerGuidanceWriteEffects files model =
+        let plan = ownerGuidancePlan files model
+        // Configuration is also part of preflight: retargeting it must not authorize a stale merge.
+        let config =
+            match containedReadOf ".fsgg/agents.yml" model with
+            | Some(Bytes snapshot) ->
+                snapshot.RawBytes
+                |> Option.map (fun bytes -> ".fsgg/agents.yml", bytes)
+                |> Option.toList
+            | _ -> []
+
+        let prerequisites =
+            match ownerGuidanceAgents model with
+            | Ok agents ->
+                match FS.GG.SDD.Commands.OwnerGuidance.requiredReads files agents with
+                | Ok paths ->
+                    paths
+                    |> List.choose (fun p -> Map.tryFind p files |> Option.map (fun bytes -> p, bytes))
+                | Error _ -> []
+            | Error _ -> []
+
+        plan.Writes
+        |> List.map (fun write ->
+            WriteFile(
+                write.Path,
+                write.Text,
+                HybridArtifact(ObservedMerge(write.ExpectedBytes, config @ prerequisites))
+            ))
+
+    let ownerGuidanceDiagnostics severity files model =
+        let plan = ownerGuidancePlan files model
+
+        let identity =
+            " descriptor="
+            + Option.defaultValue "unavailable" plan.DescriptorDigest
+            + " fragments="
+            + (plan.FragmentDigests
+               |> List.map (fun (id, sha) -> id + ":" + sha)
+               |> String.concat ",")
+
+        let writeFailures =
+            plan.Writes
+            |> List.choose (fun write ->
+                if
+                    model.InterpretedEffects
+                    |> List.exists (fun result ->
+                        match result.Effect with
+                        | WriteFile(path, _, HybridArtifact(ObservedMerge _)) ->
+                            path = write.Path && not result.Succeeded
+                        | _ -> false)
+                then
+                    Some $"{write.Path}: guidance write failed; activation is incomplete"
+                else
+                    None)
+
+        plan.Problems @ writeFailures
+        |> List.map (fun reason ->
+            FS.GG.SDD.Artifacts.Diagnostics.create
+                "ownerGuidance.incomplete"
+                severity
+                None
+                None
+                (reason + identity)
+                "Resolve the named conflict without discarding authored bytes, then run doctor/upgrade."
+                [])

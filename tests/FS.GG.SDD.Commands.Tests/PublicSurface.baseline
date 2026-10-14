@@ -179,6 +179,11 @@ FS.GG.SDD.Commands.LintEngine.classify
 FS.GG.SDD.Commands.LintEngine.detectKind
 FS.GG.SDD.Commands.LintEngine.grammarPointer
 FS.GG.SDD.Commands.LintEngine.lint
+FS.GG.SDD.Commands.OwnerGuidance.isContainedPath
+FS.GG.SDD.Commands.OwnerGuidance.merge
+FS.GG.SDD.Commands.OwnerGuidance.parse
+FS.GG.SDD.Commands.OwnerGuidance.plan
+FS.GG.SDD.Commands.OwnerGuidance.requiredReads
 FS.GG.SDD.Commands.ProcessSkillManifest.build
 FS.GG.SDD.Commands.ProviderCapabilityAdmission.request
 FS.GG.SDD.Commands.ProviderCapabilityAdmission.resolve

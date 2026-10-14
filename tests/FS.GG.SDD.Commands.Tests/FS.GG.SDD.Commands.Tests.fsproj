@@ -19,6 +19,7 @@
     <Compile Include="ChildProcessTests.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
+    <Compile Include="OwnerGuidanceTests.fs" />
     <Compile Include="CommandEffectsTests.fs" />
     <Compile Include="InitCommandTests.fs" />
     <Compile Include="CharterCommandTests.fs" />

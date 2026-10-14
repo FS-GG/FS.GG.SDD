@@ -52,6 +52,8 @@ module CommandTypes =
         /// disposition refs; an evidence declaration), so the rendered text the interpreter
         /// sees is a merge result rather than a replacement.
         | StructuredMerge
+        /// Recheck exact target and prerequisite bytes before a preserving root merge.
+        | ObservedMerge of expected: byte array option * prerequisites: (string * byte array) list
 
     /// How a written path is owned, and therefore whether the interpreter may overwrite it.
     ///
@@ -80,17 +82,20 @@ module CommandTypes =
         let ensuredSections (policy: MergePolicy) =
             match policy with
             | SectionMerge(ensured, _, _) -> ensured
-            | StructuredMerge -> []
+            | StructuredMerge
+            | ObservedMerge _ -> []
 
         let rederivedSections (policy: MergePolicy) =
             match policy with
             | SectionMerge(_, rederived, _) -> rederived
-            | StructuredMerge -> []
+            | StructuredMerge
+            | ObservedMerge _ -> []
 
         let appendedSections (policy: MergePolicy) =
             match policy with
             | SectionMerge(_, _, appended) -> appended
-            | StructuredMerge -> []
+            | StructuredMerge
+            | ObservedMerge _ -> []
 
     /// The seven lifecycle artifacts' merge policies — the single place that says which regions of
     /// each hybrid the tool owns. A stage's `WriteFile` carries the policy its merge step
@@ -901,6 +906,8 @@ module CommandTypes =
         | ReadPackageSurface of packageId: string * version: string
         | SetExecutable of path: string
         | Confirm of stepId: string * prompt: string
+        /// Read a regular file through contained, non-linked path components.
+        | ReadContainedFile of path: string * observationId: string
 
     type ProcessRunResult =
         {
@@ -1279,6 +1286,7 @@ module CommandTypes =
     let effectPath (effect: CommandEffect) =
         match effect with
         | ReadFile path
+        | ReadContainedFile(path, _)
         | EnumerateDirectory path
         | CreateDirectory path
         | WriteFile(path, _, _) -> Some path
