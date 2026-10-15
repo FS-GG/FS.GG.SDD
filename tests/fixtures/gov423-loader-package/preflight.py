@@ -35,6 +35,28 @@ assert not re.search(r'\.AsArray\(\)\s*\[', program), 'bind AsArray() before ind
 indexed_method = r'\]\s*\.[A-Za-z_][A-Za-z_0-9]*\s*\('
 assert re.search(indexed_method, 'n["observation"]["tools"].AsArray()')
 assert not re.search(indexed_method, program), 'bind an indexed receiver before calling its method'
+
+
+def require_canonical_fixture_order(text):
+    parameters = re.search(r'Parameters = \[([^\]]+)\]', text).group(1)
+    keys = re.findall(r'parameter "([^"]+)"', parameters)
+    assert keys == ['code', 'package', 'raw'], 'fixture parameters must use serializer key order'
+    produced = re.search(r'ProducedPaths =\s*ownership\.ProducedPaths(.*?)\n\s*}', text, re.S).group(1)
+    assert 'List.sortWith (fun a b -> StringComparer.Ordinal.Compare(a.Path, b.Path))' in produced, 'fixture produced paths must use serializer ordinal path order'
+
+
+require_canonical_fixture_order(program)
+for mutation in [
+    program.replace('parameter "code"; parameter "package"; parameter "raw"', 'parameter "raw"; parameter "package"; parameter "code"'),
+    program.replace('|> List.sortWith (fun a b -> StringComparer.Ordinal.Compare(a.Path, b.Path))', ''),
+]:
+    try:
+        require_canonical_fixture_order(mutation)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError('known-bad fixture ordering escaped preflight')
+assert 'RequiredCapabilityIds = [ "build:build" ]' in program
 workflow = root.parents[2] / '.github/workflows/release.yml'
 text = workflow.read_text()
 assert 'workflow_dispatch:' in text and 'timeout-minutes: 15' in text

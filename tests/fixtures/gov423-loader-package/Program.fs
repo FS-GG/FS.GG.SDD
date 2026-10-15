@@ -54,7 +54,7 @@ module Fixture =
             TemplateSource = "opaque-source"
             TemplateId = "opaque-template"
             Platforms = [ "fixture-platform" ]
-            Parameters = [ parameter "raw"; parameter "package"; parameter "code" ]
+            Parameters = [ parameter "code"; parameter "package"; parameter "raw" ]
             Identities =
                 {
                     RawName = "raw"
@@ -185,6 +185,7 @@ module Fixture =
                     @ ownership.DriverPaths
                     @ ownership.GameSkillPaths
                     @ ownership.RenderingSkillPaths
+                    |> List.sortWith (fun a b -> StringComparer.Ordinal.Compare(a.Path, b.Path))
             }
 
         {
@@ -232,7 +233,7 @@ module Fixture =
                         {
                             ContractVersion = "1.0.0"
                             Platform = "fixture-platform"
-                            RequiredCapabilityIds = []
+                            RequiredCapabilityIds = [ "build:build" ]
                             SemanticOnlyCapabilityIds = []
                             SupportedPlatforms = [ "fixture-platform" ]
                             SupportedEnvironmentIds = [ "fixture-local" ]
