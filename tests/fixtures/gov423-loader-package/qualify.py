@@ -253,6 +253,7 @@ def qualify_governance():
     require(not asset_errors, 'downstream restore/asset prerequisites failed; see downstream-assets.json')
     if full_verify:
         outcomes = {}
+        physical_pending = lambda cases: len(cases) == 20 and len({r.get('testName') for r in cases}) == 20 and all(r.get('outcome') == 'NotExecuted' for r in cases)
         for configuration in ['Release', 'Debug']:
             label = configuration.lower()
             try:
@@ -262,7 +263,7 @@ def qualify_governance():
                 trx = ET.parse(tests / ('verify-full-' + label + '.trx')).getroot()
                 rows = [e.attrib for e in trx.iter() if e.tag.split('}')[-1] == 'UnitTestResult']
                 physical = [r for r in rows if 'ProviderContextCapture Actual' in r.get('testName', '')]
-                require(physical and all(r.get('outcome') == 'NotExecuted' for r in physical), 'physical capture was not entirely pending')
+                require(physical_pending(physical), 'expected exactly 20 distinct physical capture cases, all pending')
                 nonpassing = [r for r in rows if r.get('outcome') != 'Passed' and r not in physical]
                 require(len(rows) > 26 and not nonpassing, 'full Verify TRX has failures or unexpected skips')
                 families = {}

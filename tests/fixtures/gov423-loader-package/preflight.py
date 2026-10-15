@@ -66,6 +66,15 @@ if full_verify:
     route = (root / 'qualify.py').read_text()
     for required in ["['--locked-mode', '-p:RestoreLockedMode=true']", 'allowed_locks = set() if full_verify', "for configuration in ['Release', 'Debug']", "key.startswith('FSGG_CAPTURE_OUTER')", "r.get('outcome') == 'NotExecuted'", "require(not after,"]:
         assert required in route, required
+    # Execute only the pure discovery predicate from the actual route, never its I/O.
+    predicates = [n.value for n in ast.walk(ast.parse(route)) if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'physical_pending' for t in n.targets)]
+    assert len(predicates) == 1 and isinstance(predicates[0], ast.Lambda)
+    pending = eval(compile(ast.Expression(predicates[0]), '<physical-discovery-predicate>', 'eval'))
+    cases = [{'testName': 'Actual fixture ' + str(i), 'outcome': 'NotExecuted'} for i in range(20)]
+    assert pending(cases)
+    assert not pending(cases[:-1])
+    assert not pending(cases[:-1] + [cases[0]])
+    assert not pending(cases[:-1] + [dict(cases[-1], outcome='Passed')])
 assert 'actions: read' in text and 'contents: read' in text
 assert 'cancel-in-progress: false' in text and 'if: always()' in text
 for forbidden in ['pull_request:', '  push:', '  release:', 'secrets.', 'dotnet pack', 'nuget push', 'contents: write']:
