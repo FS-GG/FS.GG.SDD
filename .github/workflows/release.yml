@@ -1,4 +1,4 @@
-name: GOV423 selected Governance loader source qualification
+name: GOV423 full Verify Debug and Release qualification
 
 # Qualification branch only. It consumes the original no-push candidate unchanged.
 # No release trigger, producer build/pack, publication, secrets or default-branch change.
@@ -15,9 +15,9 @@ concurrency:
 
 jobs:
   qualify:
-    name: Exact-source Governance loader qualification
+    name: Full Verify Debug and Release exact-feed qualification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v6
@@ -29,12 +29,12 @@ jobs:
       - name: Qualify original packages in an isolated consumer
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tests/fixtures/gov423-loader-package/qualify.py "$RUNNER_TEMP/gov423-governance-loader-evidence" --governance
+        run: python3 tests/fixtures/gov423-loader-package/qualify.py "$RUNNER_TEMP/gov423-governance-loader-evidence" --governance --full-verify
       - name: Retain exact inputs and observed result
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gov423-governance-loader-${{ github.run_id }}-${{ github.run_attempt }}
+          name: gov423-governance-full-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/gov423-governance-loader-evidence-bundle.tar.gz
             ${{ runner.temp }}/gov423-governance-loader-evidence/*.log

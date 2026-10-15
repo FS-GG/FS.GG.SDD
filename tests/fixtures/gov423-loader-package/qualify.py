@@ -48,7 +48,7 @@ def archive_identity(data, name, selected):
 
 def run(args, cwd, env, label, seconds=180):
     # Deadline stays bounded even if a dependent subprocess stalls.
-    remaining = min(seconds, 600 - (time.monotonic() - STARTED))
+    remaining = min(seconds, (1500 if '--full-verify' in sys.argv[2:] else 600) - (time.monotonic() - STARTED))
     require(remaining > 0, 'qualification elapsed budget exhausted')
     STAGES.append({'stage': label, 'command': args, 'status': 'running'})
     with (DEST / (label + '.log')).open('wb') as log:
@@ -124,11 +124,12 @@ GOVERNANCE_SOURCE_HASHES = {'Directory.Build.props': 'f29e3b29afed4f93258003519c
 
 def qualify_governance():
     """Qualify one exact downstream source against the already qualified package inputs."""
-    source_head = '4bfa8e732e7a54a21dfc460ce4d450f7213b15cc'
+    source_head = 'bf2a36874ab724addc908ae01c48a7ac24f7d079'
     package_receipt_sha = '3f52c77d0d108aad940b594c2ed896eddd3f349d9ffff1cd683155f3c112c377'
     project = 'tests/FS.GG.Governance.VerifyCommand.Tests/FS.GG.Governance.VerifyCommand.Tests.fsproj'
     test_filter = 'FullyQualifiedName~ProviderContextLoader|FullyQualifiedName~ProviderPlanningLoop|FullyQualifiedName~SurfaceDrift|FullyQualifiedName~ScopeGuard'
-    source_packet_sha = '00f12c2a8bacf458f5b6a59efe3d46f4c708d31dde07a0050d46dc54a419fd6a'
+    source_packet_sha = 'dd0c74d6069face4923b08e55dbdbc374ec7514af1438ea2b99a56b1cd7448d4'
+    full_verify = '--full-verify' in sys.argv[2:]
     # The known-good package-only run remains immutable; this mode consumes its receipts.
     blob = subprocess.check_output(['gh', 'api', 'repos/FS-GG/FS.GG.SDD/actions/artifacts/11960638495/zip'], timeout=60)
     require(hashlib.sha256(blob).hexdigest() == package_receipt_sha, 'qualified package receipt ZIP identity mismatch')
@@ -149,6 +150,11 @@ def qualify_governance():
     source.mkdir()
     env = os.environ.copy()
     env.update(DOTNET_CLI_HOME=str(DEST / 'dotnet-home'), NUGET_PACKAGES=str(DEST / 'packages'), NUGET_HTTP_CACHE_PATH=str(DEST / 'http-cache'), DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_PROCESSOR_COUNT='1', MSBUILDDISABLENODEREUSE='1')
+    if full_verify:
+        removed = [key for key in env if key == 'BLESS_GOLDEN' or key == 'FSGG_GOV_CAPTURE_NATIVE_TESTS' or key == 'FSGG_CAPTURE_FIXTURE_ROOT' or key.startswith('FSGG_CAPTURE_OUTER') or key == 'VSTEST_TESTCASE_FILTER']
+        for key in removed:
+            env.pop(key)
+        write_json('suppressed-test-opt-ins.json', sorted(removed))
     run(['git', 'init', '--quiet'], source, env, 'source-init', 20)
     run(['git', 'remote', 'add', 'origin', 'https://github.com/FS-GG/FS.GG.Governance.git'], source, env, 'source-remote', 20)
     run(['git', 'fetch', '--depth=1', 'origin', source_head], source, env, 'source-fetch', 60)
@@ -192,10 +198,11 @@ def qualify_governance():
     ET.ElementTree(config).write(selected_config, encoding='unicode')
     before_locks = {p: hashlib.sha256((source / p).read_bytes()).hexdigest() for p in [str(Path(n).parent / 'packages.lock.json') for n in projects] if (source / p).exists()}
     write_json('source-locks-before.json', before_locks)
-    run(['dotnet', 'restore', project, '--configfile', str(selected_config), '--force-evaluate', '--no-http-cache', '-p:RestoreLockedMode=false', '-p:NuGetAudit=false', '-p:DisableImplicitLibraryPacksFolder=true'], source, env, 'governance-restore')
+    restore_mode = ['--locked-mode', '-p:RestoreLockedMode=true'] if full_verify else ['--force-evaluate', '-p:RestoreLockedMode=false']
+    run(['dotnet', 'restore', project, '--configfile', str(selected_config), '--no-http-cache', '-p:NuGetAudit=false', '-p:DisableImplicitLibraryPacksFolder=true'] + restore_mode, source, env, 'governance-restore')
     # Preserve assets and lock changes before compile; do not bless or commit regenerated locks.
     changed = subprocess.check_output(['git', 'diff', '--name-only'], cwd=source, text=True).splitlines()
-    allowed_locks = {'src/FS.GG.Governance.VerifyCommand/packages.lock.json', 'tests/FS.GG.Governance.VerifyCommand.Tests/packages.lock.json'}
+    allowed_locks = set() if full_verify else {'src/FS.GG.Governance.VerifyCommand/packages.lock.json', 'tests/FS.GG.Governance.VerifyCommand.Tests/packages.lock.json'}
     write_json('source-lock-changes.json', changed)
     asset_errors = []
     if not set(changed) <= allowed_locks:
@@ -244,6 +251,37 @@ def qualify_governance():
         asset_errors.append({'stage': 'package-join', 'error': 'SDD package join absent'})
     write_json('downstream-assets.json', {'projects': asset_records, 'selectedPackageIds': sorted(selected_seen), 'configProjectConsumers': config_bindings, 'errors': asset_errors})
     require(not asset_errors, 'downstream restore/asset prerequisites failed; see downstream-assets.json')
+    if full_verify:
+        outcomes = {}
+        for configuration in ['Release', 'Debug']:
+            label = configuration.lower()
+            try:
+                run(['dotnet', 'build', project, '-c', configuration, '--no-restore', '-m:1', '-p:UseSharedCompilation=false', '-nodeReuse:false'], source, env, 'governance-build-' + label, 360)
+                tests = DEST / ('tests-' + label)
+                run(['dotnet', 'test', project, '-c', configuration, '--no-build', '--no-restore', '--logger', 'trx;LogFileName=verify-full-' + label + '.trx', '--results-directory', str(tests)], source, env, 'governance-full-tests-' + label, 180)
+                trx = ET.parse(tests / ('verify-full-' + label + '.trx')).getroot()
+                rows = [e.attrib for e in trx.iter() if e.tag.split('}')[-1] == 'UnitTestResult']
+                physical = [r for r in rows if 'ProviderContextCapture Actual' in r.get('testName', '')]
+                require(physical and all(r.get('outcome') == 'NotExecuted' for r in physical), 'physical capture was not entirely pending')
+                nonpassing = [r for r in rows if r.get('outcome') != 'Passed' and r not in physical]
+                require(len(rows) > 26 and not nonpassing, 'full Verify TRX has failures or unexpected skips')
+                families = {}
+                for family, minimum in [('ProviderContextLoader', 11), ('ProviderPlanningLoop', 8), ('SurfaceDrift', 1), ('ScopeGuard', 1)]:
+                    matches = [r for r in rows if family in r.get('testName', '')]
+                    require(len(matches) >= minimum and all(r.get('outcome') == 'Passed' for r in matches), family + ': full Verify coverage incomplete')
+                    families[family] = len(matches)
+                outcomes[configuration] = {'status': 'passed', 'total': len(rows), 'passed': len(rows) - len(physical), 'pendingPhysical': len(physical), 'families': families}
+            except RuntimeError as error:
+                # A completed failed configuration does not block independent diagnosis of the other.
+                # Timeouts/unknown process outcomes propagate and stop all dependent execution.
+                outcomes[configuration] = {'status': 'failed', 'cause': repr(error)}
+            write_json('full-verify-results.json', outcomes)
+            after = subprocess.check_output(['git', 'diff', '--name-only'], cwd=source, text=True).splitlines()
+            require(not after, 'full Verify modified selected source/locks: ' + repr(after))
+        require(len(outcomes) == 2 and all(r['status'] == 'passed' for r in outcomes.values()), 'full Verify has a failed configuration')
+        for name, selected in EXPECTED.items():
+            archive_identity((feed / f'{name}.{selected["version"]}.nupkg').read_bytes(), name, selected)
+        return {'status': 'passed', 'downstreamSource': source_head, 'fullVerify': outcomes, 'nativeCapture': 'not admitted; physical cases pending'}
     run(['dotnet', 'build', project, '-c', 'Release', '--no-restore', '-m:1', '-p:UseSharedCompilation=false', '-nodeReuse:false'], source, env, 'governance-build', 360)
     tests = DEST / 'tests'
     run(['dotnet', 'test', project, '-c', 'Release', '--no-build', '--no-restore', '--filter', test_filter, '--logger', 'trx;LogFileName=verify-provider-focused.trx', '--results-directory', str(tests)], source, env, 'governance-focused-tests', 120)

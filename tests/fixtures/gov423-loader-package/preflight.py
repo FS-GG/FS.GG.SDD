@@ -60,7 +60,12 @@ for mutation in [
 assert 'RequiredCapabilityIds = [ "build:build" ]' in program
 workflow = root.parents[2] / '.github/workflows/release.yml'
 text = workflow.read_text()
-assert 'workflow_dispatch:' in text and 'timeout-minutes: 15' in text
+full_verify = '--full-verify' in text
+assert 'workflow_dispatch:' in text and ('timeout-minutes: 30' if full_verify else 'timeout-minutes: 15') in text
+if full_verify:
+    route = (root / 'qualify.py').read_text()
+    for required in ["['--locked-mode', '-p:RestoreLockedMode=true']", 'allowed_locks = set() if full_verify', "for configuration in ['Release', 'Debug']", "key.startswith('FSGG_CAPTURE_OUTER')", "r.get('outcome') == 'NotExecuted'", "require(not after,"]:
+        assert required in route, required
 assert 'actions: read' in text and 'contents: read' in text
 assert 'cancel-in-progress: false' in text and 'if: always()' in text
 for forbidden in ['pull_request:', '  push:', '  release:', 'secrets.', 'dotnet pack', 'nuget push', 'contents: write']:
