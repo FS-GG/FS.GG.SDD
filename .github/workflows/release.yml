@@ -35,7 +35,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: gov423-governance-loader-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/gov423-governance-loader-evidence/
+          path: |
+            ${{ runner.temp }}/gov423-governance-loader-evidence-bundle.tar.gz
+            ${{ runner.temp }}/gov423-governance-loader-evidence/*.log
+            ${{ runner.temp }}/gov423-governance-loader-evidence/*.json
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30

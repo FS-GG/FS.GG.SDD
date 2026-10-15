@@ -274,4 +274,7 @@ finally:
     write_json('result.json', result)
     manifest = {str(p.relative_to(DEST)): hashlib.sha256(p.read_bytes()).hexdigest() for p in DEST.rglob('*') if p.is_file()}
     write_json('evidence-sha256.json', manifest)
+    if '--governance' in sys.argv[2:]:
+        # NuGet HTTP-cache names may contain ':'; retain them inside one portable upload name.
+        shutil.make_archive(str(DEST.parent / (DEST.name + '-bundle')), 'gztar', root_dir=DEST)
 sys.exit(0 if result['status'] == 'passed' else 1)
