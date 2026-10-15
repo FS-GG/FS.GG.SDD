@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Dependency-free source checks; does not invoke CLR or contact feeds."""
 import ast
+import base64
+import hashlib
 import json
 from pathlib import Path
 import xml.etree.ElementTree as E
+from package_checks import check_package_folders, check_package_hashes
 
 root = Path(__file__).resolve().parent
 expected = json.loads((root / 'expected-archives.json').read_text())
@@ -19,7 +22,7 @@ require_package_only(project)
 assert len(list(project.iter('Compile'))) == 1
 assert project.find('.//DisableImplicitLibraryPacksFolder').text == 'true'
 assert project.find('.//DisableImplicitFSharpCoreReference').text == 'true'
-for path in [root / 'qualify.py', root / 'preflight.py']:
+for path in [root / 'qualify.py', root / 'preflight.py', root / 'package_checks.py']:
     ast.parse(path.read_text(), filename=str(path))
 program = (root / 'Program.fs').read_text()
 for symbol in ['CatalogScaffoldPolicy.parse', 'ScaffoldProvenanceDocument.parse', 'ProviderCapabilityAdmission.request', 'ProviderCapabilityAdmission.resolve']:
@@ -40,4 +43,33 @@ except AssertionError:
     pass
 else:
     raise AssertionError('known-bad source reference escaped preflight')
+
+
+def must_refuse(action):
+    try:
+        action()
+    except RuntimeError:
+        return
+    raise AssertionError('known-bad package identity escaped preflight')
+
+
+# Both observed NuGet spellings identify one expected cache; other roots still refuse.
+cache = root / 'synthetic-cache'
+for spelling in [str(cache), str(cache) + '/']:
+    check_package_folders({spelling: {}}, cache)
+must_refuse(lambda: check_package_folders({str(root / 'wrong-cache'): {}}, cache))
+must_refuse(lambda: check_package_folders({str(cache): {}, str(root / 'other'): {}}, cache))
+
+# Synthetic signed-package identities deliberately differ. The normalized hash comes
+# from metadata, while the raw sidecar must still bind the exact archive bytes.
+raw = b'synthetic signed archive bytes'
+raw_sha512 = base64.b64encode(hashlib.sha512(raw).digest()).decode()
+normalized = base64.b64encode(hashlib.sha512(b'synthetic normalized payload').digest()).decode()
+assert raw_sha512 != normalized
+metadata = {'contentHash': normalized}
+entry = {'resolved': '1.0.0', 'contentHash': normalized}
+assert check_package_hashes(raw, raw_sha512, metadata, entry, '1.0.0') == {
+    'nugetContentHash': normalized, 'rawSha512': raw_sha512}
+must_refuse(lambda: check_package_hashes(raw, raw_sha512, {'contentHash': raw_sha512}, entry, '1.0.0'))
+must_refuse(lambda: check_package_hashes(raw, normalized, metadata, entry, '1.0.0'))
 print('Source preflight passed: 12 exact packages, isolated consumer, four actual API calls, bounded read-only workflow.')

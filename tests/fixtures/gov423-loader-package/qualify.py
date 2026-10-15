@@ -12,6 +12,7 @@ import time
 import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
+from package_checks import check_package_folders, check_package_hashes
 
 SOURCE = Path(__file__).resolve().parent
 DEST = Path(sys.argv[1]).resolve()
@@ -98,17 +99,18 @@ def qualify():
     actual = {key.rsplit('/', 1)[0].lower(): key.rsplit('/', 1)[1] for key, value in assets['libraries'].items() if value['type'] == 'package'}
     require(actual == {n.lower(): v['version'] for n, v in EXPECTED.items()}, f'actual package closure differs: {actual}')
     require(all(v['type'] == 'package' for v in assets['libraries'].values()), 'nonpackage asset dependency')
-    require(list(assets['packageFolders']) == [str(DEST / 'packages') + '/'], 'unexpected package cache')
+    check_package_folders(assets['packageFolders'], DEST / 'packages')
     recorded = {}
     locks = next(iter(lock['dependencies'].values()))
     for name, selected in EXPECTED.items():
         package_root = DEST / 'packages' / name.lower() / selected['version']
         raw = package_root / f'{name.lower()}.{selected["version"]}.nupkg'
-        archive_identity(raw.read_bytes(), name, selected)
+        raw_bytes = archive_identity(raw.read_bytes(), name, selected)
         entry = next(v for k, v in locks.items() if k.lower() == name.lower())
-        normalized = (package_root / (raw.name + '.sha512')).read_text().strip()
-        require(entry['resolved'] == selected['version'] and entry['contentHash'] == normalized, f'{name}: restored content hash mismatch')
-        recorded[name] = dict(selected, nugetContentHash=entry['contentHash'])
+        raw_sha512 = (package_root / (raw.name + '.sha512')).read_text().strip()
+        metadata = json.loads((package_root / '.nupkg.metadata').read_text())
+        hashes = check_package_hashes(raw_bytes, raw_sha512, metadata, entry, selected['version'])
+        recorded[name] = dict(selected, **hashes)
     write_json('resolved-closure.json', recorded)
     run(['dotnet', 'build', 'Consumer.fsproj', '-c', 'Release', '--no-restore', '-m:1', '-p:UseSharedCompilation=false', '-nodeReuse:false'], consumer, env, 'consumer-build')
     api_output = DEST / 'api'
