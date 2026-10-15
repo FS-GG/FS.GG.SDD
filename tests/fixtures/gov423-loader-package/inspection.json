@@ -1,0 +1,30 @@
+{
+  "schema": "fsgg.gov423.loader-package-inspection/v1",
+  "candidateSource": "c8aea9289a6cc410f076823bf1219a02314f00a7",
+  "artifactId": 11626413573,
+  "artifactZipSha256": "f814c81964b431baea787e30d0c510df93d3bf525a7e51f8de982c26c66e589e",
+  "candidateRunId": 37951954780,
+  "observation": "Read-only archive/nuspec/XML inspection; API execution pending hosted qualification.",
+  "signatureSources": [
+    {
+      "path": "src/FS.GG.SDD.Commands/CatalogScaffoldPolicy.fsi",
+      "sha256": "b0736b01d8a9dffd62142ffd14ac2b06764fc841496686aabf9ba8002b5d67f3"
+    },
+    {
+      "path": "src/FS.GG.SDD.Commands/ProviderCapabilityAdmission.fsi",
+      "sha256": "b741374ce237334d806688b13733388e0442821287070f3a1a4cf403fff1ed54"
+    },
+    {
+      "path": "src/FS.GG.SDD.Artifacts/ScaffoldProvenanceDocument.fsi",
+      "sha256": "9b5e2a166d6a71a290723076c47362f63e03da369542e7fa2daa23427295f31d"
+    },
+    {
+      "path": "src/FS.GG.SDD.Artifacts/CatalogScaffoldProvenance.fsi",
+      "sha256": "a0f785f412008ec8357af37c2bc297cc2afe610bbbe835249d809eb30ec500c4"
+    },
+    {
+      "path": "src/FS.GG.SDD.Artifacts/ProviderCatalogIntegrity.fsi",
+      "sha256": "bfde9d52b57c21538c26035198ebdc84756b0d054b008013aa194320996610b6"
+    }
+  ]
+}

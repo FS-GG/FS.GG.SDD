@@ -1,0 +1,50 @@
+{
+  "FS.GG.SDD.Commands": {
+    "version": "2.3.0",
+    "sha256": "5ae5905fc9969f6498d7d3e15776e25a47fbfabfb8a0ebbeb00348e800dd3b4c"
+  },
+  "FS.GG.SDD.Artifacts": {
+    "version": "2.3.0",
+    "sha256": "43f8c4e7f789b54d6f341d2a624f7602973f1b1f8dc6ddb3f4bba16c479e0db6"
+  },
+  "FS.GG.SDD.Knowledge": {
+    "version": "2.3.0",
+    "sha256": "bc4f800c3f14260887a1aa39ad890ed0d6f5f9bdc85baa18e076e1e976dea561"
+  },
+  "FS.GG.Contracts": {
+    "version": "7.6.0",
+    "sha256": "b1df3ebd6251f5b18aaece4dd0c5449a7825dc7056f925cf2516febc35f9dfc5"
+  },
+  "FS.GG.Governance.Config": {
+    "version": "0.3.0",
+    "sha256": "7ed9dcec09a7ae2acce57300e8302fb6baf76af3a553670ffb8f497a4e1a3545"
+  },
+  "FS.GG.Audio.Skills": {
+    "version": "0.1.0",
+    "sha256": "c2b8f88ddf62c9af39c31a199fd2767c7a00a8284de3e9867a22d63f9fad29ff"
+  },
+  "FS.GG.Drivers": {
+    "version": "0.98.0",
+    "sha256": "2bb3e668333171ae1d87341e500a5c2e60c7601cabcade8fa406a201cd75dbcc"
+  },
+  "FS.GG.Game.Skills": {
+    "version": "0.9.0",
+    "sha256": "22ff41c29378bfe29704f9c01471c94fb06af6b74bb79417e5cc2c07ec915922"
+  },
+  "FS.GG.Rendering.Skills": {
+    "version": "0.2.0",
+    "sha256": "059ed3ef5f397c7735054b9233b0ddad57232df928812d6622b62397ed1bf558"
+  },
+  "FSharp.Core": {
+    "version": "10.1.401",
+    "sha256": "cf1f4e69fc2d1351af9fa9923ac90ed466088730a00867cbe0eb1b3b2c68963e"
+  },
+  "FsQuint": {
+    "version": "0.1.0",
+    "sha256": "e170d70a683321818944d86bb9c9e087323e01391738b3b4a621892ef91a2a8a"
+  },
+  "YamlDotNet": {
+    "version": "18.1.0",
+    "sha256": "59ffe65ade67ad9d886267f877b634a450363cb81b94e19db9ca4c36461416f6"
+  }
+}
