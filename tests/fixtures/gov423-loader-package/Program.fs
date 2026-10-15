@@ -339,7 +339,10 @@ module Qualification =
               "descriptor", (fun n -> n["declaration"]["descriptor"]["help"] <- JsonValue.Create "tampered")
               "archive", (fun n -> n["observation"]["consumedArchiveDigest"] <- JsonValue.Create (Fixture.digest [||]))
               "platform", (fun n -> n["observation"]["platform"] <- JsonValue.Create "wrong-platform")
-              "tool", (fun n -> n["observation"]["tools"].AsArray()[0]["version"] <- JsonValue.Create "9.0.0")
+              "tool", (fun n ->
+                  let tools = n["observation"]["tools"].AsArray()
+                  let tool = tools[0]
+                  tool["version"] <- JsonValue.Create "9.0.0")
               "policy.digest", (fun n -> n["declaration"]["policy"]["digest"] <- JsonValue.Create "invalid")
               "failed.observation", (fun n -> n["observation"]["result"] <- JsonValue.Create "failed") ] do
             check ("provenance." + name + ".refusal") (fun () -> ScaffoldProvenanceDocument.parse (mutate text change) |> refused name)

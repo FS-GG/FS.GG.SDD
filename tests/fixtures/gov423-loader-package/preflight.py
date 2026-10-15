@@ -4,6 +4,7 @@ import ast
 import base64
 import hashlib
 import json
+import re
 from pathlib import Path
 import xml.etree.ElementTree as E
 from package_checks import check_package_folders, check_package_hashes
@@ -28,6 +29,8 @@ program = (root / 'Program.fs').read_text()
 for symbol in ['CatalogScaffoldPolicy.parse', 'ScaffoldProvenanceDocument.parse', 'ProviderCapabilityAdmission.request', 'ProviderCapabilityAdmission.resolve']:
     assert symbol in program
 assert '[<EntryPoint>]' in program and 'providerExecution = false' in program
+# Direct indexing of a method-call result caused FS0597 in the retained run.
+assert not re.search(r'\.AsArray\(\)\s*\[', program), 'bind AsArray() before indexing its result'
 workflow = root.parents[2] / '.github/workflows/release.yml'
 text = workflow.read_text()
 assert 'workflow_dispatch:' in text and 'timeout-minutes: 15' in text
