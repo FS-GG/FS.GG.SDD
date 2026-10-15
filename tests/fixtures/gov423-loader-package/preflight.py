@@ -31,6 +31,10 @@ for symbol in ['CatalogScaffoldPolicy.parse', 'ScaffoldProvenanceDocument.parse'
 assert '[<EntryPoint>]' in program and 'providerExecution = false' in program
 # Direct indexing of a method-call result caused FS0597 in the retained run.
 assert not re.search(r'\.AsArray\(\)\s*\[', program), 'bind AsArray() before indexing its result'
+# The receiver also needs a binding: indexedNode.AsArray() failed in the third run.
+indexed_method = r'\]\s*\.[A-Za-z_][A-Za-z_0-9]*\s*\('
+assert re.search(indexed_method, 'n["observation"]["tools"].AsArray()')
+assert not re.search(indexed_method, program), 'bind an indexed receiver before calling its method'
 workflow = root.parents[2] / '.github/workflows/release.yml'
 text = workflow.read_text()
 assert 'workflow_dispatch:' in text and 'timeout-minutes: 15' in text

@@ -340,7 +340,8 @@ module Qualification =
               "archive", (fun n -> n["observation"]["consumedArchiveDigest"] <- JsonValue.Create (Fixture.digest [||]))
               "platform", (fun n -> n["observation"]["platform"] <- JsonValue.Create "wrong-platform")
               "tool", (fun n ->
-                  let tools = n["observation"]["tools"].AsArray()
+                  let toolsNode = n["observation"]["tools"]
+                  let tools = toolsNode.AsArray()
                   let tool = tools[0]
                   tool["version"] <- JsonValue.Create "9.0.0")
               "policy.digest", (fun n -> n["declaration"]["policy"]["digest"] <- JsonValue.Create "invalid")
