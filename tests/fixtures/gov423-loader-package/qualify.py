@@ -124,11 +124,11 @@ GOVERNANCE_SOURCE_HASHES = {'Directory.Build.props': 'f29e3b29afed4f93258003519c
 
 def qualify_governance():
     """Qualify one exact downstream source against the already qualified package inputs."""
-    source_head = '584f447ddd0f1ff9f932f16f9a28132f2919aca2'
+    source_head = '4bfa8e732e7a54a21dfc460ce4d450f7213b15cc'
     package_receipt_sha = '3f52c77d0d108aad940b594c2ed896eddd3f349d9ffff1cd683155f3c112c377'
     project = 'tests/FS.GG.Governance.VerifyCommand.Tests/FS.GG.Governance.VerifyCommand.Tests.fsproj'
     test_filter = 'FullyQualifiedName~ProviderContextLoader|FullyQualifiedName~ProviderPlanningLoop|FullyQualifiedName~SurfaceDrift|FullyQualifiedName~ScopeGuard'
-    source_packet_sha = '0c6484b87535be51e35007ad1bf203cbf0cda1dd47e1f365a1a5aba8a213b031'
+    source_packet_sha = '00f12c2a8bacf458f5b6a59efe3d46f4c708d31dde07a0050d46dc54a419fd6a'
     # The known-good package-only run remains immutable; this mode consumes its receipts.
     blob = subprocess.check_output(['gh', 'api', 'repos/FS-GG/FS.GG.SDD/actions/artifacts/11960638495/zip'], timeout=60)
     require(hashlib.sha256(blob).hexdigest() == package_receipt_sha, 'qualified package receipt ZIP identity mismatch')
