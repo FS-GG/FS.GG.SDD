@@ -35,6 +35,7 @@ assert not re.search(r'\.AsArray\(\)\s*\[', program), 'bind AsArray() before ind
 indexed_method = r'\]\s*\.[A-Za-z_][A-Za-z_0-9]*\s*\('
 assert re.search(indexed_method, 'n["observation"]["tools"].AsArray()')
 assert not re.search(indexed_method, program), 'bind an indexed receiver before calling its method'
+assert not re.search(r'\]\s*\[', program), 'use explicit .[] notation for chained JSON indexes'
 
 
 def require_canonical_fixture_order(text):

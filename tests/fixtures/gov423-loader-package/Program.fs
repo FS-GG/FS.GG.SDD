@@ -298,9 +298,9 @@ module Qualification =
         check "policy.bytes.digest" (fun () -> require (policy.Identity.Digest = rawDigest) "policy digest lost")
         check "policy.raw.digest.refusal" (fun () -> CatalogScaffoldPolicy.parse (Fixture.digest [||]) policyBytes |> refused "digest")
         for name, change in
-            [ "schema", (fun (n: JsonNode) -> n["schemaVersion"] <- JsonValue.Create 2)
-              "unknown", (fun n -> n["unexpected"] <- JsonValue.Create true)
-              "map.digest", (fun n -> n["evidenceMap"]["digest"] <- JsonValue.Create (Fixture.digest [||])) ] do
+            [ "schema", (fun (n: JsonNode) -> n.["schemaVersion"] <- JsonValue.Create 2)
+              "unknown", (fun n -> n.["unexpected"] <- JsonValue.Create true)
+              "map.digest", (fun n -> n.["evidenceMap"].["digest"] <- JsonValue.Create (Fixture.digest [||])) ] do
             check ("policy." + name + ".refusal") (fun () ->
                 let bytes = mutate (Encoding.UTF8.GetString policyBytes) change |> Encoding.UTF8.GetBytes
                 CatalogScaffoldPolicy.parse (Fixture.digest bytes) bytes |> refused name)
@@ -335,18 +335,18 @@ module Qualification =
                 ProviderCapabilityAdmission.resolve { policy with RequiredCapabilityIds = [ "test:test" ] } "fixture-platform" received.Declaration.Descriptor |> refused "independent policy"
             | _ -> failwith "unexpected legacy")
         for name, change in
-            [ "schema", (fun (n: JsonNode) -> n["schemaVersion"] <- JsonValue.Create 3)
-              "unknown", (fun n -> n["unexpected"] <- JsonValue.Create true)
-              "descriptor", (fun n -> n["declaration"]["descriptor"]["help"] <- JsonValue.Create "tampered")
-              "archive", (fun n -> n["observation"]["consumedArchiveDigest"] <- JsonValue.Create (Fixture.digest [||]))
-              "platform", (fun n -> n["observation"]["platform"] <- JsonValue.Create "wrong-platform")
+            [ "schema", (fun (n: JsonNode) -> n.["schemaVersion"] <- JsonValue.Create 3)
+              "unknown", (fun n -> n.["unexpected"] <- JsonValue.Create true)
+              "descriptor", (fun n -> n.["declaration"].["descriptor"].["help"] <- JsonValue.Create "tampered")
+              "archive", (fun n -> n.["observation"].["consumedArchiveDigest"] <- JsonValue.Create (Fixture.digest [||]))
+              "platform", (fun n -> n.["observation"].["platform"] <- JsonValue.Create "wrong-platform")
               "tool", (fun n ->
-                  let toolsNode = n["observation"]["tools"]
+                  let toolsNode = n.["observation"].["tools"]
                   let tools = toolsNode.AsArray()
-                  let tool = tools[0]
-                  tool["version"] <- JsonValue.Create "9.0.0")
-              "policy.digest", (fun n -> n["declaration"]["policy"]["digest"] <- JsonValue.Create "invalid")
-              "failed.observation", (fun n -> n["observation"]["result"] <- JsonValue.Create "failed") ] do
+                  let tool = tools.[0]
+                  tool.["version"] <- JsonValue.Create "9.0.0")
+              "policy.digest", (fun n -> n.["declaration"].["policy"].["digest"] <- JsonValue.Create "invalid")
+              "failed.observation", (fun n -> n.["observation"].["result"] <- JsonValue.Create "failed") ] do
             check ("provenance." + name + ".refusal") (fun () -> ScaffoldProvenanceDocument.parse (mutate text change) |> refused name)
         check "provenance.malformed.refusal" (fun () -> ScaffoldProvenanceDocument.parse "{" |> refused "malformed")
         check "provenance.duplicate.refusal" (fun () -> ScaffoldProvenanceDocument.parse ("{\"schemaVersion\":2," + text.TrimStart().Substring(1)) |> refused "duplicate")
