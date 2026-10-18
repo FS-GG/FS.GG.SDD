@@ -34,6 +34,9 @@ for old,new in [
     verdict(lambda old=old,new=new:static.check(text.replace(old,new)),False)
 verdict(lambda:static.check(text.replace('  publish-cli:\n','  publish-cli:\n    run: dotnet pack extra.fsproj\n')),False)
 verdict(lambda:static.check(text+'\n# dotnet pack src/FS.GG.Contracts/FS.GG.Contracts.fsproj'),False)
+verdict(lambda:static.check(text.replace(" && inputs.occupancy_candidate_run == ''", '', 1)),False)
+verdict(lambda:static.check(text.replace(" && inputs.occupancy_candidate_sha256 == ''", '', 1)),False)
+verdict(lambda:static.check(text.replace('  occupancy-preflight:\n', '  occupancy-preflight:\n    permissions: {packages: write}\n')),False)
 
 def package(package_id,version,body=b'fixture',signature=None):
     buf=io.BytesIO()

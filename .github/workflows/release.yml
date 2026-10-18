@@ -22,6 +22,15 @@ on:
         type: string
         required: false
 
+      occupancy_candidate_run:
+        description: "Read-only occupancy preflight: original successful no-push release run ID"
+        type: string
+        required: false
+      occupancy_candidate_sha256:
+        description: "Expected original candidate artifact ZIP SHA256; requires occupancy_candidate_run"
+        type: string
+        required: false
+
 permissions:
   contents: read
 
@@ -41,7 +50,7 @@ jobs:
   resolve-versions:
     name: Resolve published Contracts and four coherent SDD versions
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
       artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
@@ -128,7 +137,7 @@ jobs:
     name: Contracts tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -156,7 +165,7 @@ jobs:
   artifacts-tests:
     name: Artifacts tests (publish gate)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -180,7 +189,7 @@ jobs:
   commands-tests:
     name: Commands tests and authored public surface (publish gate)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -199,7 +208,7 @@ jobs:
     name: CLI tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -228,7 +237,7 @@ jobs:
     name: Knowledge tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -259,7 +268,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
     # run promotes this run's retained artifact; it must never pack another container (#944).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && needs.resolve-versions.outputs.push == 'false'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'false'
     permissions:
       contents: read
       packages: read
@@ -359,7 +368,7 @@ jobs:
     name: Preflight retained candidate custody
     needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     permissions:
       actions: read
       contents: read
@@ -403,7 +412,7 @@ jobs:
     name: Publish and read back the coherent FS.GG.SDD set
     needs: [resolve-versions, locate-artifacts]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && needs.resolve-versions.outputs.push == 'true'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'true'
     permissions:
       actions: read
       contents: read
@@ -600,7 +609,7 @@ jobs:
   readback-cli:
     name: Read-only coherent SDD dual-feed verification
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version != ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version != '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     permissions:
       contents: read
       packages: read
@@ -651,3 +660,56 @@ jobs:
           path: artifacts/feed-readback/*
           if-no-files-found: error
           retention-days: 90
+
+  occupancy-preflight:
+    name: Read-only strict occupancy of an authenticated retained candidate
+    if: github.repository == 'FS-GG/FS.GG.SDD' && github.event_name == 'workflow_dispatch' && (inputs.occupancy_candidate_run != '' || inputs.occupancy_candidate_sha256 != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate mode before any download or verifier setup
+        env:
+          CANDIDATE_RUN: ${{ inputs.occupancy_candidate_run }}
+          CANDIDATE_SHA256: ${{ inputs.occupancy_candidate_sha256 }}
+          PUBLISH_VERSION: ${{ inputs.version }}
+          READBACK_VERSION: ${{ inputs.readback_version }}
+        run: |
+          python3 - <<'PYGUARD'
+          import os,re
+          assert re.fullmatch(r'[1-9][0-9]{0,19}',os.environ['CANDIDATE_RUN']), 'original candidate run ID required'
+          assert re.fullmatch(r'[0-9a-f]{64}',os.environ['CANDIDATE_SHA256']), 'original archive SHA256 required'
+          assert not os.environ['PUBLISH_VERSION'] and not os.environ['READBACK_VERSION'], 'occupancy mode excludes publish/readback modes'
+          PYGUARD
+      - name: Set up signature verifier only
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.401"
+      - name: Authenticate original candidate and run strict read-only occupancy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CANDIDATE_RUN: ${{ inputs.occupancy_candidate_run }}
+          CANDIDATE_SHA256: ${{ inputs.occupancy_candidate_sha256 }}
+          PUBLISH_VERSION: ${{ inputs.version }}
+          READBACK_VERSION: ${{ inputs.readback_version }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/occupancy-preflight
+          python3 scripts/preflight-retained-occupancy.py \
+            --run-id "$CANDIDATE_RUN" --archive-sha256 "$CANDIDATE_SHA256" \
+            --publish-version "$PUBLISH_VERSION" --readback-version "$READBACK_VERSION" \
+            --destination artifacts/occupancy-preflight/selected \
+            > artifacts/occupancy-preflight/result.json
+      - name: Retain the bounded original preflight disposition
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sdd-retained-occupancy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/occupancy-preflight/result.json
+          if-no-files-found: warn
+          retention-days: 30
