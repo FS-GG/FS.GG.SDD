@@ -42,6 +42,22 @@ def check(text):
     require(publish.count('dotnet nuget push')==8,'four-member dual-feed effect population drift')
     for package in ['Artifacts','Commands','Cli','Knowledge']:
         require(publish.count(f'dotnet nuget push "artifacts/packages/FS.GG.SDD.{package}.*.nupkg"')==2,f'{package} feed legs lose exact retained archive')
+    occupancy=jobs.get('occupancy-preflight','')
+    require('actions: read' in occupancy and 'packages: read' in occupancy
+            and 'contents: read' in occupancy and ': write' not in occupancy,
+            'occupancy-only job lacks minimal read permissions')
+    require('timeout-minutes: 6' in occupancy and 'preflight-retained-occupancy.py' in occupancy,
+            'occupancy-only job lacks bounded maintained runner')
+    require('dotnet pack' not in occupancy and 'nuget push' not in occupancy
+            and 'NuGet/login' not in occupancy, 'occupancy-only job reaches release effects')
+    require("github.event_name == 'workflow_dispatch'" in occupancy,
+            'occupancy-only mode is not an explicit manual selection')
+    for name in ['resolve-versions','contracts-tests','artifacts-tests','commands-tests','cli-tests',
+                 'knowledge-tests','publish-artifacts','locate-artifacts','publish-cli','readback-cli']:
+        condition=next((line for line in jobs.get(name,'').splitlines() if line.strip().startswith('if:')), '')
+        require("inputs.occupancy_candidate_run == ''" in condition
+                and "inputs.occupancy_candidate_sha256 == ''" in condition,
+                f'{name} can run during occupancy-only selection')
     require('for id in fs.gg.sdd.artifacts fs.gg.sdd.commands fs.gg.sdd.cli fs.gg.sdd.knowledge; do' in publish,'readback excludes an SDD member')
     require('artifacts/packages/contracts-reuse.json' in publish and 'artifacts/packages/dependencies/*.nupkg' in publish,'durable receipt loses dependency provenance')
 

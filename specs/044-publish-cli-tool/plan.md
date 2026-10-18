@@ -1,5 +1,25 @@
 # Implementation Plan: Publish the `fsgg-sdd` CLI as a dotnet tool
 
+## Bounded retained occupancy extension — issue1113
+
+Extend the existing release workflow, custody verifier and strict occupancy checker;
+add no workflow, release rail or product API. Two optional occupancy inputs select
+one read-only job and exclude all existing jobs even on malformed partial input.
+A small runner bounds/authenticates the original candidate archive and calls the
+existing custody verifier before strict `--candidate` occupancy. The SDK setup is
+only for signature verification. Original source/candidate identities and Unknown
+occupancy survive independently of the current workflow checkout.
+
+Preflight choice: existing static custody checks plus semantic runner/negative
+guard controls. They catch unintended release-job reachability, malformed/mixed
+inputs, failed/foreign runs, incomplete/duplicate/expired artifacts, substituted
+ZIP bytes/paths/source, failed custody and Unknown feed access before expensive
+restore/build gates. A custom scheduling model would add little for this isolated
+sequential read-only path; no savings are asserted. Initial source-control effort
+cap30minutes; expected offline runtime under1second. Wire runner controls before
+SDK setup in the normal gate. Keep actual runtime/occupancy separate from these
+synthetic controls and source delivery. No F# signatures/baselines/migrations apply.
+
 **Branch**: `044-publish-cli-tool` | **Date**: 2026-06-28 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `specs/044-publish-cli-tool/spec.md`

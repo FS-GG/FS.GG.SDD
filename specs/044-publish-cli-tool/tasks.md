@@ -1,4 +1,14 @@
 ---
+
+## Scoped retained occupancy work — issue1113
+
+- [x] Specify exclusive read-only inputs and original candidate/source boundary in the existing contract.
+- [x] Add runner and early semantic guard controls before effectful workflow preparation.
+- [x] Reuse actual custody and strict occupancy verifiers without candidate-only Unknown allowance.
+- [x] Verify offline good/bad runner, mode isolation and existing custody/occupancy controls.
+- [ ] Complete normal source review and required protected checks.
+- Actual authenticated occupancy dispatch, distribution and consumer retries are separately selected operations; none is a completion claim of this source slice.
+
 description: "Task list for Publish the fsgg-sdd CLI as a dotnet tool to the org feed"
 ---
 

@@ -40,6 +40,11 @@ jobs:
       - name: Lockfile-sync gating (a kit bump must not carry a lockfile repair)
         run: bash scripts/tests/lockfile-sync-gating.test.sh
 
+      - name: Retained occupancy runner and effect-isolation controls
+        run: |
+          python3 scripts/check-release-custody.py
+          python3 scripts/tests/retained-occupancy-preflight.test.py
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:

@@ -1,5 +1,26 @@
 # Feature Specification: Publish the `fsgg-sdd` CLI as a dotnet tool
 
+## Retained occupancy extension — issue1113
+
+Tier1 release-workflow contract extension, with no product F# API/schema/version
+change: an explicitly selected run ID plus expected original artifact SHA256 can
+request read-only strict feed occupancy for an authenticated retained four-member
+candidate. The original successful producer run, artifact digest, v4 manifest,
+source, archive hashes and independently reused Contracts remain joined. Current
+workflow source must never relabel the old candidate as a new-source build.
+
+Malformed/incomplete/mixed modes must prevent every release/test/pack/readback
+job and refuse before download/verifier setup. Only read permissions are allowed.
+Custody failure blocks occupancy; denied/missing/incomplete feed access cannot
+look verified or establish absence. No publication, promotion, repack, tag change,
+consumer retry or reservation release is selected. The maintained contract's
+read-only section defines inputs and limits; original release gates are unchanged.
+
+Verification uses real runner orchestration with synthetic finite GitHub/candidate
+replies, actual early shell-guard execution and negative workflow-isolation
+mutations, plus existing strict occupancy/custody controls. Actual hosted occupancy
+is a separately selected operation and is not claimed by source delivery.
+
 **Feature Branch**: `044-publish-cli-tool`
 
 **Created**: 2026-06-28

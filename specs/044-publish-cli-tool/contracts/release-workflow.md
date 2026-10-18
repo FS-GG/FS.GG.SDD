@@ -6,6 +6,42 @@ and `FS.GG.SDD.Knowledge`. They share one source-evaluated version.
 `FS.GG.Contracts` 7.6.0 is an already published dependency, never a member to
 repack or push. This contract governs `.github/workflows/release.yml`.
 
+## Read-only retained-candidate occupancy
+
+Manual dispatch may select `occupancy_candidate_run` and
+`occupancy_candidate_sha256` together, leaving `version` and `readback_version`
+empty. This selects only `occupancy-preflight`; every resolver, test, pack,
+candidate-location, publisher and published-version readback job is excluded,
+including when only one occupancy input is supplied. Incomplete, malformed or
+mixed inputs fail before artifact download or signature-verifier setup. The job
+has only contents/actions/packages read permission and a six-minute timeout.
+
+The maintained runner authenticates a successful same-repository manual release
+run and its complete bounded artifact listing, selects exactly one unexpired
+`coherent-sdd-packages-<original-source>` artifact, and requires its native digest
+and downloaded ZIP to match the caller's expected SHA256. It accepts only the nine
+regular retained v4 candidate files with bounded archive/expanded sizes. The
+candidate manifest must bind the original run's source, coherent four-member
+inventory and independent Contracts7.6.0. The current workflow checkout supplies
+verification code; it does not become the old packages' source identity.
+
+After the existing default custody verifier passes, the runner invokes the
+existing strict occupancy checker with `--candidate`. It never uses the
+candidate-only `--no-push-observation` exception. Denied, missing or incomplete
+feed/namespace evidence remains a failed/Unknown preflight. Candidate freshness,
+source/custody and original occupancy receipts are preserved. This mode neither
+repacks nor publishes, promotes, changes a tag, retries a consumer, or authorizes
+any such effect. A successful disposition applies to the selected original bytes
+at its observation time; it is not a later publisher's fresh admission.
+
+The original artifact and selected files remain runner-local data. A compact
+result identifies the original run/artifact/source/hash and outcome, with no
+credential or HTTP response-body capture. The signature-aware checker may invoke
+the pinned SDK verifier; there is no product build, package install or test run.
+The existing `readback_version` mode still requires an already-published version
+tag and cannot substitute for this unpromoted-candidate preflight. Normal
+publication still requires its own same-head candidate and all existing gates.
+
 ## Triggers and source versions
 
 Manual dispatch without `version` runs all gates and packs a no-push candidate.
