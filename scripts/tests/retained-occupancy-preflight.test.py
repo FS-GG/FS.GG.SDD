@@ -60,7 +60,10 @@ class Controls(unittest.TestCase):
 
     def command(self, argv, **kwargs):
         self.calls.append(argv)
-        return subprocess.CompletedProcess(argv, 0, b'synthetic command success\n')
+        output = ('FS.GG.Contracts 7.6.0: qualified published dependency; no push\n'
+                  + ''.join(f'{package} 2.3.0 {feed}: absent\n' for package in runner.PACKAGES
+                            for feed in ['github', 'nuget'])) if len(self.calls) == 2 else 'synthetic custody verified\n'
+        return subprocess.CompletedProcess(argv, 0, output.encode())
 
     def invoke(self, **overrides):
         values = dict(run_id='42', archive_sha256=self.digest, publish_version='', readback_version='')
@@ -78,6 +81,11 @@ class Controls(unittest.TestCase):
         self.assertEqual(self.calls[1][1], str(repo / 'scripts/check-sdd-release-occupancy.py'))
         self.assertIn('--candidate', self.calls[1])
         self.assertNotIn('--no-push-observation', self.calls[1])
+        self.assertEqual(len(result['observations']), 8)
+        self.assertEqual(result['contractsDisposition']['disposition'], 'qualified-published-dependency-no-push')
+        self.assertEqual([row['stage'] for row in result['helpers']], ['custody', 'occupancy'])
+        self.assertEqual(result['helpers'][1]['exitCode'], 0)
+        self.assertEqual(len(result['verifierFiles']), 3)
 
     def test_bad_or_mixed_inputs_never_read_or_launch(self):
         for args in [dict(run_id=''), dict(run_id='42;echo bad'), dict(archive_sha256=''),
@@ -127,15 +135,51 @@ class Controls(unittest.TestCase):
     def test_denied_or_missing_feed_never_looks_verified(self):
         def refused(argv, **kwargs):
             self.calls.append(argv)
-            return subprocess.CompletedProcess(argv, len(self.calls) == 2, b'occupancy unproved HTTP403')
+            return subprocess.CompletedProcess(argv, int(len(self.calls) == 2), b'release occupancy refused: feed access failed with HTTP 403; occupancy unproved')
         self.command = refused
-        with self.assertRaisesRegex(ValueError, 'Unknown'):
+        with self.assertRaisesRegex(runner.Refused, 'Unknown') as failure:
             self.invoke()
+        result = failure.exception.result
+        self.assertEqual(result['outcome'], 'Unknown')
+        self.assertFalse(result['publicationAuthorized'])
+        self.assertEqual(result['helpers'][-1]['stage'], 'occupancy')
+        self.assertEqual(result['helpers'][-1]['exitCode'], 1)
+        self.assertIn('feed access failed with HTTP 403; occupancy unproved', result['helpers'][-1]['diagnostic'])
+        self.assertEqual(result['candidateSource'], head)
+        self.assertEqual(result['archiveSha256'], self.digest)
 
     def test_timeout_never_looks_verified(self):
         self.command = lambda argv, **kwargs: (_ for _ in ()).throw(subprocess.TimeoutExpired(argv, 30))
-        with self.assertRaises(subprocess.TimeoutExpired):
+        with self.assertRaisesRegex(runner.Refused, 'timed out') as failure:
             self.invoke()
+        self.assertTrue(failure.exception.result['helpers'][0]['timedOut'])
+
+    def test_scoped_namespace_cause_survives_original_error_artifact(self):
+        def refused(argv, **kwargs):
+            self.calls.append(argv)
+            return subprocess.CompletedProcess(argv, int(len(self.calls) == 2),
+                b'release occupancy refused: FS.GG.SDD.Commands: scoped GitHub versions unreadable; occupancy unknown\n')
+        self.command = refused
+        with self.assertRaises(runner.Refused) as failure:
+            self.invoke()
+        artifact = json.loads(json.dumps(failure.exception.result))
+        self.assertIn('FS.GG.SDD.Commands: scoped GitHub versions unreadable; occupancy unknown',
+                      artifact['helpers'][-1]['diagnostic'])
+        self.assertFalse(artifact['publicationAuthorized'])
+        self.assertEqual(len(self.calls), 2)
+
+    def test_helper_diagnostic_redacts_credentials_and_refuses_oversize(self):
+        with patch.dict(os.environ, {'GH_TOKEN': 'synthetic-secret-token'}):
+            self.assertEqual(runner.sanitized('Authorization: Bearer synthetic-secret-token'),
+                             'Authorization: Bearer [redacted]')
+        self.command = lambda argv, **kwargs: subprocess.CompletedProcess(argv, 0, b'x' * 16385)
+        with self.assertRaises(runner.Refused) as failure:
+            self.invoke()
+        self.assertEqual(len(failure.exception.result['helpers'][0]['diagnostic']), 16384)
+        self.assertTrue(failure.exception.result['helpers'][0]['diagnosticTruncated'])
+        record = runner.diagnostic_record(b'\xff' * 16384)
+        self.assertLessEqual(record['diagnosticBytes'], 16384)
+        self.assertTrue(record['diagnosticTruncated'])
 
     def test_workflow_isolates_all_other_jobs_and_uses_read_permissions(self):
         text = (repo / '.github/workflows/release.yml').read_text()

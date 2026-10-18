@@ -22,6 +22,46 @@ SCRIPTS = Path(__file__).resolve().parent
 MAX_ARCHIVE = 32 * 1024 * 1024
 
 
+class Refused(ValueError):
+    def __init__(self, reason, result):
+        super().__init__(reason)
+        self.result = dict(result, outcome='Unknown', reason=reason)
+
+
+def sanitized(text):
+    for name in ['GH_TOKEN', 'GITHUB_TOKEN']:
+        value = os.environ.get(name)
+        if value:
+            text = text.replace(value, '[redacted]')
+    text = re.sub(r'(?i)(authorization\s*:\s*(?:bearer|basic)\s+)\S+', r'\1[redacted]', text)
+    return ''.join(character for character in text if character in '\n\t' or ord(character) >= 32)
+
+
+def diagnostic_record(raw):
+    text = sanitized(raw[:16384].decode('utf-8', errors='replace')).encode('utf-8')
+    bounded = text[:16384].decode('utf-8', errors='ignore')
+    return dict(diagnostic=bounded, diagnosticBytes=len(bounded.encode('utf-8')),
+                diagnosticTruncated=len(raw) > 16384 or len(text) > 16384)
+
+
+def typed_observations(text, version, contracts):
+    observations = []
+    dependency = None
+    for line in text.splitlines():
+        if line == f'FS.GG.Contracts {contracts}: qualified published dependency; no push':
+            dependency = dict(packageId='FS.GG.Contracts', version=contracts,
+                              disposition='qualified-published-dependency-no-push')
+        for package in PACKAGES:
+            for feed in ['github', 'nuget']:
+                prefix = f'{package} {version} {feed}: '
+                if line == prefix + 'absent':
+                    observations.append(dict(packageId=package, version=version, feed=feed, status='Absent'))
+                elif line == prefix + 'exact retained payload already present':
+                    observations.append(dict(packageId=package, version=version, feed=feed,
+                                             status='MatchedRetainedPayload'))
+    return observations, dependency
+
+
 def authenticated_reader(suffix, cap):
     token = os.environ.get('GH_TOKEN', '')
     if not token or not os.environ.get('GITHUB_ACTOR'):
@@ -129,19 +169,36 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
         [sys.executable, str(SCRIPTS / 'check-sdd-release-occupancy.py'), version,
          '--contracts-version', contracts, '--candidate', str(destination)],
     ]
+    result = dict(schema='fsgg.sdd.retained-occupancy-preflight/v1', publicationAuthorized=False,
+                  candidateRun=int(run_id), candidateArtifact=artifact['id'],
+                  archiveSha256=archive_sha256, candidateSource=source,
+                  version=version, contractsVersion=contracts,
+                  verificationSource=os.environ.get('GITHUB_SHA'),
+                  verifierFiles={name: hashlib.sha256((SCRIPTS / name).read_bytes()).hexdigest()
+                                 for name in ['preflight-retained-occupancy.py', 'verify-release-candidate.sh',
+                                              'check-sdd-release-occupancy.py']}, helpers=[])
     for index, argv in enumerate(commands):
-        result = command(argv, cwd=SCRIPTS.parent, env=environment, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, timeout=30 if index == 0 else 180, check=False)
-        if len(result.stdout) > 16384:
-            raise ValueError('preflight diagnostic output exceeds fixed bound; occupancy Unknown')
-        if result.returncode:
-            # These maintained helpers emit package identities/refusal reasons, never HTTP bodies or tokens.
-            sys.stderr.write(result.stdout.decode('utf-8', errors='replace'))
-            raise ValueError('original custody refused' if index == 0 else 'strict occupancy refused; disposition Unknown')
-    return dict(outcome='verified-read-only-occupancy', publicationAuthorized=False,
-                candidateRun=int(run_id), candidateArtifact=artifact['id'],
-                archiveSha256=archive_sha256, candidateSource=source,
-                version=version, contractsVersion=contracts)
+        stage = 'custody' if index == 0 else 'occupancy'
+        try:
+            completed = command(argv, cwd=SCRIPTS.parent, env=environment, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, timeout=30 if index == 0 else 180, check=False)
+        except subprocess.TimeoutExpired as error:
+            result['helpers'].append(dict(stage=stage, exitCode=None, timedOut=True,
+                                          **diagnostic_record(error.output or b'')))
+            raise Refused(stage + ' timed out; disposition Unknown', result) from error
+        recorded = diagnostic_record(completed.stdout)
+        result['helpers'].append(dict(stage=stage, exitCode=completed.returncode, timedOut=False,
+                                      capturedBytes=len(completed.stdout), **recorded))
+        if recorded['diagnosticTruncated']:
+            raise Refused('preflight diagnostic output exceeds fixed bound; occupancy Unknown', result)
+        if stage == 'occupancy':
+            result['observations'], result['contractsDisposition'] = typed_observations(recorded['diagnostic'], version, contracts)
+        if completed.returncode:
+            raise Refused('original custody refused' if index == 0 else 'strict occupancy refused; disposition Unknown', result)
+    keys = {(row['packageId'], row['feed']) for row in result['observations']}
+    if len(result['observations']) != 8 or len(keys) != 8 or result['contractsDisposition'] is None:
+        raise Refused('successful checker output lacks complete typed disposition; occupancy Unknown', result)
+    return dict(result, outcome='verified-read-only-occupancy')
 
 
 def main():
@@ -154,6 +211,9 @@ def main():
     args = parser.parse_args()
     try:
         result = preflight(**vars(args))
+    except Refused as error:
+        print(json.dumps(error.result, sort_keys=True))
+        return 1
     except (ValueError, OSError, KeyError, TypeError, zipfile.BadZipFile, subprocess.TimeoutExpired) as error:
         print(json.dumps(dict(outcome='Unknown', publicationAuthorized=False,
                               reason=str(error) if isinstance(error, ValueError) else type(error).__name__)))

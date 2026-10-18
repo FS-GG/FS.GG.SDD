@@ -35,8 +35,12 @@ any such effect. A successful disposition applies to the selected original bytes
 at its observation time; it is not a later publisher's fresh admission.
 
 The original artifact and selected files remain runner-local data. A compact
-result identifies the original run/artifact/source/hash and outcome, with no
-credential or HTTP response-body capture. The signature-aware checker may invoke
+result identifies the original run/artifact/source/hash, verifier source/file
+hashes and outcome. Each original helper stage retains its exit/timeout and
+sanitized diagnostic of at most16KiB, including precise refusal causes. Successful
+strict output is projected into eight typed feed observations and the reused
+Contracts disposition; missing/ambiguous output cannot qualify. No credentials or
+HTTP response bodies are captured. The signature-aware checker may invoke
 the pinned SDK verifier; there is no product build, package install or test run.
 The existing `readback_version` mode still requires an already-published version
 tag and cannot substitute for this unpromoted-candidate preflight. Normal
