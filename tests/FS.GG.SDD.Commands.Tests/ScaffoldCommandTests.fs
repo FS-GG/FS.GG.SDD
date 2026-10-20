@@ -708,7 +708,7 @@ providers:
         let recorded =
             document.RootElement.GetProperty("effectiveParameters").EnumerateArray()
             |> Seq.map (fun row ->
-                let text key =
+                let text (key: string) =
                     row.GetProperty(key).GetString()
                     |> Option.ofObj
                     |> Option.defaultWith (fun () -> failwith "Expected a string parameter field.")
