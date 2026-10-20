@@ -652,13 +652,26 @@ providers:
         let root = TestSupport.tempDirectory ()
         writeRegistry root "literal-values.providers.yml"
         let parameters = [ "productName", "Acme"; "literal", value ]
-        let request values = scaffoldRequest root (Some "fixture") values false true
+
+        let request values =
+            scaffoldRequest root (Some "fixture") values false true
+
         let expected =
-            (if value = "" then [ "--literal"; "" ] else [ "--literal=" + value ])
+            (if value = "" then
+                 [ "--literal"; "" ]
+             else
+                 [ "--literal=" + value ])
             @ [ "--productName=Acme" ]
+
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs (request parameters)))
-        Assert.Equal<string list>(plannedCreateArgs (request parameters), plannedCreateArgs (request (List.rev parameters)))
+
+        Assert.Equal<string list>(
+            plannedCreateArgs (request parameters),
+            plannedCreateArgs (request (List.rev parameters))
+        )
+
         let report = runScaffold (request parameters)
+
         if value = "" then
             Assert.Contains("--literal ''", (scaffoldSummary report).NextActionHint)
         elif value.Contains " " then
@@ -680,12 +693,18 @@ providers:
         Directory.CreateDirectory root |> ignore
         writeRegistry root "literal-values.providers.yml"
         let value = literalValue caseRoot caseName
+
         let parameters =
             [ "productName", "Acme" ]
             @ (if caseName = "default" then [] else [ "literal", value ])
+
         let request =
-            { scaffoldRequest root (Some "fixture") parameters false false with TemplateUpdate = false }
+            { scaffoldRequest root (Some "fixture") parameters false false with
+                TemplateUpdate = false
+            }
+
         let model, report = runScaffoldModel request
+
         let creation =
             model.InterpretedEffects
             |> List.pick (fun result ->
@@ -693,18 +712,30 @@ providers:
                 | RunProcess("dotnet", arguments, _), Some observed when List.contains "-o" arguments ->
                     Some(arguments, observed)
                 | _ -> None)
+
         let arguments, observed = creation
+
         let expectedArguments =
-            (if value = "" then [ "--literal"; "" ] else [ "--literal=" + value ])
+            (if value = "" then
+                 [ "--literal"; "" ]
+             else
+                 [ "--literal=" + value ])
             @ [ "--productName=Acme" ]
+
         Assert.Equal<string list>(expectedArguments, forwardedParamArgs arguments)
         Assert.True(observed.Started)
         Assert.Equal(0, observed.ExitCode)
         Assert.Equal(0, exitCodeForReport report)
         Assert.Equal("product=Acme\nliteral=" + value + "\n", TestSupport.readRelative root "product.txt")
-        Assert.Equal<(string * string) list>([ "literal", value; "productName", "Acme" ], (scaffoldSummary report).EffectiveParameters)
+
+        Assert.Equal<(string * string) list>(
+            [ "literal", value; "productName", "Acme" ],
+            (scaffoldSummary report).EffectiveParameters
+        )
+
         let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
         use document = System.Text.Json.JsonDocument.Parse provenance
+
         let recorded =
             document.RootElement.GetProperty("effectiveParameters").EnumerateArray()
             |> Seq.map (fun row ->
@@ -712,21 +743,34 @@ providers:
                     row.GetProperty(key).GetString()
                     |> Option.ofObj
                     |> Option.defaultWith (fun () -> failwith "Expected a string parameter field.")
+
                 text "key", text "value")
             |> Seq.toList
+
         Assert.Equal<(string * string) list>((scaffoldSummary report).EffectiveParameters, recorded)
+
         if caseName = "existing" then
-            Assert.Equal("--productName ExpandedResponseFile", File.ReadAllText(Path.Combine(caseRoot, "response-sentinel.rsp")))
+            Assert.Equal(
+                "--productName ExpandedResponseFile",
+                File.ReadAllText(Path.Combine(caseRoot, "response-sentinel.rsp"))
+            )
 
     [<Fact; Trait("tier", "slow")>]
     let ``real legacy failure displays original empty and spaced invocation arguments`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "literal-values.providers.yml"
+
         let report =
             runScaffold
-                { scaffoldRequest root (Some "fixture")
-                    [ "productName", "Acme"; "literal", ""; "undeclared", "with spaces" ] false false with
-                    TemplateUpdate = false }
+                { scaffoldRequest
+                      root
+                      (Some "fixture")
+                      [ "productName", "Acme"; "literal", ""; "undeclared", "with spaces" ]
+                      false
+                      false with
+                    TemplateUpdate = false
+                }
+
         Assert.Equal(2, exitCodeForReport report)
         let invocation = (scaffoldSummary report).ProviderInvocation |> Option.get
         Assert.Contains("--literal ''", invocation.CommandLine)
@@ -815,7 +859,11 @@ providers:
                 scaffoldRequest planRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", nonce ] false true
             )
 
-        Assert.Equal<string list>(sddArgs |> List.map (fun a -> if a = "--lifecycle=sdd" then "--lifecycle=" + nonce else a), nonceArgs)
+        Assert.Equal<string list>(
+            sddArgs
+            |> List.map (fun a -> if a = "--lifecycle=sdd" then "--lifecycle=" + nonce else a),
+            nonceArgs
+        )
 
         // End-to-end: same outcome, same produced-path set, same provenance owner shape.
         let runShape value =

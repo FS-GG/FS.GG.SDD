@@ -352,7 +352,10 @@ module internal HandlersScaffold =
         effective
         |> Map.toList
         |> List.collect (fun (key, value) ->
-            if value = "" then [ $"--{key}"; "" ] else [ $"--{key}={value}" ])
+            if value = "" then
+                [ $"--{key}"; "" ]
+            else
+                [ $"--{key}={value}" ])
 
     let scaffoldCreateArguments (descriptor: ProviderDescriptor) effective (request: CommandRequest) =
         [ "new"; descriptor.TemplateId; "-o"; "." ]
@@ -365,12 +368,12 @@ module internal HandlersScaffold =
             if
                 value <> ""
                 && (value
-                    |> Seq.forall (fun character ->
-                        Char.IsLetterOrDigit character || "_./:=@+,-".Contains character))
+                    |> Seq.forall (fun character -> Char.IsLetterOrDigit character || "_./:=@+,-".Contains character))
             then
                 value
             else
                 "'" + value.Replace("'", @"'\''") + "'"
+
         command :: arguments |> List.map display |> String.concat " "
 
     let scaffoldInvocationEffects

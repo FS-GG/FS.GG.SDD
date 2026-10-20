@@ -2321,7 +2321,10 @@ module CatalogScaffoldEffects =
                     // Empty inline suffixes are absent to the SDK; nonempty values must
                     // remain attached so @ values cannot become response-file tokens.
                     |> List.collect (fun (key, value) ->
-                        if value = "" then [ "--" + key; "" ] else [ "--" + key + "=" + value ])
+                        if value = "" then
+                            [ "--" + key; "" ]
+                        else
+                            [ "--" + key + "=" + value ])
 
                 let arguments =
                     (createPrefix |> List.map Linux.Literal)

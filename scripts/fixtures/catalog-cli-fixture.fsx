@@ -242,31 +242,57 @@ match args[0] with
             |})
 
     if args[0] = "generate-literal-parameters" then
-        let commands = Assembly.LoadFrom(Path.Combine(assemblyDirectory, "FS.GG.SDD.Commands.dll"))
+        let commands =
+            Assembly.LoadFrom(Path.Combine(assemblyDirectory, "FS.GG.SDD.Commands.dll"))
+
         let preview =
             invokeModule commands "FS.GG.SDD.Commands.CatalogScaffoldWorkflow" "prepare" [| selection |]
             |> requireOk
+
         let selected = field "Selected" preview |> field "Value"
+
         let effective =
             (field "EffectiveParameters" selected :?> IEnumerable)
             |> Seq.cast<obj>
             |> Seq.map (fun pair -> [| text "Item1" pair; text "Item2" pair |])
             |> Seq.toArray
+
         let values = effective |> Seq.map (fun pair -> pair[0], pair[1]) |> Map.ofSeq
+
         let expected =
-            "raw=" + values["raw"] + "\npackage=" + values["packageIdentity"] + "\ncode=" + values["code"]
-            + "\nempty=" + values["empty"] + "\nliteral=" + values["literal"] + "\n"
+            "raw="
+            + values["raw"]
+            + "\npackage="
+            + values["packageIdentity"]
+            + "\ncode="
+            + values["code"]
+            + "\nempty="
+            + values["empty"]
+            + "\nliteral="
+            + values["literal"]
+            + "\n"
+
         let manifest = JsonNode.Parse(File.ReadAllText args[4])
         manifest["effectiveParameters"] <- JsonSerializer.SerializeToNode effective
+
         manifest["literalParameterControl"] <-
             JsonSerializer.SerializeToNode
                 {|
                     caseName = args[5]
                     expectedProduct = expected
-                    sentinelPath = if args[5] = "existing" then Path.Combine(root, "response-sentinel.rsp") else ""
+                    sentinelPath =
+                        if args[5] = "existing" then
+                            Path.Combine(root, "response-sentinel.rsp")
+                        else
+                            ""
                     sentinelContents = "--raw ExpandedResponseFile"
-                    missingPath = if args[5] = "missing" then Path.Combine(root, "missing-response.rsp") else ""
+                    missingPath =
+                        if args[5] = "missing" then
+                            Path.Combine(root, "missing-response.rsp")
+                        else
+                            ""
                 |}
+
         File.WriteAllText(args[4], manifest.ToJsonString(JsonSerializerOptions(WriteIndented = true)))
 
     if args[0] = "generate-test-handoff" then
