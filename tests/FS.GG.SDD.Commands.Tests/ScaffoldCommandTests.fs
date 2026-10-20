@@ -2756,8 +2756,9 @@ providers:
     // T008 (US1 / Scenario B, SC-001): the FS.GG.SDD#35 reproduction. A template that does
     // NOT declare `productName`, invoked with `--param productName=Acme`, makes the real
     // `dotnet new` engine reject the option — its own wording is surfaced on `standardError`
-    // with no PATH shim and no re-run. Assert-contains, not golden: the engine wording is SDK
-    // data (R7) — a real engine message stands in for any provider's own rejection text.
+    // with no PATH shim and no re-run. Nonempty values use the attached --productName=Acme
+    // argument; assert the invalid-option diagnostic and that exact argument rather than the
+    // SDK wording for a separate token or a whole-output golden (R7).
     [<Fact; Trait("tier", "slow")>]
     let ``scaffold surfaces the dotnet-new invalid-option rejection on stderr_Synthetic`` () =
         let root = TestSupport.tempDirectory ()
@@ -2766,6 +2767,7 @@ providers:
         let report =
             runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
+        Assert.Equal("providerFailed", (scaffoldSummary report).Outcome)
         Assert.Equal(2, exitCodeForReport report)
         let doc, invocation = providerInvocationJson report
         use _ = doc
@@ -2774,11 +2776,16 @@ providers:
             invocation
             |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
 
+        Assert.True(invocation.GetProperty("processStarted").GetBoolean())
+        Assert.NotEqual(0, invocation.GetProperty("exitCode").GetInt32())
+        Assert.Contains("--productName=Acme", invocation.GetProperty("commandLine").GetString())
+
         let combined =
             invocation.GetProperty("standardError").GetString()
             + invocation.GetProperty("standardOutput").GetString()
 
-        Assert.Contains("'--productName' is not a valid option", combined)
+        Assert.Contains("Invalid option(s):", combined)
+        Assert.Contains("--productName=Acme", combined)
 
     // T009a (US1 / Scenario C, R4): a program that cannot start surfaces a real launch
     // failure at the edge — `Started = false`, the attempted command line, and the OS launch
