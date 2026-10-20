@@ -57,3 +57,13 @@ libraries. Ten actual sample commands passed their expected outcomes, including 
 catalog/archive emissions with changed creation order/mtimes, existing-output preservation, input
 refusals and strict real schema2 check. These task results do not close C3.1-03 or C3.1; final2.3
 archive/CLI→Verify qualification, protected source delivery and distribution remain separate.
+
+
+## SDD1115 literal parameter repair
+
+- [ ] Specify Tier1 literal argv, display/provenance and unchanged API/schema boundary.
+- [ ] Exercise existing FSI-declared caller surfaces with semantic assertions before production edits.
+- [ ] Add generic real-template literal fixtures and maintained actual-caller controls.
+- [ ] Implement legacy and catalog argument encoding and narrow legacy display derivation.
+- [ ] After separate admission, run focused compiled tests and both actual SDK10.0.401 callers; retain causal original-split failure.
+- [ ] Obtain independent exact-source review and required full coherent CI; verify source delivery only.

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD synthetic literal fixture",
+  "identity": "FsggSdd.Fixture.LiteralValues",
+  "name": "Literal parameter data fixture",
+  "shortName": "fsgg-fixture-literals",
+  "preferNameDirectory": false,
+  "symbols": {
+    "productName": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "__PRODUCT__",
+      "defaultValue": "template-product"
+    },
+    "literal": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "__LITERAL__",
+      "defaultValue": "template-default"
+    }
+  }
+}

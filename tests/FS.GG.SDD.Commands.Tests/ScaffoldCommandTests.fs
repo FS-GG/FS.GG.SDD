@@ -616,13 +616,167 @@ providers:
             | _ -> None)
         |> Option.defaultWith (fun () -> failwith "Expected a planned provider create effect.")
 
-    /// The forwarded `--key value` parameter segment of a create-arg vector — i.e.
+    /// The forwarded template parameter segment of a create-arg vector — i.e.
     /// everything after the `-o .` output target, with the optional `--force` removed.
     let private forwardedParamArgs createArgs =
         createArgs
         |> List.skipWhile (fun arg -> arg <> ".")
         |> List.skip 1
         |> List.filter (fun arg -> arg <> "--force")
+
+    // These synthetic templates exercise the production template engine, not a routing double.
+    let private literalValue caseRoot caseName =
+        match caseName with
+        | "existing" ->
+            let sentinel = Path.Combine(caseRoot, "response-sentinel.rsp")
+            File.WriteAllText(sentinel, "--productName ExpandedResponseFile")
+            "@" + sentinel
+        | "missing" -> "@" + Path.Combine(caseRoot, "missing-response.rsp")
+        | "spaces" -> "with spaces"
+        | "empty" -> ""
+        | "equals" -> "one=two=three"
+        | "option" -> "--force"
+        | "unicode" -> "λ😀é"
+        | "override" -> "author override"
+        | "default" -> "descriptor-default"
+        | _ -> failwith "Unknown literal fixture case."
+
+    [<Theory>]
+    [<InlineData("@missing")>]
+    [<InlineData("with spaces")>]
+    [<InlineData("")>]
+    [<InlineData("one=two=three")>]
+    [<InlineData("--force")>]
+    [<InlineData("λ😀é")>]
+    let ``legacy planned argv preserves each literal value without response expansion`` value =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "literal-values.providers.yml"
+        let parameters = [ "productName", "Acme"; "literal", value ]
+
+        let request values =
+            scaffoldRequest root (Some "fixture") values false true
+
+        let expected =
+            (if value = "" then
+                 [ "--literal"; "" ]
+             else
+                 [ "--literal=" + value ])
+            @ [ "--productName=Acme" ]
+
+        Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs (request parameters)))
+
+        Assert.Equal<string list>(
+            plannedCreateArgs (request parameters),
+            plannedCreateArgs (request (List.rev parameters))
+        )
+
+        let report = runScaffold (request parameters)
+
+        if value = "" then
+            Assert.Contains("--literal ''", (scaffoldSummary report).NextActionHint)
+        elif value.Contains " " then
+            Assert.Contains("'--literal=with spaces'", (scaffoldSummary report).NextActionHint)
+
+    [<Theory; Trait("tier", "slow")>]
+    [<InlineData("existing")>]
+    [<InlineData("missing")>]
+    [<InlineData("spaces")>]
+    [<InlineData("empty")>]
+    [<InlineData("equals")>]
+    [<InlineData("option")>]
+    [<InlineData("unicode")>]
+    [<InlineData("default")>]
+    [<InlineData("override")>]
+    let ``real legacy template preserves literal parameters and effective provenance`` caseName =
+        let caseRoot = TestSupport.tempDirectory ()
+        let root = Path.Combine(caseRoot, "product")
+        Directory.CreateDirectory root |> ignore
+        writeRegistry root "literal-values.providers.yml"
+        let value = literalValue caseRoot caseName
+
+        let parameters =
+            [ "productName", "Acme" ]
+            @ (if caseName = "default" then [] else [ "literal", value ])
+
+        let request =
+            { scaffoldRequest root (Some "fixture") parameters false false with
+                TemplateUpdate = false
+            }
+
+        let model, report = runScaffoldModel request
+
+        let creation =
+            model.InterpretedEffects
+            |> List.pick (fun result ->
+                match result.Effect, result.Process with
+                | RunProcess("dotnet", arguments, _), Some observed when List.contains "-o" arguments ->
+                    Some(arguments, observed)
+                | _ -> None)
+
+        let arguments, observed = creation
+
+        let expectedArguments =
+            (if value = "" then
+                 [ "--literal"; "" ]
+             else
+                 [ "--literal=" + value ])
+            @ [ "--productName=Acme" ]
+
+        Assert.Equal<string list>(expectedArguments, forwardedParamArgs arguments)
+        Assert.True(observed.Started)
+        Assert.Equal(0, observed.ExitCode)
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.Equal("product=Acme\nliteral=" + value + "\n", TestSupport.readRelative root "product.txt")
+
+        Assert.Equal<(string * string) list>(
+            [ "literal", value; "productName", "Acme" ],
+            (scaffoldSummary report).EffectiveParameters
+        )
+
+        let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
+        use document = System.Text.Json.JsonDocument.Parse provenance
+
+        let recorded =
+            document.RootElement.GetProperty("effectiveParameters").EnumerateArray()
+            |> Seq.map (fun row ->
+                let text (key: string) =
+                    row.GetProperty(key).GetString()
+                    |> Option.ofObj
+                    |> Option.defaultWith (fun () -> failwith "Expected a string parameter field.")
+
+                text "key", text "value")
+            |> Seq.toList
+
+        Assert.Equal<(string * string) list>((scaffoldSummary report).EffectiveParameters, recorded)
+
+        if caseName = "existing" then
+            Assert.Equal(
+                "--productName ExpandedResponseFile",
+                File.ReadAllText(Path.Combine(caseRoot, "response-sentinel.rsp"))
+            )
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``real legacy failure displays original empty and spaced invocation arguments`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "literal-values.providers.yml"
+
+        let report =
+            runScaffold
+                { scaffoldRequest
+                      root
+                      (Some "fixture")
+                      [ "productName", "Acme"; "literal", ""; "undeclared", "with spaces" ]
+                      false
+                      false with
+                    TemplateUpdate = false
+                }
+
+        Assert.Equal(2, exitCodeForReport report)
+        let invocation = (scaffoldSummary report).ProviderInvocation |> Option.get
+        Assert.Contains("--literal ''", invocation.CommandLine)
+        Assert.Contains("'--undeclared=with spaces'", invocation.CommandLine)
+        Assert.True(invocation.ProcessStarted)
+        Assert.NotEqual(Some 0, invocation.ExitCode)
 
     // ---------- Phase 3 / US1: lifecycle forwarded verbatim ----------
 
@@ -659,7 +813,7 @@ providers:
     // T012 (F2 / FR-003 / SC-001 / US1.3): the forwarded `--k v` set equals
     // `effective` exactly — nothing added, dropped, renamed, or reinterpreted.
     [<Fact>]
-    let ``scaffold forwards exactly the effective overlay set as --key value pairs`` () =
+    let ``scaffold forwards exactly the effective overlay set as inline nonempty arguments`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
 
@@ -667,7 +821,7 @@ providers:
             scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false true
 
         // effective = {productName=Acme, lifecycle=sdd}; Map canonicalizes to sorted keys.
-        let expected = [ "--lifecycle"; "sdd"; "--productName"; "Acme" ]
+        let expected = [ "--lifecycle=sdd"; "--productName=Acme" ]
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
 
     // T013 (F3 / FR-008): the forwarded vector is independent of author `--param` order.
@@ -705,7 +859,11 @@ providers:
                 scaffoldRequest planRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", nonce ] false true
             )
 
-        Assert.Equal<string list>(sddArgs |> List.map (fun a -> if a = "sdd" then nonce else a), nonceArgs)
+        Assert.Equal<string list>(
+            sddArgs
+            |> List.map (fun a -> if a = "--lifecycle=sdd" then "--lifecycle=" + nonce else a),
+            nonceArgs
+        )
 
         // End-to-end: same outcome, same produced-path set, same provenance owner shape.
         let runShape value =
@@ -2419,7 +2577,7 @@ providers:
         let request =
             scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true
         // effective = {productName=Acme, variant=alpha}; Map canonicalizes to sorted keys.
-        let expected = [ "--productName"; "Acme"; "--variant"; "alpha" ]
+        let expected = [ "--productName=Acme"; "--variant=alpha" ]
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
 
     // T010b(d) (Edge / no default): a provider/parameter that declares NO default and is
@@ -2598,8 +2756,9 @@ providers:
     // T008 (US1 / Scenario B, SC-001): the FS.GG.SDD#35 reproduction. A template that does
     // NOT declare `productName`, invoked with `--param productName=Acme`, makes the real
     // `dotnet new` engine reject the option — its own wording is surfaced on `standardError`
-    // with no PATH shim and no re-run. Assert-contains, not golden: the engine wording is SDK
-    // data (R7) — a real engine message stands in for any provider's own rejection text.
+    // with no PATH shim and no re-run. Nonempty values use the attached --productName=Acme
+    // argument; assert the invalid-option diagnostic and that exact argument rather than the
+    // SDK wording for a separate token or a whole-output golden (R7).
     [<Fact; Trait("tier", "slow")>]
     let ``scaffold surfaces the dotnet-new invalid-option rejection on stderr_Synthetic`` () =
         let root = TestSupport.tempDirectory ()
@@ -2608,6 +2767,7 @@ providers:
         let report =
             runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
+        Assert.Equal("providerFailed", (scaffoldSummary report).Outcome)
         Assert.Equal(2, exitCodeForReport report)
         let doc, invocation = providerInvocationJson report
         use _ = doc
@@ -2616,11 +2776,16 @@ providers:
             invocation
             |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
 
+        Assert.True(invocation.GetProperty("processStarted").GetBoolean())
+        Assert.NotEqual(0, invocation.GetProperty("exitCode").GetInt32())
+        Assert.Contains("--productName=Acme", invocation.GetProperty("commandLine").GetString())
+
         let combined =
             invocation.GetProperty("standardError").GetString()
             + invocation.GetProperty("standardOutput").GetString()
 
-        Assert.Contains("'--productName' is not a valid option", combined)
+        Assert.Contains("Invalid option(s):", combined)
+        Assert.Contains("--productName=Acme", combined)
 
     // T009a (US1 / Scenario C, R4): a program that cannot start surfaces a real launch
     // failure at the edge — `Started = false`, the attempted command line, and the OS launch
@@ -2664,7 +2829,7 @@ providers:
                 ProviderInvocation =
                     Some
                         {
-                            CommandLine = "dotnet new fsgg-fixture-app -o . --productName Acme"
+                            CommandLine = "dotnet new fsgg-fixture-app -o . --productName=Acme"
                             ProcessStarted = false // SYNTHETIC: create process failed to launch
                             ExitCode = None
                             StandardOutput = ""
@@ -2902,10 +3067,8 @@ providers:
         // Map canonicalizes to sorted keys: productName then rootNamespace.
         let expected =
             [
-                "--productName"
-                "Roquelike-DungeonCrawler"
-                "--rootNamespace"
-                "RoquelikeDungeonCrawler"
+                "--productName=Roquelike-DungeonCrawler"
+                "--rootNamespace=RoquelikeDungeonCrawler"
             ]
 
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
@@ -2920,7 +3083,7 @@ providers:
         let request =
             scaffoldRequest root (Some "fixture") [ "productName", "Acme.Foo" ] false true
 
-        let expected = [ "--productName"; "Acme.Foo"; "--rootNamespace"; "Acme.Foo" ]
+        let expected = [ "--productName=Acme.Foo"; "--rootNamespace=Acme.Foo" ]
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
 
     // T014 (US2 / FR-006 / FR-007): a real run keeps the raw name verbatim in string contexts
@@ -2986,7 +3149,7 @@ providers:
                 true
 
         let expected =
-            [ "--productName"; "Roquelike-DungeonCrawler"; "--rootNamespace"; "Explicit" ]
+            [ "--productName=Roquelike-DungeonCrawler"; "--rootNamespace=Explicit" ]
 
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
 
@@ -3015,7 +3178,7 @@ providers:
             scaffoldRequest root (Some "fixture") [ "productName", "Roquelike-DungeonCrawler" ] false true
 
         // Only the raw name is forwarded, verbatim — no derivation overwrites it.
-        let expected = [ "--productName"; "Roquelike-DungeonCrawler" ]
+        let expected = [ "--productName=Roquelike-DungeonCrawler" ]
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
 
     // Feature 080 backward compat: a provider that declares NO identifierParameter forwards
@@ -3028,7 +3191,7 @@ providers:
         let request =
             scaffoldRequest root (Some "fixture") [ "productName", "Roquelike-DungeonCrawler" ] false true
 
-        let expected = [ "--productName"; "Roquelike-DungeonCrawler" ]
+        let expected = [ "--productName=Roquelike-DungeonCrawler" ]
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
 
     [<Fact; Trait("tier", "slow")>]

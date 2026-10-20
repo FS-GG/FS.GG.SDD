@@ -149,3 +149,26 @@ no-replace publication remain unchanged. Compile Commands immediately after inte
 focused pure archive/cache controls precede the separately selected real Node CLI vertical.
 Identifier grammar, portable tool carrier and other-language evidence remain explicit gaps.
 No package publication/default activation is selected by this source window.
+
+
+## SDD1115: literal template parameter transport
+
+Tier1 transport correction, with existing FSI/API/schema shapes unchanged. Extend
+the existing public-caller semantic tests before implementation, then repair both
+legacy and catalog argument encoding. Legacy planned/failure display derives from
+original RunProcess argv in the handler; no global process renderer change.
+
+Focused semantic tests use Commands.Tests ScaffoldCommandTests and
+CatalogScaffoldRuntimeTests. Real legacy theories carry tier=slow; the maintained
+catalog CLI driver consumes generate-literal-parameters fixture requests for each
+case: existing, missing, spaces, empty, equals, option, unicode, default, override.
+The generator command is `dotnet fsi --exec scripts/fixtures/catalog-cli-fixture.fsx
+generate-literal-parameters <Commands.Tests.dll> <fresh-input-root> <unused-target>
+<manifest.json> <case>`. Each selected runtime uses the existing bounded harness
+and separately admitted exact SDK10.0.401 profile; skipped native facts and pure
+Python controls are not runtime evidence. Retain the original split-encoding causal
+failure and exact source/input/exit/EOF/staging facts for both production callers.
+
+No build/native execution is selected by these source edits. Required full source
+CI remains; its disposable compatibility packages are not retained release custody.
+No version, release, publication or installed adoption is selected.

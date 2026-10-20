@@ -346,6 +346,36 @@ module internal HandlersScaffold =
     let toolManifestText version =
         ScaffoldMutation.toolManifestText version
 
+    // Bind nonempty values before the SDK parser can treat an @-prefixed token as a
+    // response file. The SDK treats --key= as absent, so empty values stay explicit.
+    let templateParameterArguments (effective: Map<string, string>) =
+        effective
+        |> Map.toList
+        |> List.collect (fun (key, value) ->
+            if value = "" then
+                [ $"--{key}"; "" ]
+            else
+                [ $"--{key}={value}" ])
+
+    let scaffoldCreateArguments (descriptor: ProviderDescriptor) effective (request: CommandRequest) =
+        [ "new"; descriptor.TemplateId; "-o"; "." ]
+        @ templateParameterArguments effective
+        @ (if request.Force then [ "--force" ] else [])
+
+    // Diagnostic display only: execution always consumes the original ArgumentList.
+    let renderInvocation command arguments =
+        let display (value: string) =
+            if
+                value <> ""
+                && (value
+                    |> Seq.forall (fun character -> Char.IsLetterOrDigit character || "_./:=@+,-".Contains character))
+            then
+                value
+            else
+                "'" + value.Replace("'", @"'\''") + "'"
+
+        command :: arguments |> List.map display |> String.concat " "
+
     let scaffoldInvocationEffects
         (request: CommandRequest)
         (descriptor: ProviderDescriptor)
@@ -360,20 +390,7 @@ module internal HandlersScaffold =
         // process drives the outcome.
         let updateEffect = RunProcess("dotnet", [ "new"; "update" ], "")
 
-        // `dotnet new` exposes each declared template symbol as a `--<symbol>` option;
-        // it has no MSBuild-style `-p:k=v` passthrough (in SDK 10 `-p` is merely the
-        // auto-generated short alias of the first parameter, so `-p:k=v` is mis-parsed
-        // as that option's value). Forward each effective param as a verbatim
-        // `--<key> <value>` pair so the author's value reaches the child unchanged.
-        let parameterArgs =
-            effective
-            |> Map.toList
-            |> List.collect (fun (key, value) -> [ $"--{key}"; value ])
-
-        let createArgs =
-            [ "new"; descriptor.TemplateId; "-o"; "." ]
-            @ parameterArgs
-            @ (if request.Force then [ "--force" ] else [])
+        let createArgs = scaffoldCreateArguments descriptor effective request
 
         // install (+ update by default; skipped by `--no-update`), then the SDD
         // skeleton with its root ignore seed deliberately staged, then the create. The
@@ -396,15 +413,7 @@ module internal HandlersScaffold =
         (effective: Map<string, string>)
         (request: CommandRequest)
         =
-        let parameters =
-            effective
-            |> Map.toList
-            |> List.map (fun (key, value) -> $"--{key} {value}")
-            |> String.concat " "
-
-        let parameterSegment = if parameters = "" then "" else " " + parameters
-        let forceSegment = if request.Force then " --force" else ""
-        $"dotnet new {descriptor.TemplateId} -o .{parameterSegment}{forceSegment}"
+        renderInvocation "dotnet" (scaffoldCreateArguments descriptor effective request)
 
     let private rootGitignorePath = ".gitignore"
 
@@ -1151,13 +1160,23 @@ module internal HandlersScaffold =
 
         let requiredMinimum = resolvedRequiredMinimumCliVersion descriptor
 
+        let createResult =
+            model.InterpretedEffects
+            |> List.tryFind (fun result -> isCreateProcess result.Effect)
+
         // Project the edge's captured `ProcessRunResult` into the report's provider-defect
         // diagnostic facts (E1). `ExitCode` is `Some` only when the process actually
         // started, so a never-launched provider surfaces `null` — never a spurious `0`
         // (FR-003).
         let providerInvocationOf (processResult: ProcessRunResult) : ProviderInvocationResult =
             {
-                CommandLine = processResult.Command
+                CommandLine =
+                    createResult
+                    |> Option.bind (fun result ->
+                        match result.Effect with
+                        | RunProcess(command, arguments, _) -> Some(renderInvocation command arguments)
+                        | _ -> None)
+                    |> Option.defaultValue processResult.Command
                 ProcessStarted = processResult.Started
                 ExitCode =
                     if processResult.Started then
@@ -1234,10 +1253,6 @@ module internal HandlersScaffold =
 
             FinalizeTerminal(summary, [], [])
         else
-            let createResult =
-                model.InterpretedEffects
-                |> List.tryFind (fun result -> isCreateProcess result.Effect)
-
             let createProcess = createResult |> Option.bind (fun result -> result.Process)
 
             match createProcess with
