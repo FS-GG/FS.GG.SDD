@@ -69,3 +69,18 @@ values are split only at the first equals sign and empty values are preserved. P
 without a provider, duplicate valued options and unsupported options refuse with located
 diagnostics. Success reports `prepared` and `observations: null`, never provider success.
 `scaffold --catalog` is unavailable and refuses before file or process effects.
+
+
+## SDD1115: literal template parameter transport
+
+Forward every nonempty effective value as one literal `--key=value` argument.
+Forward an empty value as `--key` followed by an explicit empty argument: the SDK
+interprets an empty inline suffix as absent. Never pass values through a shell or
+response file, or add quotes inside argv. Defaults, author overrides and sorted key
+order retain their existing semantics; invalid-key/collision refusals stay before
+invocation. Human command displays quote argument boundaries, while catalog
+invocation provenance retains the actual ordered string vector. Existing descriptor,
+report and provenance versions remain unchanged; historical documents still parse.
+
+See the SDD1115 acceptance in the owning feature spec for both actual-caller SDK
+literal controls and the separate source/runtime/publication boundaries.

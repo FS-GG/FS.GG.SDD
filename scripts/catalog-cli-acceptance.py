@@ -20,6 +20,23 @@ spec.loader.exec_module(harness)
 EXPECTED_PRODUCT = b'raw=Awkward name!?\npackage=example.org/explicit/module\ncode=IndependentCode\nempty=\nliteral=$(literal);& with spaces\n'
 
 
+def template_parameter_arguments(parameters):
+    """Expected production template argv; empty suffixes are absent to the SDK parser."""
+    return [argument for key, value in parameters
+            for argument in (["--" + key, ""] if value == "" else ["--" + key + "=" + value])]
+
+
+def check_literal_control(fixture, target):
+    control = fixture.get('literalParameterControl')
+    if control is None:
+        return
+    assert (target / 'product.txt').read_bytes() == control['expectedProduct'].encode('utf-8'), 'literal product bytes differ'
+    if control.get('sentinelPath'):
+        assert Path(control['sentinelPath']).read_bytes() == control['sentinelContents'].encode('utf-8'), 'response sentinel changed'
+    if control.get('missingPath'):
+        assert not Path(control['missingPath']).exists(), 'missing response-file control appeared'
+
+
 def fixture_expectations(config):
     selected = config.get('fixtureExpectations')
     if selected is None:
@@ -167,6 +184,8 @@ def main():
         fixture_manifest = fixture_input(config, args.output, original_end, report)
         fixture = json.loads(fixture_manifest.read_text())
         fixture['transportExecutable'] = config['transportExecutable']
+        if 'literalParameterControl' in fixture:
+            expectations['files'] = [{'path': 'product.txt', 'text': fixture['literalParameterControl']['expectedProduct']}]
         report.update(generatorAssemblySha256=fixture['generatorAssemblySha256'],
             cliAssemblySha256=hashlib.sha256(Path(config['cliCommand'][-1]).read_bytes()).hexdigest(),
             archiveSha256=hashlib.sha256(Path(fixture['archive']).read_bytes()).hexdigest())
@@ -279,15 +298,17 @@ def main():
                 assert record['archiveDigest'] == fixture['archiveDigest']
                 assert any(tool['id'] == fixture.get('toolId', 'opaque-tool') and tool['version'] == fixture.get('toolVersion', '10.0.401') for tool in record['tools'])
                 assert record['invocationCount'] > 0 and record['mirroredPaths'] and record['sddOwnedPaths']
-                assert dict(record['effectiveParameters']) == dict(fixture['overrides'])
+                assert record['effectiveParameters'] == sorted(record['effectiveParameters'], key=lambda item: item[0])
+                assert dict(record['effectiveParameters']) == dict(fixture.get('effectiveParameters', fixture['overrides']))
                 creation = [inv for inv in record['invocations'] if '--output' in inv['arguments']]
                 assert len(creation) == 1 and creation[0]['exitCode'] == 0
                 prefix = ['new', fixture.get('templateId', 'fsgg-catalog-opaque-fixture'), '--output', 'workspace',
                           '--no-update-check', '--debug:custom-hive', 'engine']
-                parameters = [item for key, value in record['effectiveParameters'] for item in ['--' + key, value]]
+                parameters = template_parameter_arguments(record['effectiveParameters'])
                 assert creation[0]['arguments'] == prefix + parameters
                 assert creation[0]['executable'] == 'dotnet'
                 check_fixture_product(target, record, expectations)
+                check_literal_control(fixture, target)
                 assert '.config/dotnet-tools.json' in record['sddOwnedPaths']
                 executable_paths = ['scripts/check-claim-generation.py', 'tools/routine-delivery.py']
                 case['executableModes'] = {path: oct((target / path).stat().st_mode & 0o777) for path in executable_paths}

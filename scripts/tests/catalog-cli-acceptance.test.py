@@ -14,6 +14,32 @@ spec.loader.exec_module(driver)
 
 
 class DriverTests(unittest.TestCase):
+    def test_template_creation_argv_keeps_empty_values_and_inlines_nonempty_literals(self):
+        self.assertEqual(['--empty', '', '--equals=a=b', '--literal=@existing.rsp', '--option=--force',
+                          '--spaces=with spaces', '--unicode=λ😀é'],
+                         driver.template_parameter_arguments([['empty', ''], ['equals', 'a=b'],
+                             ['literal', '@existing.rsp'], ['option', '--force'], ['spaces', 'with spaces'],
+                             ['unicode', 'λ😀é']]))
+
+    def test_literal_control_checks_real_bytes_and_preserves_response_sentinel(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sentinel = root / 'existing.rsp'
+            sentinel.write_text('--raw ExpandedResponseFile')
+            expected = 'literal=@' + str(sentinel) + '\n'
+            (root / 'product.txt').write_text(expected)
+            fixture = {'literalParameterControl': {'expectedProduct': expected,
+                'sentinelPath': str(sentinel), 'sentinelContents': sentinel.read_text(),
+                'missingPath': str(root / 'missing.rsp')}}
+            driver.check_literal_control(fixture, root)
+            (root / 'product.txt').write_text('literal=ExpandedResponseFile\n')
+            with self.assertRaisesRegex(AssertionError, 'literal product'):
+                driver.check_literal_control(fixture, root)
+            (root / 'product.txt').write_text(expected)
+            sentinel.write_text('modified')
+            with self.assertRaisesRegex(AssertionError, 'sentinel'):
+                driver.check_literal_control(fixture, root)
+
     def test_literal_empty_and_metacharacter_parameters(self):
         fixture = dict(catalog='/catalog', catalogDigest='catalog-digest', provider='provider', archive='/archive',
                        archiveDigest='archive-digest', policy='/policy', policyDigest='policy-digest', platform='linux-x64',

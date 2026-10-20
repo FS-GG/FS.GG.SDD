@@ -358,3 +358,13 @@ I.3 FSI/prelude exercise step), and real interpreter evidence over a live fixtur
 provider (T016, T029) are all explicit. The new `RunProcess` effect keeps process
 I/O at the edge interpreter (`CommandEffects.fs`), preserving the pure
 `plan`/`update` boundary (constitution V).
+
+
+## SDD1115 literal parameter repair
+
+- [ ] Specify Tier1 literal argv, display/provenance and unchanged API/schema boundary.
+- [ ] Exercise existing FSI-declared caller surfaces with semantic assertions before production edits.
+- [ ] Add generic real-template literal fixtures and maintained actual-caller controls.
+- [ ] Implement legacy and catalog argument encoding and narrow legacy display derivation.
+- [ ] After separate admission, run focused compiled tests and both actual SDK10.0.401 callers; retain causal original-split failure.
+- [ ] Obtain independent exact-source review and required full coherent CI; verify source delivery only.

@@ -292,6 +292,78 @@ module CatalogScaffoldRuntimeTests =
             DryRun = false
         }
 
+    // Synthetic input builder for the maintained actual CLI driver; this does not execute a tool.
+    let private literalParameterRequest root target caseName =
+        let original = request root target
+        let value =
+            match caseName with
+            | "existing" ->
+                let path = Path.Combine(root, "response-sentinel.rsp")
+                File.WriteAllText(path, "--raw ExpandedResponseFile")
+                "@" + path
+            | "missing" -> "@" + Path.Combine(root, "missing-response.rsp")
+            | "spaces" -> "with spaces"
+            | "empty" -> ""
+            | "equals" -> "one=two=three"
+            | "option" -> "--force"
+            | "unicode" -> "λ😀é"
+            | "default" -> "descriptor-default"
+            | "override" -> "author override"
+            | _ -> failwith "Unknown literal fixture case."
+        let catalog =
+            ProviderCatalogIntegrity.verify original.Selection.ExpectedRawDigest original.Selection.CatalogBytes
+            |> Result.defaultWith (fun diagnostics -> failwithf "Original catalog refused: %A" diagnostics)
+        let descriptor = catalog.Providers.Head
+        let changed =
+            { descriptor with
+                Parameters =
+                    descriptor.Parameters
+                    |> List.map (fun parameter ->
+                        if parameter.Key = "literal" then
+                            { parameter with
+                                Default = Some "descriptor-default"
+                                Validation = { parameter.Validation with NonEmpty = false; MinLength = 0; MaxLength = 4096 } }
+                        else parameter) }
+        let sealedDescriptor =
+            { changed with DescriptorDigest = ProviderCatalogIntegrity.digest (ProviderCatalogIntegrity.descriptorBytes changed) }
+        let canonical = ProviderCatalogIntegrity.catalogBytes { catalog with Providers = [ sealedDescriptor ] }
+        let complete = JsonNode.Parse(Encoding.UTF8.GetString canonical) |> nonNull
+        complete["digest"] <- JsonValue.Create(ProviderCatalogIntegrity.digest canonical)
+        let bytes = Encoding.UTF8.GetBytes(complete.ToJsonString())
+        let overrides = original.Selection.Overrides |> List.filter (fun (key, _) -> key <> "literal")
+        { original with
+            Selection =
+                { original.Selection with
+                    CatalogBytes = bytes
+                    ExpectedRawDigest = ProviderCatalogIntegrity.digest bytes
+                    Overrides = overrides @ (if caseName = "default" then [] else [ "literal", value ]) } }
+
+    [<Theory>]
+    [<InlineData("existing")>]
+    [<InlineData("missing")>]
+    [<InlineData("spaces")>]
+    [<InlineData("empty")>]
+    [<InlineData("equals")>]
+    [<InlineData("option")>]
+    [<InlineData("unicode")>]
+    [<InlineData("default")>]
+    [<InlineData("override")>]
+    let ``catalog literal controls use production preparation and preserve input order independence`` caseName =
+        let root = TestSupport.tempDirectory ()
+        let original = literalParameterRequest root (Path.Combine(root, "product")) caseName
+        let prepared selection =
+            CatalogScaffoldWorkflow.prepare selection
+            |> Result.defaultWith (fun diagnostics -> failwithf "Literal fixture refused: %A" diagnostics)
+            |> fun preview -> preview.Selected |> Option.get
+        let one = prepared original.Selection
+        let two = prepared { original.Selection with Overrides = List.rev original.Selection.Overrides }
+        Assert.Equal<(string * string) list>(one.EffectiveParameters, two.EffectiveParameters)
+        let effective = Map.ofList one.EffectiveParameters
+        Assert.Equal("", effective["empty"])
+        if caseName = "empty" then Assert.Equal("", effective["literal"])
+        if caseName = "default" then Assert.Equal("descriptor-default", effective["literal"])
+        if caseName = "override" then Assert.Equal("author override", effective["literal"])
+
     // Synthetic declarations; the CLI must independently observe this selected real executable.
     let private testHandoffRequest root target (executable: string) (inputBytes: byte array) =
         if not (Path.IsPathFullyQualified executable) then

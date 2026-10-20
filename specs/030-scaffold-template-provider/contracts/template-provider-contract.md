@@ -33,7 +33,7 @@ A provider MUST declare:
 (`dotnet new install <source>` then a best-effort `dotnet new update` to upgrade an
 already-installed, e.g. NuGet-sourced, package to its latest version — its result is
 ignored, since up-to-date/offline is not a failure), then invokes
-`dotnet new <templateId> -o <targetDir> -p:<key>=<value> …` (`--force` only when the
+`dotnet new <templateId> -o <targetDir> --<key>=<nonempty-value> …` (`--force` only when the
 author opted in). A non-`dotnet new` provider may realize these inputs by any
 transport, provided it honors the same outputs below.
 
@@ -98,3 +98,18 @@ realization of this same contract: the descriptor would name an executable; SDD 
 pass the Scaffold Request as versioned JSON on stdin and read the Scaffold Result as
 versioned JSON on stdout. The report, provenance, diagnostics, and outcome state machine
 are transport-independent and would not change.
+
+
+## SDD1115: literal template parameter transport
+
+Forward every nonempty effective value as one literal `--key=value` argument.
+Forward an empty value as `--key` followed by an explicit empty argument: the SDK
+interprets an empty inline suffix as absent. Never pass values through a shell or
+response file, or add quotes inside argv. Defaults, author overrides and sorted key
+order retain their existing semantics; invalid-key/collision refusals stay before
+invocation. Human command displays quote argument boundaries, while catalog
+invocation provenance retains the actual ordered string vector. Existing descriptor,
+report and provenance versions remain unchanged; historical documents still parse.
+
+See the SDD1115 acceptance in the owning feature spec for both actual-caller SDK
+literal controls and the separate source/runtime/publication boundaries.

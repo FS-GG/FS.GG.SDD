@@ -1,0 +1,2 @@
+product=__PRODUCT__
+literal=__LITERAL__
