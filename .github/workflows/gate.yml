@@ -309,6 +309,11 @@ jobs:
             '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' \
             "$RUNNER_TEMP/quint-q2-tools/lmt" | sha256sum --check --strict
           dotnet tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-q2-tools/fable"
+          selected_sdk="$(dotnet --version)"
+          python3 scripts/tests/verify-fable-tool.test.py \
+            --archive "$RUNNER_TEMP/quint-q2-tools/fable/.store/fable/5.13.0/fable/5.13.0/Fable.nupkg" \
+            --sdk-template "$DOTNET_ROOT/sdk/$selected_sdk/AppHostTemplate/apphost" \
+            --fixture-parent "$RUNNER_TEMP"
 
       - name: Qualify the Linux user and network namespace sandbox
         run: |

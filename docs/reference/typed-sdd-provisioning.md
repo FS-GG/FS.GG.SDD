@@ -70,6 +70,15 @@ rolls back files it created on an observed write failure. A process crash can ex
 `author` refuses; rerunning provision safely completes the set from verified inputs. Existing exact objects are
 retained and their executable mode is repaired. Profile-1 workspaces do not use or change this cache contract.
 
+Fable tool identity is the pinned public package and its complete restored payload, plus the
+launcher binding produced from the selected SDK apphost template. A launcher hash alone
+is not a package identity: the same Fable version gets different launcher bytes with a
+different SDK template. `scripts/verify-fable-tool.py` authenticates the package archive,
+restored bytes and exact relative entry point before Fable executes. It reports the
+selected SDK, template and launcher hashes on failure; successful version output alone
+does not satisfy this check. The pure controls cover relocation, template changes,
+modified payloads and fake version reporters without running those fixtures.
+
 Fable is outside the author/inspect cache and remains an explicit correspondence-test dependency. Install
 `fable` 5.13.0 in the isolated qualification tool path; do not accept an ambient version:
 

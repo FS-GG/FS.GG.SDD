@@ -12,7 +12,8 @@ sha() { sha256sum "$1" | cut -d' ' -f1; }
 
 [[ "$(sha "$QUINT_BIN")" == '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' ]] || fail 'wrong Quint object'
 [[ "$(sha "$LMT_BIN")" == '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' ]] || fail 'wrong lmt object'
-[[ "$(sha "$FABLE_BIN")" == '28f7d8bd23ca801cd3c3d86dbdd053fbdebeacb6f1c7ceffe903b3af69f75451' ]] || fail 'wrong Fable launcher'
+fable_identity="$(python3 "$repo_root/scripts/verify-fable-tool.py" --tool "$FABLE_BIN")" \
+  || fail 'Fable package/SDK launcher identity refused'
 
 version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' "$repo_root/Directory.Build.local.props" | head -1)"
 [[ -n "$version" ]] || fail 'coherent package version is absent'
