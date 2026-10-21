@@ -6,13 +6,15 @@ repo_root="$(git rev-parse --show-toplevel)"
 : "${QUINT_BIN:?preseed exact Quint 0.32.0 binary in QUINT_BIN}"
 : "${LMT_BIN:?preseed exact lmt binary in LMT_BIN}"
 : "${FABLE_BIN:?preseed exact Fable 5.13.0 executable in FABLE_BIN}"
+: "${FABLE_SDK_BINDING:?preseed retained SDK provision binding in FABLE_SDK_BINDING}"
 
 fail() { printf 'SVG-WORKSPACE-QUINT-REFUSAL: %s\n' "$*" >&2; exit 1; }
 sha() { sha256sum "$1" | cut -d' ' -f1; }
 
 [[ "$(sha "$QUINT_BIN")" == '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' ]] || fail 'wrong Quint object'
 [[ "$(sha "$LMT_BIN")" == '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' ]] || fail 'wrong lmt object'
-[[ "$(sha "$FABLE_BIN")" == '28f7d8bd23ca801cd3c3d86dbdd053fbdebeacb6f1c7ceffe903b3af69f75451' ]] || fail 'wrong Fable launcher'
+fable_identity="$(python3 "$repo_root/scripts/verify-fable-tool.py" --tool "$FABLE_BIN" --sdk-binding "$FABLE_SDK_BINDING")" \
+  || fail 'Fable package/SDK launcher identity refused'
 
 version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' "$repo_root/Directory.Build.local.props" | head -1)"
 [[ -n "$version" ]] || fail 'coherent package version is absent'
@@ -63,6 +65,7 @@ if [[ "${SVG_WORKSPACE_OFFLINE_STAGE:-0}" != '1' ]]; then
     QUINT_BIN="$QUINT_BIN"
     LMT_BIN="$LMT_BIN"
     FABLE_BIN="$FABLE_BIN"
+    FABLE_SDK_BINDING="$FABLE_SDK_BINDING"
     Q3_PACKAGE_SOURCE="$package_source"
     Q2_JUNIT_OUT="${Q2_JUNIT_OUT:-}"
     Q2_EXACT_IR_JUNIT_OUT="${Q2_EXACT_IR_JUNIT_OUT:-}"

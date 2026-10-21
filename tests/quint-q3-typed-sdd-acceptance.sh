@@ -10,13 +10,16 @@ repo_root="$(git rev-parse --show-toplevel)"
 : "${QUINT_BIN:?preseed exact Quint 0.32.0 binary in QUINT_BIN}"
 : "${LMT_BIN:?preseed exact lmt binary in LMT_BIN}"
 : "${FABLE_BIN:?preseed exact Fable 5.13.0 executable in FABLE_BIN}"
+: "${FABLE_SDK_BINDING:?preseed retained SDK provision binding in FABLE_SDK_BINDING}"
 
 fail() { printf 'Q3-ACCEPTANCE-REFUSAL: %s\n' "$*" >&2; exit 1; }
 sha() { sha256sum "$1" | cut -d' ' -f1; }
 
 [[ "$(sha "$QUINT_BIN")" == '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' ]] || fail 'wrong Quint cache object'
 [[ "$(sha "$LMT_BIN")" == '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' ]] || fail 'wrong lmt cache object'
-[[ "$(sha "$FABLE_BIN")" == '28f7d8bd23ca801cd3c3d86dbdd053fbdebeacb6f1c7ceffe903b3af69f75451' ]] || fail 'wrong Fable 5.13.0 launcher'
+fable_identity="$(python3 "$repo_root/scripts/verify-fable-tool.py" --tool "$FABLE_BIN" --sdk-binding "$FABLE_SDK_BINDING")" \
+  || fail 'Fable package/SDK launcher identity refused'
+fable_evidence="$(printf '%s' "$fable_identity" | python3 -c 'import json,sys; v=json.load(sys.stdin); print(json.dumps({k:v[k] for k in ["version","packageSha256","launcherSha256","sdkRoot","sdkVersion","sdkTemplateSha256"]},separators=(",",":")))')"
 NO_COLOR=1 "$FABLE_BIN" --version 2>&1 | grep -F '5.13.0' >/dev/null || fail 'wrong Fable executable version'
 
 # Q3 inherits, rather than approximates, Q2's installed compiler, reviewed replay, and
@@ -116,7 +119,7 @@ grep -F '"origin": "github:informalsystems/quint@v0.32.0"' "$scratch/provision.j
 grep -F '"origin": "github:driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c"' "$scratch/provision.json" >/dev/null \
   || fail 'installed provision report lacks lmt provenance'
 cat >"$scratch/toolchain-evidence.json" <<EOF
-{"schema":"fsgg.svg-qual.toolchain-evidence/v1","sddPackage":"FS.GG.SDD.Cli/$version","platform":"linux/amd64","profile":"fsgg-quint-profile/2","provisionOperation":"typed-sdd provision","provisionReportSchema":"fsgg.typed-sdd.provision-report/v1","cacheLayout":"objects/<sha256>","quint":{"version":"0.32.0","sha256":"939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f"},"lmt":{"source":"github:driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c","sourceSha256":"88bc47acae2c26919ab96a5cafa80b12fac762092c57840a2baad1afcc7feda3","goVersion":"1.24.1","goArchiveSha256":"cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073","cgoEnabled":"1","sha256":"37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"},"fable":{"version":"5.13.0","launcherSha256":"28f7d8bd23ca801cd3c3d86dbdd053fbdebeacb6f1c7ceffe903b3af69f75451"}}
+{"schema":"fsgg.svg-qual.toolchain-evidence/v1","sddPackage":"FS.GG.SDD.Cli/$version","platform":"linux/amd64","profile":"fsgg-quint-profile/2","provisionOperation":"typed-sdd provision","provisionReportSchema":"fsgg.typed-sdd.provision-report/v1","cacheLayout":"objects/<sha256>","quint":{"version":"0.32.0","sha256":"939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f"},"lmt":{"source":"github:driusan/lmt@62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c","sourceSha256":"88bc47acae2c26919ab96a5cafa80b12fac762092c57840a2baad1afcc7feda3","goVersion":"1.24.1","goArchiveSha256":"cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073","cgoEnabled":"1","sha256":"37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"},"fable":$fable_evidence}
 EOF
 
 "$cli" typed-sdd provision --cache "$scratch/cache" --quint "$QUINT_BIN" --lmt "$LMT_BIN" \

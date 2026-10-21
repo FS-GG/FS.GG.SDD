@@ -70,10 +70,29 @@ rolls back files it created on an observed write failure. A process crash can ex
 `author` refuses; rerunning provision safely completes the set from verified inputs. Existing exact objects are
 retained and their executable mode is repaired. Profile-1 workspaces do not use or change this cache contract.
 
+Fable tool identity is the pinned public package and its complete restored payload, plus the
+launcher binding produced from the selected SDK apphost template. A launcher hash alone
+is not a package identity: the same Fable version gets different launcher bytes with a
+different SDK template. `scripts/verify-fable-tool.py` authenticates the package archive,
+restored bytes and exact relative entry point before Fable executes. It reports the
+selected SDK, template and launcher hashes on failure; successful version output alone
+does not satisfy this check. The trusted provisioning step writes an exclusive SDK binding
+with the provisioned root, selected version, dotnet host hash and template hash. Both
+callers require that retained binding, preserve it through offline recursion and reject
+PATH substitution or changed template bytes. Verification never derives SDK authority
+from PATH or creates a replacement binding. Paths and file types are checked before
+identity reads, including refusal diagnostics. The pure controls cover relocation, template changes,
+modified payloads and fake version reporters without running those fixtures.
+
 Fable is outside the author/inspect cache and remains an explicit correspondence-test dependency. Install
 `fable` 5.13.0 in the isolated qualification tool path; do not accept an ambient version:
 
 ```sh
-dotnet tool install fable --version 5.13.0 --tool-path ./fable-5.13.0
+"$DOTNET_ROOT/dotnet" tool install fable --version 5.13.0 --tool-path ./fable-5.13.0
+python3 scripts/verify-fable-tool.py --write-sdk-binding ./fable-sdk-binding.json \
+  --provisioned-root "$DOTNET_ROOT" --sdk-version "$("$DOTNET_ROOT/dotnet" --version)"
+export FABLE_SDK_BINDING="$PWD/fable-sdk-binding.json"
+python3 scripts/verify-fable-tool.py --tool ./fable-5.13.0/fable \
+  --sdk-binding "$FABLE_SDK_BINDING"
 ./fable-5.13.0/fable --version
 ```
