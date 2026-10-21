@@ -8,7 +8,6 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
-import subprocess
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -52,12 +51,59 @@ def reconstruct(template, relative_entry):
     return template[:offset] + entry + bytes(1024 - len(entry)) + template[offset + 1024:]
 
 
-def verify(tool, sdk_template, sdk_version):
+def load_binding(path):
+    require(path is not None, 'provisioned SDK binding is required')
+    path = Path(path)
+    regular(path)
+    require(path.stat().st_size <= 16384 and path.stat().st_uid == os.getuid()
+            and not path.stat().st_mode & 0o022, 'unsafe provisioned SDK binding')
+    binding = json.loads(path.read_text())
+    require(binding.get('schema') == 'fsgg.fable-sdk-binding/1', 'wrong SDK binding schema')
+    root = Path(binding['sdkRoot'])
+    version = binding['sdkVersion']
+    require(root.is_absolute() and str(root) == os.path.abspath(root)
+            and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', version), 'invalid bound SDK identity')
+    require(binding['dotnetPath'] == str(root / 'dotnet') and binding['sdkTemplatePath'] ==
+            str(root / 'sdk' / version / 'AppHostTemplate' / 'apphost'), 'foreign SDK binding path')
+    require(all(re.fullmatch('[0-9a-f]{64}', binding.get(k, ''))
+                for k in ('dotnetSha256', 'sdkTemplateSha256')), 'invalid bound SDK digest')
+    regular(Path(binding['dotnetPath']))
+    regular(Path(binding['sdkTemplatePath']))
+    return binding
+
+
+def write_binding(root, version, destination):
+    root = Path(os.path.abspath(root))
+    require(re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', version), 'invalid provisioned SDK version')
+    dotnet = root / 'dotnet'
+    template = root / 'sdk' / version / 'AppHostTemplate' / 'apphost'
+    regular(dotnet)
+    regular(template)
+    binding = {'schema': 'fsgg.fable-sdk-binding/1', 'sdkRoot': str(root), 'sdkVersion': version,
+               'dotnetPath': str(dotnet), 'dotnetSha256': digest(dotnet),
+               'sdkTemplatePath': str(template), 'sdkTemplateSha256': digest(template)}
+    descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, 'w') as stream:
+        json.dump(binding, stream, sort_keys=True)
+        stream.write('\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+    return binding
+
+
+def verify(tool, binding_path):
     tool = Path(os.path.abspath(tool))
-    sdk_template = Path(os.path.abspath(sdk_template))
+    binding = load_binding(binding_path)
+    sdk_template = Path(binding['sdkTemplatePath'])
     regular(tool)
-    regular(sdk_template)
+    # Inspect path and file types before any diagnostic or payload digest read.
     require(tool.name == 'fable' and os.access(tool, os.X_OK), 'expected executable fable launcher')
+    path_dotnet = shutil.which('dotnet')
+    require(path_dotnet is not None and os.path.abspath(path_dotnet) == binding['dotnetPath'], 'PATH dotnet differs from provisioned SDK')
+    identifiers = {'sdkRoot': binding['sdkRoot'], 'sdkVersion': binding['sdkVersion'],
+                   'sdkTemplateSha256': digest(sdk_template), 'launcherSha256': digest(tool)}
+    require(digest(Path(binding['dotnetPath'])) == binding['dotnetSha256'], 'provisioned dotnet bytes changed; identity=' + json.dumps(identifiers))
+    require(identifiers['sdkTemplateSha256'] == binding['sdkTemplateSha256'], 'untrusted SDK template; identity=' + json.dumps(identifiers))
     store = tool.parent / '.store' / 'fable' / VERSION / 'fable' / VERSION
     archives = [p for p in (store / 'Fable.nupkg', store / ('fable.' + VERSION + '.nupkg')) if p.exists() or p.is_symlink()]
     require(archives, 'pinned Fable archive is absent')
@@ -103,33 +149,33 @@ def verify(tool, sdk_template, sdk_version):
     template = sdk_template.read_bytes()
     require(tool.read_bytes() == reconstruct(template, relative), 'launcher does not bind selected SDK template to pinned Fable payload')
     return {'version': VERSION, 'packageSha256': ARCHIVE_SHA256, 'launcherSha256': digest(tool),
-            'sdkVersion': sdk_version, 'sdkTemplateSha256': hashlib.sha256(template).hexdigest(),
+            'sdkRoot': binding['sdkRoot'], 'sdkVersion': binding['sdkVersion'],
+            'sdkTemplateSha256': hashlib.sha256(template).hexdigest(),
             'relativeEntryPoint': relative, 'verifiedPackageFiles': len(expected), 'fableExecuted': False}
-
-
-def selected_sdk():
-    dotnet = shutil.which('dotnet')
-    require(dotnet, 'dotnet SDK is absent')
-    root = Path(dotnet).resolve().parent
-    result = subprocess.run([str(root / 'dotnet'), '--version'], capture_output=True, text=True, timeout=15, check=True)
-    version = result.stdout.strip()
-    require(re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', version), 'unreadable selected SDK version')
-    return root / 'sdk' / version / 'AppHostTemplate' / 'apphost', version
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--tool', required=True)
+    parser.add_argument('--tool')
+    parser.add_argument('--sdk-binding')
+    parser.add_argument('--write-sdk-binding')
+    parser.add_argument('--provisioned-root')
+    parser.add_argument('--sdk-version')
     args = parser.parse_args()
-    identity = {'tool': args.tool}
     try:
-        template, version = selected_sdk()
-        identity.update(sdkVersion=version, sdkTemplate=str(template), sdkTemplateSha256=digest(template),
-                        actualLauncherSha256=digest(Path(args.tool)))
-        print(json.dumps(verify(args.tool, template, version), sort_keys=True))
+        if args.write_sdk_binding:
+            require(args.provisioned_root and args.sdk_version and not args.tool and not args.sdk_binding,
+                    'binding creation requires explicit provisioned root and version only')
+            print(json.dumps(write_binding(args.provisioned_root, args.sdk_version, args.write_sdk_binding), sort_keys=True))
+        else:
+            require(args.tool and args.sdk_binding and not args.provisioned_root and not args.sdk_version,
+                    'tool verification requires retained provisioned SDK binding')
+            print(json.dumps(verify(args.tool, args.sdk_binding), sort_keys=True))
         return 0
-    except (ValueError, OSError, subprocess.SubprocessError, zipfile.BadZipFile) as error:
-        print('FABLE-TOOL-REFUSAL: ' + str(error) + '; identity=' + json.dumps(identity, sort_keys=True), file=sys.stderr)
+    except (ValueError, OSError, KeyError, zipfile.BadZipFile) as error:
+        # Do not open an unvalidated path merely to improve a refusal message.
+        print('FABLE-TOOL-REFUSAL: ' + str(error) + '; inputs=' +
+              json.dumps({'tool': args.tool, 'sdkBinding': args.sdk_binding}, sort_keys=True), file=sys.stderr)
         return 1
 
 
