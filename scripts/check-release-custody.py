@@ -58,6 +58,9 @@ def check(text):
         require("inputs.occupancy_candidate_run == ''" in condition
                 and "inputs.occupancy_candidate_sha256 == ''" in condition,
                 f'{name} can run during occupancy-only selection')
+        require(all("inputs.qualify_" + field + " == ''" in condition
+                    for field in ['published_version', 'candidate_run', 'candidate_sha256', 'candidate_source']),
+                f'{name} can run during published-set qualification')
     require('group: release-coherent-sdd' in text, 'release writers do not share a publication fence')
     for name in ['resolve-versions','contracts-tests','artifacts-tests','commands-tests','cli-tests','knowledge-tests']:
         require('ref: ${{ inputs.promotion_candidate_source || github.sha }}' in jobs[name],
@@ -121,6 +124,46 @@ def check(text):
             'read-only public package qualification gate removed')
     require('for id in fs.gg.sdd.artifacts fs.gg.sdd.commands fs.gg.sdd.cli fs.gg.sdd.knowledge; do' in publish,'readback excludes an SDD member')
     require('artifacts/packages/contracts-reuse.json' in publish and 'artifacts/packages/dependencies/*.nupkg' in publish,'durable receipt loses dependency provenance')
+    # Read-only qualification of an already-published set: no effect, no OIDC, no feed-read secret, same installed gate.
+    qualify = jobs.get('qualify-published', '')
+    require(qualify != '' and "github.event_name == 'workflow_dispatch'" in qualify and 'refs/heads/main' in qualify
+            and 'PYQUALIFY' in qualify, 'published-set qualification is not an explicit protected-main selection')
+    require('contents: read' in qualify and 'actions: read' in qualify and 'packages: read' in qualify
+            and ': write' not in qualify and 'id-token' not in qualify and 'NuGet/login' not in qualify
+            and 'dotnet nuget push' not in qualify and 'dotnet pack' not in qualify
+            and 'persist-credentials: false' in qualify and qualify.count('GH_TOKEN:') == 1,
+            'published-set qualification has publication credentials or effects')
+    require(len(re.findall(r'\bsecrets\b', qualify)) == 1 and qualify.count('secrets.GITHUB_TOKEN') == 1
+            and 'FSGG_PACKAGES_READ' not in qualify and 'NUGET_API_KEY' not in qualify,
+            'published-set qualification references a secret other than the read-only workflow token')
+    require('scripts/qualify-published-set.py' in qualify and '--source "$QUALIFY_SOURCE"' in qualify
+            and '--archive-sha256 "$QUALIFY_SHA256"' in qualify and '--version "$QUALIFY_VERSION"' in qualify
+            and 'verify-release-candidate.sh artifacts/qualified-receipt/packages' in qualify
+            and 'scripts/verify-package-payloads.py' in qualify and 'published-dual-feed-receipt' in qualify,
+            'published-set qualification loses original custody, eight-archive joins or durable receipt')
+    selection = next((line for line in qualify.splitlines() if line.strip().startswith('if:')), '')
+    require("github.repository == 'FS-GG/FS.GG.SDD'" in selection and "inputs.occupancy_candidate_run == ''" in selection
+            and "inputs.occupancy_candidate_sha256 == ''" in selection,
+            'published-set qualification lacks the repository guard or can overlap occupancy-only selection')
+    require("'PUBLISH_VERSION','READBACK_VERSION','PROMOTION_RUN','PROMOTION_SHA256','PROMOTION_SOURCE'" in qualify
+            and 'qualification excludes publish, readback and promotion modes' in qualify,
+            'published-set qualification does not refuse mixed modes')
+    require('"artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.github.nupkg" \\\n'
+            '              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.nuget.nupkg"' in qualify
+            and 'for id in Artifacts Commands Cli Knowledge; do' in qualify,
+            'published-set qualification does not join every package with both feed archives')
+    receipt_step = qualify[qualify.index('      - name: Retain the durable dual-feed receipt'):]
+    receipt_step = receipt_step[:receipt_step.index('\n      - name:', 10)]
+    require('if:' not in receipt_step and 'if-no-files-found: error' in receipt_step,
+            'published-set receipt can be retained without passing custody and eight-archive joins')
+    def installed_gate(job):
+        return job[job.index('      - name: Qualify the public Knowledge CLI and SDK\n'):
+                   job.index('      - name: Retain public qualification evidence')]
+    require(installed_gate(public).replace('${{ needs.resolve-versions.outputs.cli_version }}',
+                                           '${{ inputs.qualify_published_version }}') == installed_gate(qualify),
+            'published-set qualification installed gate drifted from the publisher-following public gate')
+    require('seq 1 99' in publish and 'sleep $(( attempt < 20 ? 15 : 30 ))' in publish and 'seq 1 40' not in publish,
+            'publisher readback wait does not tolerate observed nuget.org indexing lag')
 
 if __name__=='__main__':
     check((Path(__file__).parents[1]/'.github/workflows/release.yml').read_text())

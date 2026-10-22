@@ -44,6 +44,7 @@ jobs:
         run: |
           python3 scripts/check-release-custody.py
           python3 scripts/tests/retained-occupancy-preflight.test.py
+          python3 scripts/tests/published-set-qualification.test.py
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
