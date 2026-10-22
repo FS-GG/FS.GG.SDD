@@ -69,11 +69,18 @@ for old,new in [
  ('bash scripts/verify-knowledge-packages.sh','true # skipped'),
  ('--archive-sha256 "$QUALIFY_SHA256"','--archive-sha256 "$IGNORED"'),
  ('verify-release-candidate.sh artifacts/qualified-receipt/packages','true artifacts/qualified-receipt/packages'),
+ ('              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.nuget.nupkg"','              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.github.nupkg"'),
+ ('      - name: Retain the durable dual-feed receipt of the published set\n','      - name: Retain the durable dual-feed receipt of the published set\n        if: always()\n'),
+ ("PUBLISH_VERSION','READBACK_VERSION','PROMOTION_RUN','PROMOTION_SHA256','PROMOTION_SOURCE']), 'qualification excludes","PUBLISH_VERSION']), 'qualification excludes"),
+ ("github.repository == 'FS-GG/FS.GG.SDD' && github.event_name == 'workflow_dispatch' && (inputs.qualify","github.event_name == 'workflow_dispatch' && (inputs.qualify"),
+ ("inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''\n    runs-on: ubuntu-latest\n    timeout-minutes: 120","inputs.occupancy_candidate_run == ''\n    runs-on: ubuntu-latest\n    timeout-minutes: 120"),
  ('persist-credentials: false','persist-credentials: true')]:
     verdict(lambda old=old,new=new:static.check(qualify_mutation(old,new)),False)
 verdict(lambda:static.check(text.replace('seq 1 99','seq 1 40')),False)
 verdict(lambda:static.check(text.replace(" && inputs.qualify_published_version == ''",'',1)),False)
 verdict(lambda:static.check(text.replace(" && inputs.qualify_candidate_run == ''",'',1)),False)
+verdict(lambda:static.check(text.replace(" && inputs.qualify_candidate_sha256 == ''",'',1)),False)
+verdict(lambda:static.check(text.replace(" && inputs.qualify_candidate_source == ''",'',1)),False)
 for job in ['resolve-versions','publish-artifacts','publish-cli','qualify-public']:
     head_j,tail_j=text.split('\n  '+job+':\n',1)
     mutated=head_j+'\n  '+job+':\n'+tail_j.replace(" && inputs.qualify_published_version == ''",'',1)

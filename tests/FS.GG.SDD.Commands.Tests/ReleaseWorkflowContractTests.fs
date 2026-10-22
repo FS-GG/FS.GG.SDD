@@ -317,6 +317,21 @@ module ReleaseWorkflowContractTests =
         Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" qualify)
         Assert.Contains("published-dual-feed-receipt", qualify)
 
+        Assert.Contains(
+            "\"artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.github.nupkg\" \\\n              \"artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.nuget.nupkg\"",
+            qualify
+        )
+
+        let receiptStep =
+            qualify.Substring(qualify.IndexOf("- name: Retain the durable dual-feed receipt", StringComparison.Ordinal))
+
+        let receiptEnd =
+            receiptStep.IndexOf("\n      - name:", 10, StringComparison.Ordinal)
+
+        Assert.DoesNotContain("if:", receiptStep.Substring(0, receiptEnd))
+        Assert.Contains("github.repository == 'FS-GG/FS.GG.SDD'", qualify)
+        Assert.Contains("qualification excludes publish, readback and promotion modes", qualify)
+
         // The installed-code gate is the publisher-following gate, byte for byte, bound to the selected version.
         let installedGate (job: string) =
             let first =
@@ -350,6 +365,8 @@ module ReleaseWorkflowContractTests =
             let ifLine = workflow.Substring(ifStart, workflow.IndexOf('\n', ifStart) - ifStart)
             Assert.Contains("inputs.qualify_published_version == ''", ifLine)
             Assert.Contains("inputs.qualify_candidate_run == ''", ifLine)
+            Assert.Contains("inputs.qualify_candidate_sha256 == ''", ifLine)
+            Assert.Contains("inputs.qualify_candidate_source == ''", ifLine)
 
         for needle in [ "qualify-published-set.py"; "qualification of an already-published" ] do
             Assert.Contains(needle, contract)

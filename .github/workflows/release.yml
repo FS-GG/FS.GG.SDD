@@ -78,7 +78,7 @@ jobs:
   resolve-versions:
     name: Resolve published Contracts and four coherent SDD versions
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && (inputs.readback_version == '' || inputs.promotion_candidate_run != '' || inputs.promotion_candidate_sha256 != '' || inputs.promotion_candidate_source != '') && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && (inputs.readback_version == '' || inputs.promotion_candidate_run != '' || inputs.promotion_candidate_sha256 != '' || inputs.promotion_candidate_source != '') && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
       artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
@@ -190,7 +190,7 @@ jobs:
     name: Contracts tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -222,7 +222,7 @@ jobs:
     needs: [resolve-versions]
     name: Artifacts tests (publish gate)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -250,7 +250,7 @@ jobs:
     needs: [resolve-versions]
     name: Commands tests and authored public surface (publish gate)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -273,7 +273,7 @@ jobs:
     name: CLI tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -306,7 +306,7 @@ jobs:
     name: Knowledge tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -340,7 +340,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
     # run promotes this run's retained artifact; it must never pack another container (#944).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && needs.resolve-versions.outputs.push == 'false'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == '' && needs.resolve-versions.outputs.push == 'false'
     permissions:
       contents: read
       packages: read
@@ -442,7 +442,7 @@ jobs:
     name: Preflight retained candidate custody
     needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     permissions:
       actions: read
       contents: read
@@ -530,7 +530,7 @@ jobs:
     name: Publish and read back the coherent FS.GG.SDD set
     needs: [resolve-versions, locate-artifacts]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && needs.resolve-versions.outputs.push == 'true'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == '' && needs.resolve-versions.outputs.push == 'true'
     permissions:
       actions: read
       contents: read
@@ -683,7 +683,7 @@ jobs:
     name: Qualify the published coherent set without publisher credentials
     needs: [resolve-versions, locate-artifacts, publish-cli]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && needs.resolve-versions.outputs.push == 'true'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == '' && needs.resolve-versions.outputs.push == 'true'
     permissions:
       contents: read
       actions: read
@@ -822,7 +822,7 @@ jobs:
   readback-cli:
     name: Read-only coherent SDD dual-feed verification
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version != '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version != '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == ''
     permissions:
       contents: read
       packages: read

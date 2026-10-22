@@ -6,9 +6,12 @@ import io
 import json
 import os
 from pathlib import Path
+import http.server
 import sys
 import tempfile
+import threading
 import unittest
+import urllib.request
 from unittest.mock import patch
 import zipfile
 
@@ -159,6 +162,87 @@ class Controls(unittest.TestCase):
                 qualifier.qualify('42', self.digest, head, version, Path(directory) / 'r', read=self.read,
                                   fetch=denied, sleep=self.sleep, monotonic=lambda: self.clock)
         self.assertFalse(self.sleeps)
+
+
+class FeedHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        FeedHandler.seen.append((self.path, self.headers.get('Authorization')))
+        if self.path.startswith('/status/'):
+            self.send_response(int(self.path.rsplit('/', 1)[1]))
+            self.end_headers()
+        elif self.path == '/redirect':
+            self.send_response(302)
+            self.send_header('Location', 'http://127.0.0.1:1/elsewhere')
+            self.end_headers()
+        elif self.path == '/truncated':
+            self.send_response(200)
+            self.send_header('Content-Length', '100')
+            self.end_headers()
+            self.wfile.write(b'short')
+        else:
+            body = b'x' * 64
+            self.send_response(200)
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    def log_message(self, *arguments):
+        pass
+
+
+class OpenFeedControls(unittest.TestCase):
+    """The only new code that handles credentials: exercised against a real local HTTP server."""
+    @classmethod
+    def setUpClass(cls):
+        FeedHandler.seen = []
+        cls.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), FeedHandler)
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        cls.base = 'http://127.0.0.1:%d' % cls.server.server_port
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def test_missing_and_overloaded_responses_are_retryable_absence(self):
+        for status in [404, 429, 500, 502, 503]:
+            with self.subTest(status=status), self.assertRaises(qualifier.Absent):
+                qualifier.open_feed(self.base + '/status/' + str(status))
+
+    def test_denials_and_other_client_errors_are_fatal_not_retried(self):
+        for status in [400, 401, 403, 410]:
+            with self.subTest(status=status), self.assertRaises(ValueError):
+                qualifier.open_feed(self.base + '/status/' + str(status), 'Basic synthetic')
+
+    def test_success_sends_authorization_only_when_selected(self):
+        FeedHandler.seen.clear()
+        self.assertEqual(qualifier.open_feed(self.base + '/ok', 'Basic synthetic'), b'x' * 64)
+        self.assertEqual(qualifier.open_feed(self.base + '/ok'), b'x' * 64)
+        self.assertEqual([auth for _, auth in FeedHandler.seen], ['Basic synthetic', None])
+
+    def test_non_https_redirect_is_refused(self):
+        with self.assertRaises(ValueError):
+            qualifier.open_feed(self.base + '/redirect', 'Basic synthetic')
+
+    def test_oversize_response_is_refused(self):
+        with patch.object(qualifier, 'MAX_PACKAGE', 10), self.assertRaises(ValueError):
+            qualifier.open_feed(self.base + '/ok')
+
+    def test_truncated_or_unreachable_transport_is_retryable(self):
+        with self.assertRaises(qualifier.Absent):
+            qualifier.open_feed(self.base + '/truncated')
+        with self.assertRaises(qualifier.Absent):
+            qualifier.open_feed('http://127.0.0.1:1/unreachable')
+
+    def test_redirect_handler_strips_credentials_across_hosts_only(self):
+        handler = qualifier.Redirect()
+        original = urllib.request.Request('https://a.example/x', headers={'Authorization': 'Basic synthetic'})
+        other = handler.redirect_request(original, None, 302, 'Found', {}, 'https://b.example/y')
+        self.assertIsNone(other.get_header('Authorization'))
+        same = handler.redirect_request(original, None, 302, 'Found', {}, 'https://a.example/z')
+        self.assertEqual(same.get_header('Authorization'), 'Basic synthetic')
+        with self.assertRaises(ValueError):
+            handler.redirect_request(original, None, 302, 'Found', {}, 'http://a.example/z')
 
 
 unittest.main()

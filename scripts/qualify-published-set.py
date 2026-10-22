@@ -5,6 +5,7 @@ Read-only: it never packs, pushes, tags or consumes publisher credentials. nuget
 tens of minutes later, so absence is retried within a fixed bound before it is reported as a failure."""
 import argparse
 import base64
+import http.client
 import importlib.util
 import json
 import os
@@ -12,6 +13,7 @@ from pathlib import Path
 import re
 import sys
 import time
+import zipfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -36,29 +38,34 @@ def interval(attempt):
     return 15 if attempt < 20 else 30
 
 
-def open_feed(url, authorization=None):
-    """One bounded HTTPS read. HTTP404 and transient failures raise Absent; other denials are fatal."""
-    class Redirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, request, response, code, message, headers, target):
-            if urllib.parse.urlparse(target).scheme != 'https':
-                raise ValueError('non-HTTPS package redirect refused')
-            redirected = super().redirect_request(request, response, code, message, headers, target)
-            if redirected is not None and urllib.parse.urlparse(target).netloc != urllib.parse.urlparse(request.full_url).netloc:
-                redirected.remove_header('Authorization')
-            return redirected
+class Redirect(urllib.request.HTTPRedirectHandler):
+    """HTTPS only; credentials never follow a redirect to another host."""
+    def redirect_request(self, request, response, code, message, headers, target):
+        if urllib.parse.urlparse(target).scheme != 'https':
+            raise ValueError('non-HTTPS package redirect refused')
+        redirected = super().redirect_request(request, response, code, message, headers, target)
+        if redirected is not None and urllib.parse.urlparse(target).netloc != urllib.parse.urlparse(request.full_url).netloc:
+            redirected.remove_header('Authorization')
+        return redirected
 
+
+def open_feed(url, authorization=None):
+    """One bounded read. HTTP404/429/5xx and transient transport failures raise Absent; other denials are fatal."""
     headers = {'Authorization': authorization} if authorization else {}
     try:
         with urllib.request.build_opener(Redirect()).open(urllib.request.Request(url, headers=headers), timeout=60) as response:
             raw = response.read(MAX_PACKAGE + 1)
+            declared = response.headers.get('Content-Length')
     except urllib.error.HTTPError as error:
-        if error.code == 404 or error.code >= 500:
+        if error.code in (404, 429) or error.code >= 500:
             raise Absent('HTTP' + str(error.code)) from error
         raise ValueError('package read refused HTTP' + str(error.code)) from error
-    except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+    except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException) as error:
         raise Absent(type(error).__name__) from error
     if len(raw) > MAX_PACKAGE:
         raise ValueError('package response exceeds selected byte bound')
+    if declared is not None and declared.isdigit() and int(declared) != len(raw):
+        raise Absent('truncated body')
     return raw
 
 
@@ -122,7 +129,7 @@ def main():
     try:
         result = qualify(arguments.run_id, arguments.archive_sha256, arguments.source, arguments.version,
                          arguments.destination)
-    except (ValueError, OSError, KeyError, TypeError) as error:
+    except (ValueError, OSError, KeyError, TypeError, zipfile.BadZipFile) as error:
         print(json.dumps(dict(outcome='Refused', publicationAuthorized=False,
                               reason=_reader.sanitized(str(error) if isinstance(error, ValueError) else type(error).__name__))))
         return 1

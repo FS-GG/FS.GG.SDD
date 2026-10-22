@@ -58,8 +58,8 @@ def check(text):
         require("inputs.occupancy_candidate_run == ''" in condition
                 and "inputs.occupancy_candidate_sha256 == ''" in condition,
                 f'{name} can run during occupancy-only selection')
-        require("inputs.qualify_published_version == ''" in condition
-                and "inputs.qualify_candidate_run == ''" in condition,
+        require(all("inputs.qualify_" + field + " == ''" in condition
+                    for field in ['published_version', 'candidate_run', 'candidate_sha256', 'candidate_source']),
                 f'{name} can run during published-set qualification')
     require('group: release-coherent-sdd' in text, 'release writers do not share a publication fence')
     for name in ['resolve-versions','contracts-tests','artifacts-tests','commands-tests','cli-tests','knowledge-tests']:
@@ -141,6 +141,21 @@ def check(text):
             and 'verify-release-candidate.sh artifacts/qualified-receipt/packages' in qualify
             and 'scripts/verify-package-payloads.py' in qualify and 'published-dual-feed-receipt' in qualify,
             'published-set qualification loses original custody, eight-archive joins or durable receipt')
+    selection = next((line for line in qualify.splitlines() if line.strip().startswith('if:')), '')
+    require("github.repository == 'FS-GG/FS.GG.SDD'" in selection and "inputs.occupancy_candidate_run == ''" in selection
+            and "inputs.occupancy_candidate_sha256 == ''" in selection,
+            'published-set qualification lacks the repository guard or can overlap occupancy-only selection')
+    require("'PUBLISH_VERSION','READBACK_VERSION','PROMOTION_RUN','PROMOTION_SHA256','PROMOTION_SOURCE'" in qualify
+            and 'qualification excludes publish, readback and promotion modes' in qualify,
+            'published-set qualification does not refuse mixed modes')
+    require('"artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.github.nupkg" \\\n'
+            '              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.nuget.nupkg"' in qualify
+            and 'for id in Artifacts Commands Cli Knowledge; do' in qualify,
+            'published-set qualification does not join every package with both feed archives')
+    receipt_step = qualify[qualify.index('      - name: Retain the durable dual-feed receipt'):]
+    receipt_step = receipt_step[:receipt_step.index('\n      - name:', 10)]
+    require('if:' not in receipt_step and 'if-no-files-found: error' in receipt_step,
+            'published-set receipt can be retained without passing custody and eight-archive joins')
     def installed_gate(job):
         return job[job.index('      - name: Qualify the public Knowledge CLI and SDK\n'):
                    job.index('      - name: Retain public qualification evidence')]

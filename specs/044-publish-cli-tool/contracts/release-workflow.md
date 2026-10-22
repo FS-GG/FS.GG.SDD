@@ -323,14 +323,14 @@ qualification result; the failure does not erase completed writes, permit replay
 qualify consumer acceptance. Root retains recovery and final disposition admission.
 
 
-## Read-only qualification of an already-published set — issue1119
+## Read-only qualification of an already-published set — issue 1119
 
 A published set can be left without its durable dual-feed receipt or public
 qualification when the in-run readback expires first: SDD 2.4.0's push succeeded, but
-nuget.org first served the four archives about27 minutes later, past the original
+nuget.org first served the four archives about 27 minutes later, past the original
 10-minute readback, so the receipt upload and `qualify-public` were skipped. The
-publisher readback now polls up to99 times (15 seconds for19 polls, then 30 seconds,
-about45 minutes). It is the same read-only loop and never retries a push.
+publisher readback now polls up to 99 times (15 seconds for 19 polls, then 30 seconds,
+about 45 minutes). It is the same read-only loop and never retries a push.
 
 The `qualify-published` job is a separate manual selection on protected `main` using
 all four inputs `qualify_published_version`, `qualify_candidate_run`,
