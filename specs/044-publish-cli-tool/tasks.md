@@ -244,3 +244,9 @@ unblocks FS-GG/.github#49. **STOP and VALIDATE** at the Phase-4 checkpoint (cons
 - [x] Isolate public installed-code execution in a read-only dependent job;
   authenticate immutable writer ID/digest/source and bounded receipt before
   rejoining original custody/all eight payloads. Preserve partial-effect receipts.
+
+- [x] Update the existing F# release-workflow contract test to delimit the
+  publisher at `qualify-public`, preserving one publisher payload-check loop and
+  asserting the separate credential boundary and immutable source/receipt joins.
+  Original gate39714094173 Commands count failure is retained. Its independent
+  npm restore timeout remains Unknown; no timeout extension or skipped lane.
