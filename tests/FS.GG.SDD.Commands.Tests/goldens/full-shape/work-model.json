@@ -41,7 +41,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "c1090cf142b52d580a2487fd5119c2e9c5b3f8d45e6f76f8419abb86803c76ac"
+        "value": "bb8e14aee35484a3b56024189d3469c12d064c1c8af7352851cf4922b5190281"
       }
     },
     {
@@ -447,7 +447,7 @@
           "path": ".fsgg/scaffold-provenance.json",
           "digest": {
             "algorithm": "sha256",
-            "value": "c1090cf142b52d580a2487fd5119c2e9c5b3f8d45e6f76f8419abb86803c76ac"
+            "value": "bb8e14aee35484a3b56024189d3469c12d064c1c8af7352851cf4922b5190281"
           },
           "schemaVersion": 1
         },
@@ -510,7 +510,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "c5c6b2a83e0114e51f652e62203f3b7b7d9a36fb761866b9101cae42e3480540"
+        "value": "c31b17019eac87a1ecc9a071883b2c2f0f3121a8bc7063c7837ef4c48700fd2b"
       },
       "currency": "current"
     }
