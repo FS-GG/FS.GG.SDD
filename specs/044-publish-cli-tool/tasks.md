@@ -250,3 +250,14 @@ unblocks FS-GG/.github#49. **STOP and VALIDATE** at the Phase-4 checkpoint (cons
   asserting the separate credential boundary and immutable source/receipt joins.
   Original gate39714094173 Commands count failure is retained. Its independent
   npm restore timeout remains Unknown; no timeout extension or skipped lane.
+
+
+## Issue1119 published-set qualification
+
+- [x] Extend the publisher readback wait to the observed nuget.org indexing lag
+  (about45 minutes with backoff); no push is retried.
+- [x] Add a read-only, protected-main `qualify-published` selection that authenticates the
+  original candidate, reads both feeds, writes a durable receipt and runs the existing
+  installed-code gate; offline controls and causal workflow mutations cover it.
+- [ ] Independent exact-head source review and required source CI.
+- [ ] Root admits one qualification run for the already-published 2.4.0 set.

@@ -218,7 +218,8 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("replacement-rollback-decision-lock", svgWorkspaceQuintAcceptance)
         Assert.Contains("quint-q3-public.junit.xml", qualification)
         Assert.Contains("artifacts/feed-readback/*.nupkg", publish)
-        Assert.Contains("for attempt in $(seq 1 40)", publish)
+        Assert.Contains("for attempt in $(seq 1 99)", publish)
+        Assert.Contains("sleep $(( attempt < 20 ? 15 : 30 ))", publish)
         Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", gateWorkflow)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", gateWorkflow)
         Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", gateWorkflow)
@@ -248,7 +249,12 @@ module ReleaseWorkflowContractTests =
             workflow.IndexOf("\n  readback-cli:\n", StringComparison.Ordinal)
 
         Assert.True(readbackStart >= 0, "read-only readback job must exist")
-        let readback = workflow.Substring(readbackStart)
+
+        let readbackEnd =
+            workflow.IndexOf("\n  qualify-published:\n", readbackStart, StringComparison.Ordinal)
+
+        Assert.True(readbackEnd > readbackStart, "published-set qualification must delimit the read-only readback job")
+        let readback = workflow.Substring(readbackStart, readbackEnd - readbackStart)
         Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" readback)
 
         Assert.Contains(
@@ -261,3 +267,89 @@ module ReleaseWorkflowContractTests =
         Assert.DoesNotContain("dotnet nuget push", readback)
         assertPayloadReceiptMaps ()
         Assert.Contains("artifacts/feed-readback/*", workflow)
+
+    [<Fact>]
+    let ``release qualifies an already-published set read-only without effects or publisher credentials`` () =
+        for input in
+            [
+                "qualify_published_version:"
+                "qualify_candidate_run:"
+                "qualify_candidate_sha256:"
+                "qualify_candidate_source:"
+            ] do
+            Assert.Contains(input, workflow)
+
+        let qualifyStart =
+            workflow.IndexOf("\n  qualify-published:\n", StringComparison.Ordinal)
+
+        let occupancyStart =
+            workflow.IndexOf("\n  occupancy-preflight:\n", StringComparison.Ordinal)
+
+        Assert.True(
+            qualifyStart >= 0 && occupancyStart > qualifyStart,
+            "qualification must be its own job before occupancy"
+        )
+
+        let qualify = workflow.Substring(qualifyStart, occupancyStart - qualifyStart)
+
+        let publicStart =
+            workflow.IndexOf("\n  qualify-public:\n", StringComparison.Ordinal)
+
+        let readbackStart =
+            workflow.IndexOf("\n  readback-cli:\n", StringComparison.Ordinal)
+
+        let publicJob = workflow.Substring(publicStart, readbackStart - publicStart)
+
+        Assert.Contains("github.event_name == 'workflow_dispatch'", qualify)
+        Assert.Contains("refs/heads/main", qualify)
+        Assert.Contains("contents: read", qualify)
+        Assert.Contains("actions: read", qualify)
+        Assert.Contains("packages: read", qualify)
+        Assert.Contains("persist-credentials: false", qualify)
+        Assert.DoesNotContain(": write", qualify)
+        Assert.DoesNotContain("id-token", qualify)
+        Assert.DoesNotContain("NuGet/login", qualify)
+        Assert.DoesNotContain("dotnet nuget push", qualify)
+        Assert.DoesNotContain("dotnet pack", qualify)
+        Assert.True(publicSecretBoundaryHolds qualify, "qualification may reference only secrets.GITHUB_TOKEN")
+        Assert.Contains("python3 scripts/qualify-published-set.py", qualify)
+        Assert.Contains("scripts/verify-release-candidate.sh artifacts/qualified-receipt/packages", qualify)
+        Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" qualify)
+        Assert.Contains("published-dual-feed-receipt", qualify)
+
+        // The installed-code gate is the publisher-following gate, byte for byte, bound to the selected version.
+        let installedGate (job: string) =
+            let first =
+                job.IndexOf("      - name: Qualify the public Knowledge CLI and SDK\n", StringComparison.Ordinal)
+
+            let last =
+                job.IndexOf("      - name: Retain public qualification evidence", StringComparison.Ordinal)
+
+            Assert.True(first >= 0 && last > first, "installed-code gate must be delimited")
+            job.Substring(first, last - first)
+
+        Assert.Equal(
+            (installedGate publicJob)
+                .Replace("${{ needs.resolve-versions.outputs.cli_version }}", "${{ inputs.qualify_published_version }}"),
+            installedGate qualify
+        )
+
+        // Every other mode is excluded when a qualification is selected.
+        for name in
+            [
+                "resolve-versions"
+                "publish-artifacts"
+                "locate-artifacts"
+                "publish-cli"
+                "qualify-public"
+                "readback-cli"
+            ] do
+            let start = workflow.IndexOf("\n  " + name + ":\n", StringComparison.Ordinal)
+            Assert.True(start >= 0, name)
+            let ifStart = workflow.IndexOf("    if: ", start, StringComparison.Ordinal)
+            let ifLine = workflow.Substring(ifStart, workflow.IndexOf('\n', ifStart) - ifStart)
+            Assert.Contains("inputs.qualify_published_version == ''", ifLine)
+            Assert.Contains("inputs.qualify_candidate_run == ''", ifLine)
+
+        for needle in [ "qualify-published-set.py"; "qualification of an already-published" ] do
+            Assert.Contains(needle, contract)

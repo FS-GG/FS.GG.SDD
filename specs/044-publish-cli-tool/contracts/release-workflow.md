@@ -321,3 +321,31 @@ Release success still depends on actual public qualification. If it fails after
 publication, the writer's durable feed-effect receipt remains separate from the
 qualification result; the failure does not erase completed writes, permit replay or
 qualify consumer acceptance. Root retains recovery and final disposition admission.
+
+
+## Read-only qualification of an already-published set — issue1119
+
+A published set can be left without its durable dual-feed receipt or public
+qualification when the in-run readback expires first: SDD 2.4.0's push succeeded, but
+nuget.org first served the four archives about27 minutes later, past the original
+10-minute readback, so the receipt upload and `qualify-public` were skipped. The
+publisher readback now polls up to99 times (15 seconds for19 polls, then 30 seconds,
+about45 minutes). It is the same read-only loop and never retries a push.
+
+The `qualify-published` job is a separate manual selection on protected `main` using
+all four inputs `qualify_published_version`, `qualify_candidate_run`,
+`qualify_candidate_sha256` and `qualify_candidate_source`; publish, readback,
+promotion and occupancy inputs must be empty, and every other mode is excluded when it is
+selected. It has only contents/actions/packages read permission, no OIDC, no publisher
+or package-read secret and exactly one secret reference, the read-only workflow token.
+It never packs, pushes, tags or changes a version. `scripts/qualify-published-set.py`
+authenticates the original successful no-push run, ZIP digest, source, version and v4
+manifest with the same checks as the retained promotion, then reads the eight published
+archives (GitHub Packages with the workflow token, nuget.org anonymously) within the
+bounded indexing wait, refusing denial immediately. The job rejoins original custody and
+all eight payload joins, uploads a durable `published-dual-feed-receipt` (original
+archives, dependency identity, both feed archives, entry/payload maps, readback record),
+and then runs the same installed-code gate as `qualify-public`, kept byte-identical by
+source controls and bound to the selected version. This result is a qualification of the
+selected already-published version; it does not authorize publication and never replaces
+an original publication receipt that exists.

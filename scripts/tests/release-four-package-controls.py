@@ -53,6 +53,32 @@ verdict(lambda:static.check(text.replace('| tee retained-disposition.json','> re
 verdict(lambda:static.check(text.replace('| tee retained-promotion-disposition.json','> retained-promotion-disposition.json')),False)
 verdict(lambda:static.check(text.replace('  occupancy-preflight:\n', '  occupancy-preflight:\n    permissions: {packages: write}\n')),False)
 
+# Read-only qualification of an already-published set: causal mutations against its own boundary.
+head_q,tail_q=text.split('\n  qualify-published:\n',1)
+def qualify_mutation(old,new):
+    assert old in tail_q,old
+    return head_q+'\n  qualify-published:\n'+tail_q.replace(old,new,1)
+for old,new in [
+ ('      packages: read\n','      packages: read\n      id-token: write\n'),
+ ('      packages: read\n','      packages: write\n'),
+ ('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}','GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}'),
+ ('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}','GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          EXTRA: ${{ toJSON(secrets) }}'),
+ ('      - name: Validate explicit qualification mode before any download','      - run: dotnet nuget push artifacts/x.nupkg\n      - name: Validate explicit qualification mode before any download'),
+ ("refs/heads/main","refs/heads/anything"),
+ ('Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json','Q2_PACKAGE_SOURCE: ./local'),
+ ('bash scripts/verify-knowledge-packages.sh','true # skipped'),
+ ('--archive-sha256 "$QUALIFY_SHA256"','--archive-sha256 "$IGNORED"'),
+ ('verify-release-candidate.sh artifacts/qualified-receipt/packages','true artifacts/qualified-receipt/packages'),
+ ('persist-credentials: false','persist-credentials: true')]:
+    verdict(lambda old=old,new=new:static.check(qualify_mutation(old,new)),False)
+verdict(lambda:static.check(text.replace('seq 1 99','seq 1 40')),False)
+verdict(lambda:static.check(text.replace(" && inputs.qualify_published_version == ''",'',1)),False)
+verdict(lambda:static.check(text.replace(" && inputs.qualify_candidate_run == ''",'',1)),False)
+for job in ['resolve-versions','publish-artifacts','publish-cli','qualify-public']:
+    head_j,tail_j=text.split('\n  '+job+':\n',1)
+    mutated=head_j+'\n  '+job+':\n'+tail_j.replace(" && inputs.qualify_published_version == ''",'',1)
+    verdict(lambda mutated=mutated:static.check(mutated),False)
+
 def package(package_id,version,body=b'fixture',signature=None):
     buf=io.BytesIO()
     with zipfile.ZipFile(buf,'w') as z:

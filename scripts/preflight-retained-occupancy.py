@@ -94,17 +94,11 @@ def authenticated_reader(suffix, cap):
     return raw
 
 
-def preflight(run_id, archive_sha256, publish_version, readback_version, destination,
-              read=authenticated_reader, command=subprocess.run, expected_source=None, expected_version=None):
-    # Validate the entire mode before downloading bytes or launching any helper.
-    if (not re.fullmatch(r'[1-9][0-9]{0,19}', run_id)
-            or not re.fullmatch(r'[0-9a-f]{64}', archive_sha256)
-            or publish_version or readback_version):
-        raise ValueError('occupancy-only requires one run ID and archive SHA256, with version/readback_version empty')
-    if ((expected_source is None) != (expected_version is None)
-            or (expected_source is not None and (not re.fullmatch(r'[0-9a-f]{40}', expected_source)
-                or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', expected_version)))):
-        raise ValueError('retained selection requires exact source and stable version together')
+def authenticate_candidate(run_id, archive_sha256, destination, read, expected_source=None, expected_version=None):
+    """Authenticate the original successful no-push run and ZIP, then extract its exact nine regular files.
+
+    Returns (source, version, contracts, artifact, original_gates). Shared by the occupancy preflight and the
+    read-only qualification of an already-published set so both bind the same original custody rules."""
     run = json.loads(read('actions/runs/' + run_id, 1024 * 1024))
     if not isinstance(run, dict):
         raise ValueError('selected run metadata malformed; custody Unknown')
@@ -194,6 +188,22 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
             with target.open('xb') as output:
                 output.write(archive.read(entry))
             target.chmod(0o400)
+    return source, version, contracts, artifact, original_gates
+
+
+def preflight(run_id, archive_sha256, publish_version, readback_version, destination,
+              read=authenticated_reader, command=subprocess.run, expected_source=None, expected_version=None):
+    # Validate the entire mode before downloading bytes or launching any helper.
+    if (not re.fullmatch(r'[1-9][0-9]{0,19}', run_id)
+            or not re.fullmatch(r'[0-9a-f]{64}', archive_sha256)
+            or publish_version or readback_version):
+        raise ValueError('occupancy-only requires one run ID and archive SHA256, with version/readback_version empty')
+    if ((expected_source is None) != (expected_version is None)
+            or (expected_source is not None and (not re.fullmatch(r'[0-9a-f]{40}', expected_source)
+                or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', expected_version)))):
+        raise ValueError('retained selection requires exact source and stable version together')
+    source, version, contracts, artifact, original_gates = authenticate_candidate(
+        run_id, archive_sha256, destination, read, expected_source, expected_version)
 
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
     custody_environment = {key: value for key, value in environment.items()

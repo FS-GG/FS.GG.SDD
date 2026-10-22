@@ -44,6 +44,23 @@ on:
         type: string
         required: false
 
+      qualify_published_version:
+        description: "Read-only qualification of an already-published coherent version (requires run, SHA256 and source); never pushes or tags"
+        type: string
+        required: false
+      qualify_candidate_run:
+        description: "Qualification: original successful no-push release run ID of the published candidate"
+        type: string
+        required: false
+      qualify_candidate_sha256:
+        description: "Qualification: original retained candidate ZIP SHA256"
+        type: string
+        required: false
+      qualify_candidate_source:
+        description: "Qualification: exact original 40-character package source"
+        type: string
+        required: false
+
 permissions:
   contents: read
 
@@ -61,7 +78,7 @@ jobs:
   resolve-versions:
     name: Resolve published Contracts and four coherent SDD versions
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && (inputs.readback_version == '' || inputs.promotion_candidate_run != '' || inputs.promotion_candidate_sha256 != '' || inputs.promotion_candidate_source != '') && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && (inputs.readback_version == '' || inputs.promotion_candidate_run != '' || inputs.promotion_candidate_sha256 != '' || inputs.promotion_candidate_source != '') && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
       artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
@@ -173,7 +190,7 @@ jobs:
     name: Contracts tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -205,7 +222,7 @@ jobs:
     needs: [resolve-versions]
     name: Artifacts tests (publish gate)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -233,7 +250,7 @@ jobs:
     needs: [resolve-versions]
     name: Commands tests and authored public surface (publish gate)
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -256,7 +273,7 @@ jobs:
     name: CLI tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -289,7 +306,7 @@ jobs:
     name: Knowledge tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -323,7 +340,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
     # run promotes this run's retained artifact; it must never pack another container (#944).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'false'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && needs.resolve-versions.outputs.push == 'false'
     permissions:
       contents: read
       packages: read
@@ -425,7 +442,7 @@ jobs:
     name: Preflight retained candidate custody
     needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     permissions:
       actions: read
       contents: read
@@ -513,7 +530,7 @@ jobs:
     name: Publish and read back the coherent FS.GG.SDD set
     needs: [resolve-versions, locate-artifacts]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'true'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && needs.resolve-versions.outputs.push == 'true'
     permissions:
       actions: read
       contents: read
@@ -629,13 +646,14 @@ jobs:
             [ -f "$local_package" ] || { echo "::error::reviewed package is missing for $id $VERSION"; exit 1; }
             gh_url="https://nuget.pkg.github.com/FS-GG/download/$id/$package_version/$id.$package_version.nupkg"
             nuget_url="https://api.nuget.org/v3-flatcontainer/$id/$package_version/$id.$package_version.nupkg"
-            for attempt in $(seq 1 40); do
+            # nuget.org indexing has taken ~27 minutes: poll 19 x 15 s, then 30 s, within ~45 minutes.
+            for attempt in $(seq 1 99); do
               curl --fail --location --silent --show-error -u "$GITHUB_ACTOR:$GH_TOKEN" \
                 "$gh_url" -o "artifacts/feed-readback/$id.github.nupkg" && \
               curl --fail --location --silent --show-error \
                 "$nuget_url" -o "artifacts/feed-readback/$id.nuget.nupkg" && break
-              [ "$attempt" -lt 40 ] || { echo "::error::feed readback timed out for $id $VERSION"; exit 1; }
-              sleep 15
+              [ "$attempt" -lt 99 ] || { echo "::error::feed readback timed out for $id $VERSION"; exit 1; }
+              sleep $(( attempt < 20 ? 15 : 30 ))
             done
             python3 scripts/verify-package-payloads.py "$local_package" \
               "artifacts/feed-readback/$id.github.nupkg" \
@@ -665,7 +683,7 @@ jobs:
     name: Qualify the published coherent set without publisher credentials
     needs: [resolve-versions, locate-artifacts, publish-cli]
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'true'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && needs.resolve-versions.outputs.push == 'true'
     permissions:
       contents: read
       actions: read
@@ -804,7 +822,7 @@ jobs:
   readback-cli:
     name: Read-only coherent SDD dual-feed verification
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version != '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version != '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == ''
     permissions:
       contents: read
       packages: read
@@ -855,6 +873,178 @@ jobs:
           name: sdd-${{ inputs.readback_version }}-dual-feed-readback-${{ steps.readback.outputs.source_head }}
           path: artifacts/feed-readback/*
           if-no-files-found: error
+          retention-days: 90
+
+  qualify-published:
+    name: Read-only qualification of an already-published coherent set
+    if: github.repository == 'FS-GG/FS.GG.SDD' && github.event_name == 'workflow_dispatch' && (inputs.qualify_published_version != '' || inputs.qualify_candidate_run != '' || inputs.qualify_candidate_sha256 != '' || inputs.qualify_candidate_source != '') && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate explicit qualification mode before any download
+        env:
+          QUALIFY_VERSION: ${{ inputs.qualify_published_version }}
+          QUALIFY_RUN: ${{ inputs.qualify_candidate_run }}
+          QUALIFY_SHA256: ${{ inputs.qualify_candidate_sha256 }}
+          QUALIFY_SOURCE: ${{ inputs.qualify_candidate_source }}
+          PUBLISH_VERSION: ${{ inputs.version }}
+          READBACK_VERSION: ${{ inputs.readback_version }}
+          PROMOTION_RUN: ${{ inputs.promotion_candidate_run }}
+          PROMOTION_SHA256: ${{ inputs.promotion_candidate_sha256 }}
+          PROMOTION_SOURCE: ${{ inputs.promotion_candidate_source }}
+          REF_NAME: ${{ github.ref }}
+        run: |
+          python3 - <<'PYQUALIFY'
+          import os,re
+          assert os.environ['REF_NAME'] == 'refs/heads/main', 'qualification requires current protected main dispatch'
+          assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', os.environ['QUALIFY_VERSION']), 'explicit stable published version required'
+          assert re.fullmatch(r'[1-9][0-9]{0,19}', os.environ['QUALIFY_RUN']), 'original candidate run required'
+          assert re.fullmatch(r'[0-9a-f]{64}', os.environ['QUALIFY_SHA256']), 'original ZIP digest required'
+          assert re.fullmatch(r'[0-9a-f]{40}', os.environ['QUALIFY_SOURCE']), 'exact original source required'
+          assert not any(os.environ.get(k) for k in ['PUBLISH_VERSION','READBACK_VERSION','PROMOTION_RUN','PROMOTION_SHA256','PROMOTION_SOURCE']), 'qualification excludes publish, readback and promotion modes'
+          PYQUALIFY
+      - name: Set up package verification runtime
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.401"
+      - name: Authenticate the original retained candidate and read back both feeds within the bounded indexing wait
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUALIFY_VERSION: ${{ inputs.qualify_published_version }}
+          QUALIFY_RUN: ${{ inputs.qualify_candidate_run }}
+          QUALIFY_SHA256: ${{ inputs.qualify_candidate_sha256 }}
+          QUALIFY_SOURCE: ${{ inputs.qualify_candidate_source }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python3 scripts/qualify-published-set.py --run-id "$QUALIFY_RUN" --archive-sha256 "$QUALIFY_SHA256" \
+            --source "$QUALIFY_SOURCE" --version "$QUALIFY_VERSION" \
+            --destination artifacts/qualified-receipt | tee artifacts/published-readback.json
+      - name: Rejoin original candidate custody and all eight feed archives before package execution
+        env:
+          SOURCE: ${{ inputs.qualify_candidate_source }}
+          VERSION: ${{ inputs.qualify_published_version }}
+        run: |
+          set -euo pipefail
+          CONTRACTS_VERSION="$(sed -n 's/^contracts_version=//p' artifacts/qualified-receipt/packages/candidate.env)"
+          bash scripts/verify-release-candidate.sh artifacts/qualified-receipt/packages "$SOURCE" "$VERSION" "$CONTRACTS_VERSION"
+          for id in Artifacts Commands Cli Knowledge; do
+            lower="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
+            python3 scripts/verify-package-payloads.py \
+              "artifacts/qualified-receipt/packages/FS.GG.SDD.$id.$VERSION.nupkg" \
+              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.github.nupkg" \
+              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.nuget.nupkg"
+          done
+
+      - name: Retain the durable dual-feed receipt of the published set
+        uses: actions/upload-artifact@v7
+        with:
+          name: sdd-${{ inputs.qualify_published_version }}-published-dual-feed-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/qualified-receipt/
+            artifacts/published-readback.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Qualify the public Knowledge CLI and SDK
+        env:
+          FSGG_KNOWLEDGE_VERSION: ${{ inputs.qualify_published_version }}
+          FSGG_KNOWLEDGE_SOURCE: https://api.nuget.org/v3/index.json
+        run: bash scripts/verify-knowledge-packages.sh
+
+      - name: Verify clean public installs
+        env:
+          VERSION: ${{ inputs.qualify_published_version }}
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          export NUGET_PACKAGES="$scratch/packages"
+          export NUGET_HTTP_CACHE_PATH="$scratch/http"
+          dotnet tool install FS.GG.SDD.Cli --version "$VERSION" --tool-path "$scratch/tool" \
+            --add-source https://api.nuget.org/v3/index.json --no-cache
+          "$scratch/tool/fsgg-sdd" --version | grep -F "$VERSION"
+          dotnet new classlib -o "$scratch/consumer" --no-restore
+          dotnet add "$scratch/consumer" package FS.GG.SDD.Artifacts --version "$VERSION" \
+            --source https://api.nuget.org/v3/index.json --no-restore
+          dotnet add "$scratch/consumer" package FS.GG.SDD.Commands --version "$VERSION" \
+            --source https://api.nuget.org/v3/index.json --no-restore
+          dotnet restore "$scratch/consumer" --source https://api.nuget.org/v3/index.json --no-http-cache
+
+      - name: Set up exact Go toolchain for public Quint acceptance
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.24.1"
+          cache: false
+
+      - name: Provision content-addressed Quint acceptance tools
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/quint-release-tools"
+          curl --fail --location --silent --show-error \
+            https://github.com/quint-co/quint/releases/download/v0.32.0/quint-linux-amd64 \
+            --output "$RUNNER_TEMP/quint-release-tools/quint"
+          chmod +x "$RUNNER_TEMP/quint-release-tools/quint"
+          printf '%s  %s\n' \
+            '939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f' \
+            "$RUNNER_TEMP/quint-release-tools/quint" | sha256sum --check --strict
+          (
+            cd src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/lmt
+            GO111MODULE=off CGO_ENABLED=1 go build -trimpath \
+              -ldflags '-buildid=IvXAt1kJ-3iINki1alCT/Ut12KGabgkWIkwVpw-xO/c4zkZMLAubfWHvjZOY8o/8-oR_8tNNndNgfMVoD8F -B 0x03d1703027f57ed4dd2ba90b7cdfc8cdea2815da' \
+              -o "$RUNNER_TEMP/quint-release-tools/lmt" main.go
+          )
+          printf '%s  %s\n' \
+            '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' \
+            "$RUNNER_TEMP/quint-release-tools/lmt" | sha256sum --check --strict
+          "$DOTNET_ROOT/dotnet" tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-release-tools/fable"
+          selected_sdk="$("$DOTNET_ROOT/dotnet" --version)"
+          python3 scripts/verify-fable-tool.py \
+            --write-sdk-binding "$RUNNER_TEMP/quint-release-tools/fable-sdk-binding.json" \
+            --provisioned-root "$DOTNET_ROOT" --sdk-version "$selected_sdk"
+          printf 'FABLE_SDK_BINDING=%s\n' "$RUNNER_TEMP/quint-release-tools/fable-sdk-binding.json" >> "$GITHUB_ENV"
+          python3 scripts/tests/verify-fable-tool.test.py \
+            --archive "$RUNNER_TEMP/quint-release-tools/fable/.store/fable/5.13.0/fable/5.13.0/Fable.nupkg" \
+            --sdk-template "$DOTNET_ROOT/sdk/$selected_sdk/AppHostTemplate/apphost" \
+            --fixture-parent "$RUNNER_TEMP"
+
+      - name: Qualify neutral Q2 and Q3 receiver boundaries from the public CLI package
+        env:
+          QUINT_BIN: ${{ runner.temp }}/quint-release-tools/quint
+          LMT_BIN: ${{ runner.temp }}/quint-release-tools/lmt
+          FABLE_BIN: ${{ runner.temp }}/quint-release-tools/fable/fable
+          Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
+          Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
+          SVG_WORKSPACE_PACKAGE_VERSION: ${{ inputs.qualify_published_version }}
+          Q2_JUNIT_OUT: artifacts/feed-readback/quint-q2-public.junit.xml
+          Q2_EXACT_IR_JUNIT_OUT: artifacts/feed-readback/quint-q2-exact-ir-public.junit.xml
+          Q3_JUNIT_OUT: artifacts/feed-readback/quint-q3-public.junit.xml
+          Q3_TOOLCHAIN_OUT: artifacts/feed-readback/quint-q3-toolchain.json
+        run: |
+          set -euo pipefail
+          if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
+          bash tests/quint-svg-workspace-installed-acceptance.sh
+
+      - name: Retain public qualification evidence separately from the dual-feed receipt
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sdd-${{ inputs.qualify_published_version }}-published-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/published-readback.json
+            artifacts/feed-readback/quint-q*-public.junit.xml
+            artifacts/feed-readback/quint-q3-toolchain.json
+          if-no-files-found: warn
           retention-days: 90
 
   occupancy-preflight:
