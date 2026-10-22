@@ -117,7 +117,10 @@ module ReleaseWorkflowContractTests =
         )
 
         let publish = workflow.Substring(finish, qualificationStart - finish)
-        let qualification = workflow.Substring(qualificationStart, readbackStart - qualificationStart)
+
+        let qualification =
+            workflow.Substring(qualificationStart, readbackStart - qualificationStart)
+
         Assert.Contains("event=workflow_dispatch&status=completed", custody)
         Assert.Contains("expected exactly one retained no-push candidate", custody)
         Assert.Contains("run-id: ${{ needs.locate-artifacts.outputs.candidate_run_id }}", publish)
