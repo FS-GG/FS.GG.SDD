@@ -145,3 +145,39 @@ A developer on any FS-GG repo installs the published `fsgg-sdd` tool (globally o
 - The existing `release.yml` producer (features 039/043) is the integration point; this feature extends it rather than adding a separate workflow, keeping triggers, gating, concurrency, and the canonical-repo guard shared.
 - Making the feed package public is a one-time package-visibility action on GitHub Packages (as was done for `FS.GG.Contracts`); the feature owns ensuring it happens, even though visibility is a feed-side setting rather than workflow YAML.
 - Consumer wiring of the `contract-coherence` gate to call the published tool is owned by FS-GG/.github#49 in the `.github` repo; this feature delivers and verifies the producer + published artifact only.
+
+
+## Retained promotion and authoritative namespace visibility (issue1113)
+
+This Tier1 release-contract extension promotes the existing retained four-member
+candidate without rebuilding it. An explicit protected-main manual selection must
+bind its successful original run, original ZIP SHA256, original source and coherent
+version. Current verifier source remains distinct from package source. Source
+version evaluation and all current source-test job definitions run against the
+original source; authenticated successful original candidate qualification remains
+required. Normal same-head publication remains supported.
+
+Only a first-page scoped Commands versions404 may use the optional authority
+fallback. The same package-read token must prove its exact native user identity,
+canonical organization identity, active organization-admin membership and complete
+bounded unfiltered NuGet package population. Repository administration, public
+baseline readability, ordinary membership and404 alone never prove absence.
+A selected namespace in the population, malformed/denied/partial evidence, later
+scoped404, redirects, duplicate pages or bounds exhaustion remain Unknown.
+No-push qualification preserves its original Commands Unknown even when an
+owner credential is present. Read-only results never authorize publication.
+
+Acceptance: synthetic controls exercise the real checker/runner, identity joins,
+owner-role causal mutation, partial/denied inventory, pagination/bounds, strict
+fallback scope, credential separation, original source/version/ZIP substitution,
+mixed mode guards and no-pack promotion. Actual authenticated occupancy, package
+publication, eight dual-feed readbacks and consumer acceptance are separate effects.
+No F# API or package/version migration is introduced.
+
+
+Installed retained/public package execution must occur only with read permissions,
+without publisher/OIDC credentials. Current source-test jobs wait for mode/version
+preflight. The writer supplies a native immutable artifact ID/digest/source-bound
+receipt; a read-only dependent job validates its complete bounded original/eight-feed
+archive population before package execution. That job's real result remains part of
+release success. Partial feed effects retain evidence when later qualification fails.

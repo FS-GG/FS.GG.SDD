@@ -22,6 +22,19 @@ on:
         type: string
         required: false
 
+      promotion_candidate_run:
+        description: "Explicit retained promotion: original successful no-push run ID (requires version, source and SHA256)"
+        type: string
+        required: false
+      promotion_candidate_sha256:
+        description: "Original retained candidate ZIP SHA256; never rebuilds or substitutes archives"
+        type: string
+        required: false
+      promotion_candidate_source:
+        description: "Exact original 40-character package source; verifier remains current protected source"
+        type: string
+        required: false
+
       occupancy_candidate_run:
         description: "Read-only occupancy preflight: original successful no-push release run ID"
         type: string
@@ -34,12 +47,10 @@ on:
 permissions:
   contents: read
 
-# A single tagged release fires BOTH `release: published` and `push: tags v*`. Serialize the
-# paired runs (cancel-in-progress: false) keyed on the version/tag so they never push
-# simultaneously and no push is cancelled mid-flight; the second run no-ops via
-# --skip-duplicate. This is deliberately NOT gate.yml's cancel-in-progress: true PR key.
+# All normal and retained publication selections share a non-cancelling fence.
+# Current normal/tag and retained rails serialize; older workflow revisions retain their own fence.
 concurrency:
-  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  group: release-coherent-sdd
   cancel-in-progress: false
 
 jobs:
@@ -50,7 +61,7 @@ jobs:
   resolve-versions:
     name: Resolve published Contracts and four coherent SDD versions
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && (inputs.readback_version == '' || inputs.promotion_candidate_run != '' || inputs.promotion_candidate_sha256 != '' || inputs.promotion_candidate_source != '') && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     outputs:
       contracts_version: ${{ steps.ver.outputs.contracts_version }}
       artifacts_version: ${{ steps.ver.outputs.artifacts_version }}
@@ -59,8 +70,32 @@ jobs:
       knowledge_version: ${{ steps.ver.outputs.knowledge_version }}
       push: ${{ steps.ver.outputs.push }}
     steps:
+      - name: Validate explicit release mode before evaluating source
+        env:
+          PROMOTION_RUN: ${{ inputs.promotion_candidate_run }}
+          PROMOTION_SHA256: ${{ inputs.promotion_candidate_sha256 }}
+          PROMOTION_SOURCE: ${{ inputs.promotion_candidate_source }}
+          PUBLISH_VERSION: ${{ inputs.version }}
+          READBACK_VERSION: ${{ inputs.readback_version }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref }}
+        run: |
+          python3 - <<'PYPROMOTION'
+          import os,re
+          selected = any(os.environ[k] for k in ['PROMOTION_RUN','PROMOTION_SHA256','PROMOTION_SOURCE'])
+          if selected:
+              assert not os.environ.get('READBACK_VERSION'), 'retained promotion excludes readback mode'
+              assert os.environ['EVENT_NAME'] == 'workflow_dispatch' and os.environ['REF_NAME'] == 'refs/heads/main', 'retained promotion requires current protected main dispatch'
+              assert re.fullmatch(r'[1-9][0-9]{0,19}', os.environ['PROMOTION_RUN']), 'original run required'
+              assert re.fullmatch(r'[0-9a-f]{64}', os.environ['PROMOTION_SHA256']), 'original ZIP digest required'
+              assert re.fullmatch(r'[0-9a-f]{40}', os.environ['PROMOTION_SOURCE']), 'exact original source required'
+              assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', os.environ['PUBLISH_VERSION']), 'explicit stable version required'
+          PYPROMOTION
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.promotion_candidate_source || github.sha }}
+          persist-credentials: false
 
       - name: Check four-package release custody before evaluation
         run: python3 scripts/check-release-custody.py
@@ -134,6 +169,7 @@ jobs:
           echo "Resolved: contracts_version=$contracts_version artifacts_version=$artifacts_version cli_version=$cli_version push=$push (event=$EVENT_NAME)"
 
   contracts-tests:
+    needs: [resolve-versions]
     name: Contracts tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
@@ -141,6 +177,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.promotion_candidate_source || github.sha }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -163,12 +202,16 @@ jobs:
         run: dotnet test tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj -c Release --no-restore
 
   artifacts-tests:
+    needs: [resolve-versions]
     name: Artifacts tests (publish gate)
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.promotion_candidate_source || github.sha }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -187,12 +230,16 @@ jobs:
         run: tests/fixtures/typed-specifications/run-clean-consumer.sh
 
   commands-tests:
+    needs: [resolve-versions]
     name: Commands tests and authored public surface (publish gate)
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.promotion_candidate_source || github.sha }}
+          persist-credentials: false
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
@@ -205,6 +252,7 @@ jobs:
         run: dotnet test tests/FS.GG.SDD.Commands.Tests/FS.GG.SDD.Commands.Tests.fsproj -c Release --no-restore
 
   cli-tests:
+    needs: [resolve-versions]
     name: CLI tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
@@ -212,6 +260,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.promotion_candidate_source || github.sha }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -234,6 +285,7 @@ jobs:
         run: dotnet test tests/FS.GG.SDD.Cli.Tests/FS.GG.SDD.Cli.Tests.fsproj -c Release --no-restore
 
   knowledge-tests:
+    needs: [resolve-versions]
     name: Knowledge tests (publish gate)
     runs-on: ubuntu-latest
     # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-009).
@@ -241,6 +293,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.promotion_candidate_source || github.sha }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -268,13 +323,15 @@ jobs:
     runs-on: ubuntu-latest
     # Only a no-push manual dispatch is allowed to create publishable archives. A later tag/release
     # run promotes this run's retained artifact; it must never pack another container (#944).
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'false'
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'false'
     permissions:
       contents: read
       packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -372,12 +429,55 @@ jobs:
     permissions:
       actions: read
       contents: read
+      packages: read
     outputs:
-      candidate_run_id: ${{ steps.locate.outputs.candidate_run_id }}
+      candidate_run_id: ${{ steps.locate.outputs.candidate_run_id || steps.retained.outputs.candidate_run_id }}
+      candidate_source: ${{ steps.locate.outputs.candidate_source || steps.retained.outputs.candidate_source }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up retained signature verifier
+        if: inputs.promotion_candidate_run != ''
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.401"
+      - name: Authenticate explicitly selected retained candidate with current verifier
+        id: retained
+        if: inputs.promotion_candidate_run != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}
+          FSGG_PACKAGES_READ_ACTOR: ${{ vars.FSGG_PACKAGES_READ_ACTOR }}
+          CANDIDATE_RUN: ${{ inputs.promotion_candidate_run }}
+          CANDIDATE_SHA256: ${{ inputs.promotion_candidate_sha256 }}
+          CANDIDATE_SOURCE: ${{ inputs.promotion_candidate_source }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/preflight-retained-occupancy.py --run-id "$CANDIDATE_RUN" \
+            --archive-sha256 "$CANDIDATE_SHA256" --expected-source "$CANDIDATE_SOURCE" \
+            --expected-version "$VERSION" --destination artifacts/retained-check/selected \
+            | tee retained-disposition.json
+          echo "candidate_run_id=$CANDIDATE_RUN" >> "$GITHUB_OUTPUT"
+          echo "candidate_source=$CANDIDATE_SOURCE" >> "$GITHUB_OUTPUT"
+      - name: Requalify retained CLI and shipped APIs with current release checks
+        if: inputs.promotion_candidate_run != ''
+        env:
+          FSGG_SDD_PACKAGE_DIR: artifacts/retained-check/selected
+          FSGG_SDD_PACKAGE_VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+          FSGG_KNOWLEDGE_VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+          FSGG_KNOWLEDGE_SOURCE: ${{ github.workspace }}/artifacts/retained-check/selected
+          VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+        run: |
+          set -euo pipefail
+          bash scripts/verify-cli-tool.sh
+          bash scripts/verify-sdd-package-api.sh artifacts/retained-check/selected "$VERSION"
+          bash scripts/verify-knowledge-packages.sh
+
       - name: Locate one successful no-push candidate run at the exact head
         id: locate
-        if: needs.resolve-versions.outputs.push == 'true'
+        if: needs.resolve-versions.outputs.push == 'true' && inputs.promotion_candidate_run == ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -401,6 +501,7 @@ jobs:
             echo "::error::expected exactly one retained no-push candidate for $GITHUB_SHA; found ${#matches[@]}. Dispatch release.yml without a version exactly once at this commit before tagging/publishing."
             exit 1
           fi
+          echo "candidate_source=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           echo "candidate_run_id=${matches[0]}" >> "$GITHUB_OUTPUT"
           echo "Promoting retained candidate from workflow run ${matches[0]} at $GITHUB_SHA"
 
@@ -418,9 +519,14 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    outputs:
+      receipt_artifact_id: ${{ steps.publish-receipt.outputs.artifact-id }}
+      receipt_digest: ${{ steps.publish-receipt.outputs.artifact-digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -428,21 +534,41 @@ jobs:
           dotnet-version: "10.0.401"
 
       - name: Download the reviewed package bytes
+        if: inputs.promotion_candidate_run == ''
         uses: actions/download-artifact@v8
         with:
-          name: coherent-sdd-packages-${{ github.sha }}
+          name: coherent-sdd-packages-${{ needs.locate-artifacts.outputs.candidate_source }}
           path: artifacts/packages
           run-id: ${{ needs.locate-artifacts.outputs.candidate_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reauthenticate exact retained ZIP and fresh occupancy immediately before publication
+        if: inputs.promotion_candidate_run != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}
+          FSGG_PACKAGES_READ_ACTOR: ${{ vars.FSGG_PACKAGES_READ_ACTOR }}
+          CANDIDATE_RUN: ${{ inputs.promotion_candidate_run }}
+          CANDIDATE_SHA256: ${{ inputs.promotion_candidate_sha256 }}
+          CANDIDATE_SOURCE: ${{ needs.locate-artifacts.outputs.candidate_source }}
+          VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/preflight-retained-occupancy.py --run-id "$CANDIDATE_RUN" \
+            --archive-sha256 "$CANDIDATE_SHA256" --expected-source "$CANDIDATE_SOURCE" \
+            --expected-version "$VERSION" --destination artifacts/packages \
+            | tee retained-promotion-disposition.json
 
       - name: Verify retained candidate identity and hashes before feed credentials
         run: |
           set -euo pipefail
           bash scripts/verify-release-candidate.sh \
-            artifacts/packages "$GITHUB_SHA" "${{ needs.resolve-versions.outputs.cli_version }}" "${{ needs.resolve-versions.outputs.contracts_version }}"
+            artifacts/packages "${{ needs.locate-artifacts.outputs.candidate_source }}" "${{ needs.resolve-versions.outputs.cli_version }}" "${{ needs.resolve-versions.outputs.contracts_version }}"
 
       - name: Refuse occupied versions unless exact retained payloads already exist
         env:
+          FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}
+          FSGG_PACKAGES_READ_ACTOR: ${{ vars.FSGG_PACKAGES_READ_ACTOR }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/check-sdd-release-occupancy.py "${{ needs.resolve-versions.outputs.cli_version }}" --contracts-version "${{ needs.resolve-versions.outputs.contracts_version }}" --candidate artifacts/packages
 
@@ -516,6 +642,72 @@ jobs:
               "artifacts/feed-readback/$id.nuget.nupkg"
           done
 
+      - name: Upload durable dual-feed receipt
+        id: publish-receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: sdd-${{ needs.resolve-versions.outputs.cli_version }}-dual-feed-receipt-${{ github.sha }}
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/pre-push.sha256
+            artifacts/packages/candidate.env
+            artifacts/packages/contracts-reuse.json
+            artifacts/packages/dependencies/*.nupkg
+            artifacts/packages/*.nupkg.entries
+            artifacts/packages/*.nupkg.payloads
+            artifacts/feed-readback/*.payloads
+            artifacts/feed-readback/*.entries
+            artifacts/feed-readback/*.nupkg
+          if-no-files-found: error
+          retention-days: 90
+
+  qualify-public:
+    name: Qualify the published coherent set without publisher credentials
+    needs: [resolve-versions, locate-artifacts, publish-cli]
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && needs.resolve-versions.outputs.push == 'true'
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up package verification runtime
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.401"
+      - name: Authenticate and extract this publisher's bounded immutable receipt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_ID: ${{ needs.publish-cli.outputs.receipt_artifact_id }}
+          ARTIFACT_SHA256: ${{ needs.publish-cli.outputs.receipt_digest }}
+          SOURCE: ${{ needs.locate-artifacts.outputs.candidate_source }}
+          VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/verify-publication-receipt.py --artifact-id "$ARTIFACT_ID" \
+            --digest "$ARTIFACT_SHA256" --run-id "$GITHUB_RUN_ID" --verifier-source "$GITHUB_SHA" \
+            --source "$SOURCE" --version "$VERSION" --destination artifacts/qualified-receipt \
+            > public-receipt-identity.json
+      - name: Rejoin original candidate custody and all eight feed archives before package execution
+        env:
+          SOURCE: ${{ needs.locate-artifacts.outputs.candidate_source }}
+          VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
+          CONTRACTS_VERSION: ${{ needs.resolve-versions.outputs.contracts_version }}
+        run: |
+          set -euo pipefail
+          test -n "${{ needs.publish-cli.outputs.receipt_artifact_id }}"
+          bash scripts/verify-release-candidate.sh artifacts/qualified-receipt/packages "$SOURCE" "$VERSION" "$CONTRACTS_VERSION"
+          for id in Artifacts Commands Cli Knowledge; do
+            lower="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
+            python3 scripts/verify-package-payloads.py \
+              "artifacts/qualified-receipt/packages/FS.GG.SDD.$id.$VERSION.nupkg" \
+              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.github.nupkg" \
+              "artifacts/qualified-receipt/feed-readback/fs.gg.sdd.$lower.nuget.nupkg"
+          done
+
       - name: Qualify the public Knowledge CLI and SDK
         env:
           FSGG_KNOWLEDGE_VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
@@ -566,7 +758,16 @@ jobs:
           printf '%s  %s\n' \
             '37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10' \
             "$RUNNER_TEMP/quint-release-tools/lmt" | sha256sum --check --strict
-          dotnet tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-release-tools/fable"
+          "$DOTNET_ROOT/dotnet" tool install fable --version 5.13.0 --tool-path "$RUNNER_TEMP/quint-release-tools/fable"
+          selected_sdk="$("$DOTNET_ROOT/dotnet" --version)"
+          python3 scripts/verify-fable-tool.py \
+            --write-sdk-binding "$RUNNER_TEMP/quint-release-tools/fable-sdk-binding.json" \
+            --provisioned-root "$DOTNET_ROOT" --sdk-version "$selected_sdk"
+          printf 'FABLE_SDK_BINDING=%s\n' "$RUNNER_TEMP/quint-release-tools/fable-sdk-binding.json" >> "$GITHUB_ENV"
+          python3 scripts/tests/verify-fable-tool.test.py \
+            --archive "$RUNNER_TEMP/quint-release-tools/fable/.store/fable/5.13.0/fable/5.13.0/Fable.nupkg" \
+            --sdk-template "$DOTNET_ROOT/sdk/$selected_sdk/AppHostTemplate/apphost" \
+            --fixture-parent "$RUNNER_TEMP"
 
       - name: Qualify neutral Q2 and Q3 receiver boundaries from the public CLI package
         env:
@@ -575,6 +776,7 @@ jobs:
           FABLE_BIN: ${{ runner.temp }}/quint-release-tools/fable/fable
           Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
           Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
+          SVG_WORKSPACE_PACKAGE_VERSION: ${{ needs.resolve-versions.outputs.cli_version }}
           Q2_JUNIT_OUT: artifacts/feed-readback/quint-q2-public.junit.xml
           Q2_EXACT_IR_JUNIT_OUT: artifacts/feed-readback/quint-q2-exact-ir-public.junit.xml
           Q3_JUNIT_OUT: artifacts/feed-readback/quint-q3-public.junit.xml
@@ -587,29 +789,22 @@ jobs:
           /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
           bash tests/quint-svg-workspace-installed-acceptance.sh
 
-      - name: Upload durable dual-feed receipt
+      - name: Retain public qualification evidence separately from completed feed effects
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: sdd-${{ needs.resolve-versions.outputs.cli_version }}-dual-feed-receipt-${{ github.sha }}
+          name: sdd-${{ needs.resolve-versions.outputs.cli_version }}-public-qualification-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            artifacts/packages/pre-push.sha256
-            artifacts/packages/candidate.env
-            artifacts/packages/contracts-reuse.json
-            artifacts/packages/dependencies/*.nupkg
-            artifacts/packages/*.nupkg.entries
-            artifacts/packages/*.nupkg.payloads
-            artifacts/feed-readback/*.payloads
-            artifacts/feed-readback/*.entries
-            artifacts/feed-readback/*.nupkg
+            public-receipt-identity.json
             artifacts/feed-readback/quint-q*-public.junit.xml
             artifacts/feed-readback/quint-q3-toolchain.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
 
   readback-cli:
     name: Read-only coherent SDD dual-feed verification
     runs-on: ubuntu-latest
-    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version != '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
+    if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.promotion_candidate_run == '' && inputs.promotion_candidate_sha256 == '' && inputs.promotion_candidate_source == '' && inputs.readback_version != '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == ''
     permissions:
       contents: read
       packages: read
@@ -617,6 +812,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Read back exact public archives
         id: readback
         env:
@@ -672,17 +868,23 @@ jobs:
       packages: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Validate mode before any download or verifier setup
         env:
           CANDIDATE_RUN: ${{ inputs.occupancy_candidate_run }}
           CANDIDATE_SHA256: ${{ inputs.occupancy_candidate_sha256 }}
           PUBLISH_VERSION: ${{ inputs.version }}
           READBACK_VERSION: ${{ inputs.readback_version }}
+          PROMOTION_RUN: ${{ inputs.promotion_candidate_run }}
+          PROMOTION_SHA256: ${{ inputs.promotion_candidate_sha256 }}
+          PROMOTION_SOURCE: ${{ inputs.promotion_candidate_source }}
         run: |
           python3 - <<'PYGUARD'
           import os,re
           assert re.fullmatch(r'[1-9][0-9]{0,19}',os.environ['CANDIDATE_RUN']), 'original candidate run ID required'
           assert re.fullmatch(r'[0-9a-f]{64}',os.environ['CANDIDATE_SHA256']), 'original archive SHA256 required'
+          assert not any(os.environ.get(k) for k in ['PROMOTION_RUN','PROMOTION_SHA256','PROMOTION_SOURCE']), 'occupancy excludes promotion'
           assert not os.environ['PUBLISH_VERSION'] and not os.environ['READBACK_VERSION'], 'occupancy mode excludes publish/readback modes'
           PYGUARD
       - name: Set up signature verifier only
@@ -691,11 +893,16 @@ jobs:
           dotnet-version: "10.0.401"
       - name: Authenticate original candidate and run strict read-only occupancy
         env:
+          FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}
+          FSGG_PACKAGES_READ_ACTOR: ${{ vars.FSGG_PACKAGES_READ_ACTOR }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CANDIDATE_RUN: ${{ inputs.occupancy_candidate_run }}
           CANDIDATE_SHA256: ${{ inputs.occupancy_candidate_sha256 }}
           PUBLISH_VERSION: ${{ inputs.version }}
           READBACK_VERSION: ${{ inputs.readback_version }}
+          PROMOTION_RUN: ${{ inputs.promotion_candidate_run }}
+          PROMOTION_SHA256: ${{ inputs.promotion_candidate_sha256 }}
+          PROMOTION_SOURCE: ${{ inputs.promotion_candidate_source }}
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
           set -euo pipefail

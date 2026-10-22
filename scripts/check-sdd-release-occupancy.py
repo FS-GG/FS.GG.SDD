@@ -2,6 +2,7 @@
 """Read-only both-feed preflight; occupied versions may resume only exact payloads."""
 import argparse
 import base64
+from datetime import datetime, timezone
 import io
 import hashlib
 import json
@@ -78,7 +79,104 @@ def verified_contracts_payloads(public, org, package_name="reused Contracts"):
         raise ValueError(f'{package_name} normalized payload differs between feeds')
 
 
-def preflight(version, ids, github_index, github_download, public_download, token, actor, candidate=None, contracts_version=None, github_api="https://api.github.com", no_push_observation=None):
+def authoritative_namespace_absence(package_id, actor, read):
+    """Only the package token's native active owner role authorizes inventory absence."""
+    def document(path):
+        raw, headers = read(path)
+        if headers.get('X-GitHub-SSO'):
+            raise ValueError('organization authorization incomplete; occupancy unknown')
+        scopes = {scope.strip() for scope in headers.get('X-OAuth-Scopes', '').split(',')}
+        if not {'read:packages', 'read:org'} <= scopes:
+            raise ValueError('same-token package and organization read capabilities required')
+        try:
+            return json.loads(raw), headers
+        except (ValueError, UnicodeError) as error:
+            raise ValueError('malformed authority response; occupancy unknown') from error
+
+    def numeric(value):
+        return type(value) is int and value > 0
+
+    user, _ = document('/user')
+    org, _ = document('/orgs/FS-GG')
+    if (not isinstance(user, dict) or not numeric(user.get('id'))
+            or user.get('login') != actor or not re.fullmatch(r'[A-Za-z0-9-]+', actor)
+            or not isinstance(org, dict) or not numeric(org.get('id'))
+            or org.get('login') != 'FS-GG'):
+        raise ValueError('package actor/organization identity mismatch; occupancy unknown')
+    membership, _ = document('/orgs/FS-GG/memberships/' + actor)
+    if (not isinstance(membership, dict) or membership.get('state') != 'active'
+            or membership.get('role') != 'admin'
+            or not isinstance(membership.get('user'), dict)
+            or not isinstance(membership.get('organization'), dict)
+            or not numeric(membership['user'].get('id'))
+            or not numeric(membership['organization'].get('id'))
+            or membership.get('user', {}).get('id') != user['id']
+            or membership.get('user', {}).get('login') != user['login']
+            or membership.get('organization', {}).get('id') != org['id']
+            or membership.get('organization', {}).get('login') != org['login']):
+        raise ValueError('package token lacks native active organization owner proof; occupancy unknown')
+    seen_ids, seen_names, population = set(), set(), []
+    for page in range(1, 11):
+        path = '/orgs/FS-GG/packages?package_type=nuget&per_page=100&page=' + str(page)
+        entries, headers = document(path)
+        if not isinstance(entries, list) or len(entries) > 100:
+            raise ValueError('malformed organization package population; occupancy unknown')
+        for entry in entries:
+            if (not isinstance(entry, dict) or not numeric(entry.get('id'))
+                    or not isinstance(entry.get('name'), str) or not entry['name']
+                    or entry.get('package_type') != 'nuget'
+                    or entry.get('visibility') not in ['public', 'private', 'internal']
+                    or not isinstance(entry.get('owner'), dict)
+                    or not numeric(entry['owner'].get('id'))
+                    or entry['owner'].get('id') != org['id']
+                    or entry['owner'].get('login') != org['login']):
+                raise ValueError('malformed organization package entry; occupancy unknown')
+            name = entry['name'].casefold()
+            if entry['id'] in seen_ids or name in seen_names:
+                raise ValueError('duplicate/stalled organization package population; occupancy unknown')
+            seen_ids.add(entry['id'])
+            seen_names.add(name)
+            population.append([entry['id'], name])
+        # Construct bounded sequential requests; never follow a server-supplied URL.
+        # A short page with a next link is contradictory and cannot prove completion.
+        link = headers.get('Link', '')
+        if link:
+            links = re.findall(r'<([^>]+)>; rel="([a-z]+)"', link)
+            if not links or ', '.join('<' + url + '>; rel="' + rel + '"' for url, rel in links) != link:
+                raise ValueError('malformed organization pagination; occupancy unknown')
+            if len({rel for _, rel in links}) != len(links):
+                raise ValueError('duplicate organization pagination relation; occupancy unknown')
+            for url, rel in links:
+                parsed = urllib.parse.urlparse(url)
+                query = urllib.parse.parse_qs(parsed.query)
+                if (parsed.scheme != 'https' or parsed.netloc != 'api.github.com'
+                        or parsed.path != '/orgs/FS-GG/packages' or parsed.fragment
+                        or set(query) != {'package_type', 'per_page', 'page'}
+                        or query['package_type'] != ['nuget'] or query['per_page'] != ['100']
+                        or len(query['page']) != 1 or not query['page'][0].isdigit()
+                        or rel not in ['next', 'prev', 'first', 'last']
+                        or int(query['page'][0]) < 1
+                        or (rel == 'next' and int(query['page'][0]) != page + 1)
+                        or (rel == 'prev' and int(query['page'][0]) != page - 1)
+                        or (rel == 'first' and int(query['page'][0]) != 1)
+                        or (rel == 'last' and (int(query['page'][0]) < page
+                            or (len(entries) < 100 and int(query['page'][0]) != page)))):
+                    raise ValueError('noncanonical organization pagination; occupancy unknown')
+            if len(entries) < 100 and any(rel == 'next' for _, rel in links):
+                raise ValueError('incomplete organization pagination; occupancy unknown')
+        if len(entries) < 100:
+            if package_id.casefold() in seen_names:
+                raise ValueError('selected namespace listed but scoped versions unreadable; occupancy unknown')
+            digest = hashlib.sha256(json.dumps(sorted(population), separators=(',', ':')).encode()).hexdigest()
+            return dict(method='same-token-active-org-owner-complete-inventory', actorId=user['id'],
+                        organizationId=org['id'], ownerRoleVerified=True, pages=page,
+                        packageCount=len(population), populationSha256=digest,
+                        observedAt=datetime.now(timezone.utc).isoformat(), packageId=package_id,
+                        publicationAuthorized=False)
+    raise ValueError('organization package population exceeds page bound; occupancy unknown')
+
+
+def preflight(version, ids, github_index, github_download, public_download, token, actor, candidate=None, contracts_version=None, github_api="https://api.github.com", no_push_observation=None, namespace_authority=False, proof_output=None):
     if no_push_observation is not None and candidate is not None:
         raise ValueError("candidate-only observation cannot be combined with publisher --candidate")
     observations = []
@@ -106,6 +204,24 @@ def preflight(version, ids, github_index, github_download, public_download, toke
             return redirected
     opener = urllib.request.build_opener(FeedRedirect())
 
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *args):
+            raise ValueError("authority/API redirect refused; occupancy unknown")
+    api_opener = urllib.request.build_opener(NoRedirect())
+
+    def authority_read(path):
+        request = urllib.request.Request(github_api.rstrip('/') + path,
+            headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json'})
+        try:
+            with api_opener.open(request, timeout=30) as response:
+                raw = response.read(4 * 1024 * 1024 + 1)
+                if len(raw) > 4 * 1024 * 1024:
+                    raise ValueError('authority population exceeds byte bound; occupancy unknown')
+                return raw, response.headers
+        except urllib.error.HTTPError as error:
+            raise ValueError(f'authority read HTTP{error.code}; occupancy unknown') from error
+    proofs = []
+
     def read(url, authenticated=False, api=False):
         request = urllib.request.Request(url)
         if api:
@@ -114,7 +230,9 @@ def preflight(version, ids, github_index, github_download, public_download, toke
         elif authenticated:
             request.add_header("Authorization", "Basic " + auth)
         try:
-            with opener.open(request, timeout=30) as response:
+            with (api_opener if api else opener).open(request, timeout=30) as response:
+                if api and getattr(response, 'headers', {}).get('X-GitHub-SSO'):
+                    raise ValueError('scoped authorization incomplete; occupancy unknown')
                 raw = response.read(4 * 1024 * 1024 + 1) if api else response.read()
                 if api and len(raw) > 4 * 1024 * 1024:
                     raise ValueError("scoped version response exceeds bounded population")
@@ -169,6 +287,11 @@ def preflight(version, ids, github_index, github_download, public_download, toke
                 # missing first-page namespace remains Unknown, never Absent.
                 # This only permits read-only no-push qualification; publishing
                 # continues to require the original strict scoped-version proof.
+                if (namespace_authority and no_push_observation is None
+                        and package_id == "FS.GG.SDD.Commands" and page == 1):
+                    proof = authoritative_namespace_absence(package_id, actor, authority_read)
+                    proofs.append(dict(proof, version=selected_version))
+                    return True
                 if no_push_observation is not None and package_id == "FS.GG.SDD.Commands" and page == 1:
                     return False
                 raise ValueError(f"{package_id}: scoped GitHub versions unreadable; occupancy unknown")
@@ -207,6 +330,11 @@ def preflight(version, ids, github_index, github_download, public_download, toke
                     observations.append(dict(packageId=package_id, version=selected_version, feed=feed, status="Absent"))
                     print(f"{package_id} {selected_version} {feed}: absent")
 
+    if proof_output is not None:
+        with proof_output.open('x', encoding='utf-8') as output:
+            json.dump(dict(schema='fsgg.sdd.namespace-proof/v1', proofs=proofs,
+                           publicationAuthorized=False), output, sort_keys=True)
+            output.write('\n')
     if no_push_observation is not None:
         observation = dict(mode="no-push-candidate", version=version, contractsVersion=contracts_version,
                            publicationAuthorized=False, observations=observations)
@@ -223,12 +351,16 @@ def main():
     parser.add_argument("--candidate", type=Path)
     parser.add_argument("--contracts-version", required=True)
     parser.add_argument("--no-push-observation", type=Path, help="retain candidate-only occupancy observations; cannot be used with --candidate")
+    parser.add_argument('--namespace-proof', type=Path, help='exclusive sanitized authority witness output')
     args = parser.parse_args()
     ids = Path(__file__).with_name("sdd-release-packages.txt").read_text().splitlines()
     preflight(args.version, ids, "https://nuget.pkg.github.com/FS-GG/index.json",
               "https://nuget.pkg.github.com/FS-GG/download", "https://api.nuget.org/v3-flatcontainer",
-              os.environ.get("GH_TOKEN", ""), os.environ.get("GITHUB_ACTOR", ""), args.candidate, args.contracts_version,
-              no_push_observation=args.no_push_observation)
+              os.environ.get("FSGG_PACKAGES_READ_TOKEN") or os.environ.get("GH_TOKEN", ""),
+              os.environ.get("FSGG_PACKAGES_READ_ACTOR") or os.environ.get("GITHUB_ACTOR", ""), args.candidate, args.contracts_version,
+              no_push_observation=args.no_push_observation,
+              namespace_authority=bool(os.environ.get('FSGG_PACKAGES_READ_TOKEN')),
+              proof_output=args.namespace_proof)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,44 @@
 # Implementation Plan: Publish the `fsgg-sdd` CLI as a dotnet tool
 
+## Authoritative visibility and retained promotion — issue1113
+
+Keep the existing workflow and publisher. Add an explicit protected-main retained
+selection of run/hash/source plus existing version input. Evaluate versions and
+execute current source-test job definitions at original source; use current
+protected verifier source for transport/custody/occupancy. Authenticate the original
+successful no-push archive and preserve its manifest/dependency/source identities.
+Exclude packing whenever any retained-selection field is present. Reauthenticate
+ZIP custody and occupancy in the publisher, then keep the ordinary eight writes,
+eight archive readbacks and existing public consumer qualification. Serialize normal
+and retained rails through one non-cancelling workflow fence. This fence coordinates
+this workflow; it supplies no provider-side atomic no-overwrite guarantee.
+
+Implement only the preferred same-token native owner proof. A separate member token
+would prove account role without proving package-token private visibility and adds
+an unnecessary authority surface. Require explicit package-read credential and actor
+binding, read:packages/read:org response capabilities, native active/admin membership,
+numeric joins and bounded unfiltered organization inventory. Never export inventory;
+retain only numeric witnesses, count/pages/time and canonical population digest.
+Keep Actions credentials separate and strip unused credentials from custody child.
+
+Pipeline-preflight choice: extend static dependency/ordering guards and semantic
+real-helper fault controls, rather than add a scheduling model. Literal dependencies
+already gate publication on the six source jobs and retained qualification; there is
+no new cancellation/retry policy to model. These reusable checks catch bypassed gates,
+credential exposure, repacking and selection drift before expensive hosted tests.
+Initial extension effort cap30minutes; warm offline controls measure under1second
+on this workspace, with no setup dependency. CI savings are unmeasured. The changed
+concurrency key does not control older workflow revisions; root must independently
+retain/fence their original actors and Unknown reservations before any dispatch.
+
+Preflight: dependency-free source guards and synthetic real-helper controls before
+SDK setup; no CLR/build or package upload locally. The retained runner already caps
+its custody/occupancy subprocesses. Source tests, cold package consumption and required
+CI remain genuine release gates and must run on hosted admitted capacity. Source
+review is required at the exact final head. Original39161526465/a1 Unknown and c8
+candidate custody remain independently reserved. No-push mode never consumes the
+new fallback. A passed observation supplies no publication authority.
+
 ## Bounded retained occupancy extension — issue1113
 
 Extend the existing release workflow, custody verifier and strict occupancy checker;
@@ -171,3 +210,25 @@ are operational/cross-repo, not in-repo source.
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|--------------------------------------|
 | — | — | — |
+
+
+### Review repairs and credential boundary
+
+Independent source review found contradictory terminal pagination, missing release
+Fable SDK binding, current-source version assumptions in retained qualifiers and
+persisted checkout credentials. Repair all in the same PR. Public installed-code
+checks now run in a separate read-only job after publication/readback; the writer
+passes only its immutable artifact ID/digest. A maintained verifier authenticates
+native run/verifier-source metadata and the complete bounded40-member receipt,
+then original-source custody/eight payload joins precede any installed execution.
+No write or OIDC permission reaches this public qualification job. Completed feed
+effects retain their writer receipt if later qualification fails.
+
+Extend the existing preflight with causal mutations for missing dependency edges,
+missing artifact ID/digest joins, reintroduced credentials and removed Fable/version
+bindings. Actual shell version-selection blocks run against differing synthetic
+source versions without CLR. Dependency-free receipt fixtures exercise foreign
+writer/source/digest, ZIP substitution and path/member failures. Preserve original
+Unknown observations and rerun only newly changed source checks; genuine hosted CI
+remains required at the repaired head. This source validation establishes neither
+actual occupancy nor live package qualification.

@@ -29,13 +29,28 @@ for old,new in [
  ('sha256sum --check --strict pre-push.sha256','true # ignored digest'),
  ('dotnet nuget push "artifacts/packages/FS.GG.SDD.Commands.*.nupkg"','dotnet nuget push "artifacts/packages/OTHER.nupkg"'),
  ('--contracts-version','--ignored-version'),
- ("rows != ['[7.6.0]']", "rows != ['7.6.0']")]:
+ ("rows != ['[7.6.0]']", "rows != ['7.6.0']"),
+ ('persist-credentials: false','persist-credentials: true'),
+ ('FSGG_SDD_PACKAGE_VERSION:', 'IGNORED_CANDIDATE_VERSION:'),
+ ('SVG_WORKSPACE_PACKAGE_VERSION:', 'IGNORED_PUBLIC_VERSION:'),
+ ('needs: [resolve-versions, locate-artifacts, publish-cli]', 'needs: [resolve-versions, locate-artifacts]'),
+ ('receipt_digest: ${{ steps.publish-receipt.outputs.artifact-digest }}', 'receipt_digest: ignored'),
+ ('ARTIFACT_ID: ${{ needs.publish-cli.outputs.receipt_artifact_id }}', 'ARTIFACT_ID: ignored'),
+ ('--write-sdk-binding "$RUNNER_TEMP/quint-release-tools/fable-sdk-binding.json"','--ignored-sdk-binding')]:
     assert old in text
     verdict(lambda old=old,new=new:static.check(text.replace(old,new)),False)
 verdict(lambda:static.check(text.replace('  publish-cli:\n','  publish-cli:\n    run: dotnet pack extra.fsproj\n')),False)
 verdict(lambda:static.check(text+'\n# dotnet pack src/FS.GG.Contracts/FS.GG.Contracts.fsproj'),False)
 verdict(lambda:static.check(text.replace(" && inputs.occupancy_candidate_run == ''", '', 1)),False)
 verdict(lambda:static.check(text.replace(" && inputs.occupancy_candidate_sha256 == ''", '', 1)),False)
+def public_env(line):
+    head,tail=text.split('\n  qualify-public:\n',1)
+    return head+'\n  qualify-public:\n'+tail.replace('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}','GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          '+line,1)
+for extra in ['NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}','FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}','EXTRA: ${{ secrets[format(\'NUGET_{0}\',\'API_KEY\')] }}','EXTRA: ${{ toJSON(secrets) }}']:
+    mutated=public_env(extra);assert mutated!=text
+    verdict(lambda mutated=mutated:static.check(mutated),False)
+verdict(lambda:static.check(text.replace('| tee retained-disposition.json','> retained-disposition.json')),False)
+verdict(lambda:static.check(text.replace('| tee retained-promotion-disposition.json','> retained-promotion-disposition.json')),False)
 verdict(lambda:static.check(text.replace('  occupancy-preflight:\n', '  occupancy-preflight:\n    permissions: {packages: write}\n')),False)
 
 def package(package_id,version,body=b'fixture',signature=None):
@@ -64,10 +79,42 @@ class Opener:
     def open(self,request,timeout):
         status,raw=responses.get(request.full_url,(404,b''))
         if status!=200:raise urllib.error.HTTPError(request.full_url,status,'synthetic',None,None)
-        return io.BytesIO(raw)
-def check(expected,candidate=None,contracts='7.6.0',token='synthetic',observation=None):
+        response=io.BytesIO(raw)
+        response.headers={'X-OAuth-Scopes':'read:packages, read:org'}
+        return response
+def check(expected,candidate=None,contracts='7.6.0',token='synthetic',observation=None,namespace_authority=False,proof_output=None):
     with patch.object(occupancy.urllib.request,'build_opener',return_value=Opener()), contextlib.redirect_stdout(io.StringIO()):
-        verdict(lambda:occupancy.preflight('2.3.0',ids,'https://fixture/index','https://fixture/org','https://fixture/public',token,'fixture',candidate,contracts,github_api='https://fixture/api',no_push_observation=observation),expected)
+        verdict(lambda:occupancy.preflight('2.3.0',ids,'https://fixture/index','https://fixture/org','https://fixture/public',token,'fixture',candidate,contracts,github_api='https://fixture/api',no_push_observation=observation,namespace_authority=namespace_authority,proof_output=proof_output),expected)
+# Actual preflight integration: fallback is restricted to the selected first
+# scoped Commands404; public-known baselines alone remain insufficient.
+def authority_seed():
+    seed()
+    prefix='https://fixture/api'
+    rows={'/user':dict(id=17,login='fixture'), '/orgs/FS-GG':dict(id=23,login='FS-GG'),
+          '/orgs/FS-GG/memberships/fixture':dict(state='active',role='admin',
+              user=dict(id=17,login='fixture'),organization=dict(id=23,login='FS-GG')),
+          '/orgs/FS-GG/packages?package_type=nuget&per_page=100&page=1':[]}
+    for path,row in rows.items():responses[prefix+path]=(200,json.dumps(row).encode())
+    commands='https://fixture/api/orgs/FS-GG/packages/nuget/fs.gg.sdd.commands/versions?per_page=100&page=1'
+    responses[commands]=(404,b'')
+    return commands
+with tempfile.TemporaryDirectory() as td:
+    root=Path(td)
+    commands=authority_seed();check(True,namespace_authority=True,proof_output=root/'proof.json')
+    proof=json.loads((root/'proof.json').read_text())
+    assert proof['proofs'][0]['ownerRoleVerified'] and proof['publicationAuthorized'] is False
+    authority_seed();check(False) # Same404 without explicit authority configuration.
+    authority_seed();check(True,namespace_authority=True,observation=root/'unknown-preserved.json')
+    assert any(row['status']=='Unknown' for row in json.loads((root/'unknown-preserved.json').read_text())['observations'])
+    for status in [401,403]:
+        authority_seed();responses[commands]=(status,b'');check(False,namespace_authority=True)
+    authority_seed();responses[commands]=(200,json.dumps([dict(name='1.0.0')]*100).encode());check(False,namespace_authority=True)
+    authority_seed();responses[commands]=(200,b'[{"name":"2.3.0"}]');check(False,namespace_authority=True)
+    authority_seed();other=commands.replace('fs.gg.sdd.commands','fs.gg.sdd.artifacts');responses[other]=(404,b'');check(False,namespace_authority=True)
+    for path in ['/user','/orgs/FS-GG','/orgs/FS-GG/memberships/fixture','/orgs/FS-GG/packages?package_type=nuget&per_page=100&page=1']:
+        for status in [401,403,404]:
+            authority_seed();responses['https://fixture/api'+path]=(status,b'');check(False,namespace_authority=True)
+    authority_seed();responses['https://fixture/api/user']=(200,b'x'*(4*1024*1024+1));check(False,namespace_authority=True)
 seed();check(True);check(False,token='');check(False,contracts=None);check(False,contracts='7.6-preview')
 api='https://fixture/api/orgs/FS-GG/packages/nuget/fs.gg.sdd.commands/versions?per_page=100&page=1'
 responses[api]=(403,b'');check(False)

@@ -222,3 +222,31 @@ unblocks FS-GG/.github#49. **STOP and VALIDATE** at the Phase-4 checkpoint (cons
   failing `registry validate`; narrow and document instead.
 - Elmish/MVU is N/A — no F# product code, no lifecycle command (plan Principle V).
 - Never mark a task `[X]` on a red run; never weaken an assertion to green CI.
+
+
+## Issue1113 visibility and retained promotion
+
+- [x] Specify exact original-candidate/current-verifier separation and same-token
+  authoritative visibility; retain original Unknown and no-push behavior.
+- [x] Add native owner/inventory proof, private credential separation and bounded
+  sanitized typed witness; preserve archive equality and Contracts reuse.
+- [x] Add explicit retained selection to the existing publisher, qualify original
+  source, forbid repacking, reauthenticate custody/occupancy before existing effects.
+- [x] Exercise real helpers with synthetic negative/security and causal controls;
+  document capability supply and non-atomic observation limits.
+- [ ] Complete independent exact-head source review and required source CI.
+- [ ] Root admits actual occupancy/publication when capability and release gates
+  permit; verify all applicable live/consumer effects before full1113 closure.
+
+- [x] Repair independent review findings: contradictory/duplicate pagination,
+  strict nested numeric identity types, non-persisted checkout credentials,
+  explicit retained-version recursion and current release Fable SDK binding.
+- [x] Isolate public installed-code execution in a read-only dependent job;
+  authenticate immutable writer ID/digest/source and bounded receipt before
+  rejoining original custody/all eight payloads. Preserve partial-effect receipts.
+
+- [x] Update the existing F# release-workflow contract test to delimit the
+  publisher at `qualify-public`, preserving one publisher payload-check loop and
+  asserting the separate credential boundary and immutable source/receipt joins.
+  Original gate39714094173 Commands count failure is retained. Its independent
+  npm restore timeout remains Unknown; no timeout extension or skipped lane.

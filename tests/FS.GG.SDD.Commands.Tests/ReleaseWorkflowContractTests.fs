@@ -21,6 +21,17 @@ module ReleaseWorkflowContractTests =
         Path.Combine(TestSupport.repoRoot, "specs", "044-publish-cli-tool", "contracts", "release-workflow.md")
         |> File.ReadAllText
 
+    // The public job's credential boundary is an allowlist: exactly one secret reference, the
+    // read-only workflow token, and no publisher or feed-read secret by any spelling.
+    let private publicSecretBoundaryHolds (job: string) =
+        let secretReferences =
+            System.Text.RegularExpressions.Regex.Matches(job, @"\bsecrets\b").Count
+
+        secretReferences = 1
+        && job.Contains("secrets.GITHUB_TOKEN", StringComparison.Ordinal)
+        && not (job.Contains("FSGG_PACKAGES_READ", StringComparison.Ordinal))
+        && not (job.Contains("NUGET_API_KEY", StringComparison.Ordinal))
+
     let private count (needle: string) (text: string) =
         let mutable found = 0
         let mutable offset = 0
@@ -108,8 +119,19 @@ module ReleaseWorkflowContractTests =
         let readbackStart =
             workflow.IndexOf("\n  readback-cli:\n", finish, StringComparison.Ordinal)
 
-        Assert.True(readbackStart > finish, "publisher and read-only readback must remain distinct jobs")
-        let publish = workflow.Substring(finish, readbackStart - finish)
+        let qualificationStart =
+            workflow.IndexOf("\n  qualify-public:\n", finish, StringComparison.Ordinal)
+
+        Assert.True(
+            finish < qualificationStart && qualificationStart < readbackStart,
+            "publisher, credential-free public qualification, and read-only readback must remain distinct jobs"
+        )
+
+        let publish = workflow.Substring(finish, qualificationStart - finish)
+
+        let qualification =
+            workflow.Substring(qualificationStart, readbackStart - qualificationStart)
+
         Assert.Contains("event=workflow_dispatch&status=completed", custody)
         Assert.Contains("expected exactly one retained no-push candidate", custody)
         Assert.Contains("run-id: ${{ needs.locate-artifacts.outputs.candidate_run_id }}", publish)
@@ -136,13 +158,56 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("artifacts/feed-readback/*.payloads", publish)
         Assert.Contains("artifacts/feed-readback/*.entries", publish)
         assertPayloadReceiptMaps ()
-        Assert.Contains("Verify clean public installs", publish)
-        Assert.Contains("Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
-        Assert.Contains("Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", publish)
-        Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", publish)
-        Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", publish)
-        Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", publish)
-        Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", publish)
+        Assert.Contains("needs: [resolve-versions, locate-artifacts, publish-cli]", qualification)
+        Assert.Contains("contents: read", qualification)
+        Assert.Contains("actions: read", qualification)
+        Assert.Contains("packages: read", qualification)
+        Assert.Contains("persist-credentials: false", qualification)
+        Assert.DoesNotContain(": write", qualification)
+        Assert.True(publicSecretBoundaryHolds qualification, "public job may reference only secrets.GITHUB_TOKEN")
+
+        for extra in
+            [
+                "NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}"
+                "FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}"
+                "EXTRA: ${{ toJSON(secrets) }}"
+            ] do
+            let widened =
+                qualification.Replace(
+                    "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+                    "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          " + extra
+                )
+
+            Assert.NotEqual<string>(qualification, widened)
+
+            Assert.False(
+                publicSecretBoundaryHolds widened,
+                $"adding '{extra}' to the public job must fail the boundary"
+            )
+
+        Assert.Contains("| tee retained-disposition.json", custody)
+        Assert.Contains("| tee retained-promotion-disposition.json", publish)
+        Assert.DoesNotContain("NuGet/login", qualification)
+        Assert.DoesNotContain("dotnet nuget push", qualification)
+        Assert.Contains("receipt_artifact_id: ${{ steps.publish-receipt.outputs.artifact-id }}", publish)
+        Assert.Contains("receipt_digest: ${{ steps.publish-receipt.outputs.artifact-digest }}", publish)
+        Assert.Contains("ARTIFACT_ID: ${{ needs.publish-cli.outputs.receipt_artifact_id }}", qualification)
+        Assert.Contains("ARTIFACT_SHA256: ${{ needs.publish-cli.outputs.receipt_digest }}", qualification)
+        Assert.Contains("scripts/verify-publication-receipt.py", qualification)
+        Assert.Contains("SOURCE: ${{ needs.locate-artifacts.outputs.candidate_source }}", qualification)
+        Assert.Contains("scripts/verify-release-candidate.sh artifacts/qualified-receipt/packages", qualification)
+        Assert.Equal(1, count "python3 scripts/verify-package-payloads.py" qualification)
+        Assert.Contains("for id in Artifacts Commands Cli Knowledge; do", qualification)
+        Assert.DoesNotContain("Verify clean public installs", publish)
+        Assert.DoesNotContain("scripts/verify-knowledge-packages.sh", publish)
+        Assert.DoesNotContain("tests/quint-svg-workspace-installed-acceptance.sh", publish)
+        Assert.Contains("Verify clean public installs", qualification)
+        Assert.Contains("Q2_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", qualification)
+        Assert.Contains("Q3_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json", qualification)
+        Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", qualification)
+        Assert.Contains("/usr/bin/unshare --user --map-root-user --net -- /usr/bin/true", qualification)
+        Assert.Contains("bash tests/quint-svg-workspace-installed-acceptance.sh", qualification)
+        Assert.DoesNotContain("bash tests/quint-q3-typed-sdd-acceptance.sh", qualification)
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"16\" failures=\"0\"", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"20\" failures=\"0\"", svgWorkspaceQuintAcceptance)
@@ -151,7 +216,7 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("offline acceptance requires a real user and network namespace", svgWorkspaceQuintAcceptance)
         Assert.Contains("FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE", svgWorkspaceQuintAcceptance)
         Assert.Contains("replacement-rollback-decision-lock", svgWorkspaceQuintAcceptance)
-        Assert.Contains("quint-q3-public.junit.xml", publish)
+        Assert.Contains("quint-q3-public.junit.xml", qualification)
         Assert.Contains("artifacts/feed-readback/*.nupkg", publish)
         Assert.Contains("for attempt in $(seq 1 40)", publish)
         Assert.Contains("kernel.apparmor_restrict_unprivileged_userns=0", gateWorkflow)

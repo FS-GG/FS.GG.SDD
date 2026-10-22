@@ -53,11 +53,72 @@ def check(text):
     require("github.event_name == 'workflow_dispatch'" in occupancy,
             'occupancy-only mode is not an explicit manual selection')
     for name in ['resolve-versions','contracts-tests','artifacts-tests','commands-tests','cli-tests',
-                 'knowledge-tests','publish-artifacts','locate-artifacts','publish-cli','readback-cli']:
+                 'knowledge-tests','publish-artifacts','locate-artifacts','publish-cli','qualify-public','readback-cli']:
         condition=next((line for line in jobs.get(name,'').splitlines() if line.strip().startswith('if:')), '')
         require("inputs.occupancy_candidate_run == ''" in condition
                 and "inputs.occupancy_candidate_sha256 == ''" in condition,
                 f'{name} can run during occupancy-only selection')
+    require('group: release-coherent-sdd' in text, 'release writers do not share a publication fence')
+    for name in ['resolve-versions','contracts-tests','artifacts-tests','commands-tests','cli-tests','knowledge-tests']:
+        require('ref: ${{ inputs.promotion_candidate_source || github.sha }}' in jobs[name],
+                name + ' does not qualify original retained source')
+        if name != 'resolve-versions':
+            require('needs: [resolve-versions]' in jobs[name], name + ' launches before mode preflight')
+        require('persist-credentials: false' in jobs[name] and 'FSGG_PACKAGES_READ_TOKEN' not in jobs[name],
+                name + ' exposes protected credentials to original source')
+    for field in ['promotion_candidate_run','promotion_candidate_sha256','promotion_candidate_source']:
+        require("inputs." + field + " == ''" in candidate, 'retained promotion can repack')
+    require('refs/heads/main' in resolver and 'PYPROMOTION' in resolver,
+            'retained promotion lacks explicit protected selection validation')
+    locate = jobs.get('locate-artifacts','')
+    require('persist-credentials: false' in locate and 'persist-credentials: false' in publish,
+            'retained execution exposes persisted protected checkout credentials')
+    public = jobs.get('qualify-public', '')
+    require('FSGG_SDD_PACKAGE_VERSION:' in locate and 'SVG_WORKSPACE_PACKAGE_VERSION:' in public,
+            'retained qualifiers use current verifier version')
+    require('--write-sdk-binding "$RUNNER_TEMP/quint-release-tools/fable-sdk-binding.json"' in public
+            and 'FABLE_SDK_BINDING=%s' in public and 'scripts/tests/verify-fable-tool.test.py' in public,
+            'public receiver gate lacks provisioned Fable SDK binding/controls')
+    require('bash scripts/verify-cli-tool.sh' in locate and 'bash scripts/verify-sdd-package-api.sh' in locate
+            and 'bash scripts/verify-knowledge-packages.sh' in locate,
+            'retained packages miss current release qualification')
+    require('--expected-source "$CANDIDATE_SOURCE"' in locate and '--expected-version "$VERSION"' in locate
+            and '--archive-sha256 "$CANDIDATE_SHA256"' in locate,
+            'retained lookup does not authenticate exact original selection')
+    require('--expected-source "$CANDIDATE_SOURCE"' in publish and '--expected-version "$VERSION"' in publish
+            and '--archive-sha256 "$CANDIDATE_SHA256"' in publish,
+            'publisher does not reauthenticate retained ZIP/source/version')
+    require('artifacts/packages "${{ needs.locate-artifacts.outputs.candidate_source }}"' in publish,
+            'publisher relabels retained package source')
+    require('FSGG_PACKAGES_READ_TOKEN' in occupancy and 'FSGG_PACKAGES_READ_TOKEN' in publish,
+            'protected preflights cannot use explicit read authority')
+    require('needs: [resolve-versions, locate-artifacts, publish-cli]' in public,
+            'public qualification can precede feed writes/readbacks')
+    require('ARTIFACT_ID: ${{ needs.publish-cli.outputs.receipt_artifact_id }}' in public
+            and 'ARTIFACT_SHA256: ${{ needs.publish-cli.outputs.receipt_digest }}' in public
+            and 'scripts/verify-publication-receipt.py' in public
+            and 'receipt_artifact_id: ${{ steps.publish-receipt.outputs.artifact-id }}' in publish
+            and 'receipt_digest: ${{ steps.publish-receipt.outputs.artifact-digest }}' in publish,
+            'read-only qualification loses immutable publisher receipt join')
+    require('artifacts/packages/*.nupkg' in publish and 'verify-release-candidate.sh artifacts/qualified-receipt/packages' in public
+            and 'scripts/verify-package-payloads.py' in public,
+            'public qualification loses original archive/source/eight-feed joins')
+    require('contents: read' in public and 'actions: read' in public and 'packages: read' in public
+            and ': write' not in public and 'NuGet/login' not in public and public.count('GH_TOKEN:') == 1,
+            'public package execution has publication credentials')
+    # The denylist above is not a boundary on its own: pin the allowlist. The public job may
+    # reference exactly one secret, the read-only workflow token, and no feed/publisher secret.
+    require(len(re.findall(r'\bsecrets\b', public)) == 1 and public.count('secrets.GITHUB_TOKEN') == 1
+            and 'FSGG_PACKAGES_READ' not in public and 'NUGET_API_KEY' not in public,
+            'public job references a secret other than the read-only workflow token')
+    require('| tee retained-disposition.json' in locate and '| tee retained-promotion-disposition.json' in publish,
+            'refused retained promotion does not surface its typed disposition')
+    require('scripts/verify-knowledge-packages.sh' not in publish and 'dotnet tool install FS.GG.SDD.Cli' not in publish
+            and 'tests/quint-svg-workspace-installed-acceptance.sh' not in publish,
+            'publisher executes installed public candidate with write/OIDC permissions')
+    require('scripts/verify-knowledge-packages.sh' in public and 'dotnet tool install FS.GG.SDD.Cli' in public
+            and 'tests/quint-svg-workspace-installed-acceptance.sh' in public,
+            'read-only public package qualification gate removed')
     require('for id in fs.gg.sdd.artifacts fs.gg.sdd.commands fs.gg.sdd.cli fs.gg.sdd.knowledge; do' in publish,'readback excludes an SDD member')
     require('artifacts/packages/contracts-reuse.json' in publish and 'artifacts/packages/dependencies/*.nupkg' in publish,'durable receipt loses dependency provenance')
 
