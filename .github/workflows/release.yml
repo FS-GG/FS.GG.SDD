@@ -458,7 +458,7 @@ jobs:
           python3 scripts/preflight-retained-occupancy.py --run-id "$CANDIDATE_RUN" \
             --archive-sha256 "$CANDIDATE_SHA256" --expected-source "$CANDIDATE_SOURCE" \
             --expected-version "$VERSION" --destination artifacts/retained-check/selected \
-            > retained-disposition.json
+            | tee retained-disposition.json
           echo "candidate_run_id=$CANDIDATE_RUN" >> "$GITHUB_OUTPUT"
           echo "candidate_source=$CANDIDATE_SOURCE" >> "$GITHUB_OUTPUT"
       - name: Requalify retained CLI and shipped APIs with current release checks
@@ -557,7 +557,7 @@ jobs:
           python3 scripts/preflight-retained-occupancy.py --run-id "$CANDIDATE_RUN" \
             --archive-sha256 "$CANDIDATE_SHA256" --expected-source "$CANDIDATE_SOURCE" \
             --expected-version "$VERSION" --destination artifacts/packages \
-            > retained-promotion-disposition.json
+            | tee retained-promotion-disposition.json
 
       - name: Verify retained candidate identity and hashes before feed credentials
         run: |

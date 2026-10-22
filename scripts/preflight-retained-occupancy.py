@@ -111,6 +111,7 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
     source = run.get('head_sha', '')
     if (run.get('id') != int(run_id) or run.get('status') != 'completed'
             or run.get('conclusion') != 'success' or run.get('event') != 'workflow_dispatch'
+            or run.get('head_branch') != 'main'
             or run.get('path') != '.github/workflows/release.yml'
             or run.get('repository', {}).get('full_name') != REPOSITORY
             or run.get('head_repository', {}).get('full_name') != REPOSITORY

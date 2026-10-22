@@ -21,6 +21,17 @@ module ReleaseWorkflowContractTests =
         Path.Combine(TestSupport.repoRoot, "specs", "044-publish-cli-tool", "contracts", "release-workflow.md")
         |> File.ReadAllText
 
+    // The public job's credential boundary is an allowlist: exactly one secret reference, the
+    // read-only workflow token, and no publisher or feed-read secret by any spelling.
+    let private publicSecretBoundaryHolds (job: string) =
+        let secretReferences =
+            System.Text.RegularExpressions.Regex.Matches(job, @"\bsecrets\b").Count
+
+        secretReferences = 1
+        && job.Contains("secrets.GITHUB_TOKEN", StringComparison.Ordinal)
+        && not (job.Contains("FSGG_PACKAGES_READ", StringComparison.Ordinal))
+        && not (job.Contains("NUGET_API_KEY", StringComparison.Ordinal))
+
     let private count (needle: string) (text: string) =
         let mutable found = 0
         let mutable offset = 0
@@ -153,6 +164,29 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("packages: read", qualification)
         Assert.Contains("persist-credentials: false", qualification)
         Assert.DoesNotContain(": write", qualification)
+        Assert.True(publicSecretBoundaryHolds qualification, "public job may reference only secrets.GITHUB_TOKEN")
+
+        for extra in
+            [
+                "NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}"
+                "FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}"
+                "EXTRA: ${{ toJSON(secrets) }}"
+            ] do
+            let widened =
+                qualification.Replace(
+                    "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+                    "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          " + extra
+                )
+
+            Assert.NotEqual<string>(qualification, widened)
+
+            Assert.False(
+                publicSecretBoundaryHolds widened,
+                $"adding '{extra}' to the public job must fail the boundary"
+            )
+
+        Assert.Contains("| tee retained-disposition.json", custody)
+        Assert.Contains("| tee retained-promotion-disposition.json", publish)
         Assert.DoesNotContain("NuGet/login", qualification)
         Assert.DoesNotContain("dotnet nuget push", qualification)
         Assert.Contains("receipt_artifact_id: ${{ steps.publish-receipt.outputs.artifact-id }}", publish)

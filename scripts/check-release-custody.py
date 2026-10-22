@@ -106,6 +106,13 @@ def check(text):
     require('contents: read' in public and 'actions: read' in public and 'packages: read' in public
             and ': write' not in public and 'NuGet/login' not in public and public.count('GH_TOKEN:') == 1,
             'public package execution has publication credentials')
+    # The denylist above is not a boundary on its own: pin the allowlist. The public job may
+    # reference exactly one secret, the read-only workflow token, and no feed/publisher secret.
+    require(len(re.findall(r'\bsecrets\b', public)) == 1 and public.count('secrets.GITHUB_TOKEN') == 1
+            and 'FSGG_PACKAGES_READ' not in public and 'NUGET_API_KEY' not in public,
+            'public job references a secret other than the read-only workflow token')
+    require('| tee retained-disposition.json' in locate and '| tee retained-promotion-disposition.json' in publish,
+            'refused retained promotion does not surface its typed disposition')
     require('scripts/verify-knowledge-packages.sh' not in publish and 'dotnet tool install FS.GG.SDD.Cli' not in publish
             and 'tests/quint-svg-workspace-installed-acceptance.sh' not in publish,
             'publisher executes installed public candidate with write/OIDC permissions')

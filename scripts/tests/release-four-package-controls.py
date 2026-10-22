@@ -43,6 +43,14 @@ verdict(lambda:static.check(text.replace('  publish-cli:\n','  publish-cli:\n   
 verdict(lambda:static.check(text+'\n# dotnet pack src/FS.GG.Contracts/FS.GG.Contracts.fsproj'),False)
 verdict(lambda:static.check(text.replace(" && inputs.occupancy_candidate_run == ''", '', 1)),False)
 verdict(lambda:static.check(text.replace(" && inputs.occupancy_candidate_sha256 == ''", '', 1)),False)
+def public_env(line):
+    head,tail=text.split('\n  qualify-public:\n',1)
+    return head+'\n  qualify-public:\n'+tail.replace('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}','GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          '+line,1)
+for extra in ['NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}','FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}','EXTRA: ${{ secrets[format(\'NUGET_{0}\',\'API_KEY\')] }}','EXTRA: ${{ toJSON(secrets) }}']:
+    mutated=public_env(extra);assert mutated!=text
+    verdict(lambda mutated=mutated:static.check(mutated),False)
+verdict(lambda:static.check(text.replace('| tee retained-disposition.json','> retained-disposition.json')),False)
+verdict(lambda:static.check(text.replace('| tee retained-promotion-disposition.json','> retained-promotion-disposition.json')),False)
 verdict(lambda:static.check(text.replace('  occupancy-preflight:\n', '  occupancy-preflight:\n    permissions: {packages: write}\n')),False)
 
 def package(package_id,version,body=b'fixture',signature=None):

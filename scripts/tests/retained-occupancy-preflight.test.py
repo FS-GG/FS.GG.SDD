@@ -36,7 +36,7 @@ def fixture():
     raw = stream.getvalue()
     digest = hashlib.sha256(raw).hexdigest()
     run = dict(id=42, event='workflow_dispatch', status='completed', conclusion='success',
-               head_sha=head, path='.github/workflows/release.yml',
+               head_sha=head, head_branch='main', path='.github/workflows/release.yml',
                repository={'full_name': runner.REPOSITORY},
                head_repository={'full_name': runner.REPOSITORY})
     artifact = dict(id=17, name='coherent-sdd-packages-' + head, expired=False,
@@ -196,6 +196,16 @@ class Controls(unittest.TestCase):
                 self.invoke(**args)
         self.assertFalse(self.reads)
         self.assertFalse(self.calls)
+
+    def test_original_run_must_come_from_protected_main_branch(self):
+        for branch in ['feature/x', '', None, 'main2']:
+            self.run['head_branch'] = branch
+            self.calls.clear()
+            with self.subTest(branch=branch), self.assertRaises(ValueError):
+                self.invoke()
+            self.assertFalse(self.calls)
+        self.run['head_branch'] = 'main'
+        self.assertEqual(self.invoke()['outcome'], 'verified-read-only-occupancy')
 
     def test_untrusted_run_or_incomplete_artifact_population_blocks_commands(self):
         for key, value in [('conclusion', 'failure'), ('status', 'in_progress'),
