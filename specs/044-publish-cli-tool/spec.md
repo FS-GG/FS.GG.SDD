@@ -173,3 +173,11 @@ fallback scope, credential separation, original source/version/ZIP substitution,
 mixed mode guards and no-pack promotion. Actual authenticated occupancy, package
 publication, eight dual-feed readbacks and consumer acceptance are separate effects.
 No F# API or package/version migration is introduced.
+
+
+Installed retained/public package execution must occur only with read permissions,
+without publisher/OIDC credentials. Current source-test jobs wait for mode/version
+preflight. The writer supplies a native immutable artifact ID/digest/source-bound
+receipt; a read-only dependent job validates its complete bounded original/eight-feed
+archive population before package execution. That job's real result remains part of
+release success. Partial feed effects retain evidence when later qualification fails.

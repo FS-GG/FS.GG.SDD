@@ -210,3 +210,25 @@ are operational/cross-repo, not in-repo source.
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|--------------------------------------|
 | — | — | — |
+
+
+### Review repairs and credential boundary
+
+Independent source review found contradictory terminal pagination, missing release
+Fable SDK binding, current-source version assumptions in retained qualifiers and
+persisted checkout credentials. Repair all in the same PR. Public installed-code
+checks now run in a separate read-only job after publication/readback; the writer
+passes only its immutable artifact ID/digest. A maintained verifier authenticates
+native run/verifier-source metadata and the complete bounded40-member receipt,
+then original-source custody/eight payload joins precede any installed execution.
+No write or OIDC permission reaches this public qualification job. Completed feed
+effects retain their writer receipt if later qualification fails.
+
+Extend the existing preflight with causal mutations for missing dependency edges,
+missing artifact ID/digest joins, reintroduced credentials and removed Fable/version
+bindings. Actual shell version-selection blocks run against differing synthetic
+source versions without CLR. Dependency-free receipt fixtures exercise foreign
+writer/source/digest, ZIP substitution and path/member failures. Preserve original
+Unknown observations and rerun only newly changed source checks; genuine hosted CI
+remains required at the repaired head. This source validation establishes neither
+actual occupancy nor live package qualification.

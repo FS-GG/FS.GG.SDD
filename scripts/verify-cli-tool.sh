@@ -26,8 +26,15 @@ cli_proj="$repo_root/src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj"
 cd "$repo_root"
 good_fixture="tests/fixtures/registry/dependencies.yml"
 
-# Evaluated CLI <Version> — the source of truth (matches the producer's resolve-versions).
-version="$(dotnet msbuild "$cli_proj" -getProperty:Version | tr -d '[:space:]')"
+# Retained callers supply the already source-evaluated original version. An
+# explicit version is valid only with pre-packed bytes; it can never select packing.
+version="${FSGG_SDD_PACKAGE_VERSION:-}"
+if [ -n "$version" ]; then
+  [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && [ -n "${FSGG_SDD_PACKAGE_DIR:-}" ] \
+    || { echo '::error::explicit candidate version requires stable version and retained package directory' >&2; exit 1; }
+else
+  version="$(dotnet msbuild "$cli_proj" -getProperty:Version | tr -d '[:space:]')"
+fi
 if [ -z "$version" ]; then
   echo "::error::could not read <Version> from FS.GG.SDD.Cli.fsproj" >&2
   exit 1

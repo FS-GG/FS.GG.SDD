@@ -16,8 +16,14 @@ sha() { sha256sum "$1" | cut -d' ' -f1; }
 fable_identity="$(python3 "$repo_root/scripts/verify-fable-tool.py" --tool "$FABLE_BIN" --sdk-binding "$FABLE_SDK_BINDING")" \
   || fail 'Fable package/SDK launcher identity refused'
 
-version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' "$repo_root/Directory.Build.local.props" | head -1)"
-[[ -n "$version" ]] || fail 'coherent package version is absent'
+version="${SVG_WORKSPACE_PACKAGE_VERSION:-}"
+if [[ -z "$version" ]]; then
+  version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' "$repo_root/Directory.Build.local.props" | head -1)"
+fi
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'coherent stable package version is absent or malformed'
+if [[ -n "${SVG_WORKSPACE_PACKAGE_VERSION:-}" && -z "${Q3_PACKAGE_SOURCE:-}" ]]; then
+  fail 'explicit retained version requires a package source; packing is forbidden'
+fi
 
 if [[ "${SVG_WORKSPACE_OFFLINE_STAGE:-0}" != '1' ]]; then
   scratch="$(mktemp -d /tmp/fsgg-svg-workspace-quint.XXXXXX)"
@@ -72,6 +78,7 @@ if [[ "${SVG_WORKSPACE_OFFLINE_STAGE:-0}" != '1' ]]; then
     Q3_JUNIT_OUT="${Q3_JUNIT_OUT:-}"
     Q3_TOOLCHAIN_OUT="${Q3_TOOLCHAIN_OUT:-}"
     SVG_WORKSPACE_PACKAGE_ORIGIN="$package_origin"
+    SVG_WORKSPACE_PACKAGE_VERSION="$version"
   )
 
   if [[ "${SVG_WORKSPACE_SKIP_UNSHARE:-0}" == '1' ]]; then

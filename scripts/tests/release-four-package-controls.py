@@ -29,7 +29,14 @@ for old,new in [
  ('sha256sum --check --strict pre-push.sha256','true # ignored digest'),
  ('dotnet nuget push "artifacts/packages/FS.GG.SDD.Commands.*.nupkg"','dotnet nuget push "artifacts/packages/OTHER.nupkg"'),
  ('--contracts-version','--ignored-version'),
- ("rows != ['[7.6.0]']", "rows != ['7.6.0']")]:
+ ("rows != ['[7.6.0]']", "rows != ['7.6.0']"),
+ ('persist-credentials: false','persist-credentials: true'),
+ ('FSGG_SDD_PACKAGE_VERSION:', 'IGNORED_CANDIDATE_VERSION:'),
+ ('SVG_WORKSPACE_PACKAGE_VERSION:', 'IGNORED_PUBLIC_VERSION:'),
+ ('needs: [resolve-versions, locate-artifacts, publish-cli]', 'needs: [resolve-versions, locate-artifacts]'),
+ ('receipt_digest: ${{ steps.publish-receipt.outputs.artifact-digest }}', 'receipt_digest: ignored'),
+ ('ARTIFACT_ID: ${{ needs.publish-cli.outputs.receipt_artifact_id }}', 'ARTIFACT_ID: ignored'),
+ ('--write-sdk-binding "$RUNNER_TEMP/quint-release-tools/fable-sdk-binding.json"','--ignored-sdk-binding')]:
     assert old in text
     verdict(lambda old=old,new=new:static.check(text.replace(old,new)),False)
 verdict(lambda:static.check(text.replace('  publish-cli:\n','  publish-cli:\n    run: dotnet pack extra.fsproj\n')),False)

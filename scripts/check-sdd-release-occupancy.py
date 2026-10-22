@@ -108,6 +108,8 @@ def authoritative_namespace_absence(package_id, actor, read):
             or membership.get('role') != 'admin'
             or not isinstance(membership.get('user'), dict)
             or not isinstance(membership.get('organization'), dict)
+            or not numeric(membership['user'].get('id'))
+            or not numeric(membership['organization'].get('id'))
             or membership.get('user', {}).get('id') != user['id']
             or membership.get('user', {}).get('login') != user['login']
             or membership.get('organization', {}).get('id') != org['id']
@@ -125,6 +127,7 @@ def authoritative_namespace_absence(package_id, actor, read):
                     or entry.get('package_type') != 'nuget'
                     or entry.get('visibility') not in ['public', 'private', 'internal']
                     or not isinstance(entry.get('owner'), dict)
+                    or not numeric(entry['owner'].get('id'))
                     or entry['owner'].get('id') != org['id']
                     or entry['owner'].get('login') != org['login']):
                 raise ValueError('malformed organization package entry; occupancy unknown')
@@ -141,6 +144,8 @@ def authoritative_namespace_absence(package_id, actor, read):
             links = re.findall(r'<([^>]+)>; rel="([a-z]+)"', link)
             if not links or ', '.join('<' + url + '>; rel="' + rel + '"' for url, rel in links) != link:
                 raise ValueError('malformed organization pagination; occupancy unknown')
+            if len({rel for _, rel in links}) != len(links):
+                raise ValueError('duplicate organization pagination relation; occupancy unknown')
             for url, rel in links:
                 parsed = urllib.parse.urlparse(url)
                 query = urllib.parse.parse_qs(parsed.query)
@@ -150,7 +155,12 @@ def authoritative_namespace_absence(package_id, actor, read):
                         or query['package_type'] != ['nuget'] or query['per_page'] != ['100']
                         or len(query['page']) != 1 or not query['page'][0].isdigit()
                         or rel not in ['next', 'prev', 'first', 'last']
-                        or (rel == 'next' and int(query['page'][0]) != page + 1)):
+                        or int(query['page'][0]) < 1
+                        or (rel == 'next' and int(query['page'][0]) != page + 1)
+                        or (rel == 'prev' and int(query['page'][0]) != page - 1)
+                        or (rel == 'first' and int(query['page'][0]) != 1)
+                        or (rel == 'last' and (int(query['page'][0]) < page
+                            or (len(entries) < 100 and int(query['page'][0]) != page)))):
                     raise ValueError('noncanonical organization pagination; occupancy unknown')
             if len(entries) < 100 and any(rel == 'next' for _, rel in links):
                 raise ValueError('incomplete organization pagination; occupancy unknown')

@@ -288,3 +288,36 @@ contract. Root release admission and writer fencing remain necessary; source del
 or a passing read-only observation alone authorizes no dispatch or publication.
 Issue1113 remains open until its full supported disposition and consumer obligations
 are verified or its precise held remainder is recorded by the accountable integrator.
+
+
+## Keep installed-code qualification outside publication credentials
+
+The publisher performs custody parsing, fresh occupancy, feed writes and all eight
+archive readbacks without executing installed candidate/public binaries. It uploads
+one immutable dual-feed receipt containing original archives, dependency identity,
+manifest/hash files and all feed archives/maps. Native upload outputs supply its
+artifact ID and ZIP digest to `qualify-public` through literal job dependencies.
+
+`qualify-public` has only contents/actions/packages read permissions and no OIDC
+permission. Its temporary Actions read token reaches only receipt authentication;
+checkout credentials are not persisted. The maintained receipt verifier checks
+native artifact ID/name/run/verifier-source/digest, byte equality, original
+candidate source/version and exactly40 regular selected paths. It bounds ZIP bytes
+to128MiB, expanded bytes to192MiB and each member to32MiB. Unexpected, duplicate,
+missing or redirected member paths refuse before extraction. The job then verifies
+original candidate custody and all eight payload joins again before installed-code
+execution. No private package inventory or auth secret enters the receipt.
+
+Current CLI, Knowledge, clean public-install and Q2/Q3 receiver checks run only in
+this read-only job. The CLI and receiver qualifiers accept an explicit already
+source-evaluated package version with a required package source, preserving it
+through receiver recursion without permitting packing. Public Fable provisioning
+uses the current SDK binding producer/verifier and its pure failure controls, matching
+the main gate. Original-source test jobs depend on version/mode preflight, and mixed
+promotion/readback selection executes a refusing validator rather than finishing
+all-skipped.
+
+Release success still depends on actual public qualification. If it fails after
+publication, the writer's durable feed-effect receipt remains separate from the
+qualification result; the failure does not erase completed writes, permit replay or
+qualify consumer acceptance. Root retains recovery and final disposition admission.

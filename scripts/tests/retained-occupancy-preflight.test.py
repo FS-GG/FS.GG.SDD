@@ -146,6 +146,34 @@ class Controls(unittest.TestCase):
             encoded = base64.b64encode(b'owner:private-token').decode()
             self.assertEqual(runner.sanitized(encoded + ' private-token'), '[redacted] [redacted]')
 
+    def test_retained_qualifiers_use_selected_version_without_source_evaluation(self):
+        cli = (repo / 'scripts/verify-cli-tool.sh').read_text()
+        cli_code = cli.split('version="${FSGG_SDD_PACKAGE_VERSION:-}"', 1)[1].split('echo "Smoke:', 1)[0]
+        cli_code = 'version="${FSGG_SDD_PACKAGE_VERSION:-}"' + cli_code + '\nprintf "%s" "$version"'
+        receiver = (repo / 'tests/quint-svg-workspace-installed-acceptance.sh').read_text()
+        receiver_code = receiver.split('version="${SVG_WORKSPACE_PACKAGE_VERSION:-}"', 1)[1].split('if [[ "${SVG_WORKSPACE_OFFLINE_STAGE', 1)[0]
+        receiver_code = 'version="${SVG_WORKSPACE_PACKAGE_VERSION:-}"' + receiver_code + '\nprintf "%s" "$version"'
+        self.assertIn('SVG_WORKSPACE_PACKAGE_VERSION="$version"', receiver)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'Directory.Build.local.props').write_text('<Version>9.9.0</Version>')
+            # No dotnet exists in this fixture; explicit retained version must not
+            # invoke msbuild or pack. Source props deliberately differ.
+            for code, good in [(cli_code, dict(FSGG_SDD_PACKAGE_VERSION='2.3.0', FSGG_SDD_PACKAGE_DIR='selected')),
+                               (receiver_code, dict(SVG_WORKSPACE_PACKAGE_VERSION='2.3.0', Q3_PACKAGE_SOURCE='selected'))]:
+                prefix = 'set -euo pipefail; fail() { exit 1; }; repo_root="' + directory + '"; '
+                result = subprocess.run(['bash', '-c', prefix + code],
+                                        env=dict(os.environ, **good), capture_output=True, timeout=3)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, b'2.3.0')
+                for key in good:
+                    bad = good | {key: ''}
+                    if key.endswith('VERSION'):
+                        bad[key] = 'malformed'
+                    result = subprocess.run(['bash', '-c', prefix + code],
+                                            env=dict(os.environ, **bad), capture_output=True, timeout=3)
+                    self.assertNotEqual(result.returncode, 0)
+
     def test_actual_promotion_guard_rejects_partial_and_unprotected_selection(self):
         text = (repo / '.github/workflows/release.yml').read_text()
         block = text.split("python3 - <<'PYPROMOTION'\n", 1)[1].split('          PYPROMOTION', 1)[0]
@@ -155,7 +183,7 @@ class Controls(unittest.TestCase):
         for overrides, expected in [({}, 0), ({'PROMOTION_RUN': ''}, 1),
                                     ({'PROMOTION_SHA256': ''}, 1), ({'PROMOTION_SOURCE': ''}, 1),
                                     ({'PUBLISH_VERSION': ''}, 1), ({'EVENT_NAME': 'push'}, 1),
-                                    ({'REF_NAME': 'refs/heads/other'}, 1)]:
+                                    ({'REF_NAME': 'refs/heads/other'}, 1), ({'READBACK_VERSION': '2.3.0'}, 1)]:
             result = subprocess.run([sys.executable, '-c', code], env=dict(os.environ, **(good | overrides)),
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
             self.assertEqual(result.returncode, expected)
@@ -375,6 +403,8 @@ class NamespaceControls(unittest.TestCase):
         original = self.rows[path]
         for changes in [{'role': 'member'}, {'role': None}, {'state': 'pending'},
                         {'user': {'id': 18, 'login': 'owner'}},
+                        {'user': {'id': 17.0, 'login': 'owner'}},
+                        {'organization': {'id': 23.0, 'login': 'FS-GG'}},
                         {'user': {'id': 17, 'login': 'spoof'}},
                         {'organization': {'id': 24, 'login': 'FS-GG'}},
                         {'organization': None}]:
@@ -419,6 +449,7 @@ class NamespaceControls(unittest.TestCase):
         good = self.package(1)
         for entries in [[good, good], [good, self.package(2, good['name'].upper())],
                         [good | {'owner': {'id': 24, 'login': 'FS-GG'}}],
+                        [good | {'owner': {'id': 23.0, 'login': 'FS-GG'}}],
                         [good | {'package_type': 'npm'}], [good | {'id': True}],
                         [good | {'visibility': None}], [good | {'name': ''}], [None],
                         [good] * 101]:
@@ -433,7 +464,11 @@ class NamespaceControls(unittest.TestCase):
     def test_noncanonical_links_and_incomplete_pagination_refuse(self):
         for link in ['<https://evil.invalid/>; rel="next"',
                      '<https://api.github.com' + self.page(2) + '>; rel="next"',
-                     'malformed', '<https://api.github.com' + self.page(1) + '>; rel="next"']:
+                     'malformed', '<https://api.github.com' + self.page(1) + '>; rel="next"',
+                     '<https://api.github.com' + self.page(2) + '>; rel="last"',
+                     '<https://api.github.com' + self.page(2) + '>; rel="first"',
+                     '<https://api.github.com' + self.page(1) + '>; rel="prev"',
+                     ', '.join(['<https://api.github.com' + self.page(1) + '>; rel="last"'] * 2)]:
             self.extra_headers[self.page(1)] = {'Link': link}
             with self.subTest(link=link), self.assertRaises(ValueError):
                 self.invoke()
@@ -452,5 +487,80 @@ class NamespaceControls(unittest.TestCase):
         proof = namespace['authoritative_namespace_absence']('FS.GG.SDD.Commands', 'owner', self.read)
         self.assertTrue(proof['ownerRoleVerified'])
 
+
+receipt_spec = importlib.util.spec_from_file_location('receipt', repo / 'scripts/verify-publication-receipt.py')
+receipt = importlib.util.module_from_spec(receipt_spec)
+receipt_spec.loader.exec_module(receipt)
+
+
+class ReceiptControls(unittest.TestCase):
+    """Synthetic writer archives exercise immutable joins and safe extraction."""
+    def setUp(self):
+        self.source, self.verifier = 'c' * 40, 'd' * 40
+        self.files = {'packages/candidate.env': ('schema=fsgg.sdd.release-candidate/v4\nhead='
+                      + self.source + '\nversion=2.3.0\ncontracts_version=7.6.0\npackages='
+                      + ','.join(runner.PACKAGES) + '\n').encode(),
+                      'packages/pre-push.sha256': b'fixture', 'packages/contracts-reuse.json': b'{}',
+                      'packages/dependencies/FS.GG.Contracts.7.6.0.nupkg': b'fixture'}
+        for package in runner.PACKAGES:
+            for base in ['packages/' + package + '.2.3.0.nupkg'] + [
+                    'feed-readback/' + package.lower() + '.' + feed + '.nupkg' for feed in ['github', 'nuget']]:
+                for suffix in ['', '.entries', '.payloads']:
+                    self.files[base + suffix] = b'fixture'
+        self.make_archive()
+
+    def make_archive(self):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, 'w') as archive:
+            for path, data in self.files.items():
+                archive.writestr(path, data)
+        self.raw = stream.getvalue()
+        self.digest = hashlib.sha256(self.raw).hexdigest()
+        self.metadata = dict(id=17, expired=False, digest='sha256:' + self.digest,
+                             name='sdd-2.3.0-dual-feed-receipt-' + self.verifier,
+                             workflow_run=dict(id=42, head_sha=self.verifier), size_in_bytes=len(self.raw))
+
+    def read(self, suffix, cap):
+        return self.raw if suffix.endswith('/zip') else json.dumps(self.metadata).encode()
+
+    def invoke(self):
+        with tempfile.TemporaryDirectory() as directory:
+            return receipt.verify('17', self.digest, '42', self.verifier, self.source, '2.3.0',
+                                  Path(directory) / 'selected', read=self.read)
+
+    def test_native_writer_digest_and_distinct_original_source_join(self):
+        result = self.invoke()
+        self.assertEqual(result['candidateSource'], self.source)
+        self.assertEqual(result['verificationSource'], self.verifier)
+        self.assertFalse(result['publicationAuthorized'])
+
+    def test_wrong_native_writer_artifact_source_or_digest_refuses(self):
+        original = dict(self.metadata)
+        for changes in [dict(id=18), dict(expired=True), dict(digest='sha256:' + '0' * 64),
+                        dict(name='foreign-receipt'), dict(workflow_run=dict(id=43, head_sha=self.verifier)),
+                        dict(workflow_run=dict(id=42, head_sha=self.source)), dict(size_in_bytes=0)]:
+            self.metadata = original | changes
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                self.invoke()
+        self.metadata = original
+        self.raw += b'substituted'
+        with self.assertRaises(ValueError):
+            self.invoke()
+
+    def test_member_traversal_extra_missing_or_original_source_substitution_refuses(self):
+        original = dict(self.files)
+        for mutation in ['traversal', 'extra', 'missing', 'original-source']:
+            self.files = dict(original)
+            if mutation == 'traversal':
+                self.files['../escape'] = self.files.pop('packages/contracts-reuse.json')
+            elif mutation == 'extra':
+                self.files['packages/unselected.nupkg'] = b'fixture'
+            elif mutation == 'missing':
+                self.files.pop('feed-readback/fs.gg.sdd.commands.github.nupkg')
+            else:
+                self.files['packages/candidate.env'] = self.files['packages/candidate.env'].replace(self.source.encode(), self.verifier.encode())
+            self.make_archive()
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                self.invoke()
 
 unittest.main()

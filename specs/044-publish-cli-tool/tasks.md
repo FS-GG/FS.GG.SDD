@@ -237,3 +237,10 @@ unblocks FS-GG/.github#49. **STOP and VALIDATE** at the Phase-4 checkpoint (cons
 - [ ] Complete independent exact-head source review and required source CI.
 - [ ] Root admits actual occupancy/publication when capability and release gates
   permit; verify all applicable live/consumer effects before full1113 closure.
+
+- [x] Repair independent review findings: contradictory/duplicate pagination,
+  strict nested numeric identity types, non-persisted checkout credentials,
+  explicit retained-version recursion and current release Fable SDK binding.
+- [x] Isolate public installed-code execution in a read-only dependent job;
+  authenticate immutable writer ID/digest/source and bounded receipt before
+  rejoining original custody/all eight payloads. Preserve partial-effect receipts.
