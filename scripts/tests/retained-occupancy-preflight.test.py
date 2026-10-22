@@ -52,6 +52,14 @@ class Controls(unittest.TestCase):
 
     def read(self, suffix, cap):
         self.reads.append(suffix)
+        if suffix.endswith('/jobs?per_page=100'):
+            names = ['Resolve published Contracts and four coherent SDD versions',
+                     'Contracts tests (publish gate)', 'Artifacts tests (publish gate)',
+                     'Commands tests and authored public surface (publish gate)',
+                     'CLI tests (publish gate)', 'Knowledge tests (publish gate)',
+                     'Build and retain four coherent SDD archives once; reuse published Contracts']
+            return json.dumps(dict(total_count=7, jobs=[dict(name=name, run_id=42, head_sha=head,
+                              status='completed', conclusion='success') for name in names])).encode()
         if suffix.endswith('/zip'):
             return self.raw
         if suffix.endswith('/artifacts?per_page=100'):
@@ -86,6 +94,71 @@ class Controls(unittest.TestCase):
         self.assertEqual([row['stage'] for row in result['helpers']], ['custody', 'occupancy'])
         self.assertEqual(result['helpers'][1]['exitCode'], 0)
         self.assertEqual(len(result['verifierFiles']), 3)
+
+    def test_retained_selection_cannot_substitute_source_or_version(self):
+        self.assertEqual(self.invoke(expected_source=head, expected_version='2.3.0')['candidateSource'], head)
+        for changes in [dict(expected_source='d' * 40, expected_version='2.3.0'),
+                        dict(expected_source=head, expected_version='2.4.0'),
+                        dict(expected_source=head), dict(expected_version='2.3.0')]:
+            self.calls.clear()
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                self.invoke(**changes)
+            self.assertFalse(self.calls)
+
+    def test_original_qualification_jobs_must_be_complete_and_successful(self):
+        original = self.read
+        for mutation in ['incomplete', 'failed', 'foreign-head', 'duplicate']:
+            def read(suffix, cap):
+                raw = original(suffix, cap)
+                if '/jobs?' not in suffix:
+                    return raw
+                data = json.loads(raw)
+                if mutation == 'incomplete':
+                    data['total_count'] += 1
+                elif mutation == 'failed':
+                    data['jobs'][0]['conclusion'] = 'failure'
+                elif mutation == 'foreign-head':
+                    data['jobs'][0]['head_sha'] = 'd' * 40
+                else:
+                    data['jobs'].append(data['jobs'][0]); data['total_count'] += 1
+                return json.dumps(data).encode()
+            self.read = read
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                self.invoke(expected_source=head, expected_version='2.3.0')
+            self.assertFalse(self.calls)
+        self.read = original
+
+    def test_package_credentials_only_reach_occupancy_and_basic_is_redacted(self):
+        original = self.command
+        def inspect(argv, **kwargs):
+            if not self.calls:
+                self.assertNotIn('FSGG_PACKAGES_READ_TOKEN', kwargs['env'])
+                self.assertNotIn('GH_TOKEN', kwargs['env'])
+            else:
+                self.assertEqual(kwargs['env']['FSGG_PACKAGES_READ_TOKEN'], 'private-token')
+                self.assertEqual(kwargs['env']['GH_TOKEN'], 'actions-token')
+            return original(argv, **kwargs)
+        self.command = inspect
+        with patch.dict(os.environ, {'FSGG_PACKAGES_READ_TOKEN': 'private-token',
+                                    'FSGG_PACKAGES_READ_ACTOR': 'owner', 'GH_TOKEN': 'actions-token'}):
+            self.invoke()
+            import base64
+            encoded = base64.b64encode(b'owner:private-token').decode()
+            self.assertEqual(runner.sanitized(encoded + ' private-token'), '[redacted] [redacted]')
+
+    def test_actual_promotion_guard_rejects_partial_and_unprotected_selection(self):
+        text = (repo / '.github/workflows/release.yml').read_text()
+        block = text.split("python3 - <<'PYPROMOTION'\n", 1)[1].split('          PYPROMOTION', 1)[0]
+        code = '\n'.join(line[10:] for line in block.splitlines())
+        good = dict(PROMOTION_RUN='42', PROMOTION_SHA256=self.digest, PROMOTION_SOURCE=head,
+                    PUBLISH_VERSION='2.3.0', EVENT_NAME='workflow_dispatch', REF_NAME='refs/heads/main')
+        for overrides, expected in [({}, 0), ({'PROMOTION_RUN': ''}, 1),
+                                    ({'PROMOTION_SHA256': ''}, 1), ({'PROMOTION_SOURCE': ''}, 1),
+                                    ({'PUBLISH_VERSION': ''}, 1), ({'EVENT_NAME': 'push'}, 1),
+                                    ({'REF_NAME': 'refs/heads/other'}, 1)]:
+            result = subprocess.run([sys.executable, '-c', code], env=dict(os.environ, **(good | overrides)),
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+            self.assertEqual(result.returncode, expected)
 
     def test_bad_or_mixed_inputs_never_read_or_launch(self):
         for args in [dict(run_id=''), dict(run_id='42;echo bad'), dict(archive_sha256=''),
@@ -241,6 +314,143 @@ class Controls(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.invoke()
         self.assertFalse(self.calls)
+
+
+authority_spec = importlib.util.spec_from_file_location('authority', repo / 'scripts/check-sdd-release-occupancy.py')
+authority = importlib.util.module_from_spec(authority_spec)
+authority_spec.loader.exec_module(authority)
+
+
+class NamespaceControls(unittest.TestCase):
+    """Synthetic native REST replies exercise the real authority decision, without network."""
+    def setUp(self):
+        self.headers = {'X-OAuth-Scopes': 'read:packages, read:org'}
+        self.rows = {'/user': {'id': 17, 'login': 'owner'},
+                     '/orgs/FS-GG': {'id': 23, 'login': 'FS-GG'},
+                     '/orgs/FS-GG/memberships/owner': {
+                         'state': 'active', 'role': 'admin',
+                         'user': {'id': 17, 'login': 'owner'},
+                         'organization': {'id': 23, 'login': 'FS-GG'}},
+                     self.page(1): []}
+        self.extra_headers = {}
+
+    @staticmethod
+    def page(number):
+        return '/orgs/FS-GG/packages?package_type=nuget&per_page=100&page=' + str(number)
+
+    @staticmethod
+    def package(number, name=None):
+        return dict(id=number, name=name or ('package' + str(number)), package_type='nuget',
+                    visibility='private', owner={'id': 23, 'login': 'FS-GG'})
+
+    def read(self, path):
+        value = self.rows[path]
+        if isinstance(value, Exception):
+            raise value
+        return json.dumps(value).encode(), self.headers | self.extra_headers.get(path, {})
+
+    def invoke(self):
+        return authority.authoritative_namespace_absence('FS.GG.SDD.Commands', 'owner', self.read)
+
+    def test_complete_owner_population_proves_absence_without_exposing_names(self):
+        self.rows[self.page(1)] = [self.package(1)]
+        proof = self.invoke()
+        self.assertEqual(proof['actorId'], 17)
+        self.assertEqual(proof['organizationId'], 23)
+        self.assertEqual(proof['packageCount'], 1)
+        self.assertFalse(proof['publicationAuthorized'])
+        self.assertNotIn('package1', json.dumps(proof))
+        self.assertEqual(len(proof['populationSha256']), 64)
+
+    def test_multiple_pages_and_case_variant_target_on_last_page(self):
+        self.rows[self.page(1)] = [self.package(i) for i in range(1, 101)]
+        self.rows[self.page(2)] = [self.package(101)]
+        self.assertEqual(self.invoke()['pages'], 2)
+        self.rows[self.page(2)] = [self.package(101, 'fs.gg.sdd.COMMANDS')]
+        with self.assertRaisesRegex(ValueError, 'listed'):
+            self.invoke()
+
+    def test_native_owner_numeric_join_required(self):
+        path = '/orgs/FS-GG/memberships/owner'
+        original = self.rows[path]
+        for changes in [{'role': 'member'}, {'role': None}, {'state': 'pending'},
+                        {'user': {'id': 18, 'login': 'owner'}},
+                        {'user': {'id': 17, 'login': 'spoof'}},
+                        {'organization': {'id': 24, 'login': 'FS-GG'}},
+                        {'organization': None}]:
+            self.rows[path] = original | changes
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                self.invoke()
+        self.rows[path] = original
+        for path, bad in [('/user', {'id': 18, 'login': 'other'}),
+                          ('/user', {'id': True, 'login': 'owner'}),
+                          ('/orgs/FS-GG', {'id': 23, 'login': 'other'}),
+                          ('/orgs/FS-GG', [])]:
+            original = self.rows[path]
+            self.rows[path] = bad
+            with self.assertRaises(ValueError):
+                self.invoke()
+            self.rows[path] = original
+
+    def test_public_readability_scopes_or_separate_owner_are_insufficient(self):
+        for headers in [{}, {'X-OAuth-Scopes': 'read:packages'},
+                        {'X-OAuth-Scopes': 'read:org'},
+                        self.headers | {'X-GitHub-SSO': 'required; url=SECRET'},
+                        self.headers | {'X-GitHub-SSO': 'partial-results; organizations=23'}]:
+            old = self.headers
+            self.headers = headers
+            with self.subTest(headers=headers), self.assertRaises(ValueError):
+                self.invoke()
+            self.headers = old
+
+    def test_every_authority_endpoint_denied_or_malformed_refuses(self):
+        for path in list(self.rows):
+            original = self.rows[path]
+            for status in [401, 403, 404]:
+                self.rows[path] = ValueError('authority read HTTP' + str(status))
+                with self.subTest(path=path, status=status), self.assertRaises(ValueError):
+                    self.invoke()
+            self.rows[path] = original
+        self.rows[self.page(1)] = {'not': 'a population'}
+        with self.assertRaises(ValueError):
+            self.invoke()
+
+    def test_entry_duplicates_stalls_caps_and_malformed_fields_refuse(self):
+        good = self.package(1)
+        for entries in [[good, good], [good, self.package(2, good['name'].upper())],
+                        [good | {'owner': {'id': 24, 'login': 'FS-GG'}}],
+                        [good | {'package_type': 'npm'}], [good | {'id': True}],
+                        [good | {'visibility': None}], [good | {'name': ''}], [None],
+                        [good] * 101]:
+            self.rows[self.page(1)] = entries
+            with self.subTest(entries=entries[:2]), self.assertRaises(ValueError):
+                self.invoke()
+        for page in range(1, 11):
+            self.rows[self.page(page)] = [self.package((page - 1) * 100 + i) for i in range(1, 101)]
+        with self.assertRaisesRegex(ValueError, 'page bound'):
+            self.invoke()
+
+    def test_noncanonical_links_and_incomplete_pagination_refuse(self):
+        for link in ['<https://evil.invalid/>; rel="next"',
+                     '<https://api.github.com' + self.page(2) + '>; rel="next"',
+                     'malformed', '<https://api.github.com' + self.page(1) + '>; rel="next"']:
+            self.extra_headers[self.page(1)] = {'Link': link}
+            with self.subTest(link=link), self.assertRaises(ValueError):
+                self.invoke()
+
+    def test_owner_requirement_has_causal_negative_control(self):
+        # Removing the owner check admits an ordinary member: the negative case
+        # must therefore detect the mutant rather than pass vacuously.
+        text = (repo / 'scripts/check-sdd-release-occupancy.py').read_text()
+        mutant = text.replace("or membership.get('role') != 'admin'", 'or False')
+        self.assertNotEqual(text, mutant)
+        namespace = {'__name__': 'synthetic_mutant'}
+        exec(compile(mutant, '<owner-control-mutant>', 'exec'), namespace)
+        self.rows['/orgs/FS-GG/memberships/owner']['role'] = 'member'
+        with self.assertRaises(ValueError):
+            self.invoke()
+        proof = namespace['authoritative_namespace_absence']('FS.GG.SDD.Commands', 'owner', self.read)
+        self.assertTrue(proof['ownerRoleVerified'])
 
 
 unittest.main()

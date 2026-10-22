@@ -58,6 +58,30 @@ def check(text):
         require("inputs.occupancy_candidate_run == ''" in condition
                 and "inputs.occupancy_candidate_sha256 == ''" in condition,
                 f'{name} can run during occupancy-only selection')
+    require('group: release-coherent-sdd' in text, 'release writers do not share a publication fence')
+    for name in ['resolve-versions','contracts-tests','artifacts-tests','commands-tests','cli-tests','knowledge-tests']:
+        require('ref: ${{ inputs.promotion_candidate_source || github.sha }}' in jobs[name],
+                name + ' does not qualify original retained source')
+        require('persist-credentials: false' in jobs[name] and 'FSGG_PACKAGES_READ_TOKEN' not in jobs[name],
+                name + ' exposes protected credentials to original source')
+    for field in ['promotion_candidate_run','promotion_candidate_sha256','promotion_candidate_source']:
+        require("inputs." + field + " == ''" in candidate, 'retained promotion can repack')
+    require('refs/heads/main' in resolver and 'PYPROMOTION' in resolver,
+            'retained promotion lacks explicit protected selection validation')
+    locate = jobs.get('locate-artifacts','')
+    require('bash scripts/verify-cli-tool.sh' in locate and 'bash scripts/verify-sdd-package-api.sh' in locate
+            and 'bash scripts/verify-knowledge-packages.sh' in locate,
+            'retained packages miss current release qualification')
+    require('--expected-source "$CANDIDATE_SOURCE"' in locate and '--expected-version "$VERSION"' in locate
+            and '--archive-sha256 "$CANDIDATE_SHA256"' in locate,
+            'retained lookup does not authenticate exact original selection')
+    require('--expected-source "$CANDIDATE_SOURCE"' in publish and '--expected-version "$VERSION"' in publish
+            and '--archive-sha256 "$CANDIDATE_SHA256"' in publish,
+            'publisher does not reauthenticate retained ZIP/source/version')
+    require('artifacts/packages "${{ needs.locate-artifacts.outputs.candidate_source }}"' in publish,
+            'publisher relabels retained package source')
+    require('FSGG_PACKAGES_READ_TOKEN' in occupancy and 'FSGG_PACKAGES_READ_TOKEN' in publish,
+            'protected preflights cannot use explicit read authority')
     require('for id in fs.gg.sdd.artifacts fs.gg.sdd.commands fs.gg.sdd.cli fs.gg.sdd.knowledge; do' in publish,'readback excludes an SDD member')
     require('artifacts/packages/contracts-reuse.json' in publish and 'artifacts/packages/dependencies/*.nupkg' in publish,'durable receipt loses dependency provenance')
 

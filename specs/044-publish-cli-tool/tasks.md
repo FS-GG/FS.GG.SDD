@@ -222,3 +222,18 @@ unblocks FS-GG/.github#49. **STOP and VALIDATE** at the Phase-4 checkpoint (cons
   failing `registry validate`; narrow and document instead.
 - Elmish/MVU is N/A — no F# product code, no lifecycle command (plan Principle V).
 - Never mark a task `[X]` on a red run; never weaken an assertion to green CI.
+
+
+## Issue1113 visibility and retained promotion
+
+- [x] Specify exact original-candidate/current-verifier separation and same-token
+  authoritative visibility; retain original Unknown and no-push behavior.
+- [x] Add native owner/inventory proof, private credential separation and bounded
+  sanitized typed witness; preserve archive equality and Contracts reuse.
+- [x] Add explicit retained selection to the existing publisher, qualify original
+  source, forbid repacking, reauthenticate custody/occupancy before existing effects.
+- [x] Exercise real helpers with synthetic negative/security and causal controls;
+  document capability supply and non-atomic observation limits.
+- [ ] Complete independent exact-head source review and required source CI.
+- [ ] Root admits actual occupancy/publication when capability and release gates
+  permit; verify all applicable live/consumer effects before full1113 closure.

@@ -214,3 +214,77 @@ SDK10.0.401/runtime10.0.12 closure. Earlier failed attempts remain retained.
 This is source-contract qualification only: actual release packs, feed collision
 observations, installed candidate/public readback, provider runtime and coherent
 publication are not accepted by these two tests and remain separately gated.
+
+
+## Authoritative Commands namespace fallback
+
+The default scoped-version proof remains unchanged. When the new Commands package
+returns404 on its first scoped-version page, an explicitly supplied
+`FSGG_PACKAGES_READ_TOKEN` may establish absence using native owner authority.
+`FSGG_PACKAGES_READ_ACTOR` binds the expected token login; the checker verifies it
+against `/user`, never against a claimed workflow identity alone. The same classic
+token needs `read:packages` and `read:org`, applicable organization/SSO authorization,
+and native active/admin membership joined by exact user and organization numeric
+IDs. This read capability grants no package write/delete or repository write access.
+A separate membership credential and public-readable inventory are insufficient.
+The implementation supports only the same-token route.
+
+The checker enumerates the unfiltered organization NuGet inventory in sequential
+100-entry pages, at most10pages and4MiB per response. Every package must have a
+unique numeric ID and case-normalized name, expected organization owner/type and
+valid visibility. API redirects, denied/malformed/partial responses, conflicting
+pagination and incomplete populations refuse. A short terminal page completes the
+population; a full tenth page remains Unknown. Commands absence means its name is
+omitted from this authority-backed complete population. Listed-but-unreadable
+Commands, other scoped404s and later-page404s remain Unknown. The no-push candidate
+mode preserves Commands Unknown and never uses the fallback.
+
+Optional workflow credential `secrets.FSGG_PACKAGES_READ_TOKEN` and matching
+`vars.FSGG_PACKAGES_READ_ACTOR` reach only protected occupancy preflights. The
+Actions token continues to authenticate original run/artifact custody; unused
+credentials are stripped from its local custody-verifier child. Publishing still
+uses the existing run-scoped writer and NuGet OIDC credential. Neither credential
+provision nor secret mutation follows from this source change. Without the optional
+read credential, the ordinary scoped path works and missing namespace still refuses.
+
+The exclusive `--namespace-proof` output records typed method, actor/org IDs, owner
+role, UTC observation time, pages/count, canonical population digest and selected
+package/version. It contains no package inventory, credential, API body or SSO URL.
+Retained results include that typed witness alongside original candidate identity,
+current verifier identity/hashes and bounded sanitized helper diagnostics. Both
+result schemas retain `publicationAuthorized=false`.
+
+## Promote an original retained candidate with the current verifier
+
+A new manual selection on protected `main` uses all three inputs
+`promotion_candidate_run`, `promotion_candidate_sha256`,
+`promotion_candidate_source` and the existing explicit stable `version` input.
+The source is a full40-character commit and the digest is the original ZIP SHA256.
+Missing or mixed occupancy/readback/promotion input refuses before publication.
+Normal same-head publication still locates its unique retained no-push artifact.
+
+Retained promotion evaluates source versions and runs the current Contracts,
+Artifacts, Commands, CLI and Knowledge source-test job definitions against the
+original candidate source. The current protected checkout separately authenticates
+the successful original same-repository release run, complete artifact listing,
+native ZIP digest, complete successful original qualification-job population,
+exact v4 manifest/source/version and unchanged dependency/archive
+custody using the maintained retained preflight. This repeats in the publisher with
+a fresh download before effects. Current protected CLI self-containment, API/cold Commands consumption and Knowledge
+package checks qualify the retained archives again. Packing is unreachable for any retained selection.
+The publisher verifies against `candidate_source`, never relabels packages with the
+current verifier source, and runs fresh strict occupancy immediately before the
+existing GitHub-first and NuGet-second writes. Contracts7.6 remains reused. All eight
+feed readbacks and existing public CLI/API/Knowledge/receiver qualifications remain.
+The original successful candidate qualification is retained; no same-version rebuild,
+archive substitution, tag rewrite or replay of a previous Unknown is permitted.
+
+Current normal/tag and retained selections share a non-cancelling workflow concurrency
+fence. Older workflow revisions keep their existing concurrency group; this change
+does not cancel, supersede or prove noninterference with an older actor or reservation.
+Root must reconcile those independently before dispatch.
+Authority-backed occupancy is a fresh observation, not an atomic provider no-overwrite
+contract. Root release admission and writer fencing remain necessary; source delivery
+or a passing read-only observation alone authorizes no dispatch or publication.
+Issue1113 remains open until its full supported disposition and consumer obligations
+are verified or its precise held remainder is recorded by the accountable integrator.

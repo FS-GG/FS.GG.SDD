@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Authenticate a retained candidate, then call the existing strict read-only preflight."""
 import argparse
+import base64
 import hashlib
 import io
 import json
@@ -29,16 +30,19 @@ class Refused(ValueError):
 
 
 def sanitized(text):
-    for name in ['GH_TOKEN', 'GITHUB_TOKEN']:
+    for name in ['GH_TOKEN', 'GITHUB_TOKEN', 'FSGG_PACKAGES_READ_TOKEN']:
         value = os.environ.get(name)
         if value:
             text = text.replace(value, '[redacted]')
+            for actor in [os.environ.get('GITHUB_ACTOR', ''), os.environ.get('FSGG_PACKAGES_READ_ACTOR', '')]:
+                encoded = base64.b64encode((actor + ':' + value).encode()).decode()
+                text = text.replace(encoded, '[redacted]')
     text = re.sub(r'(?i)(authorization\s*:\s*(?:bearer|basic)\s+)\S+', r'\1[redacted]', text)
     return ''.join(character for character in text if character in '\n\t' or ord(character) >= 32)
 
 
 def diagnostic_record(raw):
-    text = sanitized(raw[:16384].decode('utf-8', errors='replace')).encode('utf-8')
+    text = sanitized(raw.decode('utf-8', errors='replace')).encode('utf-8')
     bounded = text[:16384].decode('utf-8', errors='ignore')
     return dict(diagnostic=bounded, diagnosticBytes=len(bounded.encode('utf-8')),
                 diagnosticTruncated=len(raw) > 16384 or len(text) > 16384)
@@ -91,12 +95,16 @@ def authenticated_reader(suffix, cap):
 
 
 def preflight(run_id, archive_sha256, publish_version, readback_version, destination,
-              read=authenticated_reader, command=subprocess.run):
+              read=authenticated_reader, command=subprocess.run, expected_source=None, expected_version=None):
     # Validate the entire mode before downloading bytes or launching any helper.
     if (not re.fullmatch(r'[1-9][0-9]{0,19}', run_id)
             or not re.fullmatch(r'[0-9a-f]{64}', archive_sha256)
             or publish_version or readback_version):
         raise ValueError('occupancy-only requires one run ID and archive SHA256, with version/readback_version empty')
+    if ((expected_source is None) != (expected_version is None)
+            or (expected_source is not None and (not re.fullmatch(r'[0-9a-f]{40}', expected_source)
+                or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', expected_version)))):
+        raise ValueError('retained selection requires exact source and stable version together')
     run = json.loads(read('actions/runs/' + run_id, 1024 * 1024))
     if not isinstance(run, dict):
         raise ValueError('selected run metadata malformed; custody Unknown')
@@ -108,6 +116,27 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
             or run.get('head_repository', {}).get('full_name') != REPOSITORY
             or not re.fullmatch(r'[0-9a-f]{40}', source)):
         raise ValueError('selected run is not an authenticated successful same-repository release candidate')
+    if expected_source is not None and source != expected_source:
+        raise ValueError('original candidate source differs from explicit retained selection')
+    original_gates = None
+    if expected_source is not None:
+        jobs = json.loads(read('actions/runs/' + run_id + '/jobs?per_page=100', 1024 * 1024))
+        required = ['Resolve published Contracts and four coherent SDD versions',
+                    'Contracts tests (publish gate)', 'Artifacts tests (publish gate)',
+                    'Commands tests and authored public surface (publish gate)',
+                    'CLI tests (publish gate)', 'Knowledge tests (publish gate)',
+                    'Build and retain four coherent SDD archives once; reuse published Contracts']
+        entries = jobs.get('jobs') if isinstance(jobs, dict) else None
+        if (not isinstance(entries, list) or jobs.get('total_count') != len(entries)
+                or len(entries) > 100 or any(not isinstance(job, dict) for job in entries)):
+            raise ValueError('original candidate qualification job population incomplete')
+        for name in required:
+            matches = [job for job in entries if job.get('name') == name]
+            if (len(matches) != 1 or matches[0].get('run_id') != int(run_id)
+                    or matches[0].get('head_sha') != source or matches[0].get('status') != 'completed'
+                    or matches[0].get('conclusion') != 'success'):
+                raise ValueError('original candidate qualification prerequisite missing or unsuccessful')
+        original_gates = required
     listing = json.loads(read('actions/runs/' + run_id + '/artifacts?per_page=100', 1024 * 1024))
     if not isinstance(listing, dict):
         raise ValueError('candidate artifact population malformed')
@@ -150,6 +179,8 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
                                 + '\nversion=' + version + '\ncontracts_version=' + contracts
                                 + '\npackages=' + ','.join(PACKAGES) + '\n')):
             raise ValueError('candidate does not bind the selected original run/source/coherent inventory')
+        if expected_version is not None and version != expected_version:
+            raise ValueError('original candidate version differs from explicit retained selection')
         expected = {name + '.' + version + '.nupkg' for name in PACKAGES}
         expected.update(['candidate.env', 'pre-push.sha256', 'contracts-reuse.json',
                          'occupancy-observation.json', 'dependencies/FS.GG.Contracts.' + contracts + '.nupkg'])
@@ -164,10 +195,15 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
             target.chmod(0o400)
 
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+    custody_environment = {key: value for key, value in environment.items()
+                           if key not in ['GH_TOKEN', 'GITHUB_TOKEN', 'FSGG_PACKAGES_READ_TOKEN',
+                                          'FSGG_PACKAGES_READ_ACTOR']}
+    proof_path = destination.parent / 'namespace-proof.json'
     commands = [
         ['bash', str(SCRIPTS / 'verify-release-candidate.sh'), str(destination), source, version, contracts],
         [sys.executable, str(SCRIPTS / 'check-sdd-release-occupancy.py'), version,
-         '--contracts-version', contracts, '--candidate', str(destination)],
+         '--contracts-version', contracts, '--candidate', str(destination),
+         '--namespace-proof', str(proof_path)],
     ]
     result = dict(schema='fsgg.sdd.retained-occupancy-preflight/v1', publicationAuthorized=False,
                   candidateRun=int(run_id), candidateArtifact=artifact['id'],
@@ -177,10 +213,12 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
                   verifierFiles={name: hashlib.sha256((SCRIPTS / name).read_bytes()).hexdigest()
                                  for name in ['preflight-retained-occupancy.py', 'verify-release-candidate.sh',
                                               'check-sdd-release-occupancy.py']}, helpers=[])
+    if original_gates is not None:
+        result['originalQualificationGates'] = original_gates
     for index, argv in enumerate(commands):
         stage = 'custody' if index == 0 else 'occupancy'
         try:
-            completed = command(argv, cwd=SCRIPTS.parent, env=environment, stdout=subprocess.PIPE,
+            completed = command(argv, cwd=SCRIPTS.parent, env=custody_environment if index == 0 else environment, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, timeout=30 if index == 0 else 180, check=False)
         except subprocess.TimeoutExpired as error:
             result['helpers'].append(dict(stage=stage, exitCode=None, timedOut=True,
@@ -195,6 +233,15 @@ def preflight(run_id, archive_sha256, publish_version, readback_version, destina
             result['observations'], result['contractsDisposition'] = typed_observations(recorded['diagnostic'], version, contracts)
         if completed.returncode:
             raise Refused('original custody refused' if index == 0 else 'strict occupancy refused; disposition Unknown', result)
+    if proof_path.exists():
+        raw_proof = proof_path.read_bytes()
+        if len(raw_proof) > 16384:
+            raise Refused('namespace proof exceeds fixed bound; occupancy Unknown', result)
+        proof = json.loads(raw_proof)
+        if (not isinstance(proof, dict) or proof.get('schema') != 'fsgg.sdd.namespace-proof/v1'
+                or proof.get('publicationAuthorized') is not False or not isinstance(proof.get('proofs'), list)):
+            raise Refused('malformed typed namespace proof; occupancy Unknown', result)
+        result['namespaceProof'] = proof
     keys = {(row['packageId'], row['feed']) for row in result['observations']}
     if len(result['observations']) != 8 or len(keys) != 8 or result['contractsDisposition'] is None:
         raise Refused('successful checker output lacks complete typed disposition; occupancy Unknown', result)
@@ -207,6 +254,8 @@ def main():
     parser.add_argument('--archive-sha256', required=True)
     parser.add_argument('--publish-version', default='')
     parser.add_argument('--readback-version', default='')
+    parser.add_argument('--expected-source')
+    parser.add_argument('--expected-version')
     parser.add_argument('--destination', type=Path, required=True)
     args = parser.parse_args()
     try:
