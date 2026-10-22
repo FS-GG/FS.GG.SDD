@@ -19,7 +19,7 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.3.0`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.4.0`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
@@ -27,17 +27,19 @@ sourced from `Directory.Build.local.props` `<Version>` — currently **`2.3.0`**
 - `FS.GG.SDD.Knowledge` (the standalone concise findings SDK)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.3.0"` and
-`generatorVersion.version = "2.3.0"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.4.0"` and
+`generatorVersion.version = "2.4.0"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
 The `channel` is derived from the version: a major of `0` is `preRelease`; a
 major of `>=1` without a prerelease suffix is `stable`. A prerelease suffix selects
 `preRelease`. The prepared version selects `stable`; publication remains pending.
-The 2.3.0 minor adds the catalog CLI workflow and producer admission APIs over
-published 2.2.0. Catalog schema 2 and descriptor protocol 3.0.0 remain independent
-of package versions. Existing public members remain compatible; no migration note
+The 2.4.0 minor adds optional owner-declared root guidance activation (the public
+`OwnerGuidance` module, contained-file read and observed-merge effects, and doctor/upgrade
+reporting) and carries literal-safe scaffold template parameters over published 2.3.0. Catalog
+schema 2 and descriptor protocol 3.0.0 remain independent of package versions, and published
+Contracts 7.6.0 is unchanged. Existing public members remain compatible; no migration note
 is required.
 
 ## Change class to bump rule
