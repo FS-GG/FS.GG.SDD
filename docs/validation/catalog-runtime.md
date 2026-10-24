@@ -269,3 +269,86 @@ development host through this runner (`native-runtime`, `pid-namespace`,
 source tree identity stable and direct-child exit/EOF observed. Ordinary CI still skips them, so it
 cannot close #935 or #928 or grant publication on skipped cases; the installed third-party journeys
 are run by `scripts/provider-source-journey.py` against the published tool.
+
+## Governance Verify capture lifetime (SDD928 C3.1-03, #1131)
+
+One Governance Verify provider invocation owns exactly one capture session
+(Governance#465 decision, #468 host). The Verify host is the sole caller of
+`release`; the OUTER admitted runtime supplies the invocation's original work
+and cleanup ends and owns whole-worker teardown. For SDD's package-only
+qualification that outer runtime is this runner. The join is:
+
+| Duty | Owner | Mechanism |
+|---|---|---|
+| Capture session, `release`, settlement and exit mapping | Governance Verify host | `fsgg-governance verify` (provider mode) |
+| Original work and cleanup ends | this runner | command `captureLifetime`; the runner is the only supplier of `FSGG_VERIFY_WORK_SECONDS` and `FSGG_VERIFY_CLEANUP_SECONDS` |
+| Lifetime bound | this runner | `startupAllowanceSeconds + cleanupEndSeconds <= timeoutSeconds`, refused before launch otherwise |
+| Whole-worker teardown | this runner | `native-runtime` + `pid-namespace`: PID 1 of the namespace is `timeout`; when the host exits, or at the runner's work end, the kernel retires every remaining process, including detached sessions |
+| Witness that teardown happened | this runner | `descendantWitnessPath`: descendants append `<outer-pid> <start-time>`; afterwards none may still be that process |
+
+```json
+{"name": "verify", "mode": "native-runtime", "backend": "pid-namespace",
+ "argv": ["/path/fsgg-governance", "verify", "--repo", "...", "--provider-provenance", "..."],
+ "timeoutSeconds": 150, "cleanupSeconds": 30,
+ "captureLifetime": {"workSeconds": 60, "cleanupEndSeconds": 75, "startupAllowanceSeconds": 5},
+ "descendantWitnessPath": "/abs/fresh/witness"}
+```
+
+Both ends are whole seconds measured by the host from ITS start, and the
+cleanup end is absolute (`cleanupEndSeconds >= workSeconds`), exactly as the
+host reads them. The runner starts counting before the host does, so the whole
+capture window plus a startup allowance must fit inside the runner's own work
+window. Consequently the runner never signals a host that is still inside its
+declared window: the host can settle (`release` Ok), refuse, or exit 4 on its
+own. `captureLifetime` requires native-runtime mode with the pid-namespace
+backend; a bare process group is not whole-worker teardown. `FSGG_VERIFY_*`
+in `environment` is refused, so there is a single supplier.
+
+The result's `captureLifetime.outcome` is derived only from what the runner
+observed:
+
+- `host-exited-after-settlement`: the host exited by itself inside the window
+  (its own exit code stands: 0 pass, 1 blocked, 3 input unavailable). This is
+  the only outcome with `hostSettled: true`.
+- `host-exited-with-retained-session`: exit 4 with the host's own "retained
+  after the original cleanup end ... with no read pending" report.
+- `worker-ended-by-outer-runtime`: the runner's work end (or cancellation, or
+  the namespace backstop) ended the worker. If the host reported that it "stays
+  resident while a read may be pending" this is the designed ending of a
+  session whose read cannot be proven finished, and `hostReportedResident` is
+  true. It is a non-passing result, never a settlement.
+
+A Governance contract change is not required: the join uses the documented
+environment interface and exit mapping. Not covered here, and still owned by
+Governance#423: an authentic blocked regular-file read and an independently
+observed uncertain physical close. Those are the only inputs that make the real
+host stay resident; the resident branch of this join is exercised with a
+stand-in host (`scripts/tests/capture-lifetime.test.py`), not claimed against
+the real one.
+
+### Package-only journey
+
+`scripts/verify-capture-journey.py run --work <fresh-dir>` runs the whole
+package-only path with a credential-free environment, an empty private NuGet
+cache, at most six CPUs and nuget.org as the only package source:
+
+1. download and install the published `FS.GG.SDD.Cli` and
+   `FS.GG.Governance.Cli` bytes (SHA-256 recorded, optionally compared with
+   `--expect-sha256`);
+2. restore and build `examples/provider-authoring` against the published SDD
+   version (every resolved library a package);
+3. deterministic double emission, existing-output and malformed-policy refusals;
+4. the installed SDD CLI through `catalog-cli-acceptance.py` (`positive` and
+   `negatives`) with strict schema-2 readback;
+5. commit the scaffolded workspace plus the Governance workspace catalog from
+   `tests/fixtures/provider-verify-journey/fsgg`, then run the installed
+   `fsgg-governance verify` in provider mode under the join: positive, missing,
+   stale, mismatched and non-zero evidence, a detached descendant, a declared
+   deadline, four whole-request refusals and the ends-not-supplied refusal.
+
+Each Verify case must also end with the host having settled inside the admitted
+window and every witnessed descendant absent. The policy, fixture and
+Governance catalog are SDD-owner authored fixtures: independent of the sample,
+but not supplied by a third party. This is ordinary verification on the
+supported Linux-x64/.NET 10.0.12/glibc 2.44 profile, a local cooperative
+profile, not hostile containment or provider certification.

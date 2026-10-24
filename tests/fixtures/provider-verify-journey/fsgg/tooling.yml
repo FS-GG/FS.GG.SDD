@@ -1,0 +1,9 @@
+schemaVersion: 1
+commands:
+  - id: fixture-test
+    command: "verify-journey-fixture run"
+    timeout: 30
+    environment: local-or-ci
+environmentClasses:
+  - local
+  - ci
