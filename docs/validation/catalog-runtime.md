@@ -263,7 +263,9 @@ skips, current source/binary/input joins, and actual EOF/retirement evidence:
 - offline exact cache survives removal of original local sources without acquisition;
 - selected source joins reject changed cache bytes and inspection only scaffold targets.
 
-These four results remain owed pending qualified Home carrier/custodian
-selection. Even passing them does not qualify genuine installed third-party
-creation/build/test, offline re-instantiation, publication or Wizard adoption.
-Ordinary CI cannot close #935 or #928 or grant publication on skipped cases.
+These four results ran and passed on 2026-10-24 on the exact Linux-x64/.NET 10.0.12/glibc 2.44
+development host through this runner (`native-runtime`, `pid-namespace`,
+`FSGG_SDD_NAMESPACE_REGRESSION=1`, filter `kind=provider-source-native`): 4 of 4 passed with the
+source tree identity stable and direct-child exit/EOF observed. Ordinary CI still skips them, so it
+cannot close #935 or #928 or grant publication on skipped cases; the installed third-party journeys
+are run by `scripts/provider-source-journey.py` against the published tool.

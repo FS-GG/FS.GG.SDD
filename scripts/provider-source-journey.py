@@ -164,12 +164,10 @@ def acquisition_policy(path, origins):
 def verify_product(journey, label, target):
     expected = {
         'product.txt': 'raw=Third Party Example\npackage=example.org/third-party\ncode=IndependentCode\nempty=\nliteral=$(literal);& value\n'}
-    good = True
     for name, text in expected.items():
         path = target / name
         match = path.is_file() and path.read_text() == text
         journey.record(f'{label}: {name} has the literal parameter bytes', match, '' if match else repr(path.read_text() if path.is_file() else None))
-        good &= match
     provenance = target / '.fsgg/scaffold-provenance.json'
     document = json.loads(provenance.read_text()) if provenance.is_file() else {}
     journey.record(f'{label}: schema3 provenance records the source observation',
@@ -182,7 +180,7 @@ def build_and_test(journey, label, target):
     code, out, err, _ = journey.run(f'{label}-build', [DOTNET, 'build', 'src/Product/Product.fsproj', '-c', 'Release', '-nodeReuse:false'], cwd=target, timeout=600)
     journey.record(f'{label}: created product builds', code == 0, f'exit={code}' + ('' if code == 0 else ' ' + (out + err)[-600:]))
     code, out, err, _ = journey.run(f'{label}-test', [DOTNET, 'test', 'tests/Product.Tests/Product.Tests.fsproj', '-nodeReuse:false'], cwd=target, timeout=900)
-    passed = code == 0 and 'Passed:     2' in out.replace('Passed:    2', 'Passed:     2') or (code == 0 and 'Passed!' in out)
+    passed = code == 0 and 'Failed:     0, Passed:     2, Skipped:     0, Total:     2' in out
     journey.record(f'{label}: created product tests pass', passed, f'exit={code}' + ('' if code == 0 else ' ' + (out + err)[-800:]))
 
 
@@ -283,7 +281,7 @@ def run_journeys(args):
             hops = source.get('networkHops') or []
             journey.record('https: provenance records a genuine fetch with the connected public endpoint and status 200',
                            source.get('acquisition') == 'https-fetch' and source.get('resolvedUri') == args.https_url
-                           and source.get('revision') == REVISION and bool(hops) and hops[-1].get('statusCode') == 200,
+                           and source.get('revision') == REVISION and bool(hops) and hops[-1].get('statusCode') == 200 and bool(hops[-1].get('address')),
                            json.dumps({k: source.get(k) for k in ('acquisition', 'resolvedUri', 'networkHops')})[:400])
             build_and_test(journey, 'https', https_target)
             https_offline = work / 'products' / 'https-offline'
