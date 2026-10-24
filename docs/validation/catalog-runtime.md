@@ -320,7 +320,7 @@ observed (the host's own exit mapping and reports, never a runner inference):
   did not settle cleanly), or any exit accompanied by the host's "retained",
   "not released ... stays resident" or "did not settle cleanly" reports.
 - `host-exited-without-settlement-proof`: any other exit (usage 2, a crash).
-- `host-exited-after-its-window`: a settled-session exit after the admitted window.
+- `host-exited-after-its-window`: a 0, 1 or 3 exit after the admitted window.
 - `worker-ended-by-outer-runtime`: the runner's work end (or cancellation, or
   the namespace backstop) ended the worker. If the host reported that it "stays
   resident while a read may be pending" this is the designed ending of a
