@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands
 open Xunit
 
@@ -64,6 +65,17 @@ module ProviderSourceWorkflowTests =
         let terminal, _ = ProviderSourceWorkflow.update (ProviderSourceWorkflow.RetirementObserved true) late
         Assert.NotEqual(ProviderSourceWorkflow.Prepared, ProviderSourceWorkflow.outcome terminal)
         Assert.Equal(failure, ProviderSourceWorkflow.diagnostics terminal |> List.head)
+
+    [<Fact>]
+    let ``source diagnostic accumulation is bounded while retaining the first cause`` () =
+        let initial, _ = ProviderSourceWorkflow.init request
+        let errors = [ for index in 0..999 -> { Fsgg.ProviderCatalog.Diagnostic.Code = "source.original"; Path = "$"; Message = string index + System.String('x', 4096) } ]
+        let refused, _ = ProviderSourceWorkflow.update (ProviderSourceWorkflow.FailureObserved errors) initial
+        let retained = ProviderSourceWorkflow.diagnostics refused
+        Assert.True(retained.Length <= 64)
+        Assert.StartsWith("0", retained.Head.Message)
+        Assert.True((retained |> List.sumBy (fun item -> System.Text.Encoding.UTF8.GetByteCount(item.Code + item.Path + item.Message))) <= 65536)
+        Assert.Contains(retained, fun item -> item.Code = "source.diagnosticsTruncated")
 
     [<Fact>]
     let ``invalid source declarations have no acquisition or cache effects`` () =
@@ -207,6 +219,39 @@ module ProviderSourceWorkflowTests =
         Assert.Contains(parsed.Diagnostics, fun diagnostic ->
             diagnostic.Artifact |> Option.exists (fun artifact -> artifact.Path = ScaffoldProvenance.provenancePath))
 
+    let private modelWithProvenance text =
+        let initial, _ = CommandWorkflow.init (TestSupport.request CommandTypes.SddCommand.Doctor "/synthetic/source-reader")
+        let snapshot: FileSnapshot =
+            { Path = ScaffoldProvenance.provenancePath; Text = text; RawBytes = Some(System.Text.Encoding.UTF8.GetBytes text) }
+        let observed: CommandTypes.CommandEffectResult =
+            { Effect = CommandTypes.ReadFile snapshot.Path; Succeeded = true; Read = CommandTypes.Bytes snapshot
+              Snapshot = Some snapshot; Process = None; Confirmed = None; Diagnostic = None }
+        { initial with InterpretedEffects = [ observed ] }
+
+    [<Fact>]
+    let ``doctor retains malformed source provenance and upgrade emits no repair effects`` () =
+        let model = modelWithProvenance "{\"schemaVersion\":3}"
+        let drift = Internal.HandlersDoctor.computeDrift model
+        Assert.True drift.HasProvenance
+        Assert.False drift.IsCoherent
+        Assert.NotEmpty(Internal.Foundation.scaffoldProvenanceDiagnostics DiagnosticSeverity.DiagnosticWarning model)
+        let step: CommandTypes.ReconciliationStep =
+            { StepId = CommandTypes.ReconciliationStepId.ArtifactReSeed; Kind = CommandTypes.ReconciliationStepId.ArtifactReSeed
+              DiffPreview = "synthetic"; Outcome = CommandTypes.ReconciliationOutcome.WouldApply; TargetPaths = [ "AGENTS.md" ] }
+        Assert.True(Internal.HandlersUpgrade.applyEffectsFor model model.Request step |> Result.isError)
+
+    [<Fact>]
+    let ``all provenance generations share the same owner reader without flattening the document`` () =
+        let value = sourceProvenance ()
+        let unwrap = function Ok result -> result | Error errors -> failwithf "%A" errors
+        for text in
+            [ ScaffoldProvenance.serialize value.Catalog.Ownership
+              CatalogScaffoldProvenance.serialize value.Catalog |> unwrap
+              SourceScaffoldProvenance.serialize value |> unwrap ] do
+            let model = modelWithProvenance text
+            Assert.Equal(Some value.Catalog.Ownership, Internal.HandlersDoctor.resolveProvenance model)
+            Assert.Empty(Internal.Foundation.scaffoldProvenanceDiagnostics DiagnosticSeverity.DiagnosticError model)
+
     // Actual local source I/O, with synthetic opaque archives and a declared nonexistent tool.
     // This fixture must only run in the separately admitted source-effects test stage.
     let private withInspectionSources duplicateProvider action =
@@ -287,7 +332,90 @@ module ProviderSourceWorkflowTests =
 
     [<Fact>]
     let ``whole-set provider collision refuses before an inspectable handle exists`` () =
-        withInspectionSources true (fun _ _ result ->
+        withInspectionSources true (fun _ request result ->
+            Assert.Empty(System.IO.Directory.GetFileSystemEntries request.CacheRoot)
             match result with
             | Error errors -> Assert.Contains(errors, fun error -> error.Code = "source.providerCollision")
             | Ok _ -> failwith "A colliding set must not become inspectable or selectable.")
+
+    [<Fact>]
+    let ``offline exact cache survives removal of original local sources without acquisition`` () =
+        withInspectionSources false (fun sources request result ->
+            let unwrap = function Ok value -> value | Error errors -> failwithf "%A" errors
+            let original = result |> unwrap |> ProviderSourceEffects.inspect
+            for source in sources do
+                match source.Locator with
+                | ProviderSource.LocalDirectory path -> System.IO.Directory.Delete(path, true)
+                | _ -> failwith "The fixture must remain local."
+            let operation = ProviderSourceEffects.prepare { request with Offline = true } System.Threading.CancellationToken.None |> unwrap
+            try
+                let actual = ProviderSourceEffects.run operation |> Async.RunSynchronously |> unwrap |> ProviderSourceEffects.inspect
+                Assert.Equal<string list>(original |> List.map (fun view -> view.Source.Id), actual |> List.map (fun view -> view.Source.Id))
+                for view in actual do
+                    Assert.Equal(ProviderSource.CacheRead, view.Acquisition)
+                    Assert.Empty view.NetworkHops
+                    Assert.Empty view.Redirects
+                    Assert.Equal(None, view.ResolvedUri)
+            finally ProviderSourceEffects.release operation |> unwrap)
+
+    [<Fact>]
+    let ``selected source joins reject changed cache bytes and inspection only scaffold targets`` () =
+        withInspectionSources false (fun _ _ result ->
+            let unwrap = function Ok value -> value | Error errors -> failwithf "%A" errors
+            let prepared = result |> unwrap
+            let selected = ProviderSourceEffects.select prepared "a-provider" [] |> unwrap
+            let original = ProviderSourceEffects.catalogBytes selected
+            let exposed = ProviderSourceEffects.catalogSelection selected
+            System.Array.Fill(exposed.CatalogBytes, 0uy)
+            Assert.Equal<byte array>(original, ProviderSourceEffects.catalogBytes selected)
+            let captured = ProviderSourceEffects.inputFiles selected |> List.map (fun file -> file.AbsolutePath, System.IO.File.ReadAllBytes file.AbsolutePath)
+            Assert.True(ProviderSourceEffects.verifyCaptured selected captured |> Result.isOk)
+            let path, bytes = captured.Head
+            Assert.True(ProviderSourceEffects.verifyCaptured selected ((path, Array.append bytes [| 0uy |]) :: captured.Tail) |> Result.isError)
+            Assert.True(ProviderSourceEffects.verifyCaptured selected captured.Tail |> Result.isError)
+            let actual: CatalogScaffoldWorkflow.CatalogScaffoldRequest =
+                { Selection = ProviderSourceEffects.catalogSelection selected; TargetRoot = "/not-created/product"
+                  TemplateArchive = ProviderSourceEffects.archivePath selected; ExpectedArchiveDigest = ProviderSourceEffects.archiveSha256 selected
+                  PolicyBytes = [||]; ExpectedPolicyDigest = digest; SelectedPlatform = "linux-x64"
+                  PreflightTimeoutSeconds = 30; ScaffoldTimeoutSeconds = 60; DryRun = true }
+            let host: CatalogScaffoldEffects.HostSelection = { Mode = CatalogScaffoldEffects.LocalLinux; TransportExecutable = "/not-executed/dotnet" }
+            match CatalogScaffoldEffects.prepareFromSource host selected actual System.Threading.CancellationToken.None with
+            | Error errors -> Assert.Contains(errors, fun error -> error.Code = "source.targetBinding")
+            | Ok _ -> failwith "Inspection-only source cannot authorize a later target.")
+
+    let private envelope names =
+        use stream = new System.IO.MemoryStream()
+        do
+            use zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, true)
+            for name in names do
+                use output = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression).Open()
+                output.Write([| 1uy; 2uy; 3uy |])
+        stream.ToArray()
+
+    [<Fact>]
+    let ``actual envelope decoder accepts bounded data and refuses aliases traversal and excess expansion`` () =
+        let valid = envelope [ "source.json"; "payload/data.bin" ]
+        match ProviderSourceEffects.inspectEnvelope 6L valid with
+        | Ok files -> Assert.Equal<string list>([ "source.json"; "payload/data.bin" ], List.map fst files)
+        | Error errors -> failwithf "%A" errors
+        for bytes, bound in
+            [ envelope [ "a"; "A" ], 100L
+              envelope [ "../outside" ], 100L
+              envelope [ "/absolute" ], 100L
+              valid, 5L
+              Array.append valid [| 0uy |], 100L
+              Array.append [| 0uy |] valid, 100L ] do
+            Assert.True(ProviderSourceEffects.inspectEnvelope bound bytes |> Result.isError)
+
+    [<Fact>]
+    let ``actual envelope inventory refuses link mode and local central identity disagreement`` () =
+        let bytes = envelope [ "source.json" ]
+        let central =
+            [ 0 .. bytes.Length - 4 ]
+            |> List.find (fun index -> System.BitConverter.ToUInt32(bytes, index) = 0x02014b50u)
+        let link = Array.copy bytes
+        System.BitConverter.GetBytes(0xa1ff0000u).CopyTo(link, central + 38)
+        Assert.True(ProviderSourceEffects.inspectEnvelope 100L link |> Result.isError)
+        let changed = Array.copy bytes
+        changed[30] <- byte 'x'
+        Assert.True(ProviderSourceEffects.inspectEnvelope 100L changed |> Result.isError)

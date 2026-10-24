@@ -78,6 +78,13 @@ module ProviderSourceEffects =
 
     /// The existing scaffold caller captures these through its held input path and original budget.
     val inputFiles: source: SelectedSource -> InputFile list
+    /// Same-assembly custody join; this path is sensed again under the scaffold's original phase.
+    val internal cacheRoot: source: SelectedSource -> string
+
+    /// Same closed ZIP32 decoder used by acquisition; pure byte input, no I/O or trust decision.
+    val internal inspectEnvelope:
+        maximumExpandedBytes: int64 -> bytes: byte array ->
+            Result<(string * byte array) list, Fsgg.ProviderCatalog.Diagnostic list>
 
     /// Pure complete-closure join over those captured bytes, not a new unbounded filesystem read.
     /// A prepared handle is not enduring authority over a mutable pathname.

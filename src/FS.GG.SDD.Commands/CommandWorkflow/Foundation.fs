@@ -653,6 +653,20 @@ nuget-cache/
     let typedCompilerEffect workId =
         RunProcess("dotnet", [ "fsi"; "--exec"; $"work/{workId}/specification.fsx" ], "")
 
+    let scaffoldProvenanceDocument model =
+        match snapshot ScaffoldProvenance.provenancePath model with
+        | None -> Ok None
+        | Some observed -> ScaffoldProvenanceDocument.parse observed.Text |> Result.map Some
+
+    let scaffoldProvenanceDiagnostics severity model =
+        match scaffoldProvenanceDocument model with
+        | Ok _ -> []
+        | Error findings ->
+            findings |> List.map (fun finding ->
+                Diagnostics.create "source.provenanceMalformed" severity None None
+                    ("Existing scaffold provenance is invalid: " + finding.Message)
+                    "Restore valid schema1/2/3 provenance; do not treat this observed record as absent or rewrite its historical authority." [])
+
     let typedLifecycleSelected model =
         let provenance =
             model.InterpretedEffects
@@ -661,9 +675,11 @@ nuget-cache/
                 | ReadFile path, Some snapshot when
                     normalizeRelativePath path = normalizeRelativePath ScaffoldProvenance.provenancePath
                     ->
-                    ScaffoldProvenanceDocument.parse snapshot.Text
-                    |> Result.toOption
-                    |> Option.map ScaffoldProvenanceDocument.ownershipProjection
+                    match ScaffoldProvenanceDocument.parse snapshot.Text with
+                    | Ok document -> Some(ScaffoldProvenanceDocument.ownershipProjection document)
+                    // The strict typedLifecycleDiagnostics path below retains the error;
+                    // this Boolean selector must not dispatch a compiler for malformed data.
+                    | Error _ -> None
                 | _ -> None)
 
         provenance
@@ -1649,8 +1665,9 @@ nuget-cache/
 
     let selectedOwnerGuidanceFiles model =
         let provenance =
-            snapshot ScaffoldProvenance.provenancePath model
-            |> Option.bind (fun observed -> ScaffoldProvenance.tryParse observed.Text)
+            match scaffoldProvenanceDocument model with
+            | Ok(Some document) -> Some(ScaffoldProvenanceDocument.ownershipProjection document)
+            | Ok None | Error _ -> None
 
         match provenance with
         | None -> Map.empty

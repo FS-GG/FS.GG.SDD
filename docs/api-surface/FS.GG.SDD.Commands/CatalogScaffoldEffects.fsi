@@ -37,6 +37,18 @@ module CatalogScaffoldEffects =
         cancellationToken: System.Threading.CancellationToken ->
             Result<Operation, Fsgg.ProviderCatalog.Diagnostic list>
 
+    /// Selects the same executor with source provenance written inside staging before commit.
+    /// The original preflight captures every source input and verifies it against the prepared handle.
+    /// Refuses inspection-only handles or any different target, provider, literal override sequence,
+    /// catalog bytes/digest or archive path/digest; sharing a template/archive does not merge providers.
+    /// Physical target/source/cache ancestor and descendant aliases are checked before effects.
+    val prepareFromSource:
+        host: HostSelection ->
+        source: ProviderSourceEffects.SelectedSource ->
+        request: CatalogScaffoldWorkflow.CatalogScaffoldRequest ->
+        cancellationToken: System.Threading.CancellationToken ->
+            Result<Operation, Fsgg.ProviderCatalog.Diagnostic list>
+
     /// Consumes this operation once. Original phase ends include cleanup; unknown stays owned.
     val run: operation: Operation -> Async<CatalogScaffoldWorkflow.Model>
     /// Projects currently retained facts without resuming work or granting cleanup time.

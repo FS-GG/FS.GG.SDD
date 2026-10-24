@@ -296,12 +296,11 @@ module internal CatalogScaffoldLinux =
             Released = false
         }
 
-    let beginPhase (seconds: int) (cancellation: CancellationToken) : PhaseBudget =
-        if seconds <= 0 then
+    let private newPhase (seconds: int) (reserve: float) (cancellation: CancellationToken) : PhaseBudget =
+        if seconds <= 0 || reserve < 0.0 || reserve >= float seconds then
             refuse "catalog.invalidBudget" "A phase requires a positive whole-phase ceiling."
 
         let start = ticks ()
-        let reserve = min 5.0 (float seconds / 10.0)
 
         {
             WorkEnd = start + int64 ((float seconds - reserve) * float Stopwatch.Frequency)
@@ -315,6 +314,10 @@ module internal CatalogScaffoldLinux =
             DiagnosticBytes = 0
             DiagnosticLimitReported = false
         }
+
+    let beginPhase seconds cancellation = newPhase seconds (min 5.0 (float seconds / 10.0)) cancellation
+    let beginPhaseWithCleanup seconds cleanupSeconds cancellation = newPhase seconds (float cleanupSeconds) cancellation
+    let phaseDeadlines (budget: PhaseBudget) = budget.WorkEnd, budget.End
 
     let stopUsefulWork (budget: PhaseBudget) = budget.Stop.Set()
 
@@ -596,6 +599,9 @@ module internal CatalogScaffoldLinux =
 
     let identity (directory: DirectoryCustody) = directory.Identity
 
+    let rec directoryAncestry (directory: DirectoryCustody) =
+        directory.Identity :: (match directory.Parent with None -> [] | Some(parent, _) -> directoryAncestry parent)
+
     let rec private validateWith
         (budget: PhaseBudget)
         (check: unit -> unit)
@@ -636,6 +642,18 @@ module internal CatalogScaffoldLinux =
     let revalidateDirectory (budget: PhaseBudget) (directory: DirectoryCustody) =
         let owner = unbox<Custody> directory.Owner
         io owner budget (fun () -> validate owner budget directory)
+
+    let tryOpenChildDirectory (custody: Custody) (budget: PhaseBudget) (parent: DirectoryCustody) name =
+        leaf name
+        io custody budget (fun () ->
+            validate custody budget parent
+            checkWork budget
+            let fd = Native.openat (parent.Fd, name, directoryFlags, 0u)
+            if fd < 0 && Marshal.GetLastPInvokeError() = 2 then None
+            else
+                let owned = ownFd custody fd
+                checkWork budget
+                Some(asDirectory custody (fun () -> checkWork budget) (Some(parent, name)) owned))
 
     let createDirectory (custody: Custody) (budget: PhaseBudget) (parent: DirectoryCustody) (name: string) =
         leaf name
@@ -891,30 +909,55 @@ module internal CatalogScaffoldLinux =
 
         values
 
-    let files
+    let private boundedNames (budget: PhaseBudget) maximum (directory: DirectoryCustody) =
+        let values = ResizeArray<string>()
+        let seen = HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        for path in Directory.EnumerateFileSystemEntries(sprintf "/proc/self/fd/%d" directory.Fd) do
+            checkWork budget
+            if values.Count >= maximum then refuse "catalog.payloadCount" "Source directory exceeds its finite entry budget."
+            let name = Path.GetFileName path |> nonNull
+            leaf name
+            if not (seen.Add name) then refuse "catalog.pathAlias" "Case aliases are refused in the closed source payload."
+            values.Add name
+        values.ToArray() |> Array.sortWith (fun a b -> StringComparer.Ordinal.Compare(a, b))
+
+    let filesWithinLimits
         (custody: Custody)
         (budget: PhaseBudget)
         (root: DirectoryCustody)
         (maximumBytes: int)
+        (maximumFiles: int)
+        (maximumDepth: int)
         : CapturedFile list =
         io custody budget (fun () ->
             let result = ResizeArray<CapturedFile>()
             let mutable consumed = 0
+            let mutable entries = 0
+            let bounded = maximumFiles <> Int32.MaxValue || maximumDepth <> Int32.MaxValue
+            let maximumEntries = if bounded then Checked.(*) maximumFiles (Checked.(+) maximumDepth 1) else Int32.MaxValue
+            let directoryNames directory = if bounded then boundedNames budget maximumEntries directory else names directory
 
-            let rec walk (directory: DirectoryCustody) (prefix: string) =
+            let rec walk (directory: DirectoryCustody) (prefix: string) depth =
                 checkWork budget
+                if depth > maximumDepth then refuse "catalog.payloadDepth" "Source payload nesting exceeds its selected ceiling."
                 let identityBefore, before = stamp custody (fun () -> checkWork budget) directory.Fd
-                let original = names directory
+                let original = directoryNames directory
+                if bounded && depth > 0 && original.Length = 0 then
+                    refuse "catalog.emptyPayloadDirectory" "An empty directory is outside the declared source member population."
 
                 for name in original do
                     checkWork budget
+                    entries <- entries + 1
+                    if entries > maximumEntries then refuse "catalog.payloadCount" "Source entry population exceeds its selected ceiling."
                     let fd = ownFd custody (Native.openat (directory.Fd, name, fileFlags, 0u))
                     let objectIdentity, _ = stamp custody (fun () -> checkWork budget) fd
                     let path = if prefix = "" then name else prefix + "/" + name
 
                     match objectIdentity.Kind with
-                    | 0x4000 -> walk (asDirectory custody (fun () -> checkWork budget) (Some(directory, name)) fd) path
+                    | 0x4000 -> walk (asDirectory custody (fun () -> checkWork budget) (Some(directory, name)) fd) path (depth + 1)
                     | 0x8000 ->
+                        if result.Count >= maximumFiles || depth >= maximumDepth then
+                            refuse "catalog.payloadCount" "Source file count or path depth exceeds its selected ceiling."
                         let _, payloadStamp = stamp custody (fun () -> checkWork budget) fd
 
                         if BitConverter.ToUInt32(payloadStamp, 16) <> 1u then
@@ -939,13 +982,16 @@ module internal CatalogScaffoldLinux =
                 if
                     identityAfter <> identityBefore
                     || before[96..127] <> after[96..127]
-                    || original <> names directory
+                    || original <> directoryNames directory
                 then
                     refuse "catalog.directoryChanged" "The closed payload changed during enumeration."
 
             validate custody budget root
-            walk root ""
+            walk root "" 0
             result |> Seq.sortBy (fun value -> value.Path) |> Seq.toList)
+
+    let files custody budget root maximumBytes =
+        filesWithinLimits custody budget root maximumBytes Int32.MaxValue Int32.MaxValue
 
     let private awaitCleanup (budget: PhaseBudget) (task: Task<'a>) : 'a =
         while not task.IsCompleted do

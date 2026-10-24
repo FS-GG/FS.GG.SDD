@@ -13,6 +13,7 @@ admitted by this plan.
 | Source manifest | `fsgg.provider-source/1`; UTF-8 JSON, at most256KiB |
 | Acquisition policy | `fsgg.provider-source-policy/1`; UTF-8 JSON, at most64KiB; explicit caller-selected digest |
 | Source receipt | `fsgg.provider-source-observation/1`; strict JSON, at most256KiB |
+| Internal immutable cache metadata | `fsgg.provider-source-cache/1`; at most256KiB; historical acquisition facts only |
 | Scaffold provenance | integer schema3, nested strict schema2 `catalog` plus `source`; total existing provenance ceiling still applies |
 | JSON | depth16; duplicate/unknown properties refused; existing stricter artifact ceilings retained |
 | Source envelope | ZIP, maximum256MiB compressed; no self-extracting/executable envelope support |
@@ -135,6 +136,10 @@ consumer tests. Schema3 is explicitly incompatible with old provenance readers;
 those readers already refuse unknown schema. New readers preserve1/2 exactly.
 Select coherent package version changes through normal release policy after API
 review, not by inventing an unavailable dependency pin during implementation.
+The source candidate advances the SDD coherent set from2.4.0 to2.5.0 for additive
+source APIs. Existing schema1/2 data and constructors remain supported; exhaustive
+Document-union consumers must add SourceCatalog and old binaries refuse schema3.
+The prospective version is not a publication or installed-compatibility claim.
 
 Spec/.fsi and representative semantic/API tests form the first checkpoint.
 After reviewed compiler preflight, exercise those surfaces before corresponding

@@ -62,6 +62,26 @@ module CatalogInspectionTests =
             Console.SetOut previous
 
     [<Fact>]
+    let ``source discovery requires the complete explicit source and acquisition policy selection`` () =
+        for args, expected in
+            [ [ "inspect"; "--source-set"; "/not-read/sources.json" ], "source.selectionMissing"
+              [ "inspect"; "--source-set"; "/not-read/sources.json"; "--catalog"; "/not-read/catalog.json" ], "source.unknownOption"
+              [ "inspect"; "--source-set"; "/not-read/sources.json"; "--source-set"; "/other.json" ], "source.duplicateOption" ] do
+            let code, json = capture (args @ [ "--json" ])
+            Assert.Equal(1, code)
+            Assert.Contains(expected, json)
+
+    [<Fact>]
+    let ``source scaffold cannot dispatch the legacy executor with an incomplete source selection`` () =
+        let previous = Console.Out
+        use writer = new StringWriter()
+        try
+            Console.SetOut writer
+            Assert.Equal(1, Program.run [ "scaffold"; "--source-set"; "/not-read/sources.json"; "--root"; "/not-created/product"; "--json" ])
+            Assert.Contains("source.selectionMissing", writer.ToString())
+        finally Console.SetOut previous
+
+    [<Fact>]
     let ``real file inspection discovers all provider metadata and writes nothing`` () =
         let root = TestSupport.tempDirectory ()
         let path = Path.Combine(root, "catalog.json")

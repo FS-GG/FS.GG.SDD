@@ -68,13 +68,11 @@ module internal HandlersDoctor =
     // by `unreadableSubjects`, so `doctor` can no longer answer `isCoherent: true` off the back of
     // a provenance file it failed to open.
     let resolveProvenance model =
-        match readOf ".fsgg/scaffold-provenance.json" model with
-        | Bytes snap -> tryParse snap.Text
-        | Absent
-        | Unreadable _
-        // Unreachable — provenance is a FILE read, and only `tryEnumerate` yields `Truncated`
-        // (#743) — but stated, because the DU's job is to make every fold decide.
-        | Truncated _ -> None
+        match scaffoldProvenanceDocument model with
+        | Ok(Some document) -> Some(FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.ownershipProjection document)
+        | Ok None -> None
+        // The report separately retains these parse diagnostics and refuses coherence.
+        | Error _ -> None
 
     let resolveDriftDescriptor model (provenance: ScaffoldProvenanceRecord option) =
         match provenance with
@@ -363,7 +361,9 @@ module internal HandlersDoctor =
 
         { drift with
             Steps = steps
+            HasProvenance = drift.HasProvenance || Option.isSome (snapshot FS.GG.SDD.Artifacts.ScaffoldProvenance.provenancePath model)
             IsCoherent = drift.IsCoherent && List.isEmpty targets && List.isEmpty guidance.Problems
+                         && List.isEmpty (scaffoldProvenanceDiagnostics DiagnosticWarning model)
         }
 
     let doctorSummaryOf (drift: Drift.DriftReport) : DoctorSummary =
@@ -400,6 +400,7 @@ module internal HandlersDoctor =
             | None ->
                 let drift = computeDrift model
                 let unreadable = unreadableSubjects model
+                let provenanceProblems = scaffoldProvenanceDiagnostics DiagnosticWarning model
 
                 // FS.GG.SDD#745 / decision #754: a verdict may never report coherent over a subject
                 // it did not read. `doctor` is the lane #754 used to REJECT refusing at the edge —
@@ -409,7 +410,7 @@ module internal HandlersDoctor =
                 // already emitted name the files and keep the run at exit 0.
                 let summary =
                     { doctorSummaryOf drift with
-                        IsCoherent = drift.IsCoherent && List.isEmpty unreadable
+                        IsCoherent = drift.IsCoherent && List.isEmpty unreadable && List.isEmpty provenanceProblems
                     }
 
                 // Non-blocking drift advisory (doctor always exits 0) whenever there is drift to
@@ -432,6 +433,7 @@ module internal HandlersDoctor =
                     Diagnostics =
                         model.Diagnostics
                         @ diagnostics
+                        @ provenanceProblems
                         @ ownerGuidanceDiagnostics DiagnosticWarning (selectedOwnerGuidanceFiles model) model
                 },
                 []

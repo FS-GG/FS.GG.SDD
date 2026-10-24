@@ -268,7 +268,7 @@ module internal HandlersUpgrade =
             let manifestPlan = HandlersScaffold.productManifestAmend model manifestAdditions
 
             match manifestPlan with
-            | Some(Error refusal) -> Error refusal
+            | Some(Error refusal) -> Error(sprintf "%A" refusal)
             | _ ->
                 let manifestWrites, manifestDigest =
                     match manifestPlan with
@@ -302,7 +302,7 @@ module internal HandlersUpgrade =
                         && List.isEmpty newRenderingSkillPaths
                         && List.isEmpty newAudioSkillPaths
                     then
-                        []
+                        Ok []
                     else
                         let updated =
                             { record with
@@ -316,34 +316,35 @@ module internal HandlersUpgrade =
                                         (newRenderingSkillPaths @ newAudioSkillPaths)
                             }
 
-                        [
-                            WriteFile(
-                                ScaffoldProvenance.provenancePath,
-                                ScaffoldProvenance.serialize updated,
-                                GeneratedView
-                            )
-                        ]
+                        match scaffoldProvenanceDocument model with
+                        | Ok(Some(FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.Legacy _)) ->
+                            Ok [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
+                        | _ ->
+                            Error "Catalog/source provenance binds original observed path hashes; owner backfill cannot rewrite those observations or downgrade the wrapper."
 
-                Ok(writes @ manifestWrites @ provenanceWrite)
+                provenanceWrite |> Result.map (fun effects -> writes @ manifestWrites @ effects)
         | None -> Ok []
 
     let applyEffectsFor model (request: CommandRequest) (step: ReconciliationStep) =
-        match step.StepId with
-        | ReconciliationStepId.CliSelfUpdate -> Ok [ selfUpdateEffect ]
-        | ReconciliationStepId.ArtifactReSeed ->
-            let files = selectedOwnerGuidanceFiles model
+        if not (List.isEmpty (scaffoldProvenanceDiagnostics DiagnosticError model)) then
+            Error "Malformed observed scaffold provenance cannot authorize remediation effects."
+        else
+            match step.StepId with
+            | ReconciliationStepId.CliSelfUpdate -> Ok [ selfUpdateEffect ]
+            | ReconciliationStepId.ArtifactReSeed ->
+                let files = selectedOwnerGuidanceFiles model
 
-            let presentGuidanceTargets =
-                ownerGuidancePlan files model
-                |> fun p -> p.Writes |> List.map (fun w -> w.Path) |> Set.ofList
+                let presentGuidanceTargets =
+                    ownerGuidancePlan files model
+                    |> fun p -> p.Writes |> List.map (fun w -> w.Path) |> Set.ofList
 
-            ownerBackfillEffects model step.TargetPaths
-            |> Result.map (fun effects ->
-                reSeedEffects request (step.TargetPaths |> List.filter (presentGuidanceTargets.Contains >> not))
-                @ effects
-                @ ownerGuidanceWriteEffects files model)
-        // templateRePin is `noTarget` in this feature (R6) and never actionable.
-        | ReconciliationStepId.TemplateRePin -> Ok []
+                ownerBackfillEffects model step.TargetPaths
+                |> Result.map (fun effects ->
+                    reSeedEffects request (step.TargetPaths |> List.filter (presentGuidanceTargets.Contains >> not))
+                    @ effects
+                    @ ownerGuidanceWriteEffects files model)
+            // templateRePin is `noTarget` in this feature (R6) and never actionable.
+            | ReconciliationStepId.TemplateRePin -> Ok []
 
     // FS-GG/FS.GG.SDD#736: the advisory that closes an `upgrade` over un-repaired skill drift must
     // name the condition it actually found. There were three conditions and ONE sentence, and the
@@ -700,6 +701,7 @@ module internal HandlersUpgrade =
             || List.contains ReconciliationStepId.CliSelfUpdate applied
             || not (List.isEmpty unrepairedSkillDrift)
             || not (List.isEmpty (ownerGuidancePlan (selectedOwnerGuidanceFiles model) model).Problems)
+            || not (List.isEmpty (scaffoldProvenanceDiagnostics DiagnosticWarning model))
 
         // FS.GG.SDD#745 AC3. A step whose apply effects were refused because a TARGET could not be
         // READ is not a tool defect, and `upgradeStepFailed` is `markToolDefect` — i.e. exit 2,
@@ -778,6 +780,7 @@ module internal HandlersUpgrade =
             Diagnostics =
                 model.Diagnostics
                 @ diagnostics
+                @ scaffoldProvenanceDiagnostics DiagnosticWarning model
                 @ ownerGuidanceDiagnostics DiagnosticWarning (selectedOwnerGuidanceFiles model) model
         },
         []
@@ -856,6 +859,7 @@ module internal HandlersUpgrade =
                             Diagnostics =
                                 model.Diagnostics
                                 @ ownerGuidanceDiagnostics DiagnosticWarning (selectedOwnerGuidanceFiles model) model
+                                @ scaffoldProvenanceDiagnostics DiagnosticWarning model
                         }
                     // 058/ADR-0014 P1: the only drift is advisory content drift (a divergent/
                     // hash-mismatched copy or product-skill loss) with NO applicable step. There is

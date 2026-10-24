@@ -68,6 +68,9 @@ module CatalogScaffoldEffects =
                 Gate: obj
                 Host: HostSelection
                 Request: Workflow.CatalogScaffoldRequest
+                Source: ProviderSourceEffects.SelectedSource option
+                mutable SourceRoots: (Linux.DirectoryCustody * Linux.DirectoryCustody * string) option
+                mutable SourceInputRoots: Linux.DirectoryCustody list
                 Cancellation: CancellationToken
                 Native: Linux.Custody
                 mutable Runner: Task<Workflow.Model> option
@@ -1606,7 +1609,27 @@ module CatalogScaffoldEffects =
         lock operation.Gate (fun () -> operation.InputRoots <- operation.InputRoots @ [ held ])
         held
 
+    let private revalidateSourceRoots (operation: Operation) (budget: Linux.PhaseBudget) =
+        match operation.SourceRoots with
+        | None -> ()
+        | Some(cache, parent, leaf) ->
+            Linux.revalidateDirectory budget cache
+            Linux.revalidateDirectory budget parent
+            let same (left: Linux.ObjectIdentity) (right: Linux.ObjectIdentity) =
+                left.DeviceMajor = right.DeviceMajor && left.DeviceMinor = right.DeviceMinor
+                && left.Inode = right.Inode && left.Kind = right.Kind
+            for sourceRoot in cache :: operation.SourceInputRoots do
+                Linux.revalidateDirectory budget sourceRoot
+                if Linux.directoryAncestry parent |> List.exists (same (Linux.identity sourceRoot)) then
+                    refuse "source.targetOverlap" "The scaffold target lies inside held source/cache input objects, including nested physical aliases."
+            // The existing transaction requires an absent target. A present alias cannot
+            // become authority to mutate either the cache or an existing workspace.
+            match Linux.tryOpenChildDirectory operation.Native budget parent leaf with
+            | Some _ -> refuse "source.targetPresent" "The selected source scaffold target must remain absent before publication."
+            | None -> ()
+
     let private revalidateInputs (operation: Operation) (budget: Linux.PhaseBudget) =
+        revalidateSourceRoots operation budget
         let roots = lock operation.Gate (fun () -> operation.InputRoots)
 
         for held in roots do
@@ -2161,6 +2184,27 @@ module CatalogScaffoldEffects =
             let preview, policy, selected, association = declaredInputs operation.Request
             supportedHost operation initial policy selected
 
+            match operation.Source with
+            | None -> ()
+            | Some source ->
+                let cache = Linux.openDirectory operation.Native initial (ProviderSourceEffects.cacheRoot source)
+                let target = operation.Request.TargetRoot.TrimEnd(Path.DirectorySeparatorChar)
+                let parent = Linux.openDirectory operation.Native initial (Path.GetDirectoryName target |> requiredText)
+                let leaf = Path.GetFileName target |> requiredText
+                operation.SourceRoots <- Some(cache, parent, leaf)
+                revalidateSourceRoots operation initial
+                let captured =
+                    ProviderSourceEffects.inputFiles source
+                    |> List.map (fun file ->
+                        if file.Bytes > int64 Int32.MaxValue then
+                            refuse "source.capturedBound" "The selected source input exceeds the bounded capture representation."
+                        let value = captureInputFile operation initial file.AbsolutePath (int file.Bytes)
+                        let held = lock operation.Gate (fun () -> operation.InputRoots |> List.last)
+                        operation.SourceInputRoots <- held.Root :: operation.SourceInputRoots
+                        file.AbsolutePath, value.Bytes)
+                ProviderSourceEffects.verifyCaptured source captured |> requireResult
+                revalidateInputs operation initial
+
             let archiveFile =
                 captureInputFile operation initial operation.Request.TemplateArchive (64 * 1024 * 1024)
 
@@ -2392,7 +2436,15 @@ module CatalogScaffoldEffects =
                         writes
 
                 let serialized =
-                    CatalogScaffoldProvenance.serialize record |> requireResult |> utf8.GetBytes
+                    match operation.Source with
+                    | None -> CatalogScaffoldProvenance.serialize record |> requireResult |> utf8.GetBytes
+                    | Some source ->
+                        SourceScaffoldProvenance.serialize
+                            { SchemaVersion = 3
+                              Source = ProviderSourceEffects.sourceObservation source
+                              Catalog = record }
+                        |> requireResult
+                        |> utf8.GetBytes
 
                 Linux.writeFile operation.Native scaffold workspace ScaffoldProvenance.provenancePath serialized false
 
@@ -2557,6 +2609,9 @@ module CatalogScaffoldEffects =
                         Gate = obj ()
                         Host = host
                         Request = retained
+                        Source = None
+                        SourceRoots = None
+                        SourceInputRoots = []
                         Cancellation = cancellationToken
                         Native = Linux.createCustody ()
                         Runner = None
@@ -2580,6 +2635,19 @@ module CatalogScaffoldEffects =
                         FirstFailure = None
                         Ownership = NotStarted
                     }
+
+    let prepareFromSource host source request cancellationToken =
+        let errors =
+            ProviderSourceWorkflow.validateScaffoldJoin
+                (ProviderSourceEffects.targetRoot source)
+                (ProviderSourceEffects.catalogSelection source)
+                (ProviderSourceEffects.archivePath source)
+                (ProviderSourceEffects.archiveSha256 source)
+                request
+        if not errors.IsEmpty then Error errors
+        else
+            prepare host request cancellationToken
+            |> Result.map (fun operation -> { operation with Source = Some source })
 
     let run (operation: Operation) =
         async {

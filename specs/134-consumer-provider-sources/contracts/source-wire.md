@@ -64,6 +64,14 @@ bytes even if central-directory lengths or HTTP Content-Length claim less.
 Do not extract nested archive contents in source acquisition; the nupkg is an
 opaque member subsequently validated by the existing template transport.
 
+Version1 admits single-disk ZIP32, stored/DEFLATE members, UTF-8 names (ASCII only
+when the UTF-8 flag is absent), and no prepended/trailing data, overlapping local
+records, ZIP64 or unknown link-bearing extra fields. Local and central names,
+methods, sizes/CRC or actual data descriptors must agree. Timestamp and Unix UID/GID
+extra metadata do not grant ownership or executable authority. The fixed transport
+also bounds response headers to64KiB and resolved DNS answers to64 addresses; every
+returned address must pass the public profile before connecting once to one of them.
+
 Local directory sources normalize to that same population. Capture its complete
 observed member census with no-follow containment and revalidate the selected
 directory and files; an incomplete/changed census refuses. The source root itself
@@ -118,6 +126,20 @@ projected as a fresh network observation. The verified manifest/source revision
 and actual catalog/archive digests remain determining on every acquisition kind.
 
 ## Schema3 scaffold provenance
+
+The immutable cache entry uses `payload/` for exactly `source.json` and its
+declared members, and one sibling `acquisition.json` (maximum256KiB). Its closed
+schema is `fsgg.provider-source-cache/1`; fields are `schema`, `sourceSetSha256`,
+`acquisitionPolicySha256`, `source`, `revision`, `acquisition`, `resolvedUri`,
+`redirects`, `networkHops`, `catalogSha256`. These retain the actual original
+whole-source acquisition facts without inventing a selected template/archive.
+Cache metadata cannot itself be `cache-read`: it retains the original local or
+HTTPS acquisition. Every cache read rechecks this closed metadata and complete
+payload against the current selected manifest/envelope identity; current source
+observations separately say cache-read, with no current network hops. Cache
+metadata grants neither policy nor executable authority. Metadata never shares
+a namespace with provider members. A source set is prepared only after every
+entry is complete and whole-set collision checks pass.
 
 Root is exactly `{ "schemaVersion":3, "source":<observation>,
 "catalog":<unchanged strict schema2 record> }`. The nested catalog must be schema2
