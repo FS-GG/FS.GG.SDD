@@ -56,6 +56,14 @@ harness = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(harness)
 
 
+# nuget.org whole-file SHA-256 of the published tool packages, recorded independently of this script:
+# SDD 2.5.1 in FS-GG/FS.GG.SDD#935 (comment 6387941247); Governance 1.15.0 in FS-GG/FS.GG.SDD#928 (comment 6363029199).
+PUBLISHED_SHA256 = {
+    'FS.GG.SDD.Cli.2.5.1': '94e20819a011419531b696cc8510c122edc5cce2f2dbe93bb09864a391cfe241',
+    'FS.GG.Governance.Cli.1.15.0': '9eb3eed64cacdd84ba3d82439d8e3b6ffb3c9e035c6e5de00a1520094227879b',
+}
+
+
 def sha256_file(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -323,23 +331,23 @@ def verify_cases(journey, tools, workspace):
                 '--provider-provenance-sha256', prov_sha or sha256_file(workspace / provenance),
                 '--provider-policy', str(policy_path), '--provider-policy-sha256', sha256_file(policy_path),
                 '--provider-platform', platform]
-    # name: (arguments, fixture mode, stale evidence, tooling timeout, supply the ends, expected exit)
+    # name: (arguments, fixture mode, stale evidence, tooling timeout, supply the ends, expected exit, distinguishing stderr text)
     cases = {
-        'positive': (arguments(), 'write', False, None, True, 0),
-        'missing-evidence': (arguments(), 'none', False, None, True, 1),
-        'stale-evidence': (arguments(), 'write', True, None, True, 1),
-        'mismatched-evidence': (arguments(), 'mismatch', False, None, True, 1),
-        'nonzero-fixture-exit': (arguments(), 'exit2', False, None, True, 1),
-        'detached-descendant': (arguments(), 'escape', False, None, True, 0),
-        'declared-deadline': (arguments(), 'hang', False, 3, True, 1),
-        'provenance-digest-mismatch': (arguments(prov_sha='0' * 64), 'write', False, None, True, 3),
-        'policy-identity-mismatch': (arguments(policy_path=other_policy), 'write', False, None, True, 3),
-        'platform-mismatch': (arguments(platform='linux-arm64'), 'write', False, None, True, 3),
-        'unrouted-selection': (arguments(paths='AGENTS.md'), 'write', False, None, True, 3),
-        'ends-not-supplied': (arguments(), 'write', False, None, False, 3),
+        'positive': (arguments(), 'write', False, None, True, 0, None),
+        'missing-evidence': (arguments(), 'none', False, None, True, 1, 'was not produced by the run'),
+        'stale-evidence': (arguments(), 'write', True, None, True, 1, 'existed before launch'),
+        'mismatched-evidence': (arguments(), 'mismatch', False, None, True, 1, 'sources do not match the workspace'),
+        'nonzero-fixture-exit': (arguments(), 'exit2', False, None, True, 1, 'exited 2'),
+        'detached-descendant': (arguments(), 'escape', False, None, True, 0, None),
+        'declared-deadline': (arguments(), 'hang', False, 3, True, 1, 'WorkDeadlineReached'),
+        'provenance-digest-mismatch': (arguments(prov_sha='0' * 64), 'write', False, None, True, 3, 'RawDigestMismatch'),
+        'policy-identity-mismatch': (arguments(policy_path=other_policy), 'write', False, None, True, 3, 'differs from the independently selected policy'),
+        'platform-mismatch': (arguments(platform='linux-arm64'), 'write', False, None, True, 3, 'UnsupportedPlatform'),
+        'unrouted-selection': (arguments(paths='AGENTS.md'), 'write', False, None, True, 3, 'no selected effective gate'),
+        'ends-not-supplied': (arguments(), 'write', False, None, False, 3, 'FSGG_VERIFY_WORK_SECONDS is not set'),
     }
     summary = {}
-    for name, (tail, mode, stale, timeout, supply_ends, expected) in cases.items():
+    for name, (tail, mode, stale, timeout, supply_ends, expected, reason) in cases.items():
         repo = verify_root / (name + '-ws')
         subprocess.run(['git', 'clone', '-q', str(workspace), str(repo)], check=True, env=dict(os.environ, **journey.environment))
         if timeout is not None:
@@ -367,9 +375,19 @@ def verify_cases(journey, tools, workspace):
         witnessed = actual.get('descendantWitness', {})
         ok = actual['exitCode'] == expected and actual['cleanup'] == 'direct-child-reaped-streams-eof'
         if supply_ends:
-            # The host settled the capture itself inside the admitted window; the outer runtime never had to end it.
+            # The host exited by itself, with an exit code its own mapping reserves for a settled session
+            # and no unsettled report, inside the admitted window; the outer runtime never had to end it.
             ok = ok and capture is not None and capture['hostSettled'] and not capture['outerRuntimeEnded']
+            ok = ok and capture['withinAdmittedWindow'] and actual['durationSeconds'] < CAPTURE_CLEANUP_END
+            ok = ok and actual.get('workerScan', {}).get('survivors') == []
         ok = ok and witnessed.get('survivors') == []
+        if reason is not None:
+            # Each refusal must be the intended one, not merely the same exit code.
+            ok = ok and reason in err + out
+        if name in ('positive', 'detached-descendant'):
+            verdict = json.loads((verify_root / (name + '-verify.json')).read_text()) if (verify_root / (name + '-verify.json')).is_file() else {}
+            executed = [item.get('execution', {}).get('disposition') for item in verdict.get('passing', [])]
+            ok = ok and verdict.get('verdict') == 'pass' and executed == ['executed']
         if name == 'positive':
             ok = ok and produced and content != 'stale'
         if name == 'stale-evidence':
@@ -377,19 +395,24 @@ def verify_cases(journey, tools, workspace):
         if expected == 3:
             ok = ok and not produced
         if name in ('detached-descendant', 'declared-deadline'):
-            # The fixture left a detached descendant (own session, TERM ignored): it was recorded, and none survives the worker.
+            # The fixture left a detached descendant (own session, TERM ignored, sleeping 300 s): it was
+            # recorded, and none survives the worker that lived for seconds.
             ok = ok and witnessed.get('observed', 0) >= 2 and actual.get('descendantTeardown') == 'witnessed-absent'
+        if name == 'declared-deadline':
+            ok = ok and 2.5 <= actual['durationSeconds'] < 20
         if name == 'positive':
             ok = ok and witnessed.get('observed', 0) >= 1 and actual.get('descendantTeardown') == 'witnessed-absent'
         summary[name] = {'expectedExit': expected, 'exit': actual['exitCode'], 'ok': ok, 'evidenceProduced': produced,
                          'evidenceSha256': hashlib.sha256(content.encode()).hexdigest() if content else None,
                          'statusBefore': before.strip(), 'statusAfter': status.strip(), 'captureLifetime': capture,
-                         'descendantWitness': {k: witnessed.get(k) for k in ('observed', 'survivors')},
+                         'descendantWitness': {k: witnessed.get(k) for k in ('observed', 'survivors')}, 'workerScan': actual.get('workerScan'),
                          'descendantTeardown': actual.get('descendantTeardown'), 'durationSeconds': actual['durationSeconds'],
                          'cleanup': actual['cleanup'], 'firstFailure': actual['firstFailure'], 'stderr': err.strip()[:600]}
-        window = 'capture settled inside the admitted window' if supply_ends else 'refused before any capture (no outer ends supplied)'
+        window = ('host exited by itself with a settled-session exit inside the admitted window' if supply_ends
+                  else 'host refused before any capture (no outer ends supplied)')
         journey.record(f'verify {name}: exit {actual["exitCode"]} (expected {expected}), {window}, '
-                       f'descendants {witnessed.get("observed")} witnessed / {len(witnessed.get("survivors") or [])} surviving',
+                       f'descendants {witnessed.get("observed")} witnessed / {len(witnessed.get("survivors") or [])} surviving, '
+                       f'worker scan {len((actual.get("workerScan") or {}).get("survivors") or [])} surviving',
                        ok, '' if ok else json.dumps(summary[name])[:700])
     (work / 'results/verify-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
     return summary
@@ -407,7 +430,7 @@ def run_journey(args):
         raise SystemExit('--work must be a fresh empty directory')
     work.mkdir(parents=True, exist_ok=True)
     os.sched_setaffinity(0, set(sorted(os.sched_getaffinity(0))[:MAXIMUM_CPUS]))
-    expectations = dict(item.split('=', 1) for item in args.expect_sha256 or [])
+    expectations = dict(PUBLISHED_SHA256, **dict(item.split('=', 1) for item in args.expect_sha256 or []))
     journey = Journey(work, args.sdd_version, args.governance_version, expectations)
     journey.environment = prepare_environment(work)
     before = harness.tree_identity(ROOT, IDENTITY_PATHS)
@@ -452,7 +475,8 @@ def main():
     run.add_argument('--sdd-version', default='2.5.1')
     run.add_argument('--governance-version', default='1.15.0')
     run.add_argument('--expect-sha256', action='append', metavar='PACKAGE_ID.VERSION=HEX',
-                     help='independently recorded nuget.org whole-file SHA-256 of an installed tool package')
+                     help='override or add an independently recorded nuget.org whole-file SHA-256 of a tool package '
+                          '(the published SDD 2.5.1 and Governance 1.15.0 values are built in)')
     args = parser.parse_args()
     return run_journey(args)
 

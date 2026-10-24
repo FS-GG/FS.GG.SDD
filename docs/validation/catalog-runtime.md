@@ -305,18 +305,35 @@ backend; a bare process group is not whole-worker teardown. `FSGG_VERIFY_*`
 in `environment` is refused, so there is a single supplier.
 
 The result's `captureLifetime.outcome` is derived only from what the runner
-observed:
+observed (the host's own exit mapping and reports, never a runner inference):
 
-- `host-exited-after-settlement`: the host exited by itself inside the window
-  (its own exit code stands: 0 pass, 1 blocked, 3 input unavailable). This is
-  the only outcome with `hostSettled: true`.
-- `host-exited-with-retained-session`: exit 4 with the host's own "retained
-  after the original cleanup end ... with no read pending" report.
+- `host-exited-after-settlement`: the host exited by itself with an exit code
+  its own mapping reserves for a settled session (0 pass, 1 blocked, 3 input
+  unavailable), with none of its unsettled reports, inside the admitted window.
+  This is the only outcome with `hostSettled: true`. Exits 3 can also be a
+  refusal before any capture session existed (for example an unsupported
+  platform); the result does not distinguish them, the case's expected
+  diagnostic does.
+- `host-exited-with-retained-session` and `host-exited-with-unsettled-session`:
+  exit 4 (the tool error the host also uses to replace an exit of a session that
+  did not settle cleanly), or any exit accompanied by the host's "retained",
+  "not released ... stays resident" or "did not settle cleanly" reports.
+- `host-exited-without-settlement-proof`: any other exit (usage 2, a crash).
+- `host-exited-after-its-window`: a settled-session exit after the admitted window.
 - `worker-ended-by-outer-runtime`: the runner's work end (or cancellation, or
   the namespace backstop) ended the worker. If the host reported that it "stays
   resident while a read may be pending" this is the designed ending of a
   session whose read cannot be proven finished, and `hostReportedResident` is
   true. It is a non-passing result, never a settlement.
+
+Teardown is checked two ways after the worker ended. `descendantWitnessPath` is
+cooperative: descendants append `<outer-pid> <start-time>` and none may still be
+that process (an empty witness proves nothing and is not upgraded).
+`workerScan` is not: every capture command carries a unique
+`FSGG_RUNNER_WORKER_ID` in its environment, and no live process may still carry
+it (this finds the runtime host and detached sessions that kept their inherited
+environment, not only volunteers). Either finding is a failure
+(`descendant-survived-teardown`, `worker-process-survived-teardown`).
 
 A Governance contract change is not required: the join uses the documented
 environment interface and exit mapping. Not covered here, and still owned by
@@ -346,8 +363,11 @@ cache, at most six CPUs and nuget.org as the only package source:
    stale, mismatched and non-zero evidence, a detached descendant, a declared
    deadline, four whole-request refusals and the ends-not-supplied refusal.
 
-Each Verify case must also end with the host having settled inside the admitted
-window and every witnessed descendant absent. The policy, fixture and
+Each Verify case must also end with the host having exited by itself with a
+settled-session exit inside the admitted window, every witnessed descendant
+absent and the worker scan empty, and each refusal must carry its intended
+diagnostic. The published tool package SHA-256 values are pinned in the script
+from their independent records. The policy, fixture and
 Governance catalog are SDD-owner authored fixtures: independent of the sample,
 but not supplied by a third party. This is ordinary verification on the
 supported Linux-x64/.NET 10.0.12/glibc 2.44 profile, a local cooperative

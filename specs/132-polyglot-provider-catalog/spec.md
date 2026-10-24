@@ -128,9 +128,11 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
   ends, requires the whole capture window plus a startup allowance to fit inside its own work window
   (so it never signals a host inside that window), refuses the declaration otherwise, and ends the
   whole pid-namespace worker afterwards. No Governance contract change is required.
-- FR-020: Teardown is witnessed, not assumed: descendants record their outer pid and kernel start
-  time and none may be that process after the worker ended. A host that stays resident is a
-  non-passing `worker-ended-by-outer-runtime`, never a settlement.
+- FR-020: Teardown is observed, not assumed: descendants record their outer pid and kernel start
+  time, and a per-run environment marker is scanned for non-cooperatively; none may survive the
+  worker. A settlement is only a host exit by itself with a settled-session exit code (0/1/3), no
+  unsettled report and inside the admitted window; a host that stays resident is a non-passing
+  `worker-ended-by-outer-runtime`.
 - Out of scope: an authentic blocked regular-file read and an independently observed uncertain
   close (Governance#423 prerequisite b); hostile containment; provider certification; distribution.
 

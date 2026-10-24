@@ -104,25 +104,54 @@ class DeclarationTests(unittest.TestCase):
     def test_classification_reads_only_runner_observations(self):
         with tempfile.TemporaryDirectory() as directory:
             log = Path(directory) / 'stderr.log'
-            def classify(exit_code, failure, text):
+            def classify(exit_code, failure, text, duration=1.0):
                 log.write_text(text)
-                result = {'exitCode': exit_code, 'firstFailure': failure, 'streams': {'stderr': {'log': str(log)}}}
-                return harness.classify_capture({'workSeconds': 1}, result, 9)
-            settled = classify(0, None, '')
-            self.assertEqual('host-exited-after-settlement', settled['outcome'])
-            self.assertTrue(settled['hostSettled'])
-            self.assertEqual('host-exited-after-settlement', classify(3, 'nonzero-exit', '')['outcome'])
+                result = {'exitCode': exit_code, 'firstFailure': failure, 'durationSeconds': duration,
+                          'streams': {'stderr': {'log': str(log)}}}
+                return harness.classify_capture({'workSeconds': 1, 'cleanupEndSeconds': 2, 'startupAllowanceSeconds': 1}, result, 9)
+            for code in (0, 1, 3):
+                settled = classify(code, None if code == 0 else 'nonzero-exit', '')
+                self.assertEqual('host-exited-after-settlement', settled['outcome'], code)
+                self.assertTrue(settled['hostSettled'])
+            # Only the host's own mapping reserves 0/1/3 for a settled session: a crash, a usage error
+            # and the tool error do not prove settlement, whatever the stderr says or omits.
+            for code in (2, 139, 137):
+                result = classify(code, 'nonzero-exit', '')
+                self.assertEqual('host-exited-without-settlement-proof', result['outcome'], code)
+                self.assertFalse(result['hostSettled'])
+            self.assertEqual('host-exited-with-unsettled-session', classify(4, 'nonzero-exit', '')['outcome'])
             retained = classify(4, 'nonzero-exit', 'x ' + harness.HOST_RETAINED_REPORT)
             self.assertEqual('host-exited-with-retained-session', retained['outcome'])
             self.assertFalse(retained['hostSettled'])
-            # Exit 4 without the host's own retained report is just an exit, not a classification.
-            self.assertEqual('host-exited-after-settlement', classify(4, 'nonzero-exit', '')['outcome'])
+            # Each of the host's unsettled reports blocks a settlement, even under a passing-looking exit.
+            for text in ('exit 1 is replaced by 4: the capture session ' + harness.HOST_UNSETTLED_REPORT,
+                         'the host retains it and ' + harness.HOST_RESIDENT_REPORT):
+                for code in (1, 4):
+                    result = classify(code, None, text)
+                    self.assertEqual('host-exited-with-unsettled-session', result['outcome'], (code, text))
+                    self.assertFalse(result['hostSettled'])
+            late = classify(0, None, '', duration=4.5)  # window is allowance 1 + cleanup end 2
+            self.assertEqual('host-exited-after-its-window', late['outcome'])
+            self.assertFalse(late['withinAdmittedWindow'] or late['hostSettled'])
             resident = classify(-9, 'timeout', harness.HOST_RESIDENT_REPORT)
             self.assertEqual('worker-ended-by-outer-runtime', resident['outcome'])
             self.assertTrue(resident['outerRuntimeEnded'] and resident['hostReportedResident'])
             self.assertFalse(resident['hostSettled'])
             self.assertEqual('worker-ended-by-outer-runtime', classify(None, 'cleanup-timeout', '')['outcome'])
             self.assertEqual('unknown', classify(None, None, '')['outcome'])
+
+    def test_worker_scan_finds_a_live_marked_process_and_nothing_else(self):
+        marker = 'unit-' + str(os.getpid())
+        self.assertEqual([], harness.worker_survivors(marker))
+        child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
+                                 env=dict(os.environ, **{harness.WORKER_MARKER: marker}))
+        try:
+            self.assertEqual([child.pid], harness.worker_survivors(marker))
+            self.assertEqual([], harness.worker_survivors(marker + 'x'))
+        finally:
+            child.kill()
+            child.wait()
+        self.assertEqual([], harness.worker_survivors(marker))
 
 
 class JourneyFixtureTests(unittest.TestCase):
@@ -185,6 +214,8 @@ class NamespaceTests(unittest.TestCase):
             self.assertEqual(2, result['descendantWitness']['observed'])
             self.assertEqual([], result['descendantWitness']['survivors'])
             self.assertEqual('witnessed-absent', result['descendantTeardown'])
+            self.assertEqual([], result['workerScan']['survivors'])
+            self.assertTrue(capture['withinAdmittedWindow'])
             self.assertLess(result['durationSeconds'], 4)
 
     def test_resident_host_is_ended_only_by_the_outer_runtime_after_its_window(self):
@@ -219,6 +250,7 @@ class NamespaceTests(unittest.TestCase):
             self.assertEqual(2, result['descendantWitness']['observed'])
             self.assertEqual([], result['descendantWitness']['survivors'])
             self.assertEqual('witnessed-absent', result['descendantTeardown'])
+            self.assertEqual([], result['workerScan']['survivors'])
 
     def test_host_exit_four_with_its_retained_report_is_not_a_settlement(self):
         host = ('import sys\n'
