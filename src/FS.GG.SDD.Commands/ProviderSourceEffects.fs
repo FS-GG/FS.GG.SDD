@@ -136,7 +136,7 @@ module ProviderSourceEffects =
         let deadline = min operation.WorkEnd (ticks () + seconds maximumSeconds)
         let winner = Task.WhenAny(task :> Task, Task.Delay(remainingMilliseconds deadline)).GetAwaiter().GetResult()
         if not (obj.ReferenceEquals(winner, task)) then
-            operation.CancellationSource |> Option.iter _.Cancel
+            operation.CancellationSource |> Option.iter (fun cancellation -> cancellation.Cancel())
             refuse "source.deadline" "An original bounded source task did not complete; its custody is retained."
         let result = task.GetAwaiter().GetResult()
         checkWork operation
@@ -198,7 +198,7 @@ module ProviderSourceEffects =
         match files |> List.filter (fun file -> file.Path = name) with
         | [ value ] -> value
         | _ -> refuse "source.population" ("Expected exactly one member: " + name)
-    let private validatePayload reference (files: Linux.CapturedFile list) =
+    let private validatePayload (reference: Source.Reference) (files: Linux.CapturedFile list) =
         let manifestFile = findMember "source.json" files
         let manifest = Source.parseManifest reference.ManifestSha256 manifestFile.Bytes |> unwrap
         if manifest.Id <> reference.Id then refuse "source.manifestIdentity" "Manifest ID differs from the selected source."
@@ -222,7 +222,7 @@ module ProviderSourceEffects =
 
     let private archiveDigest (manifest: Source.Manifest) (archive: Source.Archive) =
         manifest.Members |> List.find (fun memberValue -> memberValue.Path = archive.Path) |> _.Sha256
-    let private metadataBytes preview manifest catalogSha256 =
+    let private metadataBytes (preview: SourcePreview) (manifest: Source.Manifest) (catalogSha256: string) =
         // The selected-archive fields are used only to reuse strict observation validation.
         // The stored whole-source receipt deliberately has no provider/archive selection.
         for archive in manifest.Archives do
@@ -238,7 +238,7 @@ module ProviderSourceEffects =
         if bytes.Length > Source.limits.MaximumReceiptBytes then refuse "source.cacheMetadataBound" "Cache metadata exceeds its byte ceiling."
         bytes
 
-    let private readMetadata (reference: Source.Reference) (manifest: Source.Manifest) catalog rawCatalogSha256 (bytes: byte array) =
+    let private readMetadata (reference: Source.Reference) (manifest: Source.Manifest) (catalog: CatalogScaffoldWorkflow.CatalogPreview) (rawCatalogSha256: string) (bytes: byte array) =
         if bytes.Length > Source.limits.MaximumReceiptBytes || (bytes.Length >= 3 && bytes[0..2] = [| 0xefuy; 0xbbuy; 0xbfuy |]) then
             refuse "source.cacheMetadataBound" "Cache metadata must be bounded strict UTF-8 without BOM."
         let text = UTF8Encoding(false, true).GetString bytes
@@ -280,7 +280,7 @@ module ProviderSourceEffects =
           Acquisition = historical.Acquisition; ResolvedUri = historical.ResolvedUri
           Redirects = historical.Redirects; NetworkHops = historical.NetworkHops; Catalog = catalog }
 
-    let private readCache operation reference root key charge =
+    let private readCache (operation: Operation) (reference: Source.Reference) (root: Linux.DirectoryCustody) (key: string) (charge: bool) : Entry =
         let maximum = if charge then operation.Policy.MaximumExpandedBytes - operation.ExpandedBytes else operation.Policy.MaximumExpandedBytes + int64 Source.limits.MaximumReceiptBytes
         let files = captureFiles operation root maximum (Source.limits.MaximumMembers + 2) (Source.limits.MaximumPathDepth + 1)
         guardCapturedTarget operation (Path.Combine(operation.Request.CacheRoot, key)) files
@@ -382,7 +382,7 @@ module ProviderSourceEffects =
                 completed <- Some result
         completed.Value, selected, List.ofSeq redirects, List.ofSeq hops
 
-    let private decodeEnvelope maximumExpandedBytes check charge (bytes: byte array) =
+    let private decodeEnvelope (maximumExpandedBytes: int64) (check: unit -> unit) (charge: int64 -> unit) (bytes: byte array) : Linux.CapturedFile list =
         let require condition message = if not condition then refuse "source.zipEnvelope" message
         let u16 offset =
             require (offset >= 0 && offset <= bytes.Length - 2) "Truncated ZIP field."
@@ -489,7 +489,7 @@ module ProviderSourceEffects =
                     output.Write(buffer, 0, length)
             require (output.Length = int64 expanded) "ZIP member ended before its declared length."
             let payload = output.ToArray()
-            yield { Linux.CapturedFile.Path = name; Bytes = payload; Sha256 = Source.sha256 payload } ]
+            yield ({ Path = name; Bytes = payload; Sha256 = Source.sha256 payload }: Linux.CapturedFile) ]
 
     let private envelopeFiles operation bytes =
         decodeEnvelope (operation.Policy.MaximumExpandedBytes - operation.ExpandedBytes)
@@ -517,7 +517,7 @@ module ProviderSourceEffects =
           CatalogBytes: byte array }
     type private SourceState = Cached of Entry | Acquired of Acquired
 
-    let private acquire operation reference =
+    let private acquire (operation: Operation) (reference: Source.Reference) : Acquired =
         guardRoots operation
         let files, acquisition, resolved, redirects, hops =
             match reference.Locator with
@@ -579,7 +579,7 @@ module ProviderSourceEffects =
         let phase = budget operation
         Linux.stopUsefulWork phase
         let mutable unknown = false
-        try operation.CancellationSource |> Option.iter _.Cancel with _ -> unknown <- true
+        try operation.CancellationSource |> Option.iter (fun cancellation -> cancellation.Cancel()) with _ -> unknown <- true
         let pending () = lock operation.Gate (fun () -> operation.Tasks |> Seq.exists (fun slot -> slot.Started && (slot.Task |> Option.forall (fun task -> not task.IsCompleted))))
         // No callback may append a new socket after the disposal inventory is frozen.
         while pending () && ticks () < operation.End do Thread.Sleep(min 5 (remainingMilliseconds operation.End))
@@ -633,9 +633,9 @@ module ProviderSourceEffects =
                 refuse "source.hostProfile" "Source filesystem custody requires the existing Linux-x64 .NET10.0.12 catalog host profile."
             Linux.observeAbi operation.Native phase |> unwrap |> ignore
             operation.Cache <- Some(Linux.openDirectory operation.Native phase operation.Request.CacheRoot)
-            operation.TargetParent <- operation.Request.TargetRoot |> Option.map (fun target ->
+            operation.TargetParent <- operation.Request.TargetRoot |> Option.map (fun (target: string) ->
                 let parent = Path.GetDirectoryName target |> nonNull
-                let leaf = Path.GetFileName target
+                let leaf = Path.GetFileName target |> nonNull
                 if String.IsNullOrEmpty leaf then refuse "source.targetPath" "A target leaf beneath an existing parent is required."
                 Linux.openDirectory operation.Native phase parent, leaf)
             guardRoots operation
@@ -686,7 +686,7 @@ module ProviderSourceEffects =
 
     let prepare (request: Request) cancellationToken =
         try
-            if isNull request.SourceSetBytes || isNull request.PolicyBytes then refuse "source.requestBytes" "Explicit source-set and acquisition-policy bytes are required."
+            if obj.ReferenceEquals(request.SourceSetBytes, null) || obj.ReferenceEquals(request.PolicyBytes, null) then refuse "source.requestBytes" "Explicit source-set and acquisition-policy bytes are required."
             let retained = { request with SourceSetBytes = Array.copy request.SourceSetBytes; PolicyBytes = Array.copy request.PolicyBytes }
             let sources = Source.parseSet retained.ExpectedSourceSetSha256 retained.SourceSetBytes |> unwrap
             let policy = Source.parsePolicy retained.ExpectedPolicySha256 retained.PolicyBytes |> unwrap
@@ -790,12 +790,12 @@ module ProviderSourceEffects =
             let actual = Map.ofList captured
             for file in source.Entry.Files do
                 let bytes = actual[file.AbsolutePath]
-                if isNull bytes || bytes.LongLength <> file.Bytes || Source.sha256 bytes <> file.Sha256 then
+                if obj.ReferenceEquals(bytes, null) || bytes.LongLength <> file.Bytes || Source.sha256 bytes <> file.Sha256 then
                     refuse "source.capturedChanged" "A source input differs from its original prepared byte identity."
             let payload =
                 captured |> List.choose (fun (path, bytes) ->
                     if path.StartsWith(source.Entry.PayloadRoot + string Path.DirectorySeparatorChar, StringComparison.Ordinal) then
-                        Some { Linux.CapturedFile.Path = path[(source.Entry.PayloadRoot.Length + 1)..]; Bytes = bytes; Sha256 = Source.sha256 bytes }
+                        Some ({ Path = path[(source.Entry.PayloadRoot.Length + 1)..]; Bytes = bytes; Sha256 = Source.sha256 bytes }: Linux.CapturedFile)
                     else None)
             let manifest, catalog, bytes = validatePayload source.Entry.Preview.Source payload
             if manifest <> source.Entry.Manifest || bytes <> source.Entry.CatalogBytes then refuse "source.capturedChanged" "Captured source manifest/catalog differs from the selected closure."

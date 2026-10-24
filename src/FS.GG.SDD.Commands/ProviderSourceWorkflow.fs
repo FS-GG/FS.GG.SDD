@@ -61,7 +61,7 @@ module ProviderSourceWorkflow =
         { Code = code; Path = path; Message = message }
     let private boundedDiagnostics (items: Fsgg.ProviderCatalog.Diagnostic list) =
         let shorten maximum (text: string) =
-            if isNull text then ""
+            if obj.ReferenceEquals(text, null) then ""
             elif text.Length <= maximum then text
             else text[..maximum - 1] + " [truncated]"
         let rec retain bytes count (rest: Fsgg.ProviderCatalog.Diagnostic list) =

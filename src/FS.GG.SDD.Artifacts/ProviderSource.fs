@@ -128,7 +128,7 @@ module ProviderSource =
             "source.text" path "Expected bounded nonempty text without control characters."
         utf8.GetByteCount value |> ignore
     let private hash path (value: string) =
-        check (not (isNull value) && value.Length = 71 && value.StartsWith("sha256:", StringComparison.Ordinal)
+        check (not (obj.ReferenceEquals(value, null)) && value.Length = 71 && value.StartsWith("sha256:", StringComparison.Ordinal)
                && (value[7..] |> Seq.forall (fun c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))))
             "source.digest" path "Expected sha256: followed by 64 lowercase hexadecimal digits."
     let private portable path (value: string) =
@@ -336,7 +336,7 @@ module ProviderSource =
           Locator = location
           ManifestSha256 = get "manifestSha256" value |> readString }
     let private parseBytes maximum expected read validate (bytes: byte array) = protect (fun () ->
-        check (not (isNull bytes) && bytes.Length <= maximum) "source.bound" "$" "JSON is absent or exceeds the byte ceiling."
+        check (not (obj.ReferenceEquals(bytes, null)) && bytes.Length <= maximum) "source.bound" "$" "JSON is absent or exceeds the byte ceiling."
         check (sha256 bytes = expected) "source.rawDigestMismatch" "$" "Selected raw digest does not match the actual bytes."
         check (not (bytes.Length >= 3 && bytes[0..2] = [| 0xefuy; 0xbbuy; 0xbfuy |])) "source.encoding" "$" "UTF-8 BOM is not supported."
         let json = utf8.GetString bytes
@@ -366,9 +366,9 @@ module ProviderSource =
             { Schema = get "schema" value |> readString; AllowedOrigins = get "allowedOrigins" value |> readList 16 readString
               MaximumRedirects = get "maximumRedirects" value |> readSmall; AcquisitionSeconds = get "acquisitionSeconds" value |> readSmall
               MaximumTransferBytes = get "maximumTransferBytes" value |> readInt; MaximumExpandedBytes = get "maximumExpandedBytes" value |> readInt }) validatePolicy bytes
-    let parseObservation text =
+    let parseObservation (text: string) =
         match protect (fun () ->
-            check (not (isNull text) && text.Length <= limits.MaximumReceiptBytes) "source.bound" "$" "Observation text is absent or exceeds its ceiling."
+            check (not (obj.ReferenceEquals(text, null)) && text.Length <= limits.MaximumReceiptBytes) "source.bound" "$" "Observation text is absent or exceeds its ceiling."
             utf8.GetBytes(text: string)) with
         | Error diagnostics -> Error diagnostics
         | Ok bytes ->
