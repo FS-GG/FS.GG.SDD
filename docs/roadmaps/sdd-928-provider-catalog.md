@@ -268,6 +268,32 @@ input/output refusal and real strict schema2 reading. Final2.3 archive/CLI→Ver
 remains pending; this evidence does not mark C3.1 or distribution complete.
 
 
+## C3.1-03 package-only qualification and the Verify capture-lifetime join — 2026-10-24 (#1131)
+
+Programme/root assigned the Governance Verify/GateExecution capture-lifetime/teardown join to
+FS.GG.SDD ([#928 comment 6385677685](https://github.com/FS-GG/FS.GG.SDD/issues/928#issuecomment-6385677685)).
+The Verify host owns one capture session per invocation (Governance#465/#468); the maintained runner is
+the outer admitted runtime: it alone supplies `FSGG_VERIFY_WORK_SECONDS` / `FSGG_VERIFY_CLEANUP_SECONDS`
+(`captureLifetime`), requires the capture window plus a startup allowance to fit inside its own work
+window so it never signals a host inside it, ends the whole pid-namespace worker afterwards and
+witnesses that detached descendants are gone. No Governance contract change was needed. Details:
+[catalog runtime validation](../validation/catalog-runtime.md#governance-verify-capture-lifetime-sdd928-c31-03-1131).
+
+`scripts/verify-capture-journey.py` runs the genuine package-only path with a credential-free
+environment and an empty private NuGet cache: published `FS.GG.SDD.Cli` 2.5.1 (nupkg SHA-256
+`94e20819…e241`) and `FS.GG.Governance.Cli` 1.15.0 (`9eb3eed6…879b`) from nuget.org, the typed
+authoring example compiled against published packages, deterministic double emission, refusals, the
+installed CLI through `catalog-cli-acceptance.py` (positive and 7 negatives), then the installed
+`fsgg-governance verify` in provider mode through GateExecution under the join (positive, missing,
+stale, mismatched and non-zero evidence, a detached TERM-ignoring descendant, a declared deadline, four
+whole-request refusals, and the ends-not-supplied refusal). Result on the supported Linux-x64/.NET
+10.0.12/glibc 2.44 host with six CPUs: 27 of 27, every Verify host settled inside the admitted window
+and every witnessed descendant absent afterwards. Ordinary verification under ADR-0096; the policy,
+fixture and Governance catalog are SDD-owner fixtures (independent of the sample, not third-party
+supplied). Still owned elsewhere: an authentic blocked regular-file read and an independently
+observed uncertain close (Governance#423 prerequisite b), hostile containment and a hosted profile.
+The resident-host branch of the join is exercised with a stand-in host, not claimed against Governance.
+
 ## Selected-template data transport follow-up
 
 The accepted Templates441/SDD928 join extends only the private data transport:
