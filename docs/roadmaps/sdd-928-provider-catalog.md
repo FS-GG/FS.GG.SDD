@@ -313,6 +313,24 @@ Ordinary verification under ADR-0096 on the exact Linux-x64/.NET 10.0.12/glibc 2
 profile. Still open on #928: C4 distribution, the schema-v1 window, concrete language providers (Templates#441)
 and Governance#423 prerequisite (b). The package evidence is a deterministic tar written by the fixture, not a real language toolchain's output.
 
+## C4a schema-v1 compatibility window — 2026-10-25 (#1139)
+
+#928 requires "schema-v1 compatibility during its declared window" but no window was declared. It is now:
+[provider schema-v1 compatibility window](../reference/provider-schema-compatibility.md) covers the schema-1
+registry, descriptor contract major 1 (any 1.x) and major 2 (stable, minimum CLI at least 2.1.0), `scaffold
+--provider` invocation and the legacy route's schema-1 provenance; it opens with SDD 1.0.0, stays open through the
+whole 2.x line and may close no earlier than 3.0.0, announced at least one MINOR release earlier with a migration
+path (nothing is deprecated). The catalog route (contract 3.0.0, provenance schemas 2 and 3) is additive.
+`scripts/check-provider-schema-window.py` (required gate) ties the declaration to the source constants, the current
+major line and the unit tests that pin each guarantee by name; `scripts/provider-schema-window-journey.py` proves
+guarantees G6-G8 against the nine published releases 1.0.0 to 2.5.1 installed from nuget.org.
+
+C4 distribution assessment. The catalog/provider contract is already distributed: SDD 2.4.0, 2.5.0 and 2.5.1 are
+published with byte-identical dual-feed readback and the installed journeys run against them. The authoring example
+and the qualification harness are nonpackable by design. The only residue is a NEW package identity for the SDK or
+harness, which needs a design decision (contents beyond the published Artifacts/Commands APIs, namespace occupancy as
+in SDD#1113, ApiCompat baselines, publication admission); it is not selected here.
+
 ## Selected-template data transport follow-up
 
 The accepted Templates441/SDD928 join extends only the private data transport:
