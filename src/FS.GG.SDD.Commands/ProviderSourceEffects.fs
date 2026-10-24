@@ -403,7 +403,7 @@ module ProviderSourceEffects =
         require (endOffset >= 0) "Missing complete ZIP end record."
         let count = u16 (endOffset + 10)
         require (u16 (endOffset + 4) = 0 && u16 (endOffset + 6) = 0 && u16 (endOffset + 8) = count
-                 && count > 0 && count <= Source.limits.MaximumMembers) "Only bounded single-disk ZIP32 is supported."
+                 && count > 0 && count <= Source.limits.MaximumMembers + 1) "Only bounded single-disk ZIP32 is supported (payload plus fixed manifest)."
         let centralStart, centralBytes = u32 (endOffset + 16), u32 (endOffset + 12)
         require (centralStart + centralBytes = endOffset) "Central directory has unaccounted bytes or ZIP64 records."
         let names = HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -462,6 +462,11 @@ module ProviderSourceEffects =
             inventory.Add(name, expanded, compressed)
             cursor <- next
         require (cursor = endOffset) "Unaccounted central directory records."
+        for name in names do
+            let mutable separator = name.IndexOf('/')
+            while separator >= 0 do
+                require (not (names.Contains(name.Substring(0, separator)))) "ZIP file/ancestor collision."
+                separator <- name.IndexOf('/', separator + 1)
         let mutable previous = 0
         for first, finish in spans |> Seq.sortBy fst do
             require (first = previous) "Prepended, overlapping or hidden inter-member ZIP bytes are refused."
@@ -687,6 +692,8 @@ module ProviderSourceEffects =
     let prepare (request: Request) cancellationToken =
         try
             if obj.ReferenceEquals(request.SourceSetBytes, null) || obj.ReferenceEquals(request.PolicyBytes, null) then refuse "source.requestBytes" "Explicit source-set and acquisition-policy bytes are required."
+            if request.SourceSetBytes.Length > Source.limits.MaximumSetBytes || request.PolicyBytes.Length > Source.limits.MaximumPolicyBytes then
+                refuse "source.requestBound" "Source-set or acquisition-policy bytes exceed their ceiling before copying or parsing."
             let retained = { request with SourceSetBytes = Array.copy request.SourceSetBytes; PolicyBytes = Array.copy request.PolicyBytes }
             let sources = Source.parseSet retained.ExpectedSourceSetSha256 retained.SourceSetBytes |> unwrap
             let policy = Source.parsePolicy retained.ExpectedPolicySha256 retained.PolicyBytes |> unwrap

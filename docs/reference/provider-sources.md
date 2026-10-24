@@ -84,4 +84,13 @@ Legacy schema1 backfill remains supported.
 
 An unresolved acquisition, publication or cleanup retains its original owner.
 Passive observation does not retry a request, resend publication or renew a
-cleanup clock. CLI reporting cannot release unresolved resource custody.
+cleanup clock. CLI reporting preserves the original failure before reporting
+unresolved release. Once the original runner is terminal Unknown, the CLI holds
+the same owner passively without polling release or restarting cleanup.
+
+The acquisition and retirement attempt has a finite budget; independent CLI
+process exit after Unknown is not promised. Actual CLI qualification must run
+under the existing finite external custodian, which owns the original process
+birth/PIDfd, descendants and output EOF through its included deadline. Terminating
+that process never converts unknown resource or pathname cleanup into success.
+That native qualification remains outstanding.

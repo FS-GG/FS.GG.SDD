@@ -23,6 +23,10 @@ module Catalog =
 
     /// Closed argv parsing preserves ordinal parameter values, including empty strings.
     val parseScaffoldOptions: args: string list -> Result<ScaffoldOptions, Fsgg.ProviderCatalog.Diagnostic list>
+    /// Original diagnostics precede secondary release refusal within the existing count/byte bound.
+    val internal sourceFailureDiagnostics:
+        original: Fsgg.ProviderCatalog.Diagnostic list ->
+        secondary: Fsgg.ProviderCatalog.Diagnostic list -> Fsgg.ProviderCatalog.Diagnostic list
     /// Runs the selected production edge once, retaining its original owner after unresolved cleanup.
     /// Reporting does not promise bounded process exit; passive waiting grants no cleanup authority.
     val scaffold: args: string list -> int

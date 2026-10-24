@@ -52,6 +52,18 @@ module ProviderSourceTests =
 
     let members = [ "catalog.yml", catalogBytes; "fixture.nupkg", archiveBytes ]
 
+    [<Theory>]
+    [<InlineData("a", "a/b.nupkg")>]
+    [<InlineData("A/b.nupkg", "a")>]
+    [<InlineData("SOURCE.JSON/catalog", "fixture.nupkg")>]
+    let ``manifest refuses file ancestor collisions including its fixed manifest`` catalogPath archivePath =
+        let candidate =
+            { manifest with
+                CatalogPath = catalogPath
+                Members = [ { manifest.Members.Head with Path = catalogPath }; { List.last manifest.Members with Path = archivePath } ]
+                Archives = [ { manifest.Archives.Head with Path = archivePath } ] }
+        Assert.Contains(ProviderSource.validateManifest candidate, fun error -> error.Code = "source.memberCollision")
+
     let codes result =
         match result with
         | Ok _ -> []

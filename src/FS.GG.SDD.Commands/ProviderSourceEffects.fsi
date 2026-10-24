@@ -42,7 +42,8 @@ module ProviderSourceEffects =
             Settled: bool
         }
 
-    /// Constructs custody before I/O; validates the explicit request without acquiring data.
+    /// Rejects oversized arrays before defensive copying. Constructs custody before I/O;
+    /// validates the explicit request without acquiring data.
     val prepare:
         request: Request ->
         cancellationToken: System.Threading.CancellationToken ->
@@ -51,7 +52,9 @@ module ProviderSourceEffects =
     /// Consumes one original acquisition window. Unknown cleanup cannot return a prepared set.
     val run: operation: Operation -> Async<Result<PreparedSet, Fsgg.ProviderCatalog.Diagnostic list>>
     val observe: operation: Operation -> Observation
-    /// Passive wait retains original ownership; it neither renews cleanup time nor retries acquisition.
+    /// Awaits the original runner only; terminal Unknown cannot settle through repeated calls.
+    /// It neither renews cleanup time nor retries acquisition. The caller retains unresolved
+    /// custody; bounded acquisition/retirement attempts do not guarantee bounded CLI exit.
     val waitForSettled: operation: Operation -> Async<Observation>
     val release: operation: Operation -> Result<unit, Fsgg.ProviderCatalog.Diagnostic list>
 

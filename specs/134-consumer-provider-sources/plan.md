@@ -118,9 +118,16 @@ preparation and recheck physical containment at acquisition. The selected cache
 root must already exist; source acquisition never creates missing parent paths
 that could accidentally create a target. Existing/appearing scaffold targets are
 preserved, with the existing final no-replace guard retained. Request byte arrays
-are copied before validation and returned payload arrays are defensive copies.
-After cleanup Unknown, passive settlement waiting retains the original operation;
-it grants neither a retry nor a new cleanup deadline.
+are length-checked before defensive copying and then validated; returned payload
+arrays are defensive copies. Manifest and envelope populations reject ordinal
+case-insensitive file/ancestor collisions, including the fixed `source.json`.
+The4096 payload-member limit excludes that one manifest member, so an envelope
+can contain4097 regular files while retaining all existing byte bounds.
+After terminal cleanup Unknown, the CLI retains the original operation passively
+without repeated release/settlement calls. The bounded acquisition and retirement
+attempt does not promise bounded CLI process exit. Genuine CLI qualification must
+use the existing finite external custodian with original PID/birth, descendant and
+EOF observations; process death does not establish semantic resource cleanup.
 
 The opaque selected source carries its original target binding. None is genuinely
 inspection-only: it cannot later enter prepareFromSource. Sourced preparation

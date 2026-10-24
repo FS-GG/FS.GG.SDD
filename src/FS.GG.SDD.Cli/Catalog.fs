@@ -775,18 +775,32 @@ module Catalog =
         | Text | Rich -> Console.Out.WriteLine("Provider source inspection\n" + json)
         match result with Ok _ -> 0 | Error _ -> 1
 
+    let internal sourceFailureDiagnostics original secondary =
+        let mutable bytes = 0
+        (original @ secondary)
+        |> List.distinct
+        |> List.truncate 64
+        |> List.takeWhile (fun (item: Fsgg.ProviderCatalog.Diagnostic) ->
+            bytes <- bytes + System.Text.Encoding.UTF8.GetByteCount(item.Code + item.Path + item.Message)
+            bytes <= 65536)
+
+    let private holdSourceOwner operation =
+        // Terminal Unknown cannot settle by polling the completed runner. Preserve
+        // the same owner until the separately selected external process custodian
+        // retires this invocation; process death is not semantic cleanup evidence.
+        try
+            while true do System.Threading.Thread.Sleep System.Threading.Timeout.Infinite
+        finally GC.KeepAlive operation
+
     let private retainSourceOwner operation =
-        let mutable released = false
-        while not released do
-            try
-                Sources.waitForSettled operation
-                |> fun pending -> Async.RunSynchronously(pending, cancellationToken = System.Threading.CancellationToken.None)
-                |> ignore
-                match Sources.release operation with
-                | Ok() -> released <- true
-                | Error _ -> System.Threading.Thread.Sleep 1000
-            with _ -> System.Threading.Thread.Sleep 1000
-            GC.KeepAlive operation
+        try
+            Sources.waitForSettled operation
+            |> fun pending -> Async.RunSynchronously(pending, cancellationToken = System.Threading.CancellationToken.None)
+            |> ignore
+            match Sources.release operation with
+            | Ok() -> ()
+            | Error _ -> holdSourceOwner operation
+        with _ -> holdSourceOwner operation
 
     let private sourceCommand scaffold args =
         let refuse errors =
@@ -842,9 +856,12 @@ module Catalog =
                             // Selection/execution only receives data after the source owner's actual retirement.
                             match Sources.release operation with
                             | Error errors ->
-                                let code = refuse errors
-                                retainSourceOwner operation
-                                released <- true
+                                // Preserve the original diagnostic order. The release
+                                // refusal is secondary, never a replacement first cause.
+                                let original = match result with Error original -> original | Ok _ -> (Sources.observe operation).Diagnostics
+                                let findings = sourceFailureDiagnostics original errors
+                                let code = refuse findings
+                                holdSourceOwner operation
                                 code
                             | Ok() ->
                                 released <- true

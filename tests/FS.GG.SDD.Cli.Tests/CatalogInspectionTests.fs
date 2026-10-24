@@ -11,6 +11,17 @@ open Xunit
 
 [<Collection("ProcessGlobalEnv")>]
 module CatalogInspectionTests =
+    [<Fact>]
+    let ``source refusal keeps the original first cause before bounded release diagnostics`` () =
+        let original: Fsgg.ProviderCatalog.Diagnostic = { Code = "source.original"; Path = "$"; Message = "Original failure" }
+        let secondary: Fsgg.ProviderCatalog.Diagnostic = { Code = "source.releaseUnsettled"; Path = "$"; Message = "Cleanup remains Unknown" }
+        let retained = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics [ original ] [ secondary; original ]
+        Assert.Equal<Fsgg.ProviderCatalog.Diagnostic list>([ original; secondary ], retained)
+        let saturated = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics [ original ] [ for i in 1..100 -> { secondary with Message = string i + String('x', 4096) } ]
+        Assert.Equal(original, saturated.Head)
+        Assert.True(saturated.Length <= 64)
+        Assert.True((saturated |> List.sumBy (fun d -> Encoding.UTF8.GetByteCount(d.Code + d.Path + d.Message))) <= 65536)
+
     let catalogBytes () =
         let authored =
             File.ReadAllText(

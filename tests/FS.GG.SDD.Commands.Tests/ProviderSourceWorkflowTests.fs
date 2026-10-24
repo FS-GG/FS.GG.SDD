@@ -114,6 +114,15 @@ module ProviderSourceWorkflowTests =
         | Error errors -> Assert.Contains(errors, fun error -> error.Code = "source.rawDigestMismatch")
         | Ok _ -> failwith "Caller metadata did not bind the actual policy bytes."
 
+        // The public API must refuse before copying/parsing or constructing a runner,
+        // even when an earlier raw digest would otherwise fail first.
+        for oversized in
+            [ { actual with SourceSetBytes = Array.zeroCreate (ProviderSource.limits.MaximumSetBytes + 1) }
+              { actual with PolicyBytes = Array.zeroCreate (ProviderSource.limits.MaximumPolicyBytes + 1) } ] do
+            match ProviderSourceEffects.prepare oversized System.Threading.CancellationToken.None with
+            | Error errors -> Assert.Equal<string list>([ "source.requestBound" ], errors |> List.map _.Code)
+            | Ok _ -> failwith "Oversized request constructed source custody."
+
     [<Fact>]
     let ``cache staging cannot create or mutate a selected target before validation`` () =
         let overlapping = { request with TargetRoot = Some "/selected" }
@@ -239,6 +248,17 @@ module ProviderSourceWorkflowTests =
             { StepId = CommandTypes.ReconciliationStepId.ArtifactReSeed; Kind = CommandTypes.ReconciliationStepId.ArtifactReSeed
               DiffPreview = "synthetic"; Outcome = CommandTypes.ReconciliationOutcome.WouldApply; TargetPaths = [ "AGENTS.md" ] }
         Assert.True(Internal.HandlersUpgrade.applyEffectsFor model model.Request step |> Result.isError)
+        let upgraded, effects = Internal.HandlersUpgrade.computeUpgradeNext model
+        Assert.Empty effects
+        let summary = upgraded.Upgrade |> Option.get
+        Assert.True summary.HasProvenance
+        Assert.False summary.AlreadyCoherent
+        Assert.True summary.ResidualDrift
+        Assert.NotEmpty upgraded.Diagnostics
+        let absent = { model with InterpretedEffects = [] }
+        let absentUpgrade, absentEffects = Internal.HandlersUpgrade.computeUpgradeNext absent
+        Assert.Empty absentEffects
+        Assert.False((absentUpgrade.Upgrade |> Option.get).HasProvenance)
 
     [<Fact>]
     let ``all provenance generations share the same owner reader without flattening the document`` () =
@@ -400,12 +420,24 @@ module ProviderSourceWorkflowTests =
         | Error errors -> failwithf "%A" errors
         for bytes, bound in
             [ envelope [ "a"; "A" ], 100L
+              envelope [ "a"; "A/b.nupkg" ], 100L
+              envelope [ "a/b.nupkg"; "A" ], 100L
+              envelope [ "source.json"; "SOURCE.JSON/child" ], 100L
               envelope [ "../outside" ], 100L
               envelope [ "/absolute" ], 100L
               valid, 5L
               Array.append valid [| 0uy |], 100L
               Array.append [| 0uy |] valid, 100L ] do
             Assert.True(ProviderSourceEffects.inspectEnvelope bound bytes |> Result.isError)
+
+    [<Fact>]
+    let ``envelope population allows the fixed manifest plus exactly the maximum payload`` () =
+        let names = "source.json" :: [ for index in 1 .. ProviderSource.limits.MaximumMembers -> sprintf "p/%04d" index ]
+        let bytes = envelope names
+        match ProviderSourceEffects.inspectEnvelope (int64 names.Length * 3L) bytes with
+        | Ok files -> Assert.Equal(ProviderSource.limits.MaximumMembers + 1, files.Length)
+        | Error errors -> failwithf "%A" errors
+        Assert.True(ProviderSourceEffects.inspectEnvelope 20000L (envelope ("extra" :: names)) |> Result.isError)
 
     [<Fact>]
     let ``actual envelope inventory refuses link mode and local central identity disagreement`` () =

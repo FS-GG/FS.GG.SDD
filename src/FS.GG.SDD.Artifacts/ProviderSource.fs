@@ -192,6 +192,12 @@ module ProviderSource =
             hash "$.members.sha256" memberValue.Sha256
             check (memberValue.Bytes >= 0L && memberValue.Bytes <= limits.MaximumMemberBytes) "source.bound" "$.members.bytes" "Member exceeds the byte ceiling."
             bytes <- Checked.(+) bytes memberValue.Bytes
+        let files = HashSet<string>("source.json" :: paths, StringComparer.OrdinalIgnoreCase)
+        for path in paths do
+            let mutable separator = path.IndexOf('/')
+            while separator >= 0 do
+                check (not (files.Contains(path.Substring(0, separator)))) "source.memberCollision" "$.members" "A file cannot also be an ancestor directory, including the fixed manifest."
+                separator <- path.IndexOf('/', separator + 1)
         check (bytes <= limits.MaximumExpandedBytes) "source.bound" "$.members" "Expanded source population exceeds its ceiling."
         unique StringComparer.Ordinal "source.archiveCollision" "$.archives" (value.Archives |> List.map _.TemplateSource)
         unique StringComparer.OrdinalIgnoreCase "source.archiveCollision" "$.archives" (value.Archives |> List.map _.Path)
