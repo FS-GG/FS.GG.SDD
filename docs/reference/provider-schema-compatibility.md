@@ -13,8 +13,8 @@ the compatibility window". This page declares that window.
 | Subject | Declaration |
 |---|---|
 | Registry | `.fsgg/providers.yml` with `schemaVersion: 1` (a missing, malformed or out-of-range registry schema is refused) |
-| Descriptor contract | `contractVersion` major 1: accepted for any 1.x with the legacy reader semantics. Major 2: accepted for a stable `2.y.z` that declares `minimumFsggSdd.version` of at least `2.1.0` which the installed CLI meets. Supported range, in source: `>=1.0.0 <3.0.0` |
-| Invocation | `fsgg-sdd scaffold --provider <name>` runs the descriptor's `dotnet new` template with the effective parameters forwarded literally, including a provider-declared identifier parameter, and produces no output outside the provider and SDD ownership rules |
+| Descriptor contract | `contractVersion` major 1: accepted for any value whose first dotted component is `1` (`1.0.0`, `1.9.9`, even `1.x` or `1`) with the legacy reader semantics. Major 2: accepted for a stable `2.y.z` that declares `minimumFsggSdd.version` of at least `2.1.0` which the installed CLI meets. Supported range, in source: `>=1.0.0 <3.0.0` |
+| Invocation | `fsgg-sdd scaffold --provider <name>` (inspection means the registry parse, the `--dry-run` plan and the read-only `doctor`) runs the descriptor's `dotnet new` template with the effective parameters forwarded literally, including a provider-declared identifier parameter, and produces no output outside the provider and SDD ownership rules |
 | Provenance | the legacy route writes `.fsgg/scaffold-provenance.json` with `schemaVersion` 1; the legacy reader accepts that schema and refuses others |
 
 Separate and additive, not covered by the window's guarantees: the explicit catalog route
@@ -25,7 +25,7 @@ route is provided or implied.
 
 ## The window
 
-* **Opens** with SDD 1.0.0, the first published release that scaffolds a registry provider this way.
+* **Opens** with SDD 1.0.0, the first stable release line. Pre-1.0 releases (0.4.0 to 0.32.0) already ship the registry route (with the narrower range `>=1.0.0 <2.0.0`) but are not covered by this window or the installed journey.
 * **Stays open** through the entire SDD 2.x line.
 * **May close no earlier than SDD 3.0.0.** Narrowing or removing any covered behaviour is a breaking public
   contract change: it needs a major version, the repository's ApiCompat and migration process, and an
@@ -41,13 +41,13 @@ releases, by the installed journey `scripts/provider-schema-window-journey.py`.
 
 | Id | Guarantee |
 |---|---|
-| G1 | A registry provider whose contract is outside the supported range (major 0, major 3 or above, malformed, or a major-2 pre-release) is refused before any provider process or write, with `scaffold.providerVersionUnsupported`; contract 3.0.0 is refused by the legacy route before mutation |
+| G1 | A registry provider whose contract is outside the supported range (major 0, major 3 or above, a non-numeric major, or a major-2 pre-release) is refused before any provider process or write, with `scaffold.providerVersionUnsupported`; contract 3.0.0 is refused by the legacy route before mutation |
 | G2 | A major-2 provider is admitted only with a stable version and a declared minimum of at least 2.1.0 that the installed CLI meets; otherwise it is refused before writes and provider processes with `scaffold.providerCapabilityRefused`. An older release refuses a contract newer than it supports rather than misreading it |
 | G3 | A schema-v1 registry provider keeps its legacy shape: the today-shape entry parses with the extended fields defaulted, and an out-of-range registry schema is refused |
 | G4 | The legacy route's provenance stays schema 1 (also when an identifier parameter is derived and when the provider fails), is byte-stable and deterministic, and the legacy reader refuses any other schema |
 | G5 | A repeated scaffold blocks on collision without clobbering the provenance, and refresh excludes provider-produced paths |
-| G6 | Across published releases 1.0.0 to the current release, the same schema-v1 provider scaffolds successfully and the provider-owned bytes and the provenance core (schema, provider, contract, template, outcome, effective parameters, minimum, produced and mirrored paths with digests) are identical; the record gains additive keys across releases (driver, game and rendering skill paths) that are not part of the core; only SDD-owned seeded content and the generator version legitimately differ between releases |
-| G7 | The current release reads a workspace scaffolded by any older release read-only (`doctor`): no provenance or registry diagnostic (a `doctor.driftDetected` warning that the workspace is behind the current coherent set is expected and allowed), and no write |
+| G6 | Across the nine sampled published releases 1.0.0 to the current release (of about thirty stable releases from 1.0.0; the sample spans both majors, the 2.1.0 contract-2 boundary and every release of the catalog line), the same schema-v1 provider scaffolds successfully and the provider-owned bytes and the provenance core (schema, provider, contract, template, outcome, effective parameters, minimum, produced and mirrored paths with digests) are identical; the record gains additive keys across releases (driver, game and rendering skill paths) that are not part of the core; only SDD-owned seeded content and the generator version legitimately differ between releases |
+| G7 | The current release reads a workspace scaffolded by each sampled release (older ones and its own) read-only (`doctor`): no provenance or registry diagnostic (a `doctor.driftDetected` warning that the workspace is behind the current coherent set is expected and allowed), and no write |
 | G8 | Out-of-range and below-minimum contracts are refused by the installed current release before any provider process or write |
 
 ## Not guaranteed
@@ -55,6 +55,7 @@ releases, by the installed journey `scripts/provider-schema-window-journey.py`.
 * Old clients reading newer provenance: a release older than the schema refuses it; no claim is made.
 * Equality of SDD-owned seeded skills, tool manifests and scripts between releases.
 * The provider's own template output: the window preserves SDD's transport, not provider content.
+* Releases that are not sampled by the journey: they are covered by the declaration and the pinned tests, not by an installed run.
 * The catalog route: it is governed by the catalog contract, not by this window.
 
 ## Machine-readable declaration
@@ -79,6 +80,8 @@ releases, by the installed journey `scripts/provider-schema-window-journey.py`.
   "guarantees": [
     {"id": "G1", "tests": [
       {"file": "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs", "name": "scaffold unsupported contract version blocks before invocation"},
+      {"file": "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs", "name": "window legacy scaffold refuses a contract outside the supported range before invocation"},
+      {"file": "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs", "name": "window legacy scaffold admits a major one contract with the legacy reader semantics"},
       {"file": "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs", "name": "catalog protocol three remains refused by legacy scaffold before mutation"}]},
     {"id": "G2", "tests": [
       {"file": "tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs", "name": "contract two capability failures refuse before writes and provider processes"},

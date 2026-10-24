@@ -97,10 +97,21 @@ class WindowGateTests(unittest.TestCase):
         self.assertTrue(self.problems(lambda r: edit_declaration(r, lambda w: w.update(opensAtRelease='1.8.0'))))
 
     def test_a_legacy_provenance_schema_change_fails(self):
-        problems = self.problems(lambda r: rewrite(r, 'src/FS.GG.SDD.Artifacts/ScaffoldProvenance.fs', 'SchemaVersion = 1\n', 'SchemaVersion = 4\n'))
-        self.assertTrue(any('legacy provenance writer' in p for p in problems), problems)
+        problems = self.problems(lambda r: rewrite(r, 'src/FS.GG.SDD.Commands/CommandWorkflow/HandlersScaffold.fs',
+                                                   'let record: ScaffoldProvenanceRecord =\n            {\n                SchemaVersion = 1', 'let record: ScaffoldProvenanceRecord =\n            {\n                SchemaVersion = 4'))
+        self.assertTrue(any('legacy scaffold route writes' in p for p in problems), problems)
         problems = self.problems(lambda r: rewrite(r, 'src/FS.GG.SDD.Artifacts/SchemaVersion.fs', 'let supportedRange = "1"', 'let supportedRange = "2"'))
         self.assertTrue(any('legacy reader' in p for p in problems), problems)
+        problems = self.problems(lambda r: rewrite(r, 'src/FS.GG.SDD.Artifacts/ScaffoldProvenance.fs', 'SchemaVersion.isBlocking (SchemaVersion.classifyRaw', 'SchemaVersion.isBlocking (SchemaVersion.other'))
+        self.assertTrue(any('gates on the schema range' in p for p in problems), problems)
+
+    def test_an_extra_admitted_major_or_a_dropped_stable_requirement_fails(self):
+        scaffold = 'src/FS.GG.SDD.Commands/CommandWorkflow/HandlersScaffold.fs'
+        self.assertTrue(any('isSupportedContract' in p for p in self.problems(lambda r: rewrite(r, scaffold, '        | _ -> false\n\n    let private capabilityRefusal', '        | Some 3 -> true\n        | _ -> false\n\n    let private capabilityRefusal'))))
+        self.assertTrue(any('isSupportedContract' in p for p in self.problems(lambda r: rewrite(r, scaffold, '| Some 2 -> stableVersion version |> Option.isSome', '| Some 2 -> true'))))
+
+    def test_a_prerelease_current_version_does_not_fail_the_gate(self):
+        self.assertEqual([], self.problems(lambda r: rewrite(r, 'Directory.Build.local.props', '<Version>2.5.1</Version>', '<Version>2.6.0-preview.1</Version>')))
 
     def test_catalog_and_source_route_schema_drift_fails(self):
         self.assertTrue(self.problems(lambda r: rewrite(r, 'src/FS.GG.SDD.Artifacts/CatalogScaffoldProvenance.fs', 'r.SchemaVersion <> 2', 'r.SchemaVersion <> 5')))
@@ -108,9 +119,28 @@ class WindowGateTests(unittest.TestCase):
 
     def test_a_renamed_or_removed_pinned_test_fails(self):
         problems = self.problems(lambda r: rewrite(r, 'tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs', '``scaffold unsupported contract version blocks before invocation``', '``renamed``'))
-        self.assertTrue(any('pinned test not found by name' in p for p in problems), problems)
+        self.assertTrue(any('not found by name' in p for p in problems), problems)
         problems = self.problems(lambda r: (r / 'tests/FS.GG.SDD.Artifacts.Tests/ProviderRegistryParseTests.fs').unlink())
         self.assertTrue(any('pinned test file is missing' in p for p in problems), problems)
+
+    def test_a_pinned_test_must_be_a_live_fact_or_theory(self):
+        path = 'tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs'
+        name = '``scaffold unsupported contract version blocks before invocation``'
+        def skipped(root):
+            text = (root / path).read_text()
+            marker = '    [<Fact>]\n    let ' + name
+            assert marker in text
+            (root / path).write_text(text.replace(marker, '    [<Fact(Skip = "disabled")>]\n    let ' + name, 1))
+        self.assertTrue(any('is skipped' in p for p in self.problems(skipped)))
+        def stripped(root):
+            text = (root / path).read_text()
+            marker = '    [<Fact>]\n    let ' + name
+            (root / path).write_text(text.replace(marker, '    let ' + name, 1))
+        self.assertTrue(any('no [<Fact>]/[<Theory>]' in p for p in self.problems(stripped)))
+        def commented(root):
+            text = (root / path).read_text()
+            (root / path).write_text(text.replace('    let ' + name, '    // let ' + name + '\n    let ``other``', 1))
+        self.assertTrue(any('not found by name' in p for p in self.problems(commented)))
 
     def test_guarantee_table_and_declaration_must_agree(self):
         self.assertTrue(self.problems(lambda r: edit_declaration(r, lambda w: w['guarantees'].pop())))

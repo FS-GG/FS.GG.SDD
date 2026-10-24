@@ -161,7 +161,7 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
 - FR-C3-06: The schema-v1 compatibility window #928 requires is declared in
   `docs/reference/provider-schema-compatibility.md`: it covers the schema-1 registry, descriptor contract
   major 1 (any 1.x) and major 2 (stable, minimum CLI at least 2.1.0), `scaffold --provider` invocation and the
-  legacy route's schema-1 provenance; it opens with SDD 1.0.0, stays open through SDD 2.x and may close no
+  legacy route's schema-1 provenance; it opens with the first stable line (SDD 1.0.0), stays open through SDD 2.x and may close no
   earlier than SDD 3.0.0, announced at least one MINOR release earlier with a migration path. The catalog
   route (contract 3.0.0; provenance schemas 2 and 3) is additive and never changes the schema-v1 route.
 - FR-C3-07: A pure required-gate checker (`scripts/check-provider-schema-window.py`) fails when the

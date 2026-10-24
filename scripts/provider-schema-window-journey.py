@@ -5,8 +5,9 @@ Installs every published FS.GG.SDD.Cli release the declaration lists (docs/refer
 compatibility.md) from nuget.org bytes into an empty private cache and proves, on the supported host, the
 installed-behaviour guarantees G6-G8 and the installed halves of G1-G2:
 
-  G6  the same schema-v1 registry provider scaffolds on every release; its provider-owned bytes and the
-      provider-owned core of the schema-1 provenance record are identical across releases
+  G6  the same schema-v1 registry provider scaffolds on every sampled release (nine of the published releases,
+      1.0.0 to the current); its provider-owned bytes, the provider-declared identifier derivation and the
+      provider-owned core of the schema-1 provenance record are identical across them
   G7  the current release reads every older release's workspace read-only (`doctor`): no provenance or
       registry diagnostic and no write
   G8  out-of-range and below-minimum contracts are refused by the current release before any provider
@@ -59,9 +60,11 @@ def version_key(version):
     return tuple(int(part) for part in version.split('.'))
 
 
-def registry(contract, minimum, source):
+def registry(contract, minimum, source, identifier=False):
     text = ('schemaVersion: 1\nproviders:\n  - name: fixture\n    contractVersion: "' + contract + '"\n'
-            '    templateId: fsgg-catalog-opaque-fixture\n    source: ' + str(source) + '\n    parameters:\n      - key: raw\n        required: true\n')
+            '    templateId: fsgg-catalog-opaque-fixture\n    source: ' + str(source) + '\n'
+            + ('    nameParameter: raw\n    identifierParameter: code\n' if identifier else '')
+            + '    parameters:\n      - key: raw\n        required: true\n')
     if minimum is not None:
         text += '    minimumFsggSdd:\n      version: ' + minimum + '\n'
     return text
@@ -119,12 +122,12 @@ class Window:
             self.journey.record(f'FS.GG.SDD.Cli {version} installs from the nuget.org bytes into the empty cache and reports its version',
                                 version in self.tools and reported.endswith(version), f'sha256={digest} reported={reported!r}')
 
-    def scaffold(self, version, contract, minimum, label):
+    def scaffold(self, version, contract, minimum, label, identifier=False, raw='Acme'):
         target = self.work / 'ws' / f'{label}-{version}'
         (target / '.fsgg').mkdir(parents=True)
-        (target / '.fsgg/providers.yml').write_text(registry(contract, minimum, self.work / 'template'))
+        (target / '.fsgg/providers.yml').write_text(registry(contract, minimum, self.work / 'template', identifier))
         before = tree(target)
-        actual, report, out, err = self.cli(version, 'scaffold', '--provider', 'fixture', '--param', 'raw=Acme', '--root', '.', '--json',
+        actual, report, out, err = self.cli(version, 'scaffold', '--provider', 'fixture', '--param', 'raw=' + raw, '--root', '.', '--json',
                                             cwd=target, name=f'scaffold-{label}-{version}')
         return target, before, actual, report
 
@@ -158,6 +161,27 @@ class Window:
             self.workspaces[version] = target if ok else None
             self.journey.record(f'G6 {version}: the schema-v1 provider scaffolds, schema-1 provenance written, provider-owned bytes and provenance core '
                                 f'identical to {baseline[0] if baseline else "the first release"}', ok, detail)
+
+    def g6_identifier(self):
+        """The provider-declared identifier parameter is derived identically on every release."""
+        baseline = None
+        for version in self.releases:
+            if version not in self.tools:
+                continue
+            target, before, actual, report = self.scaffold(version, '1.0.0', None, 'identifier', identifier=True, raw='Acme widget-2')
+            ok = actual['exitCode'] == 0 and report is not None and report['outcome'] == 'succeeded'
+            derived = None
+            if ok:
+                core, _ = self.provenance_core(target)
+                product = (target / 'product.txt').read_bytes()
+                derived = (core['effectiveParameters'], product)
+                ok = b'raw=Acme widget-2' in product and b'code=Acmewidget2' in product and {'key': 'code', 'value': 'Acmewidget2'} in core['effectiveParameters']
+                if baseline is None:
+                    baseline = (version, derived)
+                else:
+                    ok = ok and derived == baseline[1]
+            self.journey.record(f'G6 {version}: the provider-declared identifier parameter is derived (raw "Acme widget-2" gives code=Acmewidget2) identically to '
+                                f'{baseline[0] if baseline else "the first release"}, forwarded and recorded', ok, f'exit={actual["exitCode"]}')
 
     def g2_contract_two(self):
         for version in self.releases:
@@ -236,6 +260,7 @@ def run(args):
     state = Window(journey, sorted(releases, key=version_key), sorted(releases, key=version_key)[-1])
     state.install()
     state.g6()
+    state.g6_identifier()
     state.g2_contract_two()
     state.g7()
     state.g8()

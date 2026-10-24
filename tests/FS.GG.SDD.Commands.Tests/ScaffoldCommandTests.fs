@@ -342,6 +342,66 @@ providers:
         Assert.False((scaffoldSummary report).ProviderInvoked)
         Assert.False(TestSupport.existsRelative root "App.fsproj")
 
+    /// The declared schema-v1 window (docs/reference/provider-schema-compatibility.md, G1): a contract outside
+    /// the supported range is refused before any provider process or write.
+    [<Theory>]
+    [<InlineData("0.9.0")>]
+    [<InlineData("3.0.0")>]
+    [<InlineData("4.2.0")>]
+    [<InlineData("x.y.z")>]
+    [<InlineData("")>]
+    [<InlineData("2.1.0-preview")>]
+    let ``window legacy scaffold refuses a contract outside the supported range before invocation`` contract =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let registryPath = Path.Combine(root, ".fsgg/providers.yml")
+
+        File.WriteAllText(
+            registryPath,
+            File.ReadAllText(registryPath).Replace("contractVersion: \"1.0.0\"", $"contractVersion: \"{contract}\"")
+        )
+
+        let before =
+            Directory.GetFiles(root, "*", SearchOption.AllDirectories) |> Array.sort
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        Assert.Contains("scaffold.providerVersionUnsupported", diagnosticIds report)
+        Assert.Equal(1, exitCodeForReport report)
+        Assert.False((scaffoldSummary report).ProviderInvoked)
+        Assert.Equal<string array>(before, Directory.GetFiles(root, "*", SearchOption.AllDirectories) |> Array.sort)
+
+    /// G1 counterpart: major 1 keeps the legacy reader semantics, so any 1.x (even a non-triple) is admitted and the
+    /// provider create is planned.
+    [<Theory>]
+    [<InlineData("1.0.0")>]
+    [<InlineData("1.9.9")>]
+    [<InlineData("1.x")>]
+    [<InlineData("1")>]
+    let ``window legacy scaffold admits a major one contract with the legacy reader semantics`` contract =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let registryPath = Path.Combine(root, ".fsgg/providers.yml")
+
+        File.WriteAllText(
+            registryPath,
+            File.ReadAllText(registryPath).Replace("contractVersion: \"1.0.0\"", $"contractVersion: \"{contract}\"")
+        )
+
+        let model, report =
+            runScaffoldModel (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
+
+        Assert.DoesNotContain("scaffold.providerVersionUnsupported", diagnosticIds report)
+
+        Assert.True(
+            model.PendingEffects
+            |> List.exists (function
+                | RunProcess("dotnet", args, _) -> List.contains "-o" args
+                | _ -> false),
+            "Expected the provider create to be planned for a major-one contract."
+        )
+
     [<Fact>]
     let ``catalog protocol three remains refused by legacy scaffold before mutation`` () =
         let root = TestSupport.tempDirectory ()

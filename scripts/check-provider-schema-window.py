@@ -30,7 +30,8 @@ SCHEMA = 'fsgg.provider-schema-window/v1'
 
 
 def parse_version(text):
-    match = SEMVER.match(text)
+    """The (major, minor, patch) core of a version; a pre-release suffix (-preview.1) is tolerated."""
+    match = SEMVER.match(text.split('-', 1)[0].split('+', 1)[0])
     if not match:
         raise ValueError('not a stable semantic version: ' + repr(text))
     return tuple(int(part) for part in match.groups())
@@ -42,6 +43,28 @@ def declaration(root):
     if len(blocks) != 1:
         raise ValueError('the declaration page needs exactly one `json provider-schema-window` block')
     return json.loads(blocks[0]), text
+
+
+def pinned_test_state(text, name):
+    """'live' when `name` is a real, enabled xUnit Fact/Theory; otherwise why not."""
+    lines = text.splitlines()
+    marker = f'let ``{name}``'
+    indexes = [i for i, line in enumerate(lines) if line.strip().startswith(marker)]
+    if not indexes:
+        return 'not found by name as a let-bound test'
+    if len(indexes) > 1:
+        return 'declared more than once'
+    attributes = []
+    cursor = indexes[0] - 1
+    while cursor >= 0 and lines[cursor].strip().startswith('[<'):
+        attributes.append(lines[cursor].strip())
+        cursor -= 1
+    joined = ' '.join(attributes)
+    if not re.search(r'\[<(Fact|Theory)\b', joined):
+        return 'has no [<Fact>]/[<Theory>] attribute'
+    if re.search(r'Skip\s*=', joined):
+        return 'is skipped'
+    return 'live'
 
 
 def check(root):
@@ -65,8 +88,10 @@ def check(root):
     minimum = re.search(r'Fsgg\.Version\.compare minimum "([^"]+)"', scaffold)
     expect(minimum is not None and minimum.group(1) == registry.get('major2MinimumCliVersion'),
            'the major-2 minimum CLI version in source differs from the declaration')
-    expect('| Some 1 -> true' in scaffold and '| Some 2 -> stableVersion version |> Option.isSome' in scaffold,
-           'isSupportedContract no longer accepts exactly major 1 and a stable major 2')
+    block = re.search(r'let isSupportedContract version =\n(?P<body>(?:        .*\n|\n)+)', scaffold)
+    admission = [line.split('//')[0].strip() for line in (block.group('body').splitlines() if block else []) if line.strip()]
+    expect(admission == ['match contractMajor version with', '| Some 1 -> true', '| Some 2 -> stableVersion version |> Option.isSome', '| _ -> false'],
+           'isSupportedContract no longer accepts exactly major 1 and a stable major 2 (found: ' + ' / '.join(admission) + ')')
     range_match = re.fullmatch(r'>=(\d+\.\d+\.\d+) <(\d+\.\d+\.\d+)', str(registry.get('supportedContractRange')))
     expect(range_match is not None, 'the supported contract range is not ">=X <Y"')
 
@@ -94,9 +119,10 @@ def check(root):
     expect(window.get('announceMinorReleasesBeforeClose', 0) >= 1, 'a close must be announced at least one MINOR release earlier')
 
     legacy = window.get('provenance', {}).get('legacyRouteSchema')
-    writer = (root / 'src/FS.GG.SDD.Artifacts/ScaffoldProvenance.fs').read_text()
-    written = re.search(r'SchemaVersion = (\d+)\n', writer)
-    expect(written is not None and int(written.group(1)) == legacy, 'the legacy provenance writer schema differs from the declaration')
+    written = re.search(r'let record: ScaffoldProvenanceRecord =\s*\{\s*SchemaVersion = (\d+)\n', scaffold)
+    expect(written is not None and int(written.group(1)) == legacy, 'the legacy scaffold route writes a provenance schema that differs from the declaration')
+    reader = (root / 'src/FS.GG.SDD.Artifacts/ScaffoldProvenance.fs').read_text()
+    expect('SchemaVersion.isBlocking (SchemaVersion.classifyRaw' in reader, 'the legacy provenance reader no longer gates on the schema range')
     schema_source = (root / 'src/FS.GG.SDD.Artifacts/SchemaVersion.fs').read_text()
     expect(re.search(r'let supportedRange = "(\d+)"', schema_source) is not None and re.search(r'let supportedRange = "(\d+)"', schema_source).group(1) == str(legacy),
            'the legacy reader schema range differs from the declaration')
@@ -116,7 +142,8 @@ def check(root):
             path = root / str(pin.get('file', ''))
             expect(path.is_file(), f'{gid}: pinned test file is missing: {pin.get("file")}')
             if path.is_file():
-                expect(f'``{pin.get("name")}``' in path.read_text(), f'{gid}: pinned test not found by name: {pin.get("name")}')
+                state = pinned_test_state(path.read_text(), str(pin.get('name')))
+                expect(state == 'live', f'{gid}: pinned test {pin.get("name")}: {state}')
     table = set(re.findall(r'^\| (G\d+) \|', page, re.M))
     expect(table == declared_ids and declared_ids, f'guarantee ids differ between the page table {sorted(table)} and the declaration {sorted(declared_ids)}')
     journey = root / 'scripts/provider-schema-window-journey.py'
