@@ -156,6 +156,20 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
 - Out of scope: distribution (C4), the schema-v1 window, concrete language providers, hosted or hostile
   profiles, and Governance#423 prerequisite (b).
 
+### SDD928-C4a — the declared schema-v1 compatibility window (#1139)
+
+- FR-C3-06: The schema-v1 compatibility window #928 requires is declared in
+  `docs/reference/provider-schema-compatibility.md`: it covers the schema-1 registry, descriptor contract
+  major 1 (any 1.x) and major 2 (stable, minimum CLI at least 2.1.0), `scaffold --provider` invocation and the
+  legacy route's schema-1 provenance; it opens with SDD 1.0.0, stays open through SDD 2.x and may close no
+  earlier than SDD 3.0.0, announced at least one MINOR release earlier with a migration path. The catalog
+  route (contract 3.0.0; provenance schemas 2 and 3) is additive and never changes the schema-v1 route.
+- FR-C3-07: A pure required-gate checker (`scripts/check-provider-schema-window.py`) fails when the
+  declaration, the source constants or a pinned unit test drift; an installed journey
+  (`scripts/provider-schema-window-journey.py`) proves guarantees G6-G8 across the published releases.
+- Out of scope: any deprecation or removal, publication or a new package identity (C4), automatic conversion
+  of schema-1 workspaces.
+
 ## Selected-template data transport follow-up
 
 This bounded internal transport extension implements the accepted Templates441/SDD928
