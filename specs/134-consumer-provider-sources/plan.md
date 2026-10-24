@@ -143,8 +143,10 @@ consumer tests. Schema3 is explicitly incompatible with old provenance readers;
 those readers already refuse unknown schema. New readers preserve1/2 exactly.
 Select coherent package version changes through normal release policy after API
 review, not by inventing an unavailable dependency pin during implementation.
-The source candidate advances the SDD coherent set from2.4.0 to2.5.0 for additive
-source APIs. Existing schema1/2 data and constructors remain supported; exhaustive
+The source candidate keeps the SDD coherent set at 2.4.0: the additive source APIs
+call for a minor advance to 2.5.0, which is selected with the coherent release
+preparation (compatibility matrix, readiness baseline, goldens) at publication,
+not by a partial bump in this source delivery. Existing schema1/2 data and constructors remain supported; exhaustive
 Document-union consumers must add SourceCatalog and old binaries refuse schema3.
 The prospective version is not a publication or installed-compatibility claim.
 

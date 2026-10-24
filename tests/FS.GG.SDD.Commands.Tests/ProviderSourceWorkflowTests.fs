@@ -249,6 +249,21 @@ module ProviderSourceWorkflowTests =
             { StepId = CommandTypes.ReconciliationStepId.ArtifactReSeed; Kind = CommandTypes.ReconciliationStepId.ArtifactReSeed
               DiffPreview = "synthetic"; Outcome = CommandTypes.ReconciliationOutcome.WouldApply; TargetPaths = [ "AGENTS.md" ] }
         Assert.True(Internal.HandlersUpgrade.applyEffectsFor model model.Request step |> Result.isError)
+        // The read gate precedes any decision: its first emission is read-only skill-root enumeration.
+        let _, gateEffects = Internal.HandlersUpgrade.computeUpgradeNext model
+        Assert.All(gateEffects, fun effect -> Assert.True(match effect with CommandTypes.EnumerateDirectory _ -> true | _ -> false))
+        let withListings (source: CommandTypes.CommandModel) =
+            let listing effect =
+                match effect with
+                | CommandTypes.EnumerateDirectory dir ->
+                    let snapshot: FileSnapshot = { Path = dir; Text = ""; RawBytes = None }
+                    let result: CommandTypes.CommandEffectResult =
+                        { Effect = effect; Succeeded = true; Read = CommandTypes.Bytes snapshot
+                          Snapshot = Some snapshot; Process = None; Confirmed = None; Diagnostic = None }
+                    Some result
+                | _ -> None
+            { source with InterpretedEffects = source.InterpretedEffects @ List.choose listing Internal.HandlersDoctor.skillRootEnumerations }
+        let model = withListings model
         let upgraded, effects = Internal.HandlersUpgrade.computeUpgradeNext model
         Assert.Empty effects
         let summary = upgraded.Upgrade |> Option.get
@@ -256,7 +271,7 @@ module ProviderSourceWorkflowTests =
         Assert.False summary.AlreadyCoherent
         Assert.True summary.ResidualDrift
         Assert.NotEmpty upgraded.Diagnostics
-        let absent = { model with InterpretedEffects = [] }
+        let absent = withListings { model with InterpretedEffects = [] }
         let absentUpgrade, absentEffects = Internal.HandlersUpgrade.computeUpgradeNext absent
         Assert.Empty absentEffects
         Assert.False((absentUpgrade.Upgrade |> Option.get).HasProvenance)

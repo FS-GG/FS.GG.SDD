@@ -44,9 +44,14 @@ module SourceScaffoldProvenanceTests =
         let value = synthetic ()
         let text = SourceScaffoldProvenance.serialize value |> unwrap
         let parsed = SourceScaffoldProvenance.parse text |> unwrap
-        Assert.Equal(value, parsed)
+        // The existing codec canonicalizes list order, so compare canonical bytes, not fixture list order.
+        Assert.Equal(value.Source, parsed.Source)
+        Assert.Equal(text, SourceScaffoldProvenance.serialize parsed |> unwrap)
         let document = ScaffoldProvenanceDocument.parse text |> unwrap
-        Assert.Equal(value.Catalog.Ownership, ScaffoldProvenanceDocument.ownershipProjection document)
+        Assert.Equal(
+            ScaffoldProvenance.serialize value.Catalog.Ownership,
+            ScaffoldProvenance.serialize (ScaffoldProvenanceDocument.ownershipProjection document)
+        )
 
         match document with
         | ScaffoldProvenanceDocument.SourceCatalog record -> Assert.Equal(value.Source, record.Source)
