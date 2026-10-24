@@ -244,7 +244,9 @@ module ProviderSourceWorkflowTests =
         let drift = Internal.HandlersDoctor.computeDrift model
         Assert.True drift.HasProvenance
         Assert.False drift.IsCoherent
-        Assert.NotEmpty(Internal.Foundation.scaffoldProvenanceDiagnostics DiagnosticSeverity.DiagnosticWarning model)
+        let diagnostics = Internal.Foundation.scaffoldProvenanceDiagnostics DiagnosticSeverity.DiagnosticWarning model
+        Assert.NotEmpty diagnostics
+        Assert.All(diagnostics, fun diagnostic -> Assert.Equal("scaffold.provenanceMalformed", diagnostic.Id))
         let step: CommandTypes.ReconciliationStep =
             { StepId = CommandTypes.ReconciliationStepId.ArtifactReSeed; Kind = CommandTypes.ReconciliationStepId.ArtifactReSeed
               DiffPreview = "synthetic"; Outcome = CommandTypes.ReconciliationOutcome.WouldApply; TargetPaths = [ "AGENTS.md" ] }

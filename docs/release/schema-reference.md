@@ -91,10 +91,10 @@ rather than silent.
   defaults absent/null to `[]`). It is the
   **authority for refresh exclusion** (FR-007 / SC-007): `fsgg-sdd refresh` reads it
   and never regenerates or flags provider-produced runtime files as stale SDD views;
-  malformed provenance surfaces `scaffold.provenanceMalformed` and is treated as
-  absent (fail-safe) by refresh/repeat; `doctor` and `upgrade` also report the same id for a
-  malformed schema 1, 2 or 3 record and retain it as an observed invalid authority (never absent,
-  never rewritten or downgraded). Schema 2 and 3 ownership are read, not only schema 1. Unlike the `validation-report` it represents
+  malformed provenance surfaces `scaffold.provenanceMalformed` on refresh (which blocks
+  mutation) and, as a warning, on `doctor` and `upgrade`; those two retain a malformed
+  schema 1, 2 or 3 record as an observed invalid authority (never absent, never rewritten or
+  downgraded). Schema 2 and 3 ownership are read, not only schema 1. Unlike the `validation-report` it represents
   *externally-owned output references* rather than sensed metadata.
 - **`.fsgg/providers.yml`** (schema v1, `owner: author/provider`) — the
   author-/provider-supplied selection registry mapping a `--provider <name>` to its
