@@ -120,6 +120,22 @@ are explicit early-compile inputs only; final local2.3 qualification awaits inde
 qualified archives. This bounded slice does not close C3.1, distribution or provider certification.
 
 
+### SDD928-C3.1-03 — Governance Verify capture-lifetime join (#1131)
+
+- FR-019: One Governance Verify provider invocation owns one capture session; the Verify host
+  releases it (Governance#465/#468). The maintained runner is the outer admitted runtime for the
+  SDD package-only qualification: it is the only supplier of the host's original work and cleanup
+  ends, requires the whole capture window plus a startup allowance to fit inside its own work window
+  (so it never signals a host inside that window), refuses the declaration otherwise, and ends the
+  whole pid-namespace worker afterwards. No Governance contract change is required.
+- FR-020: Teardown is observed, not assumed: descendants record their outer pid and kernel start
+  time, and a per-run environment marker is scanned for non-cooperatively; none may survive the
+  worker. A settlement is only a host exit by itself with a pass or blocked exit (0/1), no
+  unsettled report and inside the admitted window (exit 3 claims none); a host that stays resident is a non-passing
+  `worker-ended-by-outer-runtime`.
+- Out of scope: an authentic blocked regular-file read and an independently observed uncertain
+  close (Governance#423 prerequisite b); hostile containment; provider certification; distribution.
+
 ## Selected-template data transport follow-up
 
 This bounded internal transport extension implements the accepted Templates441/SDD928

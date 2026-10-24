@@ -1,0 +1,15 @@
+schemaVersion: 2
+domains:
+  - test
+pathMap:
+  - glob: "inputs/**"
+    capability: test
+surfaces: []
+checks:
+  - id: test
+    domain: test
+    command: fixture-test
+    owner: provider
+    cost: cheap
+    environment: local-or-ci
+    maturity: block-on-ship

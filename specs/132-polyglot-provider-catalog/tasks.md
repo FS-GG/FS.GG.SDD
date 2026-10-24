@@ -48,8 +48,12 @@ hosted acceptance of the final combined source.
   from a disposable package-only project using the explicit retained compatibility closure.
 - [x] C3.1-02 Implement deterministic emit and strict check with independent inputs; qualify double
   emission, path/link/no-replace refusals and malformed policy through the actual sample.
-- [ ] C3.1-03 Join the optional maintained driver producer interface and qualify actual CLI→Verify
+- [x] C3.1-03 Join the optional maintained driver producer interface and qualify actual CLI→Verify
   with independently selected final local2.3 archives. No public distribution or whole C3 closure.
+  Qualified (#1131) against the PUBLISHED SDD 2.5.1 and Governance 1.15.0 packages, not local 2.3
+  archives, by `scripts/verify-capture-journey.py` with the runner's capture-lifetime join; see the
+  roadmap C3.1-03 section and `docs/validation/catalog-runtime.md`. C3 harness/certification, C4
+  distribution and the schema-v1 window remain open.
 
 Local C3.1-01/02 qualification used only explicitly selected retained2.2 packages: cold restore
 and compilation passed after one retained FS0193 summary-write error; 12 actual assets are package

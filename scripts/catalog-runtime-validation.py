@@ -4,6 +4,11 @@
 Cooperative process groups are interruption assistance, not containment. Native
 runtime commands require explicit selection of the PID namespace backend. This
 backend supplies a process lifetime boundary, not a qualified product environment.
+
+A command may also declare a `captureLifetime` (see docs/validation/catalog-runtime.md,
+"Governance Verify capture lifetime"). This runner is then the outer admitted runtime of one
+Governance Verify provider invocation: it supplies the original work and cleanup ends, never
+signals the Verify host inside them, and owns whole-worker teardown after them.
 """
 import argparse
 import hashlib
@@ -16,6 +21,7 @@ import selectors
 import signal
 import subprocess
 import time
+import uuid
 
 
 def tree_identity(root, patterns=None):
@@ -40,6 +46,142 @@ def tree_identity(root, patterns=None):
     return digest.hexdigest()
 
 
+WORK_VARIABLE = 'FSGG_VERIFY_WORK_SECONDS'
+CLEANUP_VARIABLE = 'FSGG_VERIFY_CLEANUP_SECONDS'
+MAXIMUM_CAPTURE_SECONDS = 1_000_000
+DEFAULT_STARTUP_ALLOWANCE_SECONDS = 5
+# Literal texts of the Governance Verify host (ProviderHost.fs) the classification reads.
+HOST_RESIDENT_REPORT = 'stays resident while a read may be pending'
+HOST_RETAINED_REPORT = 'is retained after the original cleanup end'
+HOST_UNSETTLED_REPORT = 'did not settle cleanly'
+# Verify exit codes whose mapping reflects a capture session the host held and released (Loop.exitCode):
+# 0 pass, 1 blocked. 3 (input unavailable) is also what the host returns for a refusal BEFORE any session
+# exists (digest, policy, platform, absent ends) and for a planning rejection after one, so it proves no
+# settlement either way. 2 is usage and 4 is the tool error the host also uses to replace an exit of a
+# session that did not settle cleanly.
+SETTLED_EXIT_CODES = (0, 1)
+INPUT_UNAVAILABLE_EXIT_CODE = 3
+WORKER_MARKER = 'FSGG_RUNNER_WORKER_ID'
+
+
+def capture_lifetime(command):
+    """Validate and normalize the capture-lifetime declaration of one command, or None.
+
+    The Governance Verify host measures both ends in whole seconds from its own start; the
+    cleanup end is absolute (not a duration after the work end). The runner starts counting
+    before the host does, so the host's ends are admitted only when the whole capture lifetime,
+    plus a startup allowance for the host to begin, fits inside the runner's own work window.
+    Then the runner never has to signal a host that is still inside its declared capture window.
+    """
+    declared = command.get('captureLifetime')
+    if declared is None:
+        return None
+    if not isinstance(declared, dict) or not set(declared) <= {'workSeconds', 'cleanupEndSeconds', 'startupAllowanceSeconds'} \
+            or not {'workSeconds', 'cleanupEndSeconds'} <= set(declared):
+        raise ValueError('captureLifetime requires workSeconds and cleanupEndSeconds and allows startupAllowanceSeconds')
+    work, cleanup = declared['workSeconds'], declared['cleanupEndSeconds']
+    allowance = declared.get('startupAllowanceSeconds', DEFAULT_STARTUP_ALLOWANCE_SECONDS)
+    for name, value, low in [('workSeconds', work, 1), ('cleanupEndSeconds', cleanup, 1), ('startupAllowanceSeconds', allowance, 0)]:
+        if type(value) is not int or not low <= value <= MAXIMUM_CAPTURE_SECONDS:
+            raise ValueError('captureLifetime.' + name + ' must be a whole number of seconds from ' + str(low) + ' to ' + str(MAXIMUM_CAPTURE_SECONDS))
+    if cleanup < work:
+        raise ValueError('captureLifetime.cleanupEndSeconds must not precede workSeconds (the host measures both from its start)')
+    if command.get('mode') != 'native-runtime' or command.get('backend') != 'pid-namespace':
+        raise ValueError('captureLifetime requires native-runtime mode with the pid-namespace backend: whole-worker teardown is the outer runtime duty')
+    timeout = command.get('timeoutSeconds', 300)
+    if allowance + cleanup > timeout:
+        raise ValueError('captureLifetime startup allowance plus cleanupEndSeconds must fit inside timeoutSeconds, so the runner never signals a host inside its capture window')
+    names = set(command.get('environment', {}))
+    if names & {WORK_VARIABLE, CLEANUP_VARIABLE}:
+        raise ValueError('captureLifetime is the only supplier of ' + WORK_VARIABLE + ' and ' + CLEANUP_VARIABLE)
+    return {'workSeconds': work, 'cleanupEndSeconds': cleanup, 'startupAllowanceSeconds': allowance}
+
+
+def process_start_time(pid):
+    """Kernel start time (clock ticks) of an outer-view pid, or None when it is absent."""
+    try:
+        text = Path('/proc/' + str(pid) + '/stat').read_text()
+    except OSError:
+        return None
+    # The command name may contain spaces and parentheses; the fields after the last ')' are fixed.
+    fields = text.rsplit(')', 1)[-1].split()
+    return fields[19] if len(fields) > 19 else None
+
+
+def read_witness(path):
+    """Parse '<outer-pid> <start-time>' lines appended by worker descendants."""
+    entries = []
+    for line in Path(path).read_text().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            entries.append((int(parts[0]), parts[1]))
+    return entries
+
+
+def worker_survivors(marker):
+    """Outer pids of live processes whose environment carries this worker marker.
+
+    Non-cooperative: every descendant that kept its inherited environment is found, including
+    runtime hosts and detached sessions, whether or not it volunteered anything.
+    """
+    needle = (WORKER_MARKER + '=' + marker + '\0').encode()
+    found = []
+    for entry in os.listdir('/proc'):
+        if not entry.isdigit():
+            continue
+        try:
+            if needle in Path('/proc/' + entry + '/environ').read_bytes():
+                found.append(int(entry))
+        except OSError:
+            continue
+    return found
+
+
+def classify_capture(declared, result, timeout):
+    """Describe how the capture lifetime ended, from facts the runner itself observed.
+
+    `hostSettled` is true only when the host exited by itself with a pass (0) or blocked (1) result,
+    without any unsettled report, inside the admitted window. An input-unavailable exit (3) is
+    reported as `host-refused-input-unavailable`: it does not say whether a session was ever held.
+    """
+    stderr = ''
+    log = result.get('streams', {}).get('stderr', {}).get('log')
+    if log:
+        try:
+            stderr = Path(log).read_bytes().decode('utf-8', 'replace')
+        except OSError:
+            pass
+    resident = HOST_RESIDENT_REPORT in stderr
+    retained = HOST_RETAINED_REPORT in stderr
+    unsettled_report = resident or retained or HOST_UNSETTLED_REPORT in stderr
+    code = result.get('exitCode')
+    outer_end = result.get('firstFailure') in ('timeout', 'cancelled', 'backend-timeout-or-kill', 'cleanup-timeout')
+    window = declared['startupAllowanceSeconds'] + declared['cleanupEndSeconds']
+    duration = result.get('durationSeconds')
+    within_window = duration is not None and duration <= window
+    if outer_end:
+        outcome = 'worker-ended-by-outer-runtime'
+    elif code is None:
+        outcome = 'unknown'
+    elif code == 4 and retained:
+        outcome = 'host-exited-with-retained-session'
+    elif unsettled_report or code == 4:
+        outcome = 'host-exited-with-unsettled-session'
+    elif code in SETTLED_EXIT_CODES or code == INPUT_UNAVAILABLE_EXIT_CODE:
+        if not within_window:
+            outcome = 'host-exited-after-its-window'
+        elif code == INPUT_UNAVAILABLE_EXIT_CODE:
+            outcome = 'host-refused-input-unavailable'
+        else:
+            outcome = 'host-exited-after-settlement'
+    else:
+        outcome = 'host-exited-without-settlement-proof'
+    return dict(declared, outcome=outcome, outerRuntimeEnded=outer_end,
+                hostReportedResident=resident, hostReportedRetained=retained,
+                runnerWorkEndSeconds=timeout, admittedWindowSeconds=window, withinAdmittedWindow=within_window,
+                hostSettled=outcome == 'host-exited-after-settlement')
+
+
 def validate(command):
     argv = command.get('argv')
     if not isinstance(argv, list) or not argv or any(not isinstance(x, str) or '\0' in x for x in argv):
@@ -61,6 +203,10 @@ def validate(command):
     env = command.get('environment', {})
     if not isinstance(env, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not k or '=' in k or '\0' in k + v for k, v in env.items()):
         raise ValueError('environment must contain string names and values')
+    capture_lifetime(command)
+    witness = command.get('descendantWitnessPath')
+    if witness is not None and (not isinstance(witness, str) or not witness.startswith('/') or '\0' in witness):
+        raise ValueError('descendantWitnessPath must be an absolute path')
     return argv
 
 
@@ -71,6 +217,9 @@ INCOMPLETE_OWNERS = []
 
 def run_command(command, log_dir, cancel=None):
     argv = validate(command)
+    capture = capture_lifetime(command)
+    witness = command.get('descendantWitnessPath')
+    worker_marker = uuid.uuid4().hex
     result = {'name': command.get('name', 'command'), 'command': argv,
               'cwd': str(Path(command.get('cwd', '.')).resolve()), 'exitCode': None,
               'firstFailure': None, 'cleanup': 'not-started', 'streams': {},
@@ -95,6 +244,13 @@ def run_command(command, log_dir, cancel=None):
         result['productEnvironmentQualified'] = False
         result['procView'] = 'inherited-outer-pid-namespace'
         result['descendantTeardown'] = 'pid-namespace-lifetime-boundary-selected'
+    if witness is not None:
+        # The runner creates the witness file; descendants only append '<outer-pid> <start-time>'.
+        try:
+            Path(witness).touch(mode=0o600, exist_ok=False)
+        except OSError as error:
+            result['firstFailure'] = 'descendant-witness-not-fresh: ' + str(error)
+            return result
     directory = Path(log_dir)
     directory.mkdir(parents=True, exist_ok=True)
     timeout = command.get('timeoutSeconds', 300)
@@ -116,6 +272,11 @@ def run_command(command, log_dir, cancel=None):
             result['streams'][name] = {'log': str(path), 'eof': False, 'retainedBytes': 0}
         environment = os.environ.copy()
         environment.update(command.get('environment', {}))
+        if capture is not None:
+            # The one supplier of the Verify host's original ends (whole seconds from host start).
+            environment[WORK_VARIABLE] = str(capture['workSeconds'])
+            environment[CLEANUP_VARIABLE] = str(capture['cleanupEndSeconds'])
+            environment[WORKER_MARKER] = worker_marker
         process = subprocess.Popen(launch_argv, cwd=result['cwd'], env=environment,
                                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, start_new_session=True)
@@ -213,6 +374,35 @@ def run_command(command, log_dir, cancel=None):
             if result['firstFailure'] is None:
                 result['firstFailure'] = 'resource-close-error'
     result['durationSeconds'] = round(time.monotonic() - start, 3)
+    if witness is not None:
+        # Descendants record their outer pid and kernel start time; after the worker ended none may
+        # still be that same process. Kernel retirement of a namespace is asynchronous, so poll briefly.
+        entries = read_witness(witness)
+        deadline = time.monotonic() + 2
+        survivors = [pid for pid, started in entries if process_start_time(pid) == started]
+        while survivors and time.monotonic() < deadline:
+            time.sleep(.05)
+            survivors = [pid for pid, started in entries if process_start_time(pid) == started]
+        result['descendantWitness'] = {'path': witness, 'observed': len(entries), 'survivors': survivors}
+        if survivors:
+            result['descendantTeardown'] = 'witnessed-survivor'
+            if result['firstFailure'] is None:
+                result['firstFailure'] = 'descendant-survived-teardown'
+        elif entries and result['cleanup'] == 'direct-child-reaped-streams-eof':
+            result['descendantTeardown'] = 'witnessed-absent'
+    if capture is not None:
+        # Non-cooperative teardown check: no process may still carry this run's worker marker.
+        deadline = time.monotonic() + 2
+        leftover = worker_survivors(worker_marker)
+        while leftover and time.monotonic() < deadline:
+            time.sleep(.05)
+            leftover = worker_survivors(worker_marker)
+        result['workerScan'] = {'marker': WORKER_MARKER, 'survivors': leftover}
+        if leftover:
+            result['descendantTeardown'] = 'witnessed-survivor'
+            if result['firstFailure'] is None:
+                result['firstFailure'] = 'worker-process-survived-teardown'
+        result['captureLifetime'] = classify_capture(capture, result, timeout)
     result['passed'] = result['firstFailure'] is None and result['exitCode'] == 0 and all(eof.values())
     return result
 
