@@ -200,3 +200,94 @@ module ProviderSourceTests =
         Assert.NotEmpty(ProviderSource.validatePolicy { policy with AcquisitionSeconds = 181 })
         Assert.NotEmpty(ProviderSource.validatePolicy { policy with MaximumRedirects = 4 })
         Assert.NotEmpty(ProviderSource.validatePolicy { policy with MaximumExpandedBytes = ProviderSource.limits.MaximumExpandedBytes + 1L })
+
+    [<Theory>]
+    [<InlineData("60.0")>]
+    [<InlineData("6e1")>]
+    [<InlineData("-0")>]
+    [<InlineData("\"60\"")>]
+    let ``policy integer grammar cannot hide a different lexical number`` token =
+        let text = ProviderSource.serializePolicy policy |> unwrap
+        let changed = text.Replace("\"acquisitionSeconds\":60", "\"acquisitionSeconds\":" + token)
+        Assert.NotEqual(text, changed)
+        let raw = bytes changed
+        Assert.NotEmpty(codes (ProviderSource.parsePolicy (ProviderSource.sha256 raw) raw))
+
+    [<Fact>]
+    let ``strict UTF8 does not replace malformed bytes or accept a BOM`` () =
+        let valid = ProviderSource.serializeSet sourceSet |> unwrap |> bytes
+        for raw in [ Array.append [| 0xefuy; 0xbbuy; 0xbfuy |] valid; [| 0xffuy; 0xfeuy |] ] do
+            Assert.NotEmpty(codes (ProviderSource.parseSet (ProviderSource.sha256 raw) raw))
+
+    [<Fact>]
+    let ``source reference kind chooses a closed object shape`` () =
+        for locator in
+            [
+                "{\"kind\":\"local-directory\",\"path\":\"/selected/source\",\"revision\":\"extra\"}"
+                "{\"kind\":\"local-directory\"}"
+                "{\"kind\":\"https-envelope\",\"path\":\"/selected/source\"}"
+            ] do
+            let raw =
+                bytes (
+                    "{\"schema\":\"fsgg.provider-source-set/1\",\"sources\":[{\"id\":\"outside\",\"origin\":\"explicit\",\"locator\":"
+                    + locator + ",\"manifestSha256\":\"" + digest + "\"}]}"
+                )
+            Assert.NotEmpty(codes (ProviderSource.parseSet (ProviderSource.sha256 raw) raw))
+
+    [<Theory>]
+    [<InlineData("CON")>]
+    [<InlineData("aux.txt")>]
+    [<InlineData("nested/Lpt1.log")>]
+    [<InlineData("nested/file.")>]
+    [<InlineData("nested/file ")>]
+    [<InlineData("nested//file")>]
+    let ``member path portability is checked before current host filesystem semantics`` path =
+        let first = List.head manifest.Members
+        let altered =
+            { manifest with
+                CatalogPath = path
+                Members = [ { first with Path = path }; List.last manifest.Members ] }
+        Assert.NotEmpty(ProviderSource.validateManifest altered)
+
+    [<Fact>]
+    let ``manifest cannot use its externally hashed source json as a payload role`` () =
+        let first = List.head manifest.Members
+        let altered =
+            { manifest with
+                CatalogPath = "source.json"
+                Members = [ { first with Path = "source.json" }; List.last manifest.Members ] }
+        Assert.NotEmpty(ProviderSource.validateManifest altered)
+
+    [<Fact>]
+    let ``one member cannot satisfy both catalog and archive roles`` () =
+        let altered = { manifest with Archives = [ { TemplateSource = "opaque-fixture"; Path = manifest.CatalogPath } ] }
+        Assert.NotEmpty(ProviderSource.validateManifest altered)
+
+    [<Fact>]
+    let ``every source population is bounded even when all identities are unique`` () =
+        let many = [ for index in 1..17 -> { local with Id = string index } ]
+        Assert.NotEmpty(ProviderSource.validateSet { sourceSet with Sources = many })
+        Assert.NotEmpty(ProviderSource.validateSet { sourceSet with Sources = [] })
+
+    [<Theory>]
+    [<InlineData("192.0.2.1")>]
+    [<InlineData("198.51.100.1")>]
+    [<InlineData("203.0.113.1")>]
+    [<InlineData("198.18.0.1")>]
+    [<InlineData("100.64.0.1")>]
+    [<InlineData("240.0.0.1")>]
+    [<InlineData("2001:db8::1")>]
+    [<InlineData("::ffff:192.0.2.1")>]
+    let ``nonpublic special use ranges remain refused after DNS resolution`` address =
+        Assert.False(ProviderSource.isPublicAddress(IPAddress.Parse address))
+
+    [<Fact>]
+    let ``public address positives are explicit without proving a network exchange`` () =
+        Assert.True(ProviderSource.isPublicAddress(IPAddress.Parse "8.8.8.8"))
+        Assert.True(ProviderSource.isPublicAddress(IPAddress.Parse "2606:4700:4700::1111"))
+
+    [<Fact>]
+    let ``cache identity includes pinned remote envelope bytes`` () =
+        let remote = { local with Locator = ProviderSource.HttpsEnvelope("https://example.org/a.zip", "r1", digest) }
+        let changedEnvelope = { remote with Locator = ProviderSource.HttpsEnvelope("https://example.org/a.zip", "r1", otherDigest) }
+        Assert.NotEqual(ProviderSource.cacheKey remote, ProviderSource.cacheKey changedEnvelope)

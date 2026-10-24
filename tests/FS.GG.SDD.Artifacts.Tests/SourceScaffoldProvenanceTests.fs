@@ -92,3 +92,54 @@ module SourceScaffoldProvenanceTests =
             match ScaffoldProvenanceDocument.parse malformed with
             | Error errors -> Assert.NotEmpty errors
             | Ok _ -> failwith "Malformed source provenance selected a fallback."
+
+    [<Fact>]
+    let ``source wrapper does not change legacy ownership or public document constructors`` () =
+        let value = synthetic ()
+        let legacy = ScaffoldProvenanceDocument.Legacy value.Catalog.Ownership
+        let catalog = ScaffoldProvenanceDocument.Catalog value.Catalog
+        let sourced = ScaffoldProvenanceDocument.SourceCatalog value
+        for document in [ legacy; catalog; sourced ] do
+            Assert.Equal(value.Catalog.Ownership, ScaffoldProvenanceDocument.ownershipProjection document)
+
+    [<Fact>]
+    let ``nested catalog corruption remains an error even when source fields are intact`` () =
+        let value = synthetic ()
+        let altered = { value with Catalog = { value.Catalog with SchemaVersion = 1 } }
+        match SourceScaffoldProvenance.serialize altered with
+        | Error errors -> Assert.NotEmpty errors
+        | Ok _ -> failwith "The source wrapper bypassed the strict existing schema2 contract."
+
+    [<Fact>]
+    let ``current network observation joins every hop to its actual final response`` () =
+        let original = (synthetic ()).Source
+        let initialUri = "https://example.org/source.zip"
+        let finalUri = "https://example.org/retained.zip"
+        let remote =
+            { original.Source with
+                Locator = ProviderSource.HttpsEnvelope(initialUri, original.Revision, original.ArchiveSha256) }
+        let observation =
+            { original with
+                Source = remote
+                Acquisition = ProviderSource.HttpsFetch
+                ResolvedUri = Some finalUri
+                Redirects = [ finalUri ]
+                NetworkHops =
+                    [
+                        { Uri = initialUri; Address = "8.8.8.8"; StatusCode = 302 }
+                        { Uri = finalUri; Address = "8.8.4.4"; StatusCode = 200 }
+                    ] }
+        Assert.Empty(ProviderSource.validateObservation observation)
+        let firstHop = List.head observation.NetworkHops
+        let lastHop = List.last observation.NetworkHops
+        for altered in
+            [
+                { observation with ResolvedUri = None }
+                { observation with ResolvedUri = Some initialUri }
+                { observation with Redirects = [] }
+                { observation with NetworkHops = List.rev observation.NetworkHops }
+                { observation with NetworkHops = [ { firstHop with StatusCode = 200 }; lastHop ] }
+                { observation with NetworkHops = [ firstHop; { lastHop with Address = "127.0.0.1" } ] }
+                { observation with Acquisition = ProviderSource.CacheRead }
+            ] do
+            Assert.NotEmpty(ProviderSource.validateObservation altered)

@@ -68,6 +68,13 @@ CLI adds explicit source-set/digest, policy/digest, cache root and offline optio
 Its source route rejects mixing new source selection with direct catalog/archive
 selectors. `catalog inspect` remains data preparation and never runs tools; the
 new source preparation reports acquisition observations distinctly from execution.
+The opaque prepared set exposes a pure `inspect` projection for no-provider CLI
+listing. Its immutable source previews retain source identity, raw source-set and
+policy digests and actual acquisition/hop facts, plus the existing CatalogPreview
+with Selected=None. They contain no fabricated selected archive observation.
+Order sources by origin then ordinal ID and providers by ordinal ID. Listing
+neither rereads files nor resolves provider parameters or executes declarations;
+the complete source set must pass collision validation before it is inspectable.
 All projections preserve the same facts and refusal reasons. No implicit network
 request is added to legacy catalog, doctor, refresh or upgrade.
 

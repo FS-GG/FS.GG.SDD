@@ -20,6 +20,20 @@ module ProviderSourceEffects =
 
     type InputFile = { AbsolutePath: string; Bytes: int64; Sha256: string }
 
+    /// Whole-catalog inspection has no selected provider/archive and grants no execution authority.
+    type SourcePreview =
+        {
+            Source: FS.GG.SDD.Artifacts.ProviderSource.Reference
+            Revision: string
+            SourceSetSha256: string
+            AcquisitionPolicySha256: string
+            Acquisition: FS.GG.SDD.Artifacts.ProviderSource.Acquisition
+            ResolvedUri: string option
+            Redirects: string list
+            NetworkHops: FS.GG.SDD.Artifacts.ProviderSource.NetworkHop list
+            Catalog: CatalogScaffoldWorkflow.CatalogPreview
+        }
+
     type Observation =
         {
             Phase: ProviderSourceWorkflow.Phase
@@ -40,6 +54,11 @@ module ProviderSourceEffects =
     /// Passive wait retains original ownership; it neither renews cleanup time nor retries acquisition.
     val waitForSettled: operation: Operation -> Async<Observation>
     val release: operation: Operation -> Result<unit, Fsgg.ProviderCatalog.Diagnostic list>
+
+    /// Immutable captured views, ordered by origin then ordinal source ID; providers are ordinally ordered.
+    /// Catalog.Selected is None. Performs no filesystem/network/tool work or provider resolution.
+    /// Whole-set collision validation has already succeeded before a PreparedSet can exist.
+    val inspect: prepared: PreparedSet -> SourcePreview list
 
     /// Selects an existing verified provider without probing tools or executing its declarations.
     val select:
