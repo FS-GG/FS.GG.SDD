@@ -780,7 +780,13 @@ module Catalog =
             System.Text.Encoding.UTF8.GetByteCount(item.Code + item.Path + item.Message)
         let marker = diagnostic "source.cleanupUnknown" "$" "Original resource cleanup remains Unknown; the caller retains custody."
         let reserve = if List.isEmpty secondary then [] else [ marker ]
-        let mutable bytes = reserve |> List.sumBy size
+        let totalSize (items: Fsgg.ProviderCatalog.Diagnostic list) =
+            // A loop, not List.sumBy: the inlined Debug closure would surface as a public type.
+            let mutable total = 0
+            for item in items do
+                total <- total + size item
+            total
+        let mutable bytes = totalSize reserve
         let primary =
             original
             |> List.distinct
@@ -789,7 +795,7 @@ module Catalog =
                 bytes <- bytes + size item
                 bytes <= 65536)
         let kept = primary @ reserve
-        bytes <- kept |> List.sumBy size
+        bytes <- totalSize kept
         let details =
             secondary
             |> List.distinct
