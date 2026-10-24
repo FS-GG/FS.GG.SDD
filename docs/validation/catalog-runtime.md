@@ -434,6 +434,10 @@ provider (its positive-case fixture writes evidence citing the wrong bytes) is
 NOT certified and fails exactly `evidence.positive`, and each of six
 tamperings with the certified report is detected by `check-report`.
 
+The `tools` identities in a report are attested by the request's caller; the
+qualification driver derives them from the nuget.org bytes it installed, and an
+admitter must not accept them from an author without that provenance.
+
 Scope: ordinary verification under ADR-0096 on the exact Linux-x64 / .NET
 10.0.12 / glibc 2.44 profile; a local cooperative profile, not hostile
 containment or a hosted-runner profile. Not covered: distribution (C4), the

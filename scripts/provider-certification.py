@@ -201,7 +201,7 @@ class Harness:
         try:
             evidence = function()
             self.record(check_id, group, 'pass', '', evidence)
-        except (AssertionError, KeyError, ValueError, OSError, TypeError) as error:
+        except (AssertionError, KeyError, ValueError, OSError, TypeError, IndexError, StopIteration, subprocess.SubprocessError) as error:
             self.record(check_id, group, 'fail', type(error).__name__ + ': ' + (str(error) or 'assertion failed'))
 
     # -- lifecycle / provenance / skills
