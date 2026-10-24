@@ -122,13 +122,13 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
 
 ### SDD928-C3.1-03 — Governance Verify capture-lifetime join (#1131)
 
-- FR-019: One Governance Verify provider invocation owns one capture session; the Verify host
+- FR-C3-01: One Governance Verify provider invocation owns one capture session; the Verify host
   releases it (Governance#465/#468). The maintained runner is the outer admitted runtime for the
   SDD package-only qualification: it is the only supplier of the host's original work and cleanup
   ends, requires the whole capture window plus a startup allowance to fit inside its own work window
   (so it never signals a host inside that window), refuses the declaration otherwise, and ends the
   whole pid-namespace worker afterwards. No Governance contract change is required.
-- FR-020: Teardown is observed, not assumed: descendants record their outer pid and kernel start
+- FR-C3-02: Teardown is observed, not assumed: descendants record their outer pid and kernel start
   time, and a per-run environment marker is scanned for non-cooperatively; none may survive the
   worker. A settlement is only a host exit by itself with a pass or blocked exit (0/1), no
   unsettled report and inside the admitted window (exit 3 claims none); a host that stays resident is a non-passing
@@ -138,21 +138,21 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
 
 ### SDD928-C3 — provider qualification harness and certification report (#1134)
 
-- FR-021: A maintained harness (`scripts/provider-certification.py`) qualifies a PACKED provider artifact
+- FR-C3-03: A maintained harness (`scripts/provider-certification.py`) qualifies a PACKED provider artifact
   through the installed SDD CLI and installed Governance CLI and emits a closed
   `fsgg.provider-certification/v1` report: lifecycle, provenance, skill-union, no-partial-state,
   unsupported-tool, malformed/wrong-version provider controls, a supported-host check and the artifact's one
-  declared required test capability's evidence through Governance Verify/GateExecution under the FR-019/020
+  declared required test capability's evidence through Governance Verify/GateExecution under the FR-C3-01/02
   capture-lifetime join.
-- FR-023: When the artifact also declares `build:build` and/or `package:package` (typed example profile
+- FR-C3-04: A leg that cannot run is `skipped` with a reason and the verdict is not certified; an
+  admission-side validator (`check-report`) rejects a report with a missing, duplicated, unevidenced or
+  inconsistent check, a verdict that overstates the checks, or a machine-specific path.
+- FR-C3-05: When the artifact also declares `build:build` and/or `package:package` (typed example profile
   `build-test-package`), the harness certifies their ACTUAL outputs: the build output equals the declared
   transformation of its source and its handoff cites those exact bytes; the packed tar's members are exactly the
   declared members, equal the files they claim to pack, and the handoff cites the artifact's exact digest. A
   provider whose build or package evidence is self-consistent but wrong (accepted by Governance) fails exactly its
   own `capability.*` check.
-- FR-022: A leg that cannot run is `skipped` with a reason and the verdict is not certified; an
-  admission-side validator (`check-report`) rejects a report with a missing, duplicated, unevidenced or
-  inconsistent check, a verdict that overstates the checks, or a machine-specific path.
 - Out of scope: distribution (C4), the schema-v1 window, concrete language providers, hosted or hostile
   profiles, and Governance#423 prerequisite (b).
 

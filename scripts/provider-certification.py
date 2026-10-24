@@ -43,6 +43,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import zlib
 
 sys.dont_write_bytecode = True
 
@@ -88,6 +89,42 @@ def is_int(value):
 CAPABILITY_CHECKS = {'build:build': 'capability.build', 'package:package': 'capability.package'}
 TRANSFORMS = {'identity': lambda raw: raw, 'ascii-uppercase': lambda raw: raw.translate(bytes.maketrans(bytes(range(97, 123)), bytes(range(65, 91))))}
 PACKAGE_FORMATS = ('tar',)
+MAXIMUM_MEMBER_BYTES = 64 * 1024 * 1024
+
+
+def verify_tar(pack, expected):
+    """Check that `pack` is an UNCOMPRESSED tar whose regular-file members are exactly `expected` (name -> bytes).
+
+    Total over malformed input: every refusal is an AssertionError with a reason, never another exception.
+    """
+    try:
+        with tarfile.open(fileobj=io.BytesIO(pack), mode='r:') as archive:
+            entries = archive.getmembers()
+            names = [entry.name for entry in entries]
+            assert len(set(names)) == len(names), 'the package repeats a member name'
+            for entry in entries:
+                assert entry.isfile(), f'package member {entry.name} is not a regular file (links, directories and devices are refused)'
+                assert entry.name and not entry.name.startswith('/') and '\\' not in entry.name and all(part not in ('', '.', '..') for part in entry.name.split('/')), \
+                    f'package member path is not contained: {entry.name!r}'
+                assert entry.size <= MAXIMUM_MEMBER_BYTES, f'package member {entry.name} exceeds the size bound'
+            assert set(names) == set(expected), 'the package members are not exactly the declared members: ' + str(sorted(names))
+            for entry in entries:
+                assert archive.extractfile(entry).read() == expected[entry.name], f'packed member {entry.name} differs from the file it claims to pack'
+    except (tarfile.TarError, EOFError, zlib.error, OSError) as error:
+        raise AssertionError('the package is not a readable uncompressed tar: ' + type(error).__name__) from error
+    return sorted(names)
+
+
+def read_regular(root, relative):
+    """Bytes of a regular file inside `root`; a link anywhere on the path or an escape is refused."""
+    path = Path(root) / relative
+    parts = Path(relative).parts
+    current = Path(root)
+    for part in parts:
+        current = current / part
+        assert not current.is_symlink(), f'{relative} passes through a link'
+    assert path.is_file(), f'{relative} is not a regular file'
+    return path.read_bytes()
 
 
 def required_check_ids(evidence_cases=REQUIRED_EVIDENCE_CASES, capabilities=()):
@@ -193,10 +230,11 @@ def validate_report(report):
              'every declared capability bound to one command and one evidence output, matching the report artifact capabilities')
         hexdigest = lambda value: isinstance(value, str) and re.fullmatch(r'[0-9a-f]{64}', value) is not None
         need('capability.build', lambda e: hexdigest(e.get('outputSha256')) and e.get('outputSha256') == e.get('expectedSha256') == e.get('citedSha256')
-             and bool(e.get('outputPath')) and bool(e.get('transform')) and e.get('nodeState') == 'real',
+             and bool(e.get('outputPath')) and bool(e.get('sourcePath')) and hexdigest(e.get('sourceSha256')) and bool(e.get('transform')) and e.get('nodeState') == 'real',
              'the build output equals the declared transformation of its source and the handoff cites exactly it')
         need('capability.package', lambda e: hexdigest(e.get('artifactSha256')) and e.get('artifactSha256') == e.get('citedSha256') and e.get('format') in PACKAGE_FORMATS
              and isinstance(e.get('members'), list) and bool(e['members']) and all(isinstance(m, str) and m for m in e['members'])
+             and isinstance(e.get('memberSources'), dict) and sorted(e['memberSources']) == e['members'] and all(isinstance(v, str) and v for v in e['memberSources'].values())
              and e.get('memberBytesMatchSources') is True and e.get('nodeState') == 'real',
              'the packed artifact identity is cited exactly and every member equals the file it claims to pack')
         need('skill-union.recorded-and-present', lambda e: all(is_int(e.get(k)) for k in ('providerSkills', 'sddOwnedSkills', 'onDisk')) and e['providerSkills'] >= 1 and e['onDisk'] >= e['providerSkills'] + e['sddOwnedSkills'], 'at least one provider skill, all recorded skills on disk')
@@ -279,7 +317,7 @@ class Harness:
         try:
             evidence = function()
             self.record(check_id, group, 'pass', '', evidence)
-        except (AssertionError, KeyError, ValueError, OSError, TypeError, IndexError, StopIteration, subprocess.SubprocessError, tarfile.TarError, json.JSONDecodeError) as error:
+        except (AssertionError, KeyError, ValueError, OSError, TypeError, IndexError, StopIteration, subprocess.SubprocessError, tarfile.TarError, EOFError, zlib.error, json.JSONDecodeError) as error:
             self.record(check_id, group, 'fail', type(error).__name__ + ': ' + (str(error) or 'assertion failed'))
 
     # -- lifecycle / provenance / skills
@@ -554,30 +592,27 @@ class Harness:
         sha_of = lambda raw: hashlib.sha256(raw).hexdigest()
         def build_check():
             spec_ = expectations['build']
-            source = (self.positive_repo / spec_['from']).read_bytes()
+            # The source is read from the PRISTINE scaffolded target, not the post-run clone: the run cannot rewrite
+            # the source and the output consistently and pass.
+            source = read_regular(self.positive_target, spec_['from'])
+            assert read_regular(self.positive_repo, spec_['from']) == source, f'the run changed its source {spec_["from"]}'
             expected = TRANSFORMS[spec_['transform']](source)
-            output = (self.positive_repo / spec_['output']).read_bytes()
+            output = read_regular(self.positive_repo, spec_['output'])
             assert output == expected, f'the build output is not the {spec_["transform"]} of {spec_["from"]}'
             cited, state = evidence_document('build:build')
             assert cited.get(spec_['output']) == 'sha256:' + sha_of(output), 'the build handoff does not cite the exact build output bytes'
             assert cited.get(spec_['from']) == 'sha256:' + sha_of(source), 'the build handoff does not cite the exact source bytes'
             return {'outputPath': spec_['output'], 'outputSha256': sha_of(output), 'expectedSha256': sha_of(expected), 'citedSha256': cited[spec_['output']][7:],
-                    'transform': spec_['transform'], 'nodeState': state}
+                    'sourcePath': spec_['from'], 'sourceSha256': sha_of(source), 'transform': spec_['transform'], 'nodeState': state}
         def package_check():
             spec_ = expectations['package']
-            pack = (self.positive_repo / spec_['artifact']).read_bytes()
-            with tarfile.open(fileobj=io.BytesIO(pack)) as archive:
-                entries = archive.getmembers()
-                assert all(e.isfile() for e in entries), 'the package holds a member that is not a regular file'
-                assert all(not e.name.startswith('/') and '..' not in e.name.split('/') for e in entries), 'a package member path escapes'
-                members = {e.name: archive.extractfile(e).read() for e in entries}
-            assert len(members) == len(entries) and set(members) == set(spec_['members']), 'the package members are not exactly the declared members: ' + str(sorted(members))
-            for name, source in spec_['members'].items():
-                assert members[name] == (self.positive_repo / source).read_bytes(), f'packed member {name} differs from {source}'
+            pack = read_regular(self.positive_repo, spec_['artifact'])
+            expected_members = {name: read_regular(self.positive_repo, source) for name, source in spec_['members'].items()}
+            members = verify_tar(pack, expected_members)
             cited, state = evidence_document('package:package')
             assert cited.get(spec_['artifact']) == 'sha256:' + sha_of(pack), 'the package handoff does not cite the exact packed artifact bytes'
             return {'artifactPath': spec_['artifact'], 'artifactSha256': sha_of(pack), 'citedSha256': cited[spec_['artifact']][7:], 'format': spec_['format'],
-                    'members': sorted(members), 'memberBytesMatchSources': True, 'nodeState': state}
+                    'members': members, 'memberSources': dict(sorted(spec_['members'].items())), 'memberBytesMatchSources': True, 'nodeState': state}
         positive_ok = self.positive_repo is not None
         for capability_id, check_id, function in (('build:build', 'capability.build', build_check), ('package:package', 'capability.package', package_check)):
             if capability_id in {c['id'] for c in capabilities}:

@@ -12,6 +12,8 @@
 #   build    writes out/build/product.out (ASCII uppercase of product.txt) and a handoff citing it
 #   package  packs out/build/product.out into out/package/product.pack (a deterministic tar whose only member is
 #            product.out) and a handoff citing the pack
+# `package` needs out/build/product.out, so it relies on Governance running gates in id order (build, package, test as in 1.15)
+# and exits 6 if the build output is absent.
 # FSGG_FIXTURE_BUILD_MODE=wrong-output builds something other than the uppercase of product.txt, and
 # FSGG_FIXTURE_PACKAGE_MODE=wrong-content packs different bytes under the member name product.out. Both write a
 # handoff that is internally CONSISTENT with what they wrote, so Governance accepts them; only a harness that

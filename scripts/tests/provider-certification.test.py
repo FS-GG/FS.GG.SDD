@@ -33,9 +33,9 @@ def evidence_for(check_id):
         'provenance.tools-and-invocations': {'tools': [{'id': 't', 'version': '1'}], 'invocationCount': 5},
         'provenance.declared-bindings': {'capabilityIds': ['test:test'], 'declaredCommands': 1, 'evidenceOutputs': 1, 'evidenceFormat': 'f@1', 'argumentCount': 8},
         'capability.build': {'outputPath': 'out/build/product.out', 'outputSha256': 'b' * 64, 'expectedSha256': 'b' * 64, 'citedSha256': 'b' * 64,
-                             'transform': 'ascii-uppercase', 'nodeState': 'real'},
+                             'sourcePath': 'product.txt', 'sourceSha256': 'a' * 64, 'transform': 'ascii-uppercase', 'nodeState': 'real'},
         'capability.package': {'artifactPath': 'out/package/product.pack', 'artifactSha256': 'c' * 64, 'citedSha256': 'c' * 64, 'format': 'tar',
-                               'members': ['product.out'], 'memberBytesMatchSources': True, 'nodeState': 'real'},
+                               'members': ['product.out'], 'memberSources': {'product.out': 'out/build/product.out'}, 'memberBytesMatchSources': True, 'nodeState': 'real'},
         'skill-union.recorded-and-present': {'providerSkills': 1, 'sddOwnedSkills': 21, 'seededUnrecorded': 6, 'onDisk': 28},
         'skill-union.mirrors-equal': {'skills': 28, 'recordedMirrors': 1},
         'evidence.positive': {'exit': 0, 'diagnostic': None, 'evidenceProduced': True},
@@ -188,6 +188,8 @@ class CapabilityEvidenceTests(unittest.TestCase):
         self.assertTrue(self.mutated('capability.build', expectedSha256='d' * 64))
         self.assertTrue(self.mutated('capability.build', outputSha256='short', expectedSha256='short', citedSha256='short'))
         self.assertTrue(self.mutated('capability.build', nodeState='stale'))
+        self.assertTrue(self.mutated('capability.build', sourceSha256='nope'))
+        self.assertTrue(self.mutated('capability.build', sourcePath=''))
 
     def test_package_evidence_must_show_the_cited_identity_and_matching_members(self):
         self.assertTrue(self.mutated('capability.package', citedSha256='d' * 64))
@@ -196,15 +198,94 @@ class CapabilityEvidenceTests(unittest.TestCase):
         self.assertTrue(self.mutated('capability.package', members=[1]))
         self.assertTrue(self.mutated('capability.package', format='zip'))
         self.assertTrue(self.mutated('capability.package', nodeState='stale'))
+        self.assertTrue(self.mutated('capability.package', memberSources={}))
+        self.assertTrue(self.mutated('capability.package', memberSources={'other.out': 'x'}))
 
     def test_bindings_must_cover_exactly_the_declared_capabilities(self):
         self.assertTrue(self.mutated('provenance.declared-bindings', capabilityIds=['test:test']))
         self.assertTrue(self.mutated('provenance.declared-bindings', declaredCommands=1))
         self.assertTrue(self.mutated('provenance.declared-bindings', evidenceOutputs=2))
 
-    def test_transforms_and_the_tar_check_are_what_the_fixture_does(self):
+    def test_transforms_are_closed_and_exact(self):
         self.assertEqual(b'RAW=A B!?\n', cert.TRANSFORMS['ascii-uppercase'](b'raw=a b!?\n'))
         self.assertEqual(b'abc', cert.TRANSFORMS['identity'](b'abc'))
+        self.assertEqual({'identity', 'ascii-uppercase'}, set(cert.TRANSFORMS))
+
+
+def make_tar(members, mode='w:', **options):
+    import io, tarfile
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode=mode) as archive:
+        for name, data in members:
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            for key, value in options.items():
+                setattr(info, key, value)
+            archive.addfile(info, io.BytesIO(data))
+    return buffer.getvalue()
+
+
+class TarVerificationTests(unittest.TestCase):
+    EXPECTED = {'product.out': b'RAW=A\n'}
+
+    def refused(self, pack, expected=None, fragment=None):
+        with self.assertRaises(AssertionError) as caught:
+            cert.verify_tar(pack, expected if expected is not None else self.EXPECTED)
+        if fragment:
+            self.assertIn(fragment, str(caught.exception))
+
+    def test_the_exact_members_with_the_exact_bytes_are_accepted(self):
+        self.assertEqual(['product.out'], cert.verify_tar(make_tar([('product.out', b'RAW=A\n')]), self.EXPECTED))
+        self.assertEqual(['a', 'b'], cert.verify_tar(make_tar([('b', b'2'), ('a', b'1')]), {'a': b'1', 'b': b'2'}))
+
+    def test_wrong_bytes_missing_and_extra_members_are_refused(self):
+        self.refused(make_tar([('product.out', b'tampered package content\n')]), fragment='differs')
+        self.refused(make_tar([]), fragment='exactly the declared members')
+        self.refused(make_tar([('product.out', b'RAW=A\n'), ('extra', b'x')]), fragment='exactly the declared members')
+        self.refused(make_tar([('other.out', b'RAW=A\n')]), fragment='exactly the declared members')
+
+    def test_duplicate_unsafe_and_non_regular_members_are_refused(self):
+        self.refused(make_tar([('product.out', b'RAW=A\n'), ('product.out', b'RAW=A\n')]), fragment='repeats')
+        for name in ('/abs/product.out', '../product.out', 'a/../product.out', './product.out', 'a//b'):
+            self.refused(make_tar([(name, b'x')]), {name: b'x'}, 'not contained')
+        import io, tarfile
+        for kind in (tarfile.SYMTYPE, tarfile.LNKTYPE, tarfile.DIRTYPE, tarfile.FIFOTYPE):
+            buffer = io.BytesIO()
+            with tarfile.open(fileobj=buffer, mode='w:') as archive:
+                info = tarfile.TarInfo('product.out')
+                info.type = kind
+                info.linkname = 'elsewhere'
+                archive.addfile(info)
+            self.refused(buffer.getvalue(), fragment='not a regular file')
+
+    def test_compressed_truncated_and_garbage_input_is_a_refusal_not_a_crash(self):
+        plain = make_tar([('product.out', b'RAW=A\n')])
+        self.refused(make_tar([('product.out', b'RAW=A\n')], mode='w:gz'), fragment='readable uncompressed tar')
+        self.refused(make_tar([('product.out', b'RAW=A\n')], mode='w:xz'), fragment='readable uncompressed tar')
+        self.refused(b'', fragment='readable uncompressed tar')
+        self.refused(b'not a tar archive at all' * 100, fragment='readable uncompressed tar')
+        self.refused(plain[:700], fragment='readable uncompressed tar')
+        gz = make_tar([('product.out', b'RAW=A\n' * 5000)], mode='w:gz')
+        self.refused(gz[: len(gz) // 2], fragment='readable uncompressed tar')
+
+    def test_oversized_members_are_refused(self):
+        import unittest.mock
+        with unittest.mock.patch.object(cert, 'MAXIMUM_MEMBER_BYTES', 4):
+            self.refused(make_tar([('product.out', b'12345')]), {'product.out': b'12345'}, 'exceeds the size bound')
+            self.assertEqual(['product.out'], cert.verify_tar(make_tar([('product.out', b'1234')]), {'product.out': b'1234'}))
+
+    def test_read_regular_refuses_links_and_non_files(self):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'real').mkdir()
+            (root / 'real/file').write_bytes(b'ok')
+            os.symlink(root / 'real/file', root / 'link')
+            os.symlink(root / 'real', root / 'dirlink')
+            self.assertEqual(b'ok', cert.read_regular(root, 'real/file'))
+            for relative in ('link', 'dirlink/file', 'real', 'absent'):
+                with self.assertRaises(AssertionError):
+                    cert.read_regular(root, relative)
 
 
 class SemanticEvidenceTests(unittest.TestCase):
