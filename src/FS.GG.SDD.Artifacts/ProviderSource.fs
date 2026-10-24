@@ -216,11 +216,11 @@ module ProviderSource =
         check (value.MaximumTransferBytes > 0L && value.MaximumTransferBytes <= limits.MaximumEnvelopeBytes) "source.bound" "$.maximumTransferBytes" "Transfer bound exceeds the source profile."
         check (value.MaximumExpandedBytes > 0L && value.MaximumExpandedBytes <= limits.MaximumExpandedBytes) "source.bound" "$.maximumExpandedBytes" "Expanded bound exceeds the source profile.")
 
-    let validateUri policy value = protect (fun () ->
+    let validateUri policy uri = protect (fun () ->
         requireValid (validatePolicy policy)
-        let uri = uriShape value
-        check (List.contains (origin uri) policy.AllowedOrigins) "source.originDenied" "$.uri" "The selected policy does not admit this HTTPS origin."
-        uri)
+        let parsed = uriShape uri
+        check (List.contains (origin parsed) policy.AllowedOrigins) "source.originDenied" "$.uri" "The selected policy does not admit this HTTPS origin."
+        parsed)
 
     let isPublicAddress (address: IPAddress) =
         let bytes = address.GetAddressBytes()
@@ -345,12 +345,12 @@ module ProviderSource =
         requireValid (validate value)
         value)
 
-    let parseSet expected bytes =
-        parseBytes limits.MaximumSetBytes expected (fun value ->
+    let parseSet expectedSha256 bytes =
+        parseBytes limits.MaximumSetBytes expectedSha256 (fun value ->
             closed [ "schema"; "sources" ] value
             { Schema = get "schema" value |> readString; Sources = get "sources" value |> readList limits.MaximumSources reference }) validateSet bytes
-    let parseManifest expected bytes =
-        parseBytes limits.MaximumManifestBytes expected (fun value ->
+    let parseManifest expectedSha256 bytes =
+        parseBytes limits.MaximumManifestBytes expectedSha256 (fun value ->
             closed [ "schema"; "id"; "revision"; "catalog"; "members"; "archives" ] value
             { Schema = get "schema" value |> readString; Id = get "id" value |> readString
               Revision = get "revision" value |> readString; CatalogPath = get "catalog" value |> readString
@@ -360,8 +360,8 @@ module ProviderSource =
               Archives = get "archives" value |> readList limits.MaximumMembers (fun item ->
                   closed [ "templateSource"; "path" ] item
                   { TemplateSource = get "templateSource" item |> readString; Path = get "path" item |> readString }) }) validateManifest bytes
-    let parsePolicy expected bytes =
-        parseBytes limits.MaximumPolicyBytes expected (fun value ->
+    let parsePolicy expectedSha256 bytes =
+        parseBytes limits.MaximumPolicyBytes expectedSha256 (fun value ->
             closed [ "schema"; "allowedOrigins"; "maximumRedirects"; "acquisitionSeconds"; "maximumTransferBytes"; "maximumExpandedBytes" ] value
             { Schema = get "schema" value |> readString; AllowedOrigins = get "allowedOrigins" value |> readList 16 readString
               MaximumRedirects = get "maximumRedirects" value |> readSmall; AcquisitionSeconds = get "acquisitionSeconds" value |> readSmall
