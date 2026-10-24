@@ -5,9 +5,14 @@ template archives. The producer supplies a pinned `source.json` manifest and the
 exact catalog/archive population described by the [source wire contract](../../specs/134-consumer-provider-sources/contracts/source-wire.md).
 The catalog and descriptor formats remain unchanged.
 
-This implementation is under qualification. API-shape compilation has passed;
-production source, installed third-party creation, build/test, offline recreation
-and coherent publication still require their acceptance runs.
+Shipped in the coherent FS.GG.SDD 2.5.0 release. The source slice, the four
+provider-source native facts (run under the pid-namespace runner on the exact
+Linux-x64/.NET 10.0.12/glibc 2.44 host) and the installed third-party journeys
+(local directory, pinned HTTPS, offline cache, build and test of the created
+product, negative controls) have passed; see
+[`scripts/provider-source-journey.py`](../../scripts/provider-source-journey.py) and
+the example source in `tests/fixtures/third-party-provider-source`. That
+qualification covers the supported host contract below, not other hosts.
 
 ## Select and inspect
 
@@ -93,7 +98,8 @@ the same owner passively without polling release or restarting cleanup.
 
 The acquisition and retirement attempt has a finite budget; independent CLI
 process exit after Unknown is not promised. Actual CLI qualification must run
-under the existing finite external custodian, which owns the original process
-birth/PIDfd, descendants and output EOF through its included deadline. Terminating
-that process never converts unknown resource or pathname cleanup into success.
-That native qualification remains outstanding.
+under a finite external custodian (the journey driver uses the maintained
+`catalog-runtime-validation.py` native-runtime runner), which owns the original
+process birth, descendants and output EOF through its included deadline.
+Terminating that process never converts unknown resource or pathname cleanup into
+success.

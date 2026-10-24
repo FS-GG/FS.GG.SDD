@@ -1,0 +1,10 @@
+{
+          "schemaVersion":1,"id":"runtime-fixture-policy","version":"1.0.0",
+          "evidenceMap":{"id":"runtime-fixture-map","version":"1.0.0","digest":"sha256:61dc9d0938fc1c23541de3941279db5f410e05620390c099d3bba3600f96efb8","mappings":[{"format":"opaque@literal","id":"opaque-format","version":"1.0.0"}]},
+          "requiredCapabilityIds":["build:build"],"semanticOnlyCapabilityIds":[],
+          "knownPlatforms":["linux-x64"],"environments":[{"id":"fixture-local","environment":"local"}],
+          "supportedEvidenceFormats":[{"id":"opaque-format","version":"1.0.0"}],
+          "maximumPreflightSeconds":30,"maximumScaffoldSeconds":60,
+          "toolProbes":[{"id":"opaque-tool","executable":"/usr/share/dotnet/dotnet","arguments":["--version"],"versionPrefix":"","versionSuffix":"\n","maximumOutputCharacters":128}],
+          "archives":[{"templateSource":"opaque-source","packageId":"FS.GG.SDD.Catalog.OpaqueFixture","packageVersion":"1.0.1"}]
+        }
