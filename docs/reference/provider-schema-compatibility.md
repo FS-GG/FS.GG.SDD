@@ -41,13 +41,13 @@ releases, by the installed journey `scripts/provider-schema-window-journey.py`.
 
 | Id | Guarantee |
 |---|---|
-| G1 | A registry provider whose contract is outside the supported range (major 0, major 3 or above, or malformed) is refused before any provider process or write, with `scaffold.providerVersionUnsupported`; contract 3.0.0 is refused by the legacy route before mutation |
-| G2 | A major-2 provider is admitted only with a stable version and a declared minimum of at least 2.1.0 that the installed CLI meets; otherwise it is refused before writes and provider processes. An older release refuses a contract newer than it supports rather than misreading it |
+| G1 | A registry provider whose contract is outside the supported range (major 0, major 3 or above, malformed, or a major-2 pre-release) is refused before any provider process or write, with `scaffold.providerVersionUnsupported`; contract 3.0.0 is refused by the legacy route before mutation |
+| G2 | A major-2 provider is admitted only with a stable version and a declared minimum of at least 2.1.0 that the installed CLI meets; otherwise it is refused before writes and provider processes with `scaffold.providerCapabilityRefused`. An older release refuses a contract newer than it supports rather than misreading it |
 | G3 | A schema-v1 registry provider keeps its legacy shape: the today-shape entry parses with the extended fields defaulted, and an out-of-range registry schema is refused |
 | G4 | The legacy route's provenance stays schema 1 (also when an identifier parameter is derived and when the provider fails), is byte-stable and deterministic, and the legacy reader refuses any other schema |
 | G5 | A repeated scaffold blocks on collision without clobbering the provenance, and refresh excludes provider-produced paths |
-| G6 | Across published releases 1.0.0 to the current release, the same schema-v1 provider scaffolds successfully and the provider-owned bytes and the provenance record (provider, contract, template, produced and mirrored paths and their digests) are identical; only SDD-owned seeded content and the generator version legitimately differ between releases |
-| G7 | The current release reads a workspace scaffolded by any older release read-only (`doctor`): no provenance or registry diagnostic, and no write |
+| G6 | Across published releases 1.0.0 to the current release, the same schema-v1 provider scaffolds successfully and the provider-owned bytes and the provenance core (schema, provider, contract, template, outcome, effective parameters, minimum, produced and mirrored paths with digests) are identical; the record gains additive keys across releases (driver, game and rendering skill paths) that are not part of the core; only SDD-owned seeded content and the generator version legitimately differ between releases |
+| G7 | The current release reads a workspace scaffolded by any older release read-only (`doctor`): no provenance or registry diagnostic (a `doctor.driftDetected` warning that the workspace is behind the current coherent set is expected and allowed), and no write |
 | G8 | Out-of-range and below-minimum contracts are refused by the installed current release before any provider process or write |
 
 ## Not guaranteed

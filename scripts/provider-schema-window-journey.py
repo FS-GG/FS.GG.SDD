@@ -33,8 +33,14 @@ ROOT = HERE.parent
 TEMPLATE = ROOT / 'tests/fixtures/provider-catalog-runtime/opaque-template/content'
 STABLE_PROVENANCE_KEYS = ('schemaVersion', 'providerName', 'providerContractVersion', 'templateRef', 'outcome',
                           'requiredMinimumCliVersion', 'effectiveParameters', 'producedPaths', 'mirroredPaths')
-REFUSED_CONTRACTS = {  # contract version (and optional minimum) -> why it is out of range
-    '3.0.0': None, '0.9.0': None, 'x.y.z': None, '2.1.0-preview': '2.1.0', '2.0.0': None, '2.1.0': '99.0.0',
+# (contract version, declared minimum) -> the refusal the current release must give, before any provider process or write.
+REFUSED_CONTRACTS = {
+    ('3.0.0', None): 'scaffold.providerVersionUnsupported',
+    ('0.9.0', None): 'scaffold.providerVersionUnsupported',
+    ('x.y.z', None): 'scaffold.providerVersionUnsupported',
+    ('2.1.0-preview', '2.1.0'): 'scaffold.providerVersionUnsupported',  # major 2 must be a stable version
+    ('2.0.0', None): 'scaffold.providerCapabilityRefused',  # major 2 below the 2.1.0 minimum / no declared minimum
+    ('2.1.0', '99.0.0'): 'scaffold.providerCapabilityRefused',  # declared minimum above the installed CLI
 }
 
 
@@ -188,14 +194,13 @@ class Window:
                                 f'exit={actual["exitCode"]} outcome={report and report.get("outcome")} diagnostics={ids} tree-unchanged={tree(copy) == before}')
 
     def g8(self):
-        for contract, minimum in REFUSED_CONTRACTS.items():
-            target, before, actual, report = self.scaffold(self.current, contract, minimum, 'refused-' + contract.replace('.', '_'))
+        for (contract, minimum), expected in REFUSED_CONTRACTS.items():
+            label = 'refused-' + contract.replace('.', '_') + ('-min' + minimum.replace('.', '_') if minimum else '')
+            target, before, actual, report = self.scaffold(self.current, contract, minimum, label)
             codes = [d.get('id') for d in (report or {}).get('diagnostics', [])]
-            expected = {'scaffold.providerVersionUnsupported'} if minimum is None or contract == '2.1.0-preview' else {'scaffold.providerCapabilityUnsupported', 'scaffold.providerVersionUnsupported'}
             ok = (actual['exitCode'] != 0 and report is not None and report['outcome'] == 'blocked' and report['scaffold']['providerInvoked'] is False
-                  and tree(target) == before and bool(set(codes))
-                  and not (target / 'product.txt').exists())
-            self.journey.record(f'G8 {self.current}: contract {contract}{" with minimum " + minimum if minimum else ""} is refused before any provider process or write', ok,
+                  and tree(target) == before and expected in codes and not (target / 'product.txt').exists())
+            self.journey.record(f'G8 {self.current}: contract {contract}{" with minimum " + minimum if minimum else ""} is refused with {expected} before any provider process or write', ok,
                                 f'exit={actual["exitCode"]} diagnostics={codes}')
         # Major 1 keeps the legacy reader semantics: any 1.x is admitted.
         target, before, actual, report = self.scaffold(self.current, '1.9.9', None, 'accepted-1_9_9')
