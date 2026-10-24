@@ -69,7 +69,8 @@ module ProviderSourceWorkflowTests =
     [<Fact>]
     let ``source diagnostic accumulation is bounded while retaining the first cause`` () =
         let initial, _ = ProviderSourceWorkflow.init request
-        let errors = [ for index in 0..999 -> { Fsgg.ProviderCatalog.Diagnostic.Code = "source.original"; Path = "$"; Message = string index + System.String('x', 4096) } ]
+        let errors: Fsgg.ProviderCatalog.Diagnostic list =
+            [ for index in 0..999 -> { Code = "source.original"; Path = "$"; Message = string index + System.String('x', 4096) } ]
         let refused, _ = ProviderSourceWorkflow.update (ProviderSourceWorkflow.FailureObserved errors) initial
         let retained = ProviderSourceWorkflow.diagnostics refused
         Assert.True(retained.Length <= 64)
@@ -291,7 +292,7 @@ module ProviderSourceWorkflowTests =
             let cache = System.IO.Path.Combine(root, "cache")
             System.IO.Directory.CreateDirectory cache |> ignore
             let catalog, _, _, _, _, _ = CatalogWorkflowFixture.value ()
-            let create id origin providerIds =
+            let create id origin providerIds : ProviderSource.Reference =
                 let sourceRoot = System.IO.Path.Combine(root, id)
                 System.IO.Directory.CreateDirectory sourceRoot |> ignore
                 let descriptors =
@@ -312,7 +313,7 @@ module ProviderSourceWorkflowTests =
                 let manifestBytes = ProviderSource.serializeManifest manifest |> unwrap |> encode
                 for name, bytes in [ "source.json", manifestBytes; "catalog.json", catalogBytes; "fixture.nupkg", archiveBytes ] do
                     System.IO.File.WriteAllBytes(System.IO.Path.Combine(sourceRoot, name), bytes)
-                { ProviderSource.Reference.Id = id; Origin = origin; Locator = ProviderSource.LocalDirectory sourceRoot
+                { Id = id; Origin = origin; Locator = ProviderSource.LocalDirectory sourceRoot
                   ManifestSha256 = ProviderSource.sha256 manifestBytes }
             let sources =
                 [ create "z-explicit" ProviderSource.Explicit [ "z-provider"; "a-provider" ]
