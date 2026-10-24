@@ -530,7 +530,7 @@ jobs:
         run: echo "No-push dispatch will create the retained candidate in publish-artifacts."
 
   publish-cli:
-    name: Publish and read back the coherent FS.GG.SDD set
+    name: Publish and read back the coherent FS.GG.SDD set [org-publication-writer]
     needs: [resolve-versions, locate-artifacts]
     runs-on: ubuntu-latest
     if: github.repository == 'FS-GG/FS.GG.SDD' && inputs.readback_version == '' && inputs.occupancy_candidate_run == '' && inputs.occupancy_candidate_sha256 == '' && inputs.qualify_published_version == '' && inputs.qualify_candidate_run == '' && inputs.qualify_candidate_sha256 == '' && inputs.qualify_candidate_source == '' && needs.resolve-versions.outputs.push == 'true'
@@ -543,6 +543,11 @@ jobs:
       receipt_artifact_id: ${{ steps.publish-receipt.outputs.artifact-id }}
       receipt_digest: ${{ steps.publish-receipt.outputs.artifact-digest }}
     steps:
+      - name: Acquire org publication writer lock
+        uses: FS-GG/.github/.github/actions/publication-writer-lock@c799a9f9b21d52eb9766cf0950722e3e55145d39 # ADR-0097
+        with:
+          max-wait-minutes: 30
+        timeout-minutes: 32
       - name: Checkout
         uses: actions/checkout@v4
         with:
