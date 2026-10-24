@@ -71,8 +71,12 @@
     <Compile Include="ScaffoldProvenance.fs" />
     <Compile Include="ProviderCatalogIntegrity.fsi" />
     <Compile Include="ProviderCatalogIntegrity.fs" />
+    <Compile Include="ProviderSource.fsi" />
+    <Compile Include="ProviderSource.fs" />
     <Compile Include="CatalogScaffoldProvenance.fsi" />
     <Compile Include="CatalogScaffoldProvenance.fs" />
+    <Compile Include="SourceScaffoldProvenance.fsi" />
+    <Compile Include="SourceScaffoldProvenance.fs" />
     <Compile Include="ScaffoldProvenanceDocument.fsi" />
     <Compile Include="ScaffoldProvenanceDocument.fs" />
     <Compile Include="DriverManifest.fsi" />

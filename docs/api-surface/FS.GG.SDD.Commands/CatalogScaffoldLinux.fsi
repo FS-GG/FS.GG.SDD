@@ -78,6 +78,11 @@ module internal CatalogScaffoldLinux =
 
     /// Whole-phase ceiling includes cleanup; no child obtains a new deadline.
     val beginPhase: seconds: int -> cancellation: System.Threading.CancellationToken -> PhaseBudget
+    /// Same monotonic phase primitive with an explicit included cleanup reserve.
+    val beginPhaseWithCleanup:
+        seconds: int -> cleanupSeconds: int -> cancellation: System.Threading.CancellationToken -> PhaseBudget
+    /// Stopwatch ticks from the one original phase; neither value grants a new window.
+    val phaseDeadlines: budget: PhaseBudget -> int64 * int64
 
     /// Charges bounded retained diagnostics against the same aggregate original phase output ceiling.
     val chargeDiagnostics:
@@ -88,7 +93,12 @@ module internal CatalogScaffoldLinux =
     val checkCleanup: budget: PhaseBudget -> unit
     val openDirectory: custody: Custody -> budget: PhaseBudget -> absolute: string -> DirectoryCustody
     val identity: directory: DirectoryCustody -> ObjectIdentity
+    /// Existing held ancestry only; callers still revalidate before effects.
+    val directoryAncestry: directory: DirectoryCustody -> ObjectIdentity list
     val revalidateDirectory: budget: PhaseBudget -> directory: DirectoryCustody -> unit
+    /// Absence is only an observed ENOENT beneath an already held parent; other failures refuse.
+    val tryOpenChildDirectory:
+        custody: Custody -> budget: PhaseBudget -> parent: DirectoryCustody -> name: string -> DirectoryCustody option
 
     val createDirectory:
         custody: Custody -> budget: PhaseBudget -> parent: DirectoryCustody -> name: string -> DirectoryCustody
@@ -116,6 +126,11 @@ module internal CatalogScaffoldLinux =
 
     val files:
         custody: Custody -> budget: PhaseBudget -> root: DirectoryCustody -> maximumBytes: int -> CapturedFile list
+
+    /// Source ingress additionally bounds metadata count and recursion before retaining payloads.
+    val filesWithinLimits:
+        custody: Custody -> budget: PhaseBudget -> root: DirectoryCustody ->
+            maximumBytes: int -> maximumFiles: int -> maximumDepth: int -> CapturedFile list
 
     /// Exactly one syscall. Success is publication into the held parent object, not pathname locking.
     val commitNoReplace:

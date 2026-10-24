@@ -5,6 +5,7 @@ module ScaffoldProvenanceDocument =
     type Document =
         | Legacy of ScaffoldProvenance.ScaffoldProvenanceRecord
         | Catalog of CatalogScaffoldProvenance.CatalogScaffoldProvenanceRecord
+        | SourceCatalog of SourceScaffoldProvenance.Record
 
     val parse: text: string -> Result<Document, Fsgg.ProviderCatalog.Diagnostic list>
     val ownershipProjection: document: Document -> ScaffoldProvenance.ScaffoldProvenanceRecord

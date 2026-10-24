@@ -397,6 +397,12 @@ let run args =
                     "--transport-executable"
                     "--preflight-timeout-seconds"
                     "--scaffold-timeout-seconds"
+                    "--source-set"
+                    "--source-set-sha256"
+                    "--acquisition-policy"
+                    "--acquisition-policy-sha256"
+                    "--source-cache"
+                    "--offline"
                 ])
         ->
         FS.GG.SDD.Cli.Catalog.scaffold rest

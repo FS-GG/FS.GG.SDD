@@ -1,0 +1,22 @@
+# Tasks
+
+- [x] Recover source custody, actual parent928, current protected enrollment and
+  accepted source dispatch; preserve supplier/ABI and original-operation boundaries.
+- [x] Specify the full outcome, versions and numeric ceilings before effect code.
+- [x] Sketch Artifacts/Commands public `.fsi` APIs and representative semantic/API tests.
+- [x] Obtain exact API/preflight review and separately selected compiler/API exercise.
+- [x] Implement strict source-set/manifest/policy/receipt codecs and pure selection (source; not yet compiled).
+- [x] Implement schema3 provenance joins and update legacy/ownership readers (source; tests pending).
+- [x] Implement bounded local/HTTPS source acquisition, closed staging and verified cache/offline use (source; qualification pending).
+- [x] Join the actual existing scaffold operation before target publication; preserve independent policy/executor (source; qualification pending).
+- [x] Integrate explicit CLI route and deterministic projections/refusals (source; qualification pending).
+- [x] Classify the four real source-I/O facts through the existing native test route; verify the source census without claiming native passes.
+- [ ] Qualify all four source-I/O facts on the supported carrier under finite custody (four passes, zero skips).
+- [ ] Complete causal negative controls, affected suites, surfaces and required exact-head CI.
+- [ ] Obtain independent source review on the complete candidate.
+- [ ] Separately qualify genuine installed third-party creation/build/test and exact offline re-instantiation.
+- [ ] Publish the coherent once-packed artifacts, verify both feeds and public installed behavior.
+- [ ] Supply the published source contract to Wizard3010; close935 only on its full original acceptance.
+
+No unchecked compiled/native/CI/publication item is implied by the source plan or
+synthetic fixtures. Each original uncertain operation remains with its owner.

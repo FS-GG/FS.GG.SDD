@@ -6,11 +6,13 @@ module ScaffoldProvenanceDocument =
     type Document =
         | Legacy of ScaffoldProvenance.ScaffoldProvenanceRecord
         | Catalog of CatalogScaffoldProvenance.CatalogScaffoldProvenanceRecord
+        | SourceCatalog of SourceScaffoldProvenance.Record
 
     let ownershipProjection document =
         match document with
         | Legacy record -> record
         | Catalog record -> record.Ownership
+        | SourceCatalog record -> SourceScaffoldProvenance.ownershipProjection record
 
     let parse text =
         let error message : Fsgg.ProviderCatalog.Diagnostic =
@@ -44,6 +46,7 @@ module ScaffoldProvenanceDocument =
                         | Some record -> Ok(Legacy record)
                         | None -> Error [ error "Malformed legacy provenance." ]
                     | 2 -> CatalogScaffoldProvenance.parse text |> Result.map Catalog
+                    | 3 -> SourceScaffoldProvenance.parse text |> Result.map SourceCatalog
                     | _ -> Error [ error "Unsupported provenance schema; no legacy fallback is permitted." ]
             | _ -> Error [ error "Provenance requires exactly one schemaVersion." ]
         with

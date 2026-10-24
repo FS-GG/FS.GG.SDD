@@ -79,12 +79,13 @@ module WorkItem =
                         match document with
                         | ScaffoldProvenanceDocument.Legacy _ -> 1
                         | ScaffoldProvenanceDocument.Catalog _ -> 2
+                        | ScaffoldProvenanceDocument.SourceCatalog _ -> 3
 
                     { ordinaryCompatibility with
                         RawValue = string version
                         Version = Some(SchemaVersion.create version)
                         Status = SchemaVersion.Current
-                        SupportedRange = "1, 2"
+                        SupportedRange = "1, 2, 3"
                         MigrationHint = None
                     }
                 | Error _ ->
@@ -103,7 +104,7 @@ module WorkItem =
 
                                 property.Value.TryGetInt32(&version)
                                 && property.Value.GetRawText() = string version
-                                && version > 2
+                                && version > 3
                             | _ -> false
                         with
                         | :? JsonException -> false
@@ -115,10 +116,10 @@ module WorkItem =
                                 SchemaVersion.Future
                             else
                                 SchemaVersion.Malformed
-                        SupportedRange = "1, 2"
+                        SupportedRange = "1, 2, 3"
                         MigrationHint =
                             Some
-                                "Correct the provenance using its strict schema-1 or schema-2 codec; no legacy fallback is permitted."
+                                "Correct the provenance using its strict schema-1, schema-2 or schema-3 codec; no legacy fallback is permitted."
                     }
             else
                 ordinaryCompatibility

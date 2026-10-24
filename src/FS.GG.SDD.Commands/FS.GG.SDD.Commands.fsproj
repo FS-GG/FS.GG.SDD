@@ -13,6 +13,8 @@
     <Compile Include="ProviderCapabilityAdmission.fs" />
     <Compile Include="CatalogScaffoldWorkflow.fsi" />
     <Compile Include="CatalogScaffoldWorkflow.fs" />
+    <Compile Include="ProviderSourceWorkflow.fsi" />
+    <Compile Include="ProviderSourceWorkflow.fs" />
     <Compile Include="OwnerGuidance.fsi" />
     <Compile Include="OwnerGuidance.fs" />
     <Compile Include="CommandTypes.fsi" />
@@ -64,6 +66,8 @@
     <Compile Include="CommandWorkflow/HandlersScaffold.fs" />
     <Compile Include="CatalogScaffoldLinux.fsi" />
     <Compile Include="CatalogScaffoldLinux.fs" />
+    <Compile Include="ProviderSourceEffects.fsi" />
+    <Compile Include="ProviderSourceEffects.fs" />
     <Compile Include="CatalogScaffoldEffects.fsi" />
     <Compile Include="CatalogScaffoldEffects.fs" />
     <Compile Include="CommandWorkflow/HandlersDoctor.fs" />

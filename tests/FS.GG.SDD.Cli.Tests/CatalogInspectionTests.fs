@@ -11,6 +11,24 @@ open Xunit
 
 [<Collection("ProcessGlobalEnv")>]
 module CatalogInspectionTests =
+    [<Fact>]
+    let ``source refusal keeps the original first cause before bounded release diagnostics`` () =
+        let original: Fsgg.ProviderCatalog.Diagnostic = { Code = "source.original"; Path = "$"; Message = "Original failure" }
+        let secondary: Fsgg.ProviderCatalog.Diagnostic = { Code = "source.releaseUnsettled"; Path = "$"; Message = "Cleanup remains Unknown" }
+        let retained = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics [ original ] [ secondary; original ]
+        Assert.Equal(original, retained.Head)
+        Assert.Contains(retained, fun item -> item.Code = "source.cleanupUnknown")
+        Assert.Contains(secondary, retained)
+        let saturated = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics [ original ] [ for i in 1..100 -> { secondary with Message = string i + String('x', 4096) } ]
+        Assert.Equal(original, saturated.Head)
+        Assert.True(saturated.Length <= 64)
+        Assert.True((saturated |> List.sumBy (fun d -> Encoding.UTF8.GetByteCount(d.Code + d.Path + d.Message))) <= 65536)
+        let fullOriginal = [ for i in 0..63 -> { original with Message = string i } ]
+        let full = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics fullOriginal [ secondary ]
+        Assert.Equal(fullOriginal.Head, full.Head)
+        Assert.Equal(64, full.Length)
+        Assert.Contains(full, fun item -> item.Code = "source.cleanupUnknown")
+
     let catalogBytes () =
         let authored =
             File.ReadAllText(
@@ -60,6 +78,26 @@ module CatalogInspectionTests =
             code, writer.ToString()
         finally
             Console.SetOut previous
+
+    [<Fact>]
+    let ``source discovery requires the complete explicit source and acquisition policy selection`` () =
+        for args, expected in
+            [ [ "inspect"; "--source-set"; "/not-read/sources.json" ], "source.selectionMissing"
+              [ "inspect"; "--source-set"; "/not-read/sources.json"; "--catalog"; "/not-read/catalog.json" ], "source.unknownOption"
+              [ "inspect"; "--source-set"; "/not-read/sources.json"; "--source-set"; "/other.json" ], "source.duplicateOption" ] do
+            let code, json = capture (args @ [ "--json" ])
+            Assert.Equal(1, code)
+            Assert.Contains(expected, json)
+
+    [<Fact>]
+    let ``source scaffold cannot dispatch the legacy executor with an incomplete source selection`` () =
+        let previous = Console.Out
+        use writer = new StringWriter()
+        try
+            Console.SetOut writer
+            Assert.Equal(1, Program.run [ "scaffold"; "--source-set"; "/not-read/sources.json"; "--root"; "/not-created/product"; "--json" ])
+            Assert.Contains("source.selectionMissing", writer.ToString())
+        finally Console.SetOut previous
 
     [<Fact>]
     let ``real file inspection discovers all provider metadata and writes nothing`` () =
