@@ -279,6 +279,14 @@ module ProviderSourceWorkflowTests =
         let encode (text: string) = System.Text.Encoding.UTF8.GetBytes text
         let root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sdd935-inspection-" + System.Guid.NewGuid().ToString("N"))
         System.IO.Directory.CreateDirectory root |> ignore
+        let mutable cleanupUnknown = false
+        let retainUnknown () = cleanupUnknown <- true
+        let releaseOriginal operation =
+            match ProviderSourceEffects.release operation with
+            | Ok() -> ()
+            | Error errors ->
+                retainUnknown ()
+                failwithf "Original source custody unresolved; fixture retained at %s: %A" root errors
         try
             let cache = System.IO.Path.Combine(root, "cache")
             System.IO.Directory.CreateDirectory cache |> ignore
@@ -320,15 +328,16 @@ module ProviderSourceWorkflowTests =
             let operation = ProviderSourceEffects.prepare effectRequest System.Threading.CancellationToken.None |> unwrap
             try
                 let result = ProviderSourceEffects.run operation |> Async.RunSynchronously
-                action sources effectRequest result
+                action sources effectRequest result releaseOriginal
             finally
-                ProviderSourceEffects.release operation |> unwrap
+                releaseOriginal operation
         finally
-            System.IO.Directory.Delete(root, true)
+            // A failed fixture must not turn unresolved release into path deletion.
+            if not cleanupUnknown then System.IO.Directory.Delete(root, true)
 
     [<Fact>]
     let ``no-provider inspection lists every captured provider without resolution or reread`` () =
-        withInspectionSources false (fun sources request result ->
+        withInspectionSources false (fun sources request result _ ->
             let prepared = match result with Ok value -> value | Error errors -> failwithf "%A" errors
             let views = ProviderSourceEffects.inspect prepared
             Assert.Equal<string list>([ "z-builtin"; "a-workspace"; "z-workspace"; "z-explicit" ], views |> List.map (fun view -> view.Source.Id))
@@ -352,7 +361,7 @@ module ProviderSourceWorkflowTests =
 
     [<Fact>]
     let ``whole-set provider collision refuses before an inspectable handle exists`` () =
-        withInspectionSources true (fun _ request result ->
+        withInspectionSources true (fun _ request result _ ->
             Assert.Empty(System.IO.Directory.GetFileSystemEntries request.CacheRoot)
             match result with
             | Error errors -> Assert.Contains(errors, fun error -> error.Code = "source.providerCollision")
@@ -360,7 +369,7 @@ module ProviderSourceWorkflowTests =
 
     [<Fact>]
     let ``offline exact cache survives removal of original local sources without acquisition`` () =
-        withInspectionSources false (fun sources request result ->
+        withInspectionSources false (fun sources request result releaseOriginal ->
             let unwrap = function Ok value -> value | Error errors -> failwithf "%A" errors
             let original = result |> unwrap |> ProviderSourceEffects.inspect
             for source in sources do
@@ -376,11 +385,11 @@ module ProviderSourceWorkflowTests =
                     Assert.Empty view.NetworkHops
                     Assert.Empty view.Redirects
                     Assert.Equal(None, view.ResolvedUri)
-            finally ProviderSourceEffects.release operation |> unwrap)
+            finally releaseOriginal operation)
 
     [<Fact>]
     let ``selected source joins reject changed cache bytes and inspection only scaffold targets`` () =
-        withInspectionSources false (fun _ _ result ->
+        withInspectionSources false (fun _ _ result _ ->
             let unwrap = function Ok value -> value | Error errors -> failwithf "%A" errors
             let prepared = result |> unwrap
             let selected = ProviderSourceEffects.select prepared "a-provider" [] |> unwrap
