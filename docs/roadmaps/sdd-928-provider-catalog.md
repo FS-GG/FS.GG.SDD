@@ -296,6 +296,23 @@ supplied). Still owned elsewhere: an authentic blocked regular-file read and an 
 observed uncertain close (Governance#423 prerequisite b), hostile containment and a hosted profile.
 The resident-host branch of the join is exercised with a stand-in host, not claimed against Governance.
 
+## C3 provider qualification harness and certification report — 2026-10-24 (#1134)
+
+The SDK addition in [#928 comment 5436166922](https://github.com/FS-GG/FS.GG.SDD/issues/928#issuecomment-5436166922)
+asks for a reusable qualification harness and a package-only certification report suitable for catalog
+admission. `scripts/provider-certification.py` is that harness: given a PACKED provider artifact, the
+installed SDD CLI and the installed Governance CLI, it emits a closed `fsgg.provider-certification/v1` report of
+lifecycle, provenance, skill-union, no-partial-state, unsupported-tool, malformed/wrong-version and
+Governance Verify/GateExecution evidence checks for the artifact's one declared required capability (under the C3.1-03 capture-lifetime join; further build or package capabilities are not exercised). A leg
+that cannot run is `skipped` and cannot certify; `check-report` is the admission-side validator of completeness, consistency and per-check evidence (not authentication: the report is a producer's self-attestation).
+`scripts/qualify-reference-provider.py` qualifies the reference provider against the published SDD 2.5.1 and
+Governance 1.15.0 packages in an empty cache and proves the harness is not vacuous with a deliberately bad
+provider (three ways) and six report tamperings. Guide:
+[catalog runtime validation](../validation/catalog-runtime.md#provider-qualification-harness-and-certification-report-sdd928-c3-1134).
+Ordinary verification under ADR-0096 on the exact Linux-x64/.NET 10.0.12/glibc 2.44 host; a local cooperative
+profile. Still open on #928: C4 distribution, the schema-v1 window, concrete language providers (Templates#441)
+and Governance#423 prerequisite (b).
+
 ## Selected-template data transport follow-up
 
 The accepted Templates441/SDD928 join extends only the private data transport:
