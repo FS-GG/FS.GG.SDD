@@ -104,6 +104,16 @@ module ProviderSourceTests =
         let malformed = bytes "not json"
         Assert.Equal<string list>([ "source.rawDigestMismatch" ], codes (ProviderSource.parseSet digest malformed))
 
+    [<Fact>]
+    let ``valid whitespace change still requires the actual policy raw digest`` () =
+        let original = ProviderSource.serializePolicy policy |> unwrap |> bytes
+        let spaced = Array.concat [ bytes " \n"; original; bytes "\n" ]
+        Assert.Equal<string list>(
+            [ "source.rawDigestMismatch" ],
+            codes (ProviderSource.parsePolicy (ProviderSource.sha256 original) spaced)
+        )
+        Assert.Equal(policy, ProviderSource.parsePolicy (ProviderSource.sha256 spaced) spaced |> unwrap)
+
     [<Theory>]
     [<InlineData("{\"schema\":\"fsgg.provider-source-set/1\",\"schema\":\"fsgg.provider-source-set/1\",\"sources\":[]}")>]
     [<InlineData("{\"schema\":\"fsgg.provider-source-set/1\",\"sources\":[],\"execute\":\"echo unwanted\"}")>]
@@ -118,6 +128,15 @@ module ProviderSourceTests =
         Assert.NotEmpty(codes (ProviderSource.verifyMembers manifest [ List.head members ]))
         Assert.NotEmpty(codes (ProviderSource.verifyMembers manifest [ "catalog.yml", bytes "changed"; List.last members ]))
         Assert.NotEmpty(codes (ProviderSource.verifyMembers manifest (members @ [ List.head members ])))
+
+    [<Fact>]
+    let ``same length mutation of captured source bytes fails the digest join`` () =
+        let changed = Array.copy catalogBytes
+        changed[0] <- changed[0] ^^^ 0xffuy
+        Assert.Contains(
+            "source.memberDigestMismatch",
+            codes (ProviderSource.verifyMembers manifest [ "catalog.yml", changed; "fixture.nupkg", archiveBytes ])
+        )
 
     [<Theory>]
     [<InlineData("../escape")>]

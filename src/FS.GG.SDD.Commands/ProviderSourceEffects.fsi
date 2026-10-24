@@ -9,6 +9,8 @@ module ProviderSourceEffects =
             PolicyBytes: byte array
             ExpectedPolicySha256: string
             CacheRoot: string
+            /// Inspection has no target; scaffold supplies its target before source-cache effects.
+            TargetRoot: string option
             Offline: bool
         }
 
@@ -35,6 +37,8 @@ module ProviderSourceEffects =
     /// Consumes one original acquisition window. Unknown cleanup cannot return a prepared set.
     val run: operation: Operation -> Async<Result<PreparedSet, Fsgg.ProviderCatalog.Diagnostic list>>
     val observe: operation: Operation -> Observation
+    /// Passive wait retains original ownership; it neither renews cleanup time nor retries acquisition.
+    val waitForSettled: operation: Operation -> Async<Observation>
     val release: operation: Operation -> Result<unit, Fsgg.ProviderCatalog.Diagnostic list>
 
     /// Selects an existing verified provider without probing tools or executing its declarations.
@@ -48,6 +52,10 @@ module ProviderSourceEffects =
     val archivePath: source: SelectedSource -> string
     val archiveSha256: source: SelectedSource -> string
     val sourceObservation: source: SelectedSource -> FS.GG.SDD.Artifacts.ProviderSource.Observation
+    /// Exact selected provider and ordinal literal overrides, with defensive catalog-byte copy.
+    val catalogSelection: source: SelectedSource -> CatalogScaffoldWorkflow.CatalogSelection
+    /// None is inspection-only and cannot be used by prepareFromSource to create a target later.
+    val targetRoot: source: SelectedSource -> string option
 
     /// The existing scaffold caller captures these through its held input path and original budget.
     val inputFiles: source: SelectedSource -> InputFile list

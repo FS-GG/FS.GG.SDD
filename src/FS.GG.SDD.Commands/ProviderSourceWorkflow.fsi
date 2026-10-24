@@ -8,6 +8,7 @@ module ProviderSourceWorkflow =
             SourceSetSha256: string
             Policy: FS.GG.SDD.Artifacts.ProviderSource.Policy
             CacheRoot: string
+            TargetRoot: string option
             Offline: bool
         }
 
@@ -49,3 +50,11 @@ module ProviderSourceWorkflow =
     val phase: model: Model -> Phase
     val outcome: model: Model -> Outcome
     val diagnostics: model: Model -> Fsgg.ProviderCatalog.Diagnostic list
+
+    /// Pure correspondence check, not construction or authentication of a selected source handle.
+    val validateScaffoldJoin:
+        selectedTarget: string option ->
+        selectedCatalog: CatalogScaffoldWorkflow.CatalogSelection ->
+        selectedArchive: string ->
+        selectedArchiveSha256: string ->
+        actual: CatalogScaffoldWorkflow.CatalogScaffoldRequest -> Fsgg.ProviderCatalog.Diagnostic list

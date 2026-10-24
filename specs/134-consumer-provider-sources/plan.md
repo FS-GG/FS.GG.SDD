@@ -104,6 +104,24 @@ there is no claim of hostile containment or unqualified cross-platform parity.
 
 ## Compatibility and delivery
 
+Source preparation receives the scaffold target before any cache effect (inspection
+supplies no target). Refuse cache/source/staging overlap with that target in pure
+preparation and recheck physical containment at acquisition. The selected cache
+root must already exist; source acquisition never creates missing parent paths
+that could accidentally create a target. Existing/appearing scaffold targets are
+preserved, with the existing final no-replace guard retained. Request byte arrays
+are copied before validation and returned payload arrays are defensive copies.
+After cleanup Unknown, passive settlement waiting retains the original operation;
+it grants neither a retry nor a new cleanup deadline.
+
+The opaque selected source carries its original target binding. None is genuinely
+inspection-only: it cannot later enter prepareFromSource. Sourced preparation
+requires the same target, provider ID, ordinal literal override list, catalog
+bytes/raw digest and archive path/raw digest as the selected handle, including
+when two providers share one template/archive. Before cache or scaffold effects,
+recheck physical source/cache/staging versus target ancestry in both directions;
+different path strings or mount aliases do not establish disjoint objects.
+
 Keep current catalog contract3.0.0 and schema2 catalog bytes untouched. Additive
 source interfaces live in Artifacts/Commands with matching `.fsi` baselines and
 consumer tests. Schema3 is explicitly incompatible with old provenance readers;

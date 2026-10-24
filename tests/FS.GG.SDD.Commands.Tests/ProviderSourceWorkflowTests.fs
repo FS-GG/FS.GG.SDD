@@ -33,6 +33,7 @@ module ProviderSourceWorkflowTests =
                     MaximumExpandedBytes = 2097152L
                 }
             CacheRoot = "/selected/cache"
+            TargetRoot = None
             Offline = false
         }
 
@@ -87,6 +88,7 @@ module ProviderSourceWorkflowTests =
                 PolicyBytes = policyBytes
                 ExpectedPolicySha256 = ProviderSource.sha256 policyBytes
                 CacheRoot = "/this-path-does-not-exist/source-cache"
+                TargetRoot = None
                 Offline = true
             }
 
@@ -99,3 +101,50 @@ module ProviderSourceWorkflowTests =
         match ProviderSourceEffects.prepare { actual with PolicyBytes = sourceBytes } System.Threading.CancellationToken.None with
         | Error errors -> Assert.Contains(errors, fun error -> error.Code = "source.rawDigestMismatch")
         | Ok _ -> failwith "Caller metadata did not bind the actual policy bytes."
+
+    [<Fact>]
+    let ``cache staging cannot create or mutate a selected target before validation`` () =
+        let overlapping = { request with TargetRoot = Some "/selected" }
+        let model, effects = ProviderSourceWorkflow.init overlapping
+        Assert.Equal(ProviderSourceWorkflow.Refused, ProviderSourceWorkflow.outcome model)
+        Assert.Empty effects
+
+    [<Fact>]
+    let ``same archive does not authorize another provider target or literal parameter selection`` () =
+        let selected: CatalogScaffoldWorkflow.CatalogSelection =
+            {
+                CatalogBytes = [| 1uy; 2uy |]
+                ExpectedRawDigest = digest
+                Provider = Some "first-provider"
+                Overrides = [ "name", "literal value"; "argument", "$(literal);&" ]
+            }
+
+        let actual: CatalogScaffoldWorkflow.CatalogScaffoldRequest =
+            {
+                Selection = selected
+                TargetRoot = "/selected/product"
+                TemplateArchive = "/selected/cache/package.nupkg"
+                ExpectedArchiveDigest = digest
+                PolicyBytes = [||]
+                ExpectedPolicyDigest = digest
+                SelectedPlatform = "linux-x64"
+                PreflightTimeoutSeconds = 60
+                ScaffoldTimeoutSeconds = 60
+                DryRun = false
+            }
+
+        let check target request =
+            ProviderSourceWorkflow.validateScaffoldJoin target selected actual.TemplateArchive digest request
+
+        Assert.Empty(check (Some actual.TargetRoot) actual)
+        Assert.NotEmpty(check None actual)
+        Assert.NotEmpty(check (Some "/other/product") actual)
+
+        for changed in
+            [
+                { selected with Provider = Some "second-provider" }
+                { selected with Overrides = List.rev selected.Overrides }
+                { selected with Overrides = [ "name", "different" ] }
+                { selected with CatalogBytes = [| 3uy |] }
+            ] do
+            Assert.NotEmpty(check (Some actual.TargetRoot) { actual with Selection = changed })

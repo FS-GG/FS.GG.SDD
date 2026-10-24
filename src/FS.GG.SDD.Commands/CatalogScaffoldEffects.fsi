@@ -39,6 +39,9 @@ module CatalogScaffoldEffects =
 
     /// Selects the same executor with source provenance written inside staging before commit.
     /// The original preflight captures every source input and verifies it against the prepared handle.
+    /// Refuses inspection-only handles or any different target, provider, literal override sequence,
+    /// catalog bytes/digest or archive path/digest; sharing a template/archive does not merge providers.
+    /// Physical target/source/cache ancestor and descendant aliases are checked before effects.
     val prepareFromSource:
         host: HostSelection ->
         source: ProviderSourceEffects.SelectedSource ->

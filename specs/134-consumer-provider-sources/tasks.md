@@ -3,7 +3,7 @@
 - [x] Recover source custody, actual parent928, current protected enrollment and
   accepted source dispatch; preserve supplier/ABI and original-operation boundaries.
 - [x] Specify the full outcome, versions and numeric ceilings before effect code.
-- [ ] Sketch Artifacts/Commands public `.fsi` APIs and representative semantic/API tests.
+- [x] Sketch Artifacts/Commands public `.fsi` APIs and representative semantic/API tests.
 - [ ] Obtain exact API/preflight review and separately selected compiler/API exercise.
 - [ ] Implement strict source-set/manifest/policy/receipt codecs and pure selection.
 - [ ] Implement schema3 provenance joins and update all legacy/ownership readers.
