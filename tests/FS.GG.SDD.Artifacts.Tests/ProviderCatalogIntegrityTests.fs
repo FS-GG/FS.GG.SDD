@@ -138,3 +138,65 @@ module ProviderCatalogIntegrityTests =
         let bytes = [| 0xffuy |]
         Assert.True(Result.isError (ProviderCatalogIntegrity.verify (ProviderCatalogIntegrity.digest bytes) bytes))
         Assert.True(Result.isError (ProviderCatalogIntegrity.verify "invalid" (CatalogIntegrityFixture.bytes ())))
+
+    // FS.GG.SDD#1127: the canonical writer emits "default": null for an absent default, which
+    // the parser used to refuse, so a catalog with a default-less parameter had no round trip.
+    [<Fact>]
+    let ``a parameter without a default round trips through the canonical writer and parser`` () =
+        let sealedCatalog = CatalogIntegrityFixture.sealedCatalog ()
+        let descriptor = sealedCatalog.Providers.Head
+        let parameter = descriptor.Parameters.Head
+        let withoutDefault =
+            { descriptor with
+                Parameters = { parameter with Default = None } :: descriptor.Parameters.Tail }
+
+        let resealed =
+            { withoutDefault with
+                DescriptorDigest = ProviderCatalogIntegrity.digest (ProviderCatalogIntegrity.descriptorBytes withoutDefault) }
+
+        let catalog = { sealedCatalog with Providers = resealed :: sealedCatalog.Providers.Tail }
+        let sealedAgain = { catalog with Digest = ProviderCatalogIntegrity.digest (ProviderCatalogIntegrity.catalogBytes catalog) }
+        let canonical = ProviderCatalogIntegrity.catalogBytes sealedAgain
+        Assert.Contains("\"default\":null", Encoding.UTF8.GetString canonical)
+        // The canonical bytes carry no digest member; declare it as the authored fixture does.
+        let declared = JsonNode.Parse(Encoding.UTF8.GetString canonical) |> nonNull
+        declared["digest"] <- JsonValue.Create sealedAgain.Digest
+        let text = declared.ToJsonString()
+
+        // Parsing the canonical bytes yields the absent default and the same semantic identity.
+        match ProviderCatalog.parse text with
+        | Error errors -> failwithf "Canonical writer output must parse: %A" errors
+        | Ok parsed ->
+            let reparsed = parsed.Providers.Head.Parameters |> List.find (fun p -> p.Key = parameter.Key)
+            Assert.Equal<string option>(None, reparsed.Default)
+
+        // The full semantic verification (descriptor and catalog digests over re-encoded content) holds.
+        let bytes = Encoding.UTF8.GetBytes text
+        match ProviderCatalogIntegrity.verify (ProviderCatalogIntegrity.digest bytes) bytes with
+        | Ok verified -> Assert.Equal<string option>(None, (verified.Providers.Head.Parameters |> List.find (fun p -> p.Key = parameter.Key)).Default)
+        | Error errors -> failwithf "The canonical writer output must verify: %A" errors
+
+        // An absent member and an explicit null are the same declaration and the same digest.
+        let node = JsonNode.Parse(text) |> nonNull
+        let first = ((node["providers"] |> nonNull).AsArray()[0] |> nonNull)
+        let nodes = (first["parameters"] |> nonNull).AsArray() |> Seq.map (fun n -> (nonNull n).AsObject()) |> Seq.toList
+        let target = nodes |> List.find (fun n -> (n["key"] |> nonNull).GetValue<string>() = parameter.Key)
+        Assert.True(target.ContainsKey "default" && isNull target["default"])
+        target.Remove "default" |> ignore
+        match ProviderCatalog.parse (node.ToJsonString()) with
+        | Error errors -> failwithf "An absent default must still parse: %A" errors
+        | Ok parsed ->
+            let reparsed = parsed.Providers.Head.Parameters |> List.find (fun p -> p.Key = parameter.Key)
+            Assert.Equal<string option>(None, reparsed.Default)
+        let absentBytes = Encoding.UTF8.GetBytes(node.ToJsonString())
+        Assert.True(Result.isOk (ProviderCatalogIntegrity.verify (ProviderCatalogIntegrity.digest absentBytes) absentBytes))
+
+    [<Fact>]
+    let ``a non scalar default still refuses`` () =
+        let text = Encoding.UTF8.GetString(CatalogIntegrityFixture.bytes ())
+        let node = JsonNode.Parse(text) |> nonNull
+        let first = ((node["providers"] |> nonNull).AsArray()[0] |> nonNull)
+        let firstParameter = ((first["parameters"] |> nonNull).AsArray()[0] |> nonNull).AsObject()
+        firstParameter["default"] <- JsonNode.Parse "[\"a\"]"
+        Assert.True(Result.isError (ProviderCatalog.parse (node.ToJsonString())))
+

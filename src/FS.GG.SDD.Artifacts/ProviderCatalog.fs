@@ -107,9 +107,13 @@ module ProviderCatalog =
             Required = boolean path "required" f
             Prompt = scalarField path "prompt" f
             Help = scalarField path "help" f
+            // The canonical writer (ProviderCatalogIntegrity) emits an explicit null for an absent
+            // default, so null is accepted as absent; any other non-scalar value still refuses.
             Default =
-                List.tryFind (fun (key, _) -> key = "default") f
-                |> Option.map (fun (_, value) -> scalar (path + ".default") value)
+                match List.tryFind (fun (key, _) -> key = "default") f with
+                | None -> None
+                | Some(_, (:? YamlScalarNode as value)) -> tryScalarNonNullAt [] value
+                | Some _ -> malformed (path + ".default") "Expected scalar or null."
             Values = strings path "values" f
             Validation =
                 {

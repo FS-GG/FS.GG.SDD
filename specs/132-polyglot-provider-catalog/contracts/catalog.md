@@ -1,7 +1,9 @@
 # Catalog schema 2 / descriptor protocol 3.0.0
 
 All mapping keys are closed: unknown keys refuse rather than silently weakening declarations.
-All fields below are required except `default`; every list must be explicit (empty is permitted
+All fields below are required except `default`, which may be omitted or an explicit `null`
+(both mean no default; the canonical writer emits `null`, so canonical bytes and digests are
+unchanged by accepting it); every list must be explicit (empty is permitted
 unless stated). IDs and metadata strings are nonblank. IDs are exact, case-sensitive literals.
 Digests are `sha256:` followed by exactly 64 lowercase hex digits. They are declarations, not
 proof of authenticity or content equality. Catalog IDs, provider IDs and descriptor IDs are
