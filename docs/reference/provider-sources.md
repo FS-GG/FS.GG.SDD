@@ -51,7 +51,10 @@ fsgg-sdd scaffold \
 Parameter names and the execution policy come from the selected provider contract.
 The example budgets must fit that policy. A source declaration or acquisition
 policy grants no permission to execute provider commands. Direct-catalog and
-source options cannot be mixed. The target is bound before source/cache effects;
+source options cannot be mixed. In the source route the `--admission-policy` file is
+read through the source-policy bound of 64 KiB (65536 bytes, the same limit as the
+acquisition policy); a larger file is refused. The direct-catalog route keeps its own,
+larger (1 MiB) bound. The target is bound before source/cache effects;
 an inspection-only handle cannot later authorize an arbitrary target.
 
 The existing catalog executor validates the selected nupkg identity, TemplateId,
