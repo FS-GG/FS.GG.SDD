@@ -20,11 +20,37 @@ spec.loader.exec_module(cert)
 DIGEST = 'sha256:' + 'a' * 64
 
 
+def evidence_for(check_id):
+    """Evidence that satisfies the admission-side semantic rules for each required check."""
+    refusal = {'status': 'failed', 'ownership': 'Settled', 'targetUnchanged': True, 'stagingUnchanged': True}
+    table = {
+        'host.supported-profile': {'machine': 'x86_64', 'glibc': '2.44', 'runtime': '10.0.12'},
+        'lifecycle.scaffold': {'status': 'succeeded', 'ownership': 'Settled', 'stagingRemaining': 0},
+        'lifecycle.dry-run': {'status': 'prepared', 'targetCreated': False},
+        'lifecycle.strict-readback': {'schemaVersion': 2, 'invocationCount': 5},
+        'lifecycle.deterministic-instantiation': {'files': 200, 'treeSha256': 'd' * 64},
+        'provenance.inputs-bound': {'catalogDigest': DIGEST, 'policyDigest': DIGEST, 'archiveDigest': DIGEST, 'platform': 'linux-x64'},
+        'provenance.tools-and-invocations': {'tools': [{'id': 't', 'version': '1'}], 'invocationCount': 5},
+        'provenance.declared-bindings': {'capabilityId': 'test:test', 'evidenceFormat': 'f@1', 'argumentCount': 8},
+        'skill-union.recorded-and-present': {'providerSkills': 1, 'sddOwnedSkills': 21, 'seededUnrecorded': 6, 'onDisk': 28},
+        'skill-union.mirrors-equal': {'skills': 28, 'recordedMirrors': 1},
+        'evidence.positive': {'exit': 0, 'diagnostic': None, 'evidenceProduced': True},
+        'evidence.missing': {'exit': 1, 'diagnostic': 'was not produced', 'evidenceProduced': False},
+        'evidence.stale': {'exit': 1, 'diagnostic': 'existed before launch', 'evidenceProduced': False},
+        'evidence.mismatched': {'exit': 1, 'diagnostic': 'sources do not match', 'evidenceProduced': True},
+        'evidence.whole-request-refusal': {'exit': 3, 'diagnostic': 'RawDigestMismatch', 'commandLaunched': False},
+        'evidence.capture-lifetime': {'invocations': 6, 'settledCaptures': 5, 'workerSurvivors': 0, 'admittedWindowSeconds': 80},
+    }
+    if check_id.startswith('no-partial-state.'):
+        return dict(refusal, diagnostic=cert.NO_PARTIAL_CASES[check_id.split('.', 1)[1]])
+    return table[check_id]
+
+
 def good_report():
-    checks = [{'id': i, 'group': i.split('.')[0], 'status': 'pass', 'detail': '', 'evidence': {'observed': True}} for i in cert.required_check_ids()]
+    checks = [{'id': i, 'group': i.split('.')[0], 'status': 'pass', 'detail': '', 'evidence': evidence_for(i)} for i in cert.required_check_ids()]
     return {'schema': cert.REPORT_SCHEMA,
             'harness': {'sourceRevision': 'b' * 40, 'sourceTreeSha256': 'c' * 64},
-            'host': {'machine': 'x86_64', 'glibc': '2.44', 'runtimes': ['10.0.12']},
+            'host': {'machine': 'x86_64', 'glibc': '2.44', 'runtimes': ['10.0.11', '10.0.12']},
             'tools': {'sdd': {'version': '2.5.1', 'sha256': DIGEST}, 'governance': {'version': '1.15.0', 'sha256': DIGEST}},
             'artifact': {'provider': 'p', 'platform': 'linux-x64', 'catalogDigest': DIGEST, 'policyDigest': DIGEST, 'archiveDigest': DIGEST},
             'checks': checks, 'scope': cert.SCOPE,
@@ -106,15 +132,73 @@ class ReportIntegrityTests(unittest.TestCase):
     def test_machine_specific_paths_cannot_enter_a_report(self):
         for text in ('/home/developer/x', 'see /tmp/run/out for details', 'at /var/lib/y'):
             report = good_report()
-            report['checks'][0]['evidence'] = {'note': text}
+            report['checks'][0]['evidence'] = dict(report['checks'][0]['evidence'], note=text)
             self.assertTrue(any('absolute path' in p for p in cert.validate_report(report)), text)
         report = good_report()
-        report['checks'][0]['evidence'] = {'diagnostic': 'catalog.targetExists', 'path': 'out/governance-handoff.json'}
+        report['checks'][0]['evidence'] = dict(report['checks'][0]['evidence'], path='out/governance-handoff.json')
         self.assertEqual([], cert.validate_report(report))
 
     def test_non_objects_are_rejected_without_raising(self):
         for value in (None, [], 'x', {}, {'schema': cert.REPORT_SCHEMA}):
             self.assertTrue(cert.validate_report(value))
+
+
+class SemanticEvidenceTests(unittest.TestCase):
+    """The admitter cannot recompute a run, so the report must at least say the right things per check."""
+
+    def mutated(self, check_id, **changes):
+        report = good_report()
+        check = next(c for c in report['checks'] if c['id'] == check_id)
+        check['evidence'] = dict(check['evidence'], **changes)
+        return cert.validate_report(report)
+
+    def test_arbitrary_evidence_no_longer_passes(self):
+        report = good_report()
+        for check in report['checks']:
+            check['evidence'] = {'x': 0}
+        problems = cert.validate_report(report)
+        for check_id in cert.required_check_ids():
+            self.assertTrue(any(p.startswith(check_id + ':') for p in problems), check_id)
+
+    def test_each_refusal_must_carry_its_intended_diagnostic_and_unchanged_state(self):
+        for name, code in cert.NO_PARTIAL_CASES.items():
+            cid = 'no-partial-state.' + name
+            self.assertTrue(self.mutated(cid, diagnostic='catalog.somethingElse'), cid)
+            self.assertTrue(self.mutated(cid, targetUnchanged=False), cid)
+            self.assertTrue(self.mutated(cid, stagingUnchanged=False), cid)
+            self.assertTrue(self.mutated(cid, status='succeeded'), cid)
+            self.assertTrue(self.mutated(cid, ownership='Unknown'), cid)
+
+    def test_provenance_digests_must_equal_the_reported_artifact(self):
+        self.assertTrue(self.mutated('provenance.inputs-bound', archiveDigest='sha256:' + 'e' * 64))
+        self.assertTrue(self.mutated('provenance.inputs-bound', platform='linux-arm64'))
+
+    def test_evidence_cases_have_their_required_shape(self):
+        self.assertTrue(self.mutated('evidence.positive', exit=1))
+        self.assertTrue(self.mutated('evidence.positive', evidenceProduced=False))
+        for name in cert.NEGATIVE_EVIDENCE_CASES:
+            self.assertTrue(self.mutated('evidence.' + name, exit=0), name)
+            self.assertTrue(self.mutated('evidence.' + name, diagnostic=''), name)
+        self.assertTrue(self.mutated('evidence.stale', evidenceProduced=True))
+        self.assertTrue(self.mutated('evidence.whole-request-refusal', commandLaunched=True))
+        self.assertTrue(self.mutated('evidence.whole-request-refusal', exit=1))
+        self.assertTrue(self.mutated('evidence.capture-lifetime', workerSurvivors=1))
+        self.assertTrue(self.mutated('evidence.capture-lifetime', settledCaptures=0))
+
+    def test_the_host_must_be_the_supported_profile_and_agree_with_the_report(self):
+        self.assertTrue(self.mutated('host.supported-profile', glibc='2.39'))
+        self.assertTrue(self.mutated('host.supported-profile', machine='aarch64'))
+        report = good_report()
+        report['host']['runtimes'] = ['10.0.11']
+        self.assertTrue(cert.validate_report(report))
+
+    def test_non_passing_checks_are_not_semantically_constrained(self):
+        report = good_report()
+        check = next(c for c in report['checks'] if c['id'] == 'no-partial-state.archive-tamper')
+        check.update(status='fail', detail='crashed', evidence={})
+        recount(report)
+        report['verdict']['certified'] = False
+        self.assertEqual([], cert.validate_report(report))
 
 
 class ExampleTests(unittest.TestCase):
@@ -134,7 +218,7 @@ class RequestTests(unittest.TestCase):
     def request(self, tmp):
         manifest = Path(tmp) / 'request.json'
         manifest.write_text('{}')
-        cases = [{'name': n, 'expectedExit': 0 if n == 'positive' else 1} for n in cert.REQUIRED_EVIDENCE_CASES]
+        cases = [dict({'name': n, 'expectedExit': 0 if n == 'positive' else 1}, **({} if n == 'positive' else {'expectedDiagnostic': 'd'}), **({'staleEvidence': True} if n == 'stale' else {})) for n in cert.REQUIRED_EVIDENCE_CASES]
         tool = {'version': '1', 'sha256': DIGEST}
         return {'schema': cert.REQUEST_SCHEMA, 'sourceRoot': '.', 'identityPaths': ['scripts/*.py'], 'environment': {}, 'sdd': {}, 'authoring': {},
                 'governance': {'evidenceCases': cases}, 'artifact': {'request': str(manifest)}, 'tools': {'sdd': tool, 'governance': dict(tool)}}
@@ -153,6 +237,16 @@ class RequestTests(unittest.TestCase):
             bad = copy.deepcopy(request); bad['unexpected'] = 1
             with self.assertRaises(ValueError): cert.validate_request(bad)
             bad = copy.deepcopy(request); bad['governance']['evidenceCases'].append({'name': 'positive', 'expectedExit': 0})
+            with self.assertRaises(ValueError): cert.validate_request(bad)
+            # The required negative cases are behaviours, not labels.
+            for name in cert.NEGATIVE_EVIDENCE_CASES:
+                bad = copy.deepcopy(request); [c for c in bad['governance']['evidenceCases'] if c['name'] == name][0]['expectedExit'] = 0
+                with self.assertRaises(ValueError): cert.validate_request(bad)
+                bad = copy.deepcopy(request); [c for c in bad['governance']['evidenceCases'] if c['name'] == name][0].pop('expectedDiagnostic')
+                with self.assertRaises(ValueError): cert.validate_request(bad)
+            bad = copy.deepcopy(request); [c for c in bad['governance']['evidenceCases'] if c['name'] == 'stale'][0].pop('staleEvidence')
+            with self.assertRaises(ValueError): cert.validate_request(bad)
+            bad = copy.deepcopy(request); [c for c in bad['governance']['evidenceCases'] if c['name'] == 'positive'][0]['staleEvidence'] = True
             with self.assertRaises(ValueError): cert.validate_request(bad)
 
 

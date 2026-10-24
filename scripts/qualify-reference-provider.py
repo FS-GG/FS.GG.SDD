@@ -135,11 +135,35 @@ def run(args):
         if case['name'] == 'positive':
             case['environment'] = {'FSGG_FIXTURE_MODE': 'mismatch'}  # a provider whose evidence cites the wrong bytes
     bad, bad_report, _ = run_certify(journey, bad_request, 'bad-provider', False)
-    journey.record('a deliberately bad provider is NOT certified, exit nonzero, failing exactly evidence.positive',
+    journey.record('a provider whose evidence cites the wrong bytes is NOT certified, exit nonzero, failing exactly evidence.positive',
                    bad.returncode == 1 and bad_report is not None and not bad_report['verdict']['certified']
                    and bad_report['verdict']['failed'] == ['evidence.positive'] and not bad_report['verdict']['skipped']
                    and not certification.validate_report(bad_report),
                    json.dumps(bad_report['verdict']) if bad_report else bad.stdout[-300:])
+    manifest = json.loads((artifact / 'request.json').read_text())
+    # A provider whose declared executable does not match its declared digest fails provenance, not evidence.
+    (work / 'artifact-bad-bindings').mkdir()
+    (work / 'artifact-bad-bindings/request.json').write_text(json.dumps(dict(manifest, fixtureExecutableSha256='0' * 64)))
+    bad_bindings = copy.deepcopy(request)
+    bad_bindings['artifact'] = {'request': str(work / 'artifact-bad-bindings/request.json')}
+    result, result_report, _ = run_certify(journey, bad_bindings, 'bad-bindings', False)
+    journey.record('a provider with a mismatched declared executable digest is NOT certified, failing exactly provenance.declared-bindings',
+                   result.returncode == 1 and result_report is not None and not result_report['verdict']['certified']
+                   and result_report['verdict']['failed'] == ['provenance.declared-bindings'] and not result_report['verdict']['skipped']
+                   and not certification.validate_report(result_report),
+                   json.dumps(result_report['verdict']) if result_report else result.stdout[-300:])
+    # A provider whose scaffold cannot run: dependants are skipped with a reason and nothing certifies.
+    (work / 'artifact-unrunnable').mkdir()
+    (work / 'artifact-unrunnable/request.json').write_text(json.dumps(dict(manifest, archive=str(work / 'artifact-unrunnable/absent.nupkg'))))
+    unrunnable = copy.deepcopy(request)
+    unrunnable['artifact'] = {'request': str(work / 'artifact-unrunnable/request.json')}
+    skipped, skipped_report, _ = run_certify(journey, unrunnable, 'unrunnable-provider', False)
+    verdict = skipped_report['verdict'] if skipped_report else {}
+    journey.record('a provider whose scaffold cannot run fails lifecycle.scaffold, its dependants are skipped with a reason, nothing certifies',
+                   skipped.returncode == 1 and skipped_report is not None and not verdict['certified'] and 'lifecycle.scaffold' in verdict['failed']
+                   and {'lifecycle.strict-readback', 'provenance.inputs-bound', 'skill-union.mirrors-equal'} <= set(verdict['skipped'])
+                   and all(c['detail'] for c in skipped_report['checks'] if c['status'] != 'pass') and not certification.validate_report(skipped_report),
+                   json.dumps(verdict)[:400])
     return finish(journey, facts, tools, summary, report)
 
 

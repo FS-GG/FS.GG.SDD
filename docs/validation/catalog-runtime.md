@@ -405,8 +405,10 @@ archive, digests, overrides, capability and evidence declarations),
 `governance` (`tool`, `workspaceCatalog` directory of `.fsgg/*.yml`,
 `verifyPaths`, `captureLifetime`, `evidenceCases`) and `tools` (`version` and
 `sha256:` package digest of each installed tool).
-`evidenceCases` must include `positive` (exit 0) and `missing`, `stale`,
-`mismatched`; extra cases are reported as `evidence.<name>`.
+`evidenceCases` must include `positive` (exit 0, no stale evidence) and
+`missing`, `stale`, `mismatched`, each with a non-zero `expectedExit` and a named
+`expectedDiagnostic` (`stale` also sets `staleEvidence`); the names are
+behaviours, not labels. Extra cases are reported as `evidence.<name>`.
 
 | Group | Check ids | What it proves from the packed artifact |
 |---|---|---|
@@ -414,7 +416,8 @@ archive, digests, overrides, capability and evidence declarations),
 | provenance | `inputs-bound`, `tools-and-invocations`, `declared-bindings` | schema-2 digests and effective parameters equal the packed inputs; the declared tool at its exact version and the literal template argv; the declared command, arguments and evidence output |
 | skill-union | `recorded-and-present`, `mirrors-equal` | recorded provider and SDD-owned skills exist and do not collide; the whole neutral skill set and its `.claude` mirror are equal byte for byte |
 | no-partial-state | `occupied-target`, `catalog-digest`, `policy-digest`, `archive-tamper`, `malformed-catalog`, `unsupported-schema-version`, `wrong-tool-version`, `unsupported-platform` | each is refused by the product with its intended diagnostic (not an outer timeout), ownership settled, the target unchanged or never created, no owned staging |
-| evidence | `positive`, `missing`, `stale`, `mismatched`, ..., `whole-request-refusal`, `capture-lifetime` | the declared build/test/package command runs through Governance Verify/GateExecution; the evidence is produced and accepted; missing, stale and mismatched evidence is refused; a bad provenance digest is refused before the command launches; every Verify host exits inside the admitted window with no surviving worker process |
+| host | `supported-profile` | the run is on Linux-x64, glibc 2.44 with the 10.0.12 runtime, and the report's host agrees |
+| evidence | `positive`, `missing`, `stale`, `mismatched`, ..., `whole-request-refusal`, `capture-lifetime` | the artifact's one declared required capability (the reference provider declares `test:test`) runs through Governance Verify/GateExecution; its evidence is produced and accepted; missing, stale and mismatched evidence is refused; a bad provenance digest is refused before the command launches; every Verify host exits inside the admitted window with no surviving worker process. Further build or package capabilities are not exercised: the manifest names exactly one |
 
 Malformed-provider and wrong-version controls are derived from the packed
 artifact: a digest-correct catalog with an unknown member (`catalog.malformed`),
@@ -430,13 +433,21 @@ package-only qualification of the reference provider: published SDD CLI and
 Governance CLI from nuget.org in an empty private cache, the typed example
 compiled against published packages, the artifact packed, certified, and the
 report validated. It also proves the harness is not vacuous: a deliberately bad
-provider (its positive-case fixture writes evidence citing the wrong bytes) is
-NOT certified and fails exactly `evidence.positive`, and each of six
+provider is NOT certified in each of three ways (evidence citing the wrong bytes
+fails exactly `evidence.positive`; a mismatched declared executable digest fails
+exactly `provenance.declared-bindings`; an unrunnable scaffold fails
+`lifecycle.scaffold` and its dependants are `skipped` with a reason), and each of six
 tamperings with the certified report is detected by `check-report`.
 
-The `tools` identities in a report are attested by the request's caller; the
-qualification driver derives them from the nuget.org bytes it installed, and an
-admitter must not accept them from an author without that provenance.
+`check-report` checks that a report is complete and internally consistent, and
+that each passing check's evidence says what that check must say (the intended
+diagnostic, target and staging unchanged, provenance digests equal to the
+report's artifact digests, exit codes, no surviving worker, the supported
+host). It cannot authenticate the producer: the report is unsigned and a
+producer's self-attestation, and the `tools` identities are attested by the
+request's caller (the qualification driver derives them from the nuget.org bytes
+it installed). An admitter who needs assurance re-runs the harness on the same
+packed artifact and compares the artifact digests and verdict.
 
 Scope: ordinary verification under ADR-0096 on the exact Linux-x64 / .NET
 10.0.12 / glibc 2.44 profile; a local cooperative profile, not hostile

@@ -141,8 +141,9 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
 - FR-021: A maintained harness (`scripts/provider-certification.py`) qualifies a PACKED provider artifact
   through the installed SDD CLI and installed Governance CLI and emits a closed
   `fsgg.provider-certification/v1` report: lifecycle, provenance, skill-union, no-partial-state,
-  unsupported-tool, malformed/wrong-version provider controls and build/test/package evidence through
-  Governance Verify/GateExecution under the FR-019/020 capture-lifetime join.
+  unsupported-tool, malformed/wrong-version provider controls, a supported-host check and the artifact's one
+  declared required capability's evidence through Governance Verify/GateExecution under the FR-019/020
+  capture-lifetime join (further build or package capabilities are not exercised).
 - FR-022: A leg that cannot run is `skipped` with a reason and the verdict is not certified; an
   admission-side validator (`check-report`) rejects a report with a missing, duplicated, unevidenced or
   inconsistent check, a verdict that overstates the checks, or a machine-specific path.

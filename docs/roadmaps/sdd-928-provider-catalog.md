@@ -303,11 +303,11 @@ asks for a reusable qualification harness and a package-only certification repor
 admission. `scripts/provider-certification.py` is that harness: given a PACKED provider artifact, the
 installed SDD CLI and the installed Governance CLI, it emits a closed `fsgg.provider-certification/v1` report of
 lifecycle, provenance, skill-union, no-partial-state, unsupported-tool, malformed/wrong-version and
-Governance Verify/GateExecution evidence checks (the latter under the C3.1-03 capture-lifetime join). A leg
-that cannot run is `skipped` and cannot certify; `check-report` is the admission-side integrity validator.
+Governance Verify/GateExecution evidence checks for the artifact's one declared required capability (under the C3.1-03 capture-lifetime join; further build or package capabilities are not exercised). A leg
+that cannot run is `skipped` and cannot certify; `check-report` is the admission-side validator of completeness, consistency and per-check evidence (not authentication: the report is a producer's self-attestation).
 `scripts/qualify-reference-provider.py` qualifies the reference provider against the published SDD 2.5.1 and
 Governance 1.15.0 packages in an empty cache and proves the harness is not vacuous with a deliberately bad
-provider and six report tamperings. Guide:
+provider (three ways) and six report tamperings. Guide:
 [catalog runtime validation](../validation/catalog-runtime.md#provider-qualification-harness-and-certification-report-sdd928-c3-1134).
 Ordinary verification under ADR-0096 on the exact Linux-x64/.NET 10.0.12/glibc 2.44 host; a local cooperative
 profile. Still open on #928: C4 distribution, the schema-v1 window, concrete language providers (Templates#441)

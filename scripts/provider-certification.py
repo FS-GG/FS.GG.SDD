@@ -11,10 +11,13 @@ records every check with its observed evidence. It proves, from the packed artif
   provenance       schema-2 digests equal the inputs, declared tools, literal invocations and bindings
   no-partial-state every refusal leaves the target and owned staging exactly as they were
   skill-union      provider and SDD-owned skills are recorded, present, and mirrors are byte-equal
-  unsupported-tool wrong tool version and unsupported platform are refused before any invocation
+  unsupported-tool wrong tool version and unsupported platform are refused by the product, with the target and
+                   owned staging untouched (the wrong-version probe is itself an observed tool invocation)
   malformed        unsupported schema version and a malformed but digest-correct catalog are refused
-  evidence         the declared build/test/package command runs through Governance Verify/GateExecution
-                   under the capture-lifetime join; missing, stale and mismatched evidence is refused
+  evidence         the artifact's ONE declared required capability (the reference provider declares test:test)
+                   runs through Governance Verify/GateExecution under the capture-lifetime join; missing, stale
+                   and mismatched evidence is refused. Further build/package capabilities are not exercised.
+  host             the run is on the exact supported host profile
 
 Nothing is skipped silently: a check whose prerequisite failed is recorded as `skipped` and the
 verdict is not certified. Exit status 0 means certified; `check-report` validates a report's integrity
@@ -45,6 +48,8 @@ SCOPE = ('Local cooperative profile on the exact Linux-x64 / .NET 10.0.12 / glib
          'not a hosted-runner profile, no authentic blocked-read or uncertain-close case, no distribution.')
 STATUSES = ('pass', 'fail', 'skipped')
 REQUIRED_EVIDENCE_CASES = ('positive', 'missing', 'stale', 'mismatched')
+NEGATIVE_EVIDENCE_CASES = ('missing', 'stale', 'mismatched')
+SUPPORTED_HOST = {'machine': 'x86_64', 'glibc': '2.44', 'runtime': '10.0.12'}
 
 NO_PARTIAL_CASES = {  # name -> expected diagnostic
     'occupied-target': 'catalog.targetExists',
@@ -57,6 +62,7 @@ NO_PARTIAL_CASES = {  # name -> expected diagnostic
     'unsupported-platform': 'catalog.admission.UnresolvedPlatform',
 }
 STATIC_CHECKS = [
+    ('host.supported-profile', 'host'),
     ('lifecycle.scaffold', 'lifecycle'), ('lifecycle.dry-run', 'lifecycle'),
     ('lifecycle.strict-readback', 'lifecycle'), ('lifecycle.deterministic-instantiation', 'lifecycle'),
     ('provenance.inputs-bound', 'provenance'), ('provenance.tools-and-invocations', 'provenance'),
@@ -134,6 +140,35 @@ def validate_report(report):
                and verdict.get('failed') == by['fail'] and verdict.get('skipped') == by['skipped'], 'verdict counts must match the checks')
         expect(verdict.get('certified') is (not missing and not by['fail'] and not by['skipped']),
                'certified must be true exactly when every required check is present and passed')
+    if not problems:
+        by_id = {c['id']: c for c in checks}
+        def need(check_id, condition, message):
+            check = by_id.get(check_id)
+            if check is not None and check['status'] == 'pass' and not condition(check['evidence']):
+                problems.append(f'{check_id}: {message}')
+        refusal_status = lambda e: e.get('status') in ('failed', 'refused')
+        need('host.supported-profile', lambda e: e.get('machine') == host['machine'] == SUPPORTED_HOST['machine'] and e.get('glibc') == host['glibc'] == SUPPORTED_HOST['glibc']
+             and e.get('runtime') == SUPPORTED_HOST['runtime'] and SUPPORTED_HOST['runtime'] in host['runtimes'], 'evidence must show the supported host and agree with the report host')
+        need('lifecycle.scaffold', lambda e: e.get('status') == 'succeeded' and e.get('ownership') == 'Settled' and e.get('stagingRemaining') == 0, 'a settled success with no staging remaining')
+        need('lifecycle.dry-run', lambda e: e.get('status') == 'prepared' and e.get('targetCreated') is False, 'a prepared dry run that created nothing')
+        need('lifecycle.strict-readback', lambda e: e.get('schemaVersion') == 2, 'schema-2 strict readback')
+        need('lifecycle.deterministic-instantiation', lambda e: isinstance(e.get('files'), int) and e['files'] > 0 and re.fullmatch(r'[0-9a-f]{64}', str(e.get('treeSha256'))), 'a non-empty tree digest')
+        need('provenance.inputs-bound', lambda e: e.get('catalogDigest') == artifact['catalogDigest'] and e.get('policyDigest') == artifact['policyDigest']
+             and e.get('archiveDigest') == artifact['archiveDigest'] and e.get('platform') == artifact['platform'], 'provenance digests must equal the report artifact digests')
+        need('provenance.tools-and-invocations', lambda e: isinstance(e.get('invocationCount'), int) and e['invocationCount'] > 0 and e.get('tools'), 'observed tools and invocations')
+        need('provenance.declared-bindings', lambda e: e.get('capabilityId') and e.get('evidenceFormat') and e.get('argumentCount', 0) > 0, 'a declared capability, evidence format and arguments')
+        need('skill-union.recorded-and-present', lambda e: e.get('providerSkills', 0) >= 1 and e.get('onDisk', 0) >= e.get('providerSkills', 0) + e.get('sddOwnedSkills', 0), 'at least one provider skill, all recorded skills on disk')
+        need('skill-union.mirrors-equal', lambda e: e.get('skills', 0) >= 1, 'a non-empty mirrored skill set')
+        for name, code in NO_PARTIAL_CASES.items():
+            need('no-partial-state.' + name, lambda e, code=code: e.get('diagnostic') == code and refusal_status(e) and e.get('ownership') in ('Settled', 'not-started', 'NotStarted')
+                 and e.get('targetUnchanged') is True and e.get('stagingUnchanged') is True, f'the intended diagnostic {code}, a settled refusal, target and staging unchanged')
+        need('evidence.positive', lambda e: e.get('exit') == 0 and e.get('evidenceProduced') is True, 'exit 0 with the declared evidence produced')
+        for name in NEGATIVE_EVIDENCE_CASES:
+            need('evidence.' + name, lambda e: isinstance(e.get('exit'), int) and e['exit'] != 0 and bool(e.get('diagnostic')), 'a non-zero refusal with its intended diagnostic')
+        need('evidence.stale', lambda e: e.get('evidenceProduced') is False, 'the stale evidence must not count as produced')
+        need('evidence.whole-request-refusal', lambda e: e.get('exit') == 3 and e.get('commandLaunched') is False and bool(e.get('diagnostic')), 'exit 3 with the command never launched')
+        need('evidence.capture-lifetime', lambda e: e.get('workerSurvivors') == 0 and isinstance(e.get('settledCaptures'), int) and e['settledCaptures'] >= 1
+             and isinstance(e.get('invocations'), int) and e['invocations'] >= e['settledCaptures'], 'no surviving worker and at least one settled capture')
     def walk(value, path='$'):
         if isinstance(value, str) and (value.startswith('/') or re.search(r'(^|[\s=])/(home|tmp|var|usr)/', value)):
             problems.append('machine-specific absolute path in report at ' + path)
@@ -313,30 +348,35 @@ class Harness:
         controls.mkdir()
         sha = lambda raw: 'sha256:' + hashlib.sha256(raw).hexdigest()
         encode = lambda value: json.dumps(value, separators=(',', ':')).encode()
-        catalog, policy = json.loads(Path(m['catalog']).read_text()), json.loads(Path(m['policy']).read_text())
-        def write(name, raw):
-            path = controls / name
-            path.write_bytes(raw)
-            return str(path)
-        tampered = write('tampered.nupkg', Path(m['archive']).read_bytes() + b'tampered-fixture-control')
-        bad_schema = dict(catalog, schemaVersion=99)
-        malformed = dict(catalog, unexpectedMember=1)
-        probe = policy['toolProbes'][0]
-        wrong = controls / 'wrong-version-tool'
-        wrong.write_text('#!/bin/sh\nprintf "%s%s%s" ' + json.dumps(probe['versionPrefix']) + ' "0.0.0-certification-wrong" ' + json.dumps(probe['versionSuffix']) + '\n')
-        wrong.chmod(0o700)
-        wrong_policy = json.loads(json.dumps(policy))
-        wrong_policy['toolProbes'][0]['executable'] = str(wrong)
-        variants = {
-            'occupied-target': {},
-            'catalog-digest': {'catalogDigest': 'sha256:' + '0' * 64},
-            'policy-digest': {'policyDigest': 'sha256:' + '0' * 64},
-            'archive-tamper': {'archive': tampered},
-            'malformed-catalog': {'catalog': write('malformed-catalog.json', encode(malformed)), 'catalogDigest': sha(encode(malformed))},
-            'unsupported-schema-version': {'catalog': write('schema-99-catalog.json', encode(bad_schema)), 'catalogDigest': sha(encode(bad_schema))},
-            'wrong-tool-version': {'policy': write('wrong-version-policy.json', encode(wrong_policy)), 'policyDigest': sha(encode(wrong_policy))},
-            'unsupported-platform': {'platform': 'unsupported-certification-platform'},
-        }
+        try:
+            catalog, policy = json.loads(Path(m['catalog']).read_text()), json.loads(Path(m['policy']).read_text())
+            def write(name, raw):
+                path = controls / name
+                path.write_bytes(raw)
+                return str(path)
+            tampered = write('tampered.nupkg', Path(m['archive']).read_bytes() + b'tampered-fixture-control')
+            bad_schema = dict(catalog, schemaVersion=99)
+            malformed = dict(catalog, unexpectedMember=1)
+            probe = policy['toolProbes'][0]
+            wrong = controls / 'wrong-version-tool'
+            wrong.write_text('#!/bin/sh\nprintf "%s%s%s" ' + json.dumps(probe['versionPrefix']) + ' "0.0.0-certification-wrong" ' + json.dumps(probe['versionSuffix']) + '\n')
+            wrong.chmod(0o700)
+            wrong_policy = json.loads(json.dumps(policy))
+            wrong_policy['toolProbes'][0]['executable'] = str(wrong)
+            variants = {
+                'occupied-target': {},
+                'catalog-digest': {'catalogDigest': 'sha256:' + '0' * 64},
+                'policy-digest': {'policyDigest': 'sha256:' + '0' * 64},
+                'archive-tamper': {'archive': tampered},
+                'malformed-catalog': {'catalog': write('malformed-catalog.json', encode(malformed)), 'catalogDigest': sha(encode(malformed))},
+                'unsupported-schema-version': {'catalog': write('schema-99-catalog.json', encode(bad_schema)), 'catalogDigest': sha(encode(bad_schema))},
+                'wrong-tool-version': {'policy': write('wrong-version-policy.json', encode(wrong_policy)), 'policyDigest': sha(encode(wrong_policy))},
+                'unsupported-platform': {'platform': 'unsupported-certification-platform'},
+            }
+        except (OSError, ValueError, KeyError, IndexError) as error:
+            for name in NO_PARTIAL_CASES:
+                self.record('no-partial-state.' + name, 'no-partial-state', 'skipped', 'controls cannot be derived from the packed artifact: ' + type(error).__name__)
+            return
         for name, expected in NO_PARTIAL_CASES.items():
             def run_case(name=name, expected=expected):
                 parent = self.output / 'refusals' / name
@@ -409,7 +449,9 @@ class Harness:
         for case in cases:
             def run_case(case=case):
                 actual, text, repo, produced, content = verify(case['name'], case.get('environment', {}), stale=case.get('staleEvidence', False))
-                assert actual['exitCode'] == case['expectedExit'], f'exit {actual["exitCode"]} (expected {case["expectedExit"]}): {text[-250:]}'
+                assert actual['exitCode'] == case['expectedExit'] and actual['cleanup'] == 'direct-child-reaped-streams-eof', f'exit {actual["exitCode"]} (expected {case["expectedExit"]}): {text[-250:]}'
+                if case['expectedExit'] != 0:
+                    assert actual['firstFailure'] == 'nonzero-exit', 'outer safeguard or crash instead of a product refusal: ' + str(actual['firstFailure'])
                 if case.get('expectedDiagnostic'):
                     assert case['expectedDiagnostic'] in text, 'intended diagnostic absent: ' + case['expectedDiagnostic']
                 if case['expectedExit'] == 0:
@@ -462,9 +504,14 @@ def validate_request(request):
     for case in cases:
         if set(case) - {'name', 'environment', 'staleEvidence', 'expectedExit', 'expectedDiagnostic'} or not isinstance(case.get('expectedExit'), int):
             raise ValueError('evidence case needs name and expectedExit and allows environment, staleEvidence, expectedDiagnostic: ' + str(case.get('name')))
-    positive = [c for c in cases if c['name'] == 'positive'][0]
-    if positive['expectedExit'] != 0:
-        raise ValueError('the positive evidence case must expect exit 0')
+    by_name = {c['name']: c for c in cases}
+    if by_name['positive']['expectedExit'] != 0 or by_name['positive'].get('staleEvidence'):
+        raise ValueError('the positive evidence case must expect exit 0 without stale evidence')
+    for name in NEGATIVE_EVIDENCE_CASES:
+        if by_name[name]['expectedExit'] == 0 or not by_name[name].get('expectedDiagnostic'):
+            raise ValueError(f'the {name} evidence case must expect a non-zero exit and name its expectedDiagnostic')
+    if by_name['stale'].get('staleEvidence') is not True:
+        raise ValueError('the stale evidence case must set staleEvidence')
     for name in ('sdd', 'governance'):
         tool = request['tools'].get(name)
         if not isinstance(tool, dict) or set(tool) != {'version', 'sha256'} or not SHA.fullmatch(str(tool.get('sha256'))):
@@ -483,6 +530,12 @@ def certify(args):
     source = Path(request['sourceRoot']).resolve()
     before = runner.tree_identity(source, request['identityPaths'])
     print('certifying provider artifact ' + harness.manifest['provider'], flush=True)
+    profile = host_profile()
+    def host_check():
+        assert profile['machine'] == SUPPORTED_HOST['machine'] and profile['glibc'] == SUPPORTED_HOST['glibc'] and SUPPORTED_HOST['runtime'] in profile['runtimes'], \
+            'unsupported host: ' + json.dumps(profile)
+        return {'machine': profile['machine'], 'glibc': profile['glibc'], 'runtime': SUPPORTED_HOST['runtime']}
+    harness.check('host.supported-profile', 'host', host_check)
     harness.positive_leg()
     harness.refusal_leg()
     harness.evidence_leg()
@@ -494,7 +547,7 @@ def certify(args):
         'schema': REPORT_SCHEMA,
         'harness': {'sourceRevision': subprocess.run(['git', '-C', str(source), 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout.strip(),
                     'sourceTreeSha256': before},
-        'host': host_profile(),
+        'host': profile,
         'tools': request['tools'],
         'artifact': {'provider': manifest['provider'], 'platform': manifest['platform'], 'catalogDigest': manifest['catalogDigest'],
                      'policyDigest': manifest['policyDigest'], 'archiveDigest': manifest['archiveDigest']},
