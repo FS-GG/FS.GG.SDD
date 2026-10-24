@@ -79,9 +79,9 @@ archive/CLI→Verify qualification, protected source delivery and distribution r
 
 ## C4a schema-v1 compatibility window (#1139)
 
-- [ ] C4a-1 Declare the window with a machine-readable block and the guarantees G1-G8.
-- [ ] C4a-2 Add the required-gate checker and its drift controls; pin the guarantees to existing unit tests.
-- [ ] C4a-3 Add the installed cross-release journey and run it on the published releases 1.0.0 to 2.5.1.
+- [x] C4a-1 Declare the window with a machine-readable block and the guarantees G1-G8.
+- [x] C4a-2 Add the required-gate checker and its drift controls; pin the guarantees to existing unit tests.
+- [x] C4a-3 Add the installed cross-release journey and run it on the published releases 1.0.0 to 2.5.1.
 
 ## SDD1115 literal parameter repair
 
