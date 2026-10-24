@@ -1,8 +1,8 @@
 {
   "schema": "fsgg.provider-certification/v1",
   "harness": {
-    "sourceRevision": "90ddffafc0403083fd7924ebc7b95dcc9c786e83",
-    "sourceTreeSha256": "e1492b74e024687145c98a8e2b8b7539b3e331eb18e950978d368b6d1566ad96"
+    "sourceRevision": "9fd4d35d677aed3c0ba3b82c68782db2c2b79fe2",
+    "sourceTreeSha256": "e83eef2373e15fbc76a60c2762b6443e05c3ddff5c47817b7bc18a0093ba3657"
   },
   "host": {
     "machine": "x86_64",
@@ -30,8 +30,8 @@
     "capabilities": [
       "test:test"
     ],
-    "catalogDigest": "sha256:22bad77a454cb50d155ccfa5733260fb403aeb5836b84326dac1f6bebd5b990d",
-    "policyDigest": "sha256:014dc306de058a22f98b03af4d99328496c89ff25afcf61024f3f7327cfe2cf3",
+    "catalogDigest": "sha256:ab3d27e28a50e0d517eb84688ce4231ee31395129128f2b71008b1e22fdbcbc9",
+    "policyDigest": "sha256:5cc475e9db4a64946ce5b042e02367470831c3855bb3803965807edc9214b149",
     "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f"
   },
   "checks": [
@@ -97,8 +97,8 @@
       "status": "pass",
       "detail": "",
       "evidence": {
-        "catalogDigest": "sha256:22bad77a454cb50d155ccfa5733260fb403aeb5836b84326dac1f6bebd5b990d",
-        "policyDigest": "sha256:014dc306de058a22f98b03af4d99328496c89ff25afcf61024f3f7327cfe2cf3",
+        "catalogDigest": "sha256:ab3d27e28a50e0d517eb84688ce4231ee31395129128f2b71008b1e22fdbcbc9",
+        "policyDigest": "sha256:5cc475e9db4a64946ce5b042e02367470831c3855bb3803965807edc9214b149",
         "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f",
         "platform": "linux-x64"
       }

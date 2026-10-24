@@ -1,8 +1,8 @@
 {
   "schema": "fsgg.provider-certification/v1",
   "harness": {
-    "sourceRevision": "90ddffafc0403083fd7924ebc7b95dcc9c786e83",
-    "sourceTreeSha256": "e1492b74e024687145c98a8e2b8b7539b3e331eb18e950978d368b6d1566ad96"
+    "sourceRevision": "9fd4d35d677aed3c0ba3b82c68782db2c2b79fe2",
+    "sourceTreeSha256": "e83eef2373e15fbc76a60c2762b6443e05c3ddff5c47817b7bc18a0093ba3657"
   },
   "host": {
     "machine": "x86_64",
@@ -32,8 +32,8 @@
       "package:package",
       "test:test"
     ],
-    "catalogDigest": "sha256:195b31d70d5ccad7e69c94f8bb1c9831d1b1d624836aa42aa2000355ea026102",
-    "policyDigest": "sha256:0ba15e7ba8f9f72bf8249863a4e556af6bf03df376e56ba4a5ee9b2df2008d28",
+    "catalogDigest": "sha256:b3546bf2bd33b2c9dcceffb7787b1329f662baaff60bd122c5f6d43d28a852c1",
+    "policyDigest": "sha256:90018782d002ece43fdf52311c26628c6a88a89cb1b61c015d70051c1e3294f6",
     "archiveDigest": "sha256:af4324855cd02d50623129bf488d07eff53a7d5817ed7ec6abd8da592a21aa86"
   },
   "checks": [
@@ -99,8 +99,8 @@
       "status": "pass",
       "detail": "",
       "evidence": {
-        "catalogDigest": "sha256:195b31d70d5ccad7e69c94f8bb1c9831d1b1d624836aa42aa2000355ea026102",
-        "policyDigest": "sha256:0ba15e7ba8f9f72bf8249863a4e556af6bf03df376e56ba4a5ee9b2df2008d28",
+        "catalogDigest": "sha256:b3546bf2bd33b2c9dcceffb7787b1329f662baaff60bd122c5f6d43d28a852c1",
+        "policyDigest": "sha256:90018782d002ece43fdf52311c26628c6a88a89cb1b61c015d70051c1e3294f6",
         "archiveDigest": "sha256:af4324855cd02d50623129bf488d07eff53a7d5817ed7ec6abd8da592a21aa86",
         "platform": "linux-x64"
       }
@@ -339,6 +339,8 @@
         "outputSha256": "dc1badefef857ba6a5d448bbf84b72aba1e1e840eed54f35716a8ba5870b660f",
         "expectedSha256": "dc1badefef857ba6a5d448bbf84b72aba1e1e840eed54f35716a8ba5870b660f",
         "citedSha256": "dc1badefef857ba6a5d448bbf84b72aba1e1e840eed54f35716a8ba5870b660f",
+        "sourcePath": "product.txt",
+        "sourceSha256": "70d1e10ca4d6cd6971ef44007ca4698f02577c2311795fbfbe3c299fd4c0a430",
         "transform": "ascii-uppercase",
         "nodeState": "real"
       }
@@ -356,6 +358,9 @@
         "members": [
           "product.out"
         ],
+        "memberSources": {
+          "product.out": "out/build/product.out"
+        },
         "memberBytesMatchSources": true,
         "nodeState": "real"
       }
