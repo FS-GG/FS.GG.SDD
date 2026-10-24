@@ -141,7 +141,7 @@ module ProviderSource =
             part <> "" && part <> "." && part <> ".." && not (part.EndsWith(".", StringComparison.Ordinal))
             && not (part.EndsWith(" ", StringComparison.Ordinal))
             && not (part |> Seq.exists (fun c -> c = '\\' || c = ':' || c = '<' || c = '>' || c = '"' || c = '|' || c = '?' || c = '*'))
-            && not (Set.contains (part.Split('.')[0].ToUpperInvariant()) devices)))
+            && not (Set.contains (((part.Split('.')).[0]).ToUpperInvariant()) devices)))
             "source.path" path "Expected a contained portable member path with no reserved basename."
     let private unique (comparer: IEqualityComparer<string>) code path (values: string list) =
         let seen = HashSet<string>(comparer)
@@ -297,9 +297,9 @@ module ProviderSource =
         let actual = value.EnumerateObject() |> Seq.map _.Name |> Seq.toList
         unique StringComparer.Ordinal "source.duplicateProperty" "$" actual
         check (Set.ofList actual = Set.ofList names) "source.properties" "$" "Object requires exactly the documented properties."
-    let private get name (value: JsonElement) =
+    let private get (name: string) (value: JsonElement) =
         let mutable property = Unchecked.defaultof<JsonElement>
-        check (value.TryGetProperty(name: string, &property)) "source.properties" ("$." + name) "Missing required property."
+        check (value.TryGetProperty(name, &property)) "source.properties" ("$." + name) "Missing required property."
         property
     let private readString (value: JsonElement) =
         check (value.ValueKind = JsonValueKind.String) "source.shape" "$" "Expected a string."

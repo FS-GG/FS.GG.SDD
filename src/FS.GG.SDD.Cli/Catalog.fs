@@ -668,7 +668,7 @@ module Catalog =
                             "Use catalog inspect --catalog <file> --catalog-sha256 <sha256:digest>."
                     ])
 
-    module private Sources = FS.GG.SDD.Commands.ProviderSourceEffects
+    module Sources = FS.GG.SDD.Commands.ProviderSourceEffects
 
     let private sourceSelectors =
         [ "--source-set"; "--source-set-sha256"; "--acquisition-policy"; "--acquisition-policy-sha256"; "--source-cache"; "--offline" ]

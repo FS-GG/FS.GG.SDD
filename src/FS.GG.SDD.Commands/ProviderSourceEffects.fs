@@ -54,9 +54,9 @@ module ProviderSourceEffects =
             Settled: bool
         }
 
-    module private Linux = CatalogScaffoldLinux
-    module private Workflow = ProviderSourceWorkflow
-    module private Source = ProviderSource
+    module Linux = CatalogScaffoldLinux
+    module Workflow = ProviderSourceWorkflow
+    module Source = ProviderSource
 
     type private Entry =
         { Preview: SourcePreview
@@ -194,19 +194,19 @@ module ProviderSourceEffects =
         let files = Linux.filesWithinLimits operation.Native (budget operation) root (int maximumBytes) maximumFiles maximumDepth
         checkWork operation
         files
-    let private member name (files: Linux.CapturedFile list) =
+    let private findMember name (files: Linux.CapturedFile list) =
         match files |> List.filter (fun file -> file.Path = name) with
         | [ value ] -> value
         | _ -> refuse "source.population" ("Expected exactly one member: " + name)
     let private validatePayload reference (files: Linux.CapturedFile list) =
-        let manifestFile = member "source.json" files
+        let manifestFile = findMember "source.json" files
         let manifest = Source.parseManifest reference.ManifestSha256 manifestFile.Bytes |> unwrap
         if manifest.Id <> reference.Id then refuse "source.manifestIdentity" "Manifest ID differs from the selected source."
         match reference.Locator with
         | Source.HttpsEnvelope(_, revision, _) when revision <> manifest.Revision -> refuse "source.revision" "Pinned HTTPS revision differs from the manifest."
         | _ -> ()
         Source.verifyMembers manifest (files |> List.filter (fun file -> file.Path <> "source.json") |> List.map (fun file -> file.Path, file.Bytes)) |> unwrap
-        let catalogFile = member manifest.CatalogPath files
+        let catalogFile = findMember manifest.CatalogPath files
         let catalog = CatalogScaffoldWorkflow.prepare { CatalogBytes = catalogFile.Bytes; ExpectedRawDigest = catalogFile.Sha256; Provider = None; Overrides = [] } |> unwrap
         let declared = catalog.Catalog.Providers |> List.map _.TemplateSource |> Set.ofList
         if declared <> (manifest.Archives |> List.map _.TemplateSource |> Set.ofList) then
@@ -290,7 +290,7 @@ module ProviderSourceEffects =
                 elif file.Path = "acquisition.json" then None
                 else refuse "source.cachePopulation" "Unexpected member outside the closed cache payload and receipt.")
         let manifest, catalog, catalogBytes = validatePayload reference payload
-        readMetadata reference manifest catalog (Source.sha256 catalogBytes) (member "acquisition.json" files).Bytes |> ignore
+        readMetadata reference manifest catalog (Source.sha256 catalogBytes) (findMember "acquisition.json" files).Bytes |> ignore
         if charge then chargeExpanded operation (files |> List.sumBy (fun file -> int64 file.Bytes.LongLength))
         let rootPath = Path.Combine(operation.Request.CacheRoot, key)
         { Preview =
@@ -755,9 +755,9 @@ module ProviderSourceEffects =
 
     let inspect (prepared: PreparedSet) =
         prepared.Entries |> List.map (fun entry ->
-            { entry.Preview with Catalog =
-                { entry.Preview.Catalog with Selected = None
-                                             Catalog = { entry.Preview.Catalog.Catalog with Providers = entry.Preview.Catalog.Catalog.Providers |> List.sortWith (fun a b -> StringComparer.Ordinal.Compare(a.Id, b.Id)) } } })
+            let providers = entry.Preview.Catalog.Catalog.Providers |> List.sortWith (fun a b -> StringComparer.Ordinal.Compare(a.Id, b.Id))
+            let catalog = { entry.Preview.Catalog.Catalog with Providers = providers }
+            { entry.Preview with Catalog = { entry.Preview.Catalog with Selected = None; Catalog = catalog } })
 
     let select (prepared: PreparedSet) provider overrides =
         try
