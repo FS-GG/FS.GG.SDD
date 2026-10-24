@@ -66,7 +66,8 @@ opaque member subsequently validated by the existing template transport.
 
 Version1 admits single-disk ZIP32, stored/DEFLATE members, UTF-8 names (ASCII only
 when the UTF-8 flag is absent), and no prepended/trailing data, overlapping local
-records, ZIP64 or unknown link-bearing extra fields. Local and central names,
+records, ZIP64 or any extra field other than extended timestamp (0x5455) and Unix
+UID/GID (0x7875); other producers' fields (for example NTFS 0x000a) are refused. Local and central names,
 methods, sizes/CRC or actual data descriptors must agree. Timestamp and Unix UID/GID
 extra metadata do not grant ownership or executable authority. The fixed transport
 also bounds response headers to64KiB and resolved DNS answers to64 addresses; every

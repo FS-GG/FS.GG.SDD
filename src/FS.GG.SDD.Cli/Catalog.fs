@@ -733,12 +733,18 @@ module Catalog =
                     for view in Sources.inspect prepared do
                         w.WriteStartObject()
                         w.WriteString("id", view.Source.Id)
-                        w.WriteString("origin", string view.Source.Origin)
+                        w.WriteString("origin", (match view.Source.Origin with
+                                                 | ProviderSource.BuiltIn -> "built-in"
+                                                 | ProviderSource.Workspace -> "workspace"
+                                                 | ProviderSource.Explicit -> "explicit"))
                         w.WriteString("revision", view.Revision)
                         w.WriteString("manifestSha256", view.Source.ManifestSha256)
                         w.WriteString("sourceSetSha256", view.SourceSetSha256)
                         w.WriteString("acquisitionPolicySha256", view.AcquisitionPolicySha256)
-                        w.WriteString("acquisition", string view.Acquisition)
+                        w.WriteString("acquisition", (match view.Acquisition with
+                                                      | ProviderSource.LocalCopy -> "local-copy"
+                                                      | ProviderSource.HttpsFetch -> "https-fetch"
+                                                      | ProviderSource.CacheRead -> "cache-read"))
                         match view.ResolvedUri with Some uri -> w.WriteString("resolvedUri", uri) | None -> w.WriteNull "resolvedUri"
                         w.WriteStartArray "redirects"
                         for uri in view.Redirects do w.WriteStringValue uri

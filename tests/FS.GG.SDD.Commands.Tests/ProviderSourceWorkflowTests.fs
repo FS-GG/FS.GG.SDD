@@ -251,6 +251,7 @@ module ProviderSourceWorkflowTests =
         Assert.True(Internal.HandlersUpgrade.applyEffectsFor model model.Request step |> Result.isError)
         // The read gate precedes any decision: its first emission is read-only skill-root enumeration.
         let _, gateEffects = Internal.HandlersUpgrade.computeUpgradeNext model
+        Assert.NotEmpty gateEffects
         Assert.All(gateEffects, fun effect -> Assert.True(match effect with CommandTypes.EnumerateDirectory _ -> true | _ -> false))
         let withListings (source: CommandTypes.CommandModel) =
             let listing effect =
