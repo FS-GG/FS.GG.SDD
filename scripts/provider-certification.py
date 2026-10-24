@@ -49,6 +49,9 @@ SCOPE = ('Local cooperative profile on the exact Linux-x64 / .NET 10.0.12 / glib
 STATUSES = ('pass', 'fail', 'skipped')
 REQUIRED_EVIDENCE_CASES = ('positive', 'missing', 'stale', 'mismatched')
 NEGATIVE_EVIDENCE_CASES = ('missing', 'stale', 'mismatched')
+# What Governance Verify reports for each (the 1.15 contract); a case that does not expect it is not that case.
+REQUIRED_DIAGNOSTICS = {'missing': 'was not produced by the run', 'stale': 'existed before launch', 'mismatched': 'sources do not match the workspace'}
+EVIDENCE_PRODUCED = {'missing': False, 'stale': False, 'mismatched': True}
 SUPPORTED_HOST = {'machine': 'x86_64', 'glibc': '2.44', 'runtime': '10.0.12'}
 
 NO_PARTIAL_CASES = {  # name -> expected diagnostic
@@ -71,6 +74,10 @@ STATIC_CHECKS = [
 ] + [('no-partial-state.' + name, 'no-partial-state') for name in NO_PARTIAL_CASES] + [
     ('evidence.whole-request-refusal', 'evidence'), ('evidence.capture-lifetime', 'evidence'),
 ]
+
+
+def is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def required_check_ids(evidence_cases=REQUIRED_EVIDENCE_CASES):
@@ -149,26 +156,27 @@ def validate_report(report):
         refusal_status = lambda e: e.get('status') in ('failed', 'refused')
         need('host.supported-profile', lambda e: e.get('machine') == host['machine'] == SUPPORTED_HOST['machine'] and e.get('glibc') == host['glibc'] == SUPPORTED_HOST['glibc']
              and e.get('runtime') == SUPPORTED_HOST['runtime'] and SUPPORTED_HOST['runtime'] in host['runtimes'], 'evidence must show the supported host and agree with the report host')
-        need('lifecycle.scaffold', lambda e: e.get('status') == 'succeeded' and e.get('ownership') == 'Settled' and e.get('stagingRemaining') == 0, 'a settled success with no staging remaining')
+        need('lifecycle.scaffold', lambda e: e.get('status') == 'succeeded' and e.get('ownership') == 'Settled' and is_int(e.get('stagingRemaining')) and e['stagingRemaining'] == 0, 'a settled success with no staging remaining')
         need('lifecycle.dry-run', lambda e: e.get('status') == 'prepared' and e.get('targetCreated') is False, 'a prepared dry run that created nothing')
         need('lifecycle.strict-readback', lambda e: e.get('schemaVersion') == 2, 'schema-2 strict readback')
-        need('lifecycle.deterministic-instantiation', lambda e: isinstance(e.get('files'), int) and e['files'] > 0 and re.fullmatch(r'[0-9a-f]{64}', str(e.get('treeSha256'))), 'a non-empty tree digest')
+        need('lifecycle.deterministic-instantiation', lambda e: is_int(e.get('files')) and e['files'] > 0 and re.fullmatch(r'[0-9a-f]{64}', str(e.get('treeSha256'))), 'a non-empty tree digest')
         need('provenance.inputs-bound', lambda e: e.get('catalogDigest') == artifact['catalogDigest'] and e.get('policyDigest') == artifact['policyDigest']
              and e.get('archiveDigest') == artifact['archiveDigest'] and e.get('platform') == artifact['platform'], 'provenance digests must equal the report artifact digests')
-        need('provenance.tools-and-invocations', lambda e: isinstance(e.get('invocationCount'), int) and e['invocationCount'] > 0 and e.get('tools'), 'observed tools and invocations')
-        need('provenance.declared-bindings', lambda e: e.get('capabilityId') and e.get('evidenceFormat') and e.get('argumentCount', 0) > 0, 'a declared capability, evidence format and arguments')
-        need('skill-union.recorded-and-present', lambda e: e.get('providerSkills', 0) >= 1 and e.get('onDisk', 0) >= e.get('providerSkills', 0) + e.get('sddOwnedSkills', 0), 'at least one provider skill, all recorded skills on disk')
-        need('skill-union.mirrors-equal', lambda e: e.get('skills', 0) >= 1, 'a non-empty mirrored skill set')
+        need('provenance.tools-and-invocations', lambda e: is_int(e.get('invocationCount')) and e['invocationCount'] > 0 and bool(e.get('tools')), 'observed tools and invocations')
+        need('provenance.declared-bindings', lambda e: bool(e.get('capabilityId')) and bool(e.get('evidenceFormat')) and is_int(e.get('argumentCount')) and e['argumentCount'] > 0, 'a declared capability, evidence format and arguments')
+        need('skill-union.recorded-and-present', lambda e: all(is_int(e.get(k)) for k in ('providerSkills', 'sddOwnedSkills', 'onDisk')) and e['providerSkills'] >= 1 and e['onDisk'] >= e['providerSkills'] + e['sddOwnedSkills'], 'at least one provider skill, all recorded skills on disk')
+        need('skill-union.mirrors-equal', lambda e: is_int(e.get('skills')) and e['skills'] >= 1, 'a non-empty mirrored skill set')
         for name, code in NO_PARTIAL_CASES.items():
             need('no-partial-state.' + name, lambda e, code=code: e.get('diagnostic') == code and refusal_status(e) and e.get('ownership') in ('Settled', 'not-started', 'NotStarted')
                  and e.get('targetUnchanged') is True and e.get('stagingUnchanged') is True, f'the intended diagnostic {code}, a settled refusal, target and staging unchanged')
-        need('evidence.positive', lambda e: e.get('exit') == 0 and e.get('evidenceProduced') is True, 'exit 0 with the declared evidence produced')
+        need('evidence.positive', lambda e: is_int(e.get('exit')) and e['exit'] == 0 and e.get('evidenceProduced') is True, 'exit 0 with the declared evidence produced')
         for name in NEGATIVE_EVIDENCE_CASES:
-            need('evidence.' + name, lambda e: isinstance(e.get('exit'), int) and e['exit'] != 0 and bool(e.get('diagnostic')), 'a non-zero refusal with its intended diagnostic')
-        need('evidence.stale', lambda e: e.get('evidenceProduced') is False, 'the stale evidence must not count as produced')
-        need('evidence.whole-request-refusal', lambda e: e.get('exit') == 3 and e.get('commandLaunched') is False and bool(e.get('diagnostic')), 'exit 3 with the command never launched')
-        need('evidence.capture-lifetime', lambda e: e.get('workerSurvivors') == 0 and isinstance(e.get('settledCaptures'), int) and e['settledCaptures'] >= 1
-             and isinstance(e.get('invocations'), int) and e['invocations'] >= e['settledCaptures'], 'no surviving worker and at least one settled capture')
+            need('evidence.' + name, lambda e, name=name: is_int(e.get('exit')) and e['exit'] != 0 and isinstance(e.get('diagnostic'), str)
+                 and REQUIRED_DIAGNOSTICS[name] in e['diagnostic'] and e.get('evidenceProduced') is EVIDENCE_PRODUCED[name],
+                 f'a non-zero refusal whose diagnostic contains "{REQUIRED_DIAGNOSTICS[name]}" and evidenceProduced={EVIDENCE_PRODUCED[name]}')
+        need('evidence.whole-request-refusal', lambda e: is_int(e.get('exit')) and e['exit'] == 3 and e.get('commandLaunched') is False and bool(e.get('diagnostic')), 'exit 3 with the command never launched')
+        need('evidence.capture-lifetime', lambda e: is_int(e.get('workerSurvivors')) and e['workerSurvivors'] == 0 and is_int(e.get('settledCaptures')) and e['settledCaptures'] >= 1
+             and is_int(e.get('invocations')) and e['invocations'] >= e['settledCaptures'], 'no surviving worker and at least one settled capture')
     def walk(value, path='$'):
         if isinstance(value, str) and (value.startswith('/') or re.search(r'(^|[\s=])/(home|tmp|var|usr)/', value)):
             problems.append('machine-specific absolute path in report at ' + path)
@@ -262,7 +270,7 @@ class Harness:
         def dry_run():
             dry = workdir / 'dry-run'
             actual, projection, _ = self.scaffold('scaffold-dry-run', self.manifest, dry, ['--dry-run'])
-            assert actual['exitCode'] == 0 and projection['status'] == 'prepared' and projection['ownership'] == 'Settled'
+            assert actual['exitCode'] == 0 and projection and projection['status'] == 'prepared' and projection['ownership'] == 'Settled', f'dry run did not prepare: exit {actual["exitCode"]}'
             assert projection['observations'] is None and not dry.exists(), 'dry run observed or created state'
             return {'status': projection['status'], 'targetCreated': False}
         self.check('lifecycle.dry-run', 'lifecycle', dry_run)
@@ -387,7 +395,7 @@ class Harness:
             }
         except (OSError, ValueError, KeyError, IndexError) as error:
             for name in NO_PARTIAL_CASES:
-                self.record('no-partial-state.' + name, 'no-partial-state', 'skipped', 'controls cannot be derived from the packed artifact: ' + type(error).__name__)
+                self.record('no-partial-state.' + name, 'no-partial-state', 'skipped', 'controls cannot be derived from the packed artifact: ' + type(error).__name__ + ': ' + str(error))
             return
         for name, expected in NO_PARTIAL_CASES.items():
             def run_case(name=name, expected=expected):
@@ -473,6 +481,8 @@ class Harness:
                     assert produced and content != 'stale', 'declared evidence was not produced by the run'
                 if case.get('staleEvidence'):
                     assert content == 'stale', 'stale evidence was overwritten or accepted'
+                if case['name'] in EVIDENCE_PRODUCED:
+                    assert (produced and content != 'stale') is EVIDENCE_PRODUCED[case['name']], f'{case["name"]}: evidence production differs from the case it claims to be'
                 return {'exit': actual['exitCode'], 'diagnostic': case.get('expectedDiagnostic'), 'evidenceProduced': produced and content != 'stale'}
             self.check('evidence.' + case['name'], 'evidence', run_case)
 
@@ -520,8 +530,8 @@ def validate_request(request):
     if by_name['positive']['expectedExit'] != 0 or by_name['positive'].get('staleEvidence'):
         raise ValueError('the positive evidence case must expect exit 0 without stale evidence')
     for name in NEGATIVE_EVIDENCE_CASES:
-        if by_name[name]['expectedExit'] == 0 or not by_name[name].get('expectedDiagnostic'):
-            raise ValueError(f'the {name} evidence case must expect a non-zero exit and name its expectedDiagnostic')
+        if by_name[name]['expectedExit'] == 0 or REQUIRED_DIAGNOSTICS[name] not in str(by_name[name].get('expectedDiagnostic', '')):
+            raise ValueError(f'the {name} evidence case must expect a non-zero exit and an expectedDiagnostic containing "{REQUIRED_DIAGNOSTICS[name]}"')
     if by_name['stale'].get('staleEvidence') is not True:
         raise ValueError('the stale evidence case must set staleEvidence')
     for name in ('sdd', 'governance'):

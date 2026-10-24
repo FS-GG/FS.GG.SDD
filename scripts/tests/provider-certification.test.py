@@ -35,9 +35,9 @@ def evidence_for(check_id):
         'skill-union.recorded-and-present': {'providerSkills': 1, 'sddOwnedSkills': 21, 'seededUnrecorded': 6, 'onDisk': 28},
         'skill-union.mirrors-equal': {'skills': 28, 'recordedMirrors': 1},
         'evidence.positive': {'exit': 0, 'diagnostic': None, 'evidenceProduced': True},
-        'evidence.missing': {'exit': 1, 'diagnostic': 'was not produced', 'evidenceProduced': False},
+        'evidence.missing': {'exit': 1, 'diagnostic': 'was not produced by the run', 'evidenceProduced': False},
         'evidence.stale': {'exit': 1, 'diagnostic': 'existed before launch', 'evidenceProduced': False},
-        'evidence.mismatched': {'exit': 1, 'diagnostic': 'sources do not match', 'evidenceProduced': True},
+        'evidence.mismatched': {'exit': 1, 'diagnostic': 'sources do not match the workspace', 'evidenceProduced': True},
         'evidence.whole-request-refusal': {'exit': 3, 'diagnostic': 'RawDigestMismatch', 'commandLaunched': False},
         'evidence.capture-lifetime': {'invocations': 6, 'settledCaptures': 5, 'workerSurvivors': 0, 'admittedWindowSeconds': 80},
     }
@@ -185,6 +185,20 @@ class SemanticEvidenceTests(unittest.TestCase):
         self.assertTrue(self.mutated('evidence.capture-lifetime', workerSurvivors=1))
         self.assertTrue(self.mutated('evidence.capture-lifetime', settledCaptures=0))
 
+    def test_the_required_negative_cases_are_bound_to_their_own_behaviour(self):
+        self.assertTrue(self.mutated('evidence.missing', evidenceProduced=True))
+        self.assertTrue(self.mutated('evidence.missing', diagnostic='x'))
+        self.assertTrue(self.mutated('evidence.mismatched', evidenceProduced=False))
+        self.assertTrue(self.mutated('evidence.mismatched', diagnostic='was not produced by the run'))
+        self.assertTrue(self.mutated('evidence.stale', diagnostic='sources do not match the workspace'))
+
+    def test_wrongly_typed_evidence_is_a_problem_not_a_traceback(self):
+        for check_id, key, value in [('provenance.declared-bindings', 'argumentCount', '8'), ('skill-union.recorded-and-present', 'providerSkills', '1'),
+                                     ('skill-union.mirrors-equal', 'skills', None), ('lifecycle.deterministic-instantiation', 'files', True),
+                                     ('evidence.positive', 'exit', False), ('evidence.capture-lifetime', 'workerSurvivors', False),
+                                     ('lifecycle.scaffold', 'stagingRemaining', False), ('evidence.missing', 'exit', '1')]:
+            self.assertTrue(self.mutated(check_id, **{key: value}), (check_id, key))
+
     def test_the_host_must_be_the_supported_profile_and_agree_with_the_report(self):
         self.assertTrue(self.mutated('host.supported-profile', glibc='2.39'))
         self.assertTrue(self.mutated('host.supported-profile', machine='aarch64'))
@@ -218,7 +232,7 @@ class RequestTests(unittest.TestCase):
     def request(self, tmp):
         manifest = Path(tmp) / 'request.json'
         manifest.write_text('{}')
-        cases = [dict({'name': n, 'expectedExit': 0 if n == 'positive' else 1}, **({} if n == 'positive' else {'expectedDiagnostic': 'd'}), **({'staleEvidence': True} if n == 'stale' else {})) for n in cert.REQUIRED_EVIDENCE_CASES]
+        cases = [dict({'name': n, 'expectedExit': 0 if n == 'positive' else 1}, **({} if n == 'positive' else {'expectedDiagnostic': cert.REQUIRED_DIAGNOSTICS[n]}), **({'staleEvidence': True} if n == 'stale' else {})) for n in cert.REQUIRED_EVIDENCE_CASES]
         tool = {'version': '1', 'sha256': DIGEST}
         return {'schema': cert.REQUEST_SCHEMA, 'sourceRoot': '.', 'identityPaths': ['scripts/*.py'], 'environment': {}, 'sdd': {}, 'authoring': {},
                 'governance': {'evidenceCases': cases}, 'artifact': {'request': str(manifest)}, 'tools': {'sdd': tool, 'governance': dict(tool)}}
@@ -241,6 +255,8 @@ class RequestTests(unittest.TestCase):
             # The required negative cases are behaviours, not labels.
             for name in cert.NEGATIVE_EVIDENCE_CASES:
                 bad = copy.deepcopy(request); [c for c in bad['governance']['evidenceCases'] if c['name'] == name][0]['expectedExit'] = 0
+                with self.assertRaises(ValueError): cert.validate_request(bad)
+                bad = copy.deepcopy(request); [c for c in bad['governance']['evidenceCases'] if c['name'] == name][0]['expectedDiagnostic'] = 'some other diagnostic'
                 with self.assertRaises(ValueError): cert.validate_request(bad)
                 bad = copy.deepcopy(request); [c for c in bad['governance']['evidenceCases'] if c['name'] == name][0].pop('expectedDiagnostic')
                 with self.assertRaises(ValueError): cert.validate_request(bad)

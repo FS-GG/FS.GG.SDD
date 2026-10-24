@@ -406,9 +406,11 @@ archive, digests, overrides, capability and evidence declarations),
 `verifyPaths`, `captureLifetime`, `evidenceCases`) and `tools` (`version` and
 `sha256:` package digest of each installed tool).
 `evidenceCases` must include `positive` (exit 0, no stale evidence) and
-`missing`, `stale`, `mismatched`, each with a non-zero `expectedExit` and a named
-`expectedDiagnostic` (`stale` also sets `staleEvidence`); the names are
-behaviours, not labels. Extra cases are reported as `evidence.<name>`.
+`missing`, `stale`, `mismatched`, each with a non-zero `expectedExit` and the
+Governance Verify diagnostic that defines it (`was not produced by the run`,
+`existed before launch`, `sources do not match the workspace`; `stale` also sets
+`staleEvidence`); the harness checks the evidence was produced only for
+`mismatched`. The names are behaviours, not labels. Extra cases are reported as `evidence.<name>`.
 
 | Group | Check ids | What it proves from the packed artifact |
 |---|---|---|
