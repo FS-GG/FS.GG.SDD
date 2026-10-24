@@ -653,20 +653,6 @@ nuget-cache/
     let typedCompilerEffect workId =
         RunProcess("dotnet", [ "fsi"; "--exec"; $"work/{workId}/specification.fsx" ], "")
 
-    let scaffoldProvenanceDocument model =
-        match snapshot ScaffoldProvenance.provenancePath model with
-        | None -> Ok None
-        | Some observed -> ScaffoldProvenanceDocument.parse observed.Text |> Result.map Some
-
-    let scaffoldProvenanceDiagnostics severity model =
-        match scaffoldProvenanceDocument model with
-        | Ok _ -> []
-        | Error findings ->
-            findings |> List.map (fun finding ->
-                Diagnostics.create "source.provenanceMalformed" severity None None
-                    ("Existing scaffold provenance is invalid: " + finding.Message)
-                    "Restore valid schema1/2/3 provenance; do not treat this observed record as absent or rewrite its historical authority." [])
-
     let typedLifecycleSelected model =
         let provenance =
             model.InterpretedEffects
@@ -1356,6 +1342,20 @@ nuget-cache/
                 result.Snapshot
             else
                 None)
+
+    let scaffoldProvenanceDocument model =
+        match snapshot ScaffoldProvenance.provenancePath model with
+        | None -> Ok None
+        | Some observed -> ScaffoldProvenanceDocument.parse observed.Text |> Result.map Some
+
+    let scaffoldProvenanceDiagnostics severity model =
+        match scaffoldProvenanceDocument model with
+        | Ok _ -> []
+        | Error findings ->
+            findings |> List.map (fun finding ->
+                Diagnostics.create "source.provenanceMalformed" severity None None
+                    ("Existing scaffold provenance is invalid: " + finding.Message)
+                    "Restore valid schema1/2/3 provenance; do not treat this observed record as absent or rewrite its historical authority." [])
 
     /// The three-state read for `path` from the interpreted-effect log (FS.GG.SDD#745, decision
     /// #754). This — not `snapshot` — is what a fold that computes a COHERENCE VERDICT must
