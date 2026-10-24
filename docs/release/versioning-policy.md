@@ -19,7 +19,7 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.0`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.1`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
@@ -27,8 +27,8 @@ sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.0`**
 - `FS.GG.SDD.Knowledge` (the standalone concise findings SDK)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.5.0"` and
-`generatorVersion.version = "2.5.0"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.5.1"` and
+`generatorVersion.version = "2.5.1"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
@@ -44,6 +44,12 @@ that union must add the case, and binaries older than 2.5.0 refuse schema 3 prov
 published 2.4.0. Catalog schema 2 and descriptor protocol 3.0.0 remain independent of package
 versions, and published Contracts 7.6.0 is unchanged. Existing public members remain compatible;
 no migration note is required.
+
+The 2.5.1 patch fixes FS-GG/FS.GG.SDD#1127: the catalog parser accepts an explicit
+`"default": null` as an absent parameter default, which is what the canonical writer emits, so a
+typed catalog with a default-less parameter now round-trips through `catalogBytes` and `parse`
+without post-processing. Canonical bytes and semantic digests are unchanged and previously accepted
+catalogs parse identically. No public member changes.
 
 ## Change class to bump rule
 
