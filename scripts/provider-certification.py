@@ -284,8 +284,20 @@ class Harness:
             actual, projection, _ = self.scaffold('scaffold-repeat', self.manifest, second)
             assert actual['exitCode'] == 0 and projection['status'] == 'succeeded', 'repeat scaffold refused'
             first_tree, second_tree = self.driver.target_snapshot(target), self.driver.target_snapshot(second)
+            # The provenance records each child's remaining time budget (`timeoutSeconds`), which depends on
+            # elapsed wall time and so differs between two otherwise identical instantiations; every other
+            # byte of it, and of the tree, must be equal.
+            provenance = '.fsgg/scaffold-provenance.json'
+            def stable(path):
+                document = json.loads((path / provenance).read_text())
+                for invocation in document.get('observation', {}).get('invocations', []):
+                    invocation.pop('timeoutSeconds', None)
+                return json.dumps(document, sort_keys=True)
+            assert stable(target) == stable(second), 'provenance differs beyond the remaining-budget timeouts'
+            first_tree.pop(provenance); second_tree.pop(provenance)
             assert first_tree == second_tree, 'instantiations differ: ' + ', '.join(sorted(k for k in set(first_tree) | set(second_tree) if first_tree.get(k) != second_tree.get(k))[:5])
-            return {'files': len(first_tree), 'treeSha256': hashlib.sha256(json.dumps(first_tree, sort_keys=True).encode()).hexdigest()}
+            return {'files': len(first_tree) + 1, 'treeSha256': hashlib.sha256(json.dumps(first_tree, sort_keys=True).encode()).hexdigest(),
+                    'provenanceVolatileFields': ['observation.invocations[].timeoutSeconds']}
         self.check('lifecycle.deterministic-instantiation', 'lifecycle', deterministic, None if ok else why)
 
         m, s = self.manifest, self.summary

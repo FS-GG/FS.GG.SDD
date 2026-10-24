@@ -419,6 +419,14 @@ behaviours, not labels. Extra cases are reported as `evidence.<name>`.
 | host | `supported-profile` | the run is on Linux-x64, glibc 2.44 with the 10.0.12 runtime, and the report's host agrees |
 | evidence | `positive`, `missing`, `stale`, `mismatched`, ..., `whole-request-refusal`, `capture-lifetime` | the artifact's one declared required capability (the reference provider declares `test:test`) runs through Governance Verify/GateExecution; its evidence is produced and accepted; missing, stale and mismatched evidence is refused; a bad provenance digest is refused before the command launches; every Verify host exits inside the admitted window with no surviving worker process. Further build or package capabilities are not exercised: the manifest names exactly one |
 
+Deterministic instantiation compares two scaffolds of the same artifact into
+different parents byte for byte, except that the provenance's per-invocation
+`timeoutSeconds` is excluded: the product records each child's REMAINING time
+budget there, so two otherwise identical runs can legitimately differ by a
+second (observed 13 versus 12). The excluded field is named in the check's
+evidence. Whether volatile remaining budgets belong in canonical provenance is a
+product question this harness only reports.
+
 Malformed-provider and wrong-version controls are derived from the packed
 artifact: a digest-correct catalog with an unknown member (`catalog.malformed`),
 the same with `schemaVersion` 99 (`catalog.unsupportedSchema`), and a policy
