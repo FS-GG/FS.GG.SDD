@@ -16,11 +16,18 @@ module CatalogInspectionTests =
         let original: Fsgg.ProviderCatalog.Diagnostic = { Code = "source.original"; Path = "$"; Message = "Original failure" }
         let secondary: Fsgg.ProviderCatalog.Diagnostic = { Code = "source.releaseUnsettled"; Path = "$"; Message = "Cleanup remains Unknown" }
         let retained = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics [ original ] [ secondary; original ]
-        Assert.Equal<Fsgg.ProviderCatalog.Diagnostic list>([ original; secondary ], retained)
+        Assert.Equal(original, retained.Head)
+        Assert.Contains(retained, fun item -> item.Code = "source.cleanupUnknown")
+        Assert.Contains(secondary, retained)
         let saturated = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics [ original ] [ for i in 1..100 -> { secondary with Message = string i + String('x', 4096) } ]
         Assert.Equal(original, saturated.Head)
         Assert.True(saturated.Length <= 64)
         Assert.True((saturated |> List.sumBy (fun d -> Encoding.UTF8.GetByteCount(d.Code + d.Path + d.Message))) <= 65536)
+        let fullOriginal = [ for i in 0..63 -> { original with Message = string i } ]
+        let full = FS.GG.SDD.Cli.Catalog.sourceFailureDiagnostics fullOriginal [ secondary ]
+        Assert.Equal(fullOriginal.Head, full.Head)
+        Assert.Equal(64, full.Length)
+        Assert.Contains(full, fun item -> item.Code = "source.cleanupUnknown")
 
     let catalogBytes () =
         let authored =

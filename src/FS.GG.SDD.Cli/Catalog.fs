@@ -776,13 +776,29 @@ module Catalog =
         match result with Ok _ -> 0 | Error _ -> 1
 
     let internal sourceFailureDiagnostics original secondary =
-        let mutable bytes = 0
-        (original @ secondary)
-        |> List.distinct
-        |> List.truncate 64
-        |> List.takeWhile (fun (item: Fsgg.ProviderCatalog.Diagnostic) ->
-            bytes <- bytes + System.Text.Encoding.UTF8.GetByteCount(item.Code + item.Path + item.Message)
-            bytes <= 65536)
+        let size (item: Fsgg.ProviderCatalog.Diagnostic) =
+            System.Text.Encoding.UTF8.GetByteCount(item.Code + item.Path + item.Message)
+        let marker = diagnostic "source.cleanupUnknown" "$" "Original resource cleanup remains Unknown; the caller retains custody."
+        let reserve = if List.isEmpty secondary then [] else [ marker ]
+        let mutable bytes = reserve |> List.sumBy size
+        let primary =
+            original
+            |> List.distinct
+            |> List.truncate (64 - reserve.Length)
+            |> List.takeWhile (fun item ->
+                bytes <- bytes + size item
+                bytes <= 65536)
+        let kept = primary @ reserve
+        bytes <- kept |> List.sumBy size
+        let details =
+            secondary
+            |> List.distinct
+            |> List.filter (fun item -> not (List.contains item kept))
+            |> List.truncate (64 - kept.Length)
+            |> List.takeWhile (fun item ->
+                bytes <- bytes + size item
+                bytes <= 65536)
+        kept @ details
 
     let private holdSourceOwner operation =
         // Terminal Unknown cannot settle by polling the completed runner. Preserve
