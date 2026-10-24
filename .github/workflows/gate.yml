@@ -49,6 +49,9 @@ jobs:
       - name: Source native-test classification (four carrier cases remain owed)
         run: python3 -I -B scripts/tests/catalog-runtime-validation.test.py ProviderSourceClassificationTests
 
+      - name: Third-party provider-source fixture integrity
+        run: python3 -I -B scripts/tests/provider-source-journey.test.py
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
