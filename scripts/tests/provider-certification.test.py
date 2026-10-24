@@ -280,16 +280,31 @@ class SemanticEvidenceTests(unittest.TestCase):
 
 
 class ExampleTests(unittest.TestCase):
-    def test_the_committed_example_is_a_valid_certified_report(self):
-        example = json.loads((ROOT / 'tests/fixtures/provider-certification/report.example.json').read_text())
-        self.assertEqual([], cert.validate_report(example))
-        self.assertTrue(example['verdict']['certified'])
-        self.assertEqual(sorted(cert.required_check_ids(capabilities=example['artifact']['capabilities']) + ['evidence.nonzero-exit']), sorted(c['id'] for c in example['checks']))
+    EXAMPLES = {'report.example.json': ('test:test',), 'report.build-test-package.example.json': BTP}
 
-    def test_the_committed_example_fails_when_tampered(self):
-        example = json.loads((ROOT / 'tests/fixtures/provider-certification/report.example.json').read_text())
-        example['checks'][0]['status'] = 'fail'
-        self.assertTrue(cert.validate_report(example))
+    def load(self, name):
+        return json.loads((ROOT / 'tests/fixtures/provider-certification' / name).read_text())
+
+    def test_the_committed_examples_are_valid_certified_reports(self):
+        for name, capabilities in self.EXAMPLES.items():
+            example = self.load(name)
+            self.assertEqual([], cert.validate_report(example), name)
+            self.assertTrue(example['verdict']['certified'], name)
+            self.assertEqual(sorted(capabilities), example['artifact']['capabilities'], name)
+            self.assertEqual(sorted(cert.required_check_ids(capabilities=capabilities) + ['evidence.nonzero-exit']), sorted(c['id'] for c in example['checks']), name)
+
+    def test_the_build_test_package_example_carries_real_output_evidence(self):
+        checks = {c['id']: c for c in self.load('report.build-test-package.example.json')['checks']}
+        build, package = checks['capability.build']['evidence'], checks['capability.package']['evidence']
+        self.assertEqual(build['outputSha256'], build['citedSha256'])
+        self.assertEqual(package['artifactSha256'], package['citedSha256'])
+        self.assertEqual(['product.out'], package['members'])
+
+    def test_the_committed_examples_fail_when_tampered(self):
+        for name in self.EXAMPLES:
+            example = self.load(name)
+            example['checks'][0]['status'] = 'fail'
+            self.assertTrue(cert.validate_report(example), name)
 
 
 class RequestTests(unittest.TestCase):

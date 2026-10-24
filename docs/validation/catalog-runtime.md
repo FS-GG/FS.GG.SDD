@@ -419,7 +419,19 @@ Governance Verify diagnostic that defines it (`was not produced by the run`,
 | skill-union | `recorded-and-present`, `mirrors-equal` | recorded provider and SDD-owned skills exist and do not collide; the whole neutral skill set and its `.claude` mirror are equal byte for byte |
 | no-partial-state | `occupied-target`, `catalog-digest`, `policy-digest`, `archive-tamper`, `malformed-catalog`, `unsupported-schema-version`, `wrong-tool-version`, `unsupported-platform` | each is refused by the product with its intended diagnostic (not an outer timeout), ownership settled, the target unchanged or never created, no owned staging |
 | host | `supported-profile` | the run is on Linux-x64, glibc 2.44 with the 10.0.12 runtime, and the report's host agrees |
-| evidence | `positive`, `missing`, `stale`, `mismatched`, ..., `whole-request-refusal`, `capture-lifetime` | the artifact's one declared required capability (the reference provider declares `test:test`) runs through Governance Verify/GateExecution; its evidence is produced and accepted; missing, stale and mismatched evidence is refused; a bad provenance digest is refused before the command launches; every Verify host exits inside the admitted window with no surviving worker process. Further build or package capabilities are not exercised: the manifest names exactly one |
+| evidence | `positive`, `missing`, `stale`, `mismatched`, ..., `whole-request-refusal`, `capture-lifetime` | every declared capability runs through Governance Verify/GateExecution (all gates `executed`); the evidence is produced and accepted; missing, stale and mismatched evidence of the required test capability is refused; a bad provenance digest is refused before any command launches; every Verify host exits inside the admitted window with no surviving worker process |
+| capability | `build` (when `build:build` is declared), `package` (when `package:package` is declared) | the ACTUAL outputs, not labels: the build output equals the declared transformation of its source and its handoff cites exactly those bytes; the packed artifact is a tar whose members are exactly the declared members and equal the files they claim to pack, and its handoff cites the artifact's exact sha256. Governance accepts a self-consistent but wrong build or package (its handoff cites what was written); these checks are what rejects it |
+
+The `capability.*` checks are required exactly when the artifact declares the
+capability, and the report names the declared capabilities in `artifact.capabilities`
+so an admitter can tell a test-only provider from a build-test-package provider.
+A request supplies `governance.capabilityExpectations` for each declared
+capability: `build: {from, output, transform}` (`identity` or `ascii-uppercase`)
+and `package: {artifact, format: "tar", members: {memberName: workspacePath}}`.
+The typed authoring example's `emit --profile build-test-package` declares build,
+test and package (`governance-build-test-package-fixture`); the default `test`
+profile is unchanged. The harness certifies only capabilities the manifest
+declares and does not invent others.
 
 Deterministic instantiation compares two scaffolds of the same artifact into
 different parents byte for byte, except that the provenance's per-invocation
@@ -427,7 +439,9 @@ different parents byte for byte, except that the provenance's per-invocation
 budget there, so two otherwise identical runs can legitimately differ by a
 second (observed 13 versus 12). The excluded field is named in the check's
 evidence. Whether volatile remaining budgets belong in canonical provenance is a
-product question this harness only reports.
+product question this harness only reports; it is tracked as
+[SDD#1136](https://github.com/FS-GG/FS.GG.SDD/issues/1136), and the exclusion
+is removed when that is fixed.
 
 Malformed-provider and wrong-version controls are derived from the packed
 artifact: a digest-correct catalog with an unknown member (`catalog.malformed`),
@@ -461,7 +475,10 @@ packed artifact and compares the artifact digests and verdict.
 
 Scope: ordinary verification under ADR-0096 on the exact Linux-x64 / .NET
 10.0.12 / glibc 2.44 profile; a local cooperative profile, not hostile
-containment or a hosted-runner profile. Not covered: distribution (C4), the
+containment or a hosted-runner profile. Package evidence is the identity and
+members of a deterministic tar written by the fixture; it is not the output of a
+real language toolchain, and a language provider's real build and package
+evidence stays with Templates#441. Not covered: distribution (C4), the
 schema-v1 window, concrete language providers (Templates#441), and the
 authentic blocked-read/uncertain-close cases (Governance#423 prerequisite b).
 The policy, fixture and Governance catalog are SDD-owner fixtures. A third

@@ -142,8 +142,14 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
   through the installed SDD CLI and installed Governance CLI and emits a closed
   `fsgg.provider-certification/v1` report: lifecycle, provenance, skill-union, no-partial-state,
   unsupported-tool, malformed/wrong-version provider controls, a supported-host check and the artifact's one
-  declared required capability's evidence through Governance Verify/GateExecution under the FR-019/020
-  capture-lifetime join (further build or package capabilities are not exercised).
+  declared required test capability's evidence through Governance Verify/GateExecution under the FR-019/020
+  capture-lifetime join.
+- FR-023: When the artifact also declares `build:build` and/or `package:package` (typed example profile
+  `build-test-package`), the harness certifies their ACTUAL outputs: the build output equals the declared
+  transformation of its source and its handoff cites those exact bytes; the packed tar's members are exactly the
+  declared members, equal the files they claim to pack, and the handoff cites the artifact's exact digest. A
+  provider whose build or package evidence is self-consistent but wrong (accepted by Governance) fails exactly its
+  own `capability.*` check.
 - FR-022: A leg that cannot run is `skipped` with a reason and the verdict is not certified; an
   admission-side validator (`check-report`) rejects a report with a missing, duplicated, unevidenced or
   inconsistent check, a verdict that overstates the checks, or a machine-specific path.

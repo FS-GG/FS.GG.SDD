@@ -70,6 +70,9 @@ archive/CLI→Verify qualification, protected source delivery and distribution r
 - [x] C3-H2 Implement `scripts/provider-certification.py certify` over a packed artifact: lifecycle,
   provenance, skill-union, no-partial-state, unsupported-tool, malformed/wrong-version controls and
   Governance Verify/GateExecution evidence under the capture-lifetime join; skipped legs cannot certify.
+- [x] C3-H4 Certify declared build and package capabilities by their actual outputs and qualify a
+  build-test-package provider (typed example `--profile`), including bad variants that fail exactly their own
+  capability check (#1134, second window).
 - [x] C3-H3 Qualify the reference provider through `scripts/qualify-reference-provider.py` against the
   published SDD 2.5.1 and Governance 1.15.0 packages, including a deliberately bad provider that must not
   certify. C4 distribution and the schema-v1 window remain open on #928.

@@ -329,7 +329,8 @@ class Harness:
             first_tree, second_tree = self.driver.target_snapshot(target), self.driver.target_snapshot(second)
             # The provenance records each child's remaining time budget (`timeoutSeconds`), which depends on
             # elapsed wall time and so differs between two otherwise identical instantiations; every other
-            # byte of it, and of the tree, must be equal.
+            # byte of it, and of the tree, must be equal. Tracked as FS-GG/FS.GG.SDD#1136 (normalize the value or
+            # move it out of canonical provenance); remove this exclusion when that is fixed.
             provenance = '.fsgg/scaffold-provenance.json'
             def stable(path):
                 document = json.loads((path / provenance).read_text())
@@ -340,7 +341,7 @@ class Harness:
             first_tree.pop(provenance); second_tree.pop(provenance)
             assert first_tree == second_tree, 'instantiations differ: ' + ', '.join(sorted(k for k in set(first_tree) | set(second_tree) if first_tree.get(k) != second_tree.get(k))[:5])
             return {'files': len(first_tree) + 1, 'treeSha256': hashlib.sha256(json.dumps(first_tree, sort_keys=True).encode()).hexdigest(),
-                    'provenanceVolatileFields': ['observation.invocations[].timeoutSeconds']}
+                    'provenanceVolatileFields': ['observation.invocations[].timeoutSeconds'], 'volatileFieldsTrackedIn': 'FS-GG/FS.GG.SDD#1136'}
         self.check('lifecycle.deterministic-instantiation', 'lifecycle', deterministic, None if ok else why)
 
         m, s = self.manifest, self.summary
