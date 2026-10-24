@@ -43,7 +43,8 @@ DOTNET = '/usr/share/dotnet/dotnet'
 SDK_VERSION = '10.0.401'
 MAXIMUM_CPUS = 6
 IDENTITY_PATHS = ['scripts/*.py', 'scripts/fixtures/*', 'examples/provider-authoring/*',
-                  'tests/fixtures/provider-verify-journey/*', 'tests/fixtures/provider-verify-journey/fsgg/*']
+                  'tests/fixtures/provider-verify-journey/*', 'tests/fixtures/provider-verify-journey/fsgg/*',
+                  'tests/fixtures/provider-verify-journey/fsgg-build-test-package/*']
 
 # Verify capture window the outer runner admits to every Verify invocation (seconds).
 CAPTURE_WORK = 60
@@ -198,12 +199,12 @@ def build_authoring(journey):
     return dll if dll.is_file() else None
 
 
-def fixture_policy(fixture, policy_id):
+def fixture_policy(fixture, policy_id, required=('test:test',)):
     mappings = '[{"format":"fsgg.governance-handoff@2.0.0","id":"fsgg.governance-handoff","version":"2.0.0"}]'
     return {"schemaVersion": 1, "id": policy_id, "version": "1.0.0",
             "evidenceMap": {"id": "verify-journey-map", "version": "1.0.0",
                             "digest": "sha256:" + hashlib.sha256(mappings.encode()).hexdigest(), "mappings": json.loads(mappings)},
-            "requiredCapabilityIds": ["test:test"], "semanticOnlyCapabilityIds": [],
+            "requiredCapabilityIds": sorted(required), "semanticOnlyCapabilityIds": [],
             "knownPlatforms": ["linux-x64"], "environments": [{"id": "fixture-local", "environment": "local"}],
             "supportedEvidenceFormats": [{"id": "fsgg.governance-handoff", "version": "2.0.0"}],
             "maximumPreflightSeconds": 30, "maximumScaffoldSeconds": 60,

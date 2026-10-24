@@ -16,7 +16,19 @@ module Authoring =
         | Ok value -> value
         | Error diagnostics -> failwithf "Production contract refused: %A" diagnostics
 
-    let catalog (executable: string) : ProviderCatalog.Catalog =
+    /// Provider profiles the sample can author: the default single-capability `test` profile and the
+    /// `build-test-package` profile that also declares build and package capabilities.
+    let profiles = [ "test"; "build-test-package" ]
+
+    let providerId profile =
+        if profile = "build-test-package" then "governance-build-test-package-fixture" else "governance-test-fixture"
+
+    let private ceremony = [ ""; "with spaces"; "$(literal);&" ]
+
+    let catalogFor (profile: string) (executable: string) : ProviderCatalog.Catalog =
+        if not (List.contains profile profiles) then
+            invalidArg "profile" ("Unknown profile: " + profile)
+
         if not (System.IO.Path.IsPathFullyQualified executable) then
             invalidArg "executable" "Select an absolute fixture executable."
 
@@ -40,12 +52,12 @@ module Authoring =
 
         let descriptor: ProviderCatalog.Descriptor =
             {
-                Id = "governance-test-fixture"
+                Id = providerId profile
                 DisplayName = "Generic handoff fixture"
                 Help = "Explicit test declaration"
                 Language = "opaque"
                 ProductShape = "fixture"
-                DescriptorId = "governance-test-fixture-descriptor"
+                DescriptorId = providerId profile + "-descriptor"
                 DescriptorRevision = "revision"
                 DescriptorDigest = ProviderCatalogIntegrity.digest [||]
                 ContractVersion = "3.0.0"
@@ -75,29 +87,16 @@ module Authoring =
                         }
                     ]
                 Capabilities =
-                    [
+                    (let capability id evidenceId (arguments: string list) : ProviderCatalog.CapabilityDeclaration =
                         {
-                            Id = "test:test"
+                            Id = id
                             Required = true
                             Platforms = [ "linux-x64" ]
                             ToolIds = [ "governance-test-fixture" ]
-                            EvidenceIds = [ "fixture-handoff" ]
+                            EvidenceIds = [ evidenceId ]
                             Binding =
                                 ProviderCatalog.Command(
-                                    {
-                                        Executable = executable
-                                        Arguments =
-                                            [
-                                                "run"
-                                                "--input"
-                                                "inputs/tests.json"
-                                                "--output"
-                                                "out/governance-handoff.json"
-                                                ""
-                                                "with spaces"
-                                                "$(literal);&"
-                                            ]
-                                    },
+                                    { Executable = executable; Arguments = arguments },
                                     {
                                         WorkingDirectory = "."
                                         TimeoutSeconds = 30
@@ -106,16 +105,62 @@ module Authoring =
                                     }
                                 )
                         }
-                    ]
+
+                     let testCapability =
+                         capability
+                             "test:test"
+                             "fixture-handoff"
+                             ([ "run"; "--input"; "inputs/tests.json"; "--output"; "out/governance-handoff.json" ] @ ceremony)
+
+                     if profile = "build-test-package" then
+                         [
+                             capability
+                                 "build:build"
+                                 "build-handoff"
+                                 ([
+                                     "build"
+                                     "--input"
+                                     "inputs/build.json"
+                                     "--output"
+                                     "out/build-handoff.json"
+                                     "--build-output"
+                                     "out/build/product.out"
+                                  ]
+                                  @ ceremony)
+                             testCapability
+                             capability
+                                 "package:package"
+                                 "package-handoff"
+                                 ([
+                                     "package"
+                                     "--input"
+                                     "out/build/product.out"
+                                     "--output"
+                                     "out/package-handoff.json"
+                                     "--package"
+                                     "out/package/product.pack"
+                                  ]
+                                  @ ceremony)
+                         ]
+                     else
+                         [ testCapability ])
                 Evidence =
-                    [
+                    (let entry id path : ProviderCatalog.EvidenceDeclaration =
                         {
-                            Id = "fixture-handoff"
+                            Id = id
                             Format = "fsgg.governance-handoff@2.0.0"
-                            Path = "out/governance-handoff.json"
+                            Path = path
                             Required = true
                         }
-                    ]
+
+                     if profile = "build-test-package" then
+                         [
+                             entry "build-handoff" "out/build-handoff.json"
+                             entry "fixture-handoff" "out/governance-handoff.json"
+                             entry "package-handoff" "out/package-handoff.json"
+                         ]
+                     else
+                         [ entry "fixture-handoff" "out/governance-handoff.json" ])
                 Skills = [ "opaque-fixture" ]
             }
 
@@ -131,6 +176,8 @@ module Authoring =
             Digest = ProviderCatalogIntegrity.digest [||]
             Providers = [ descriptor ]
         }
+
+    let catalog (executable: string) : ProviderCatalog.Catalog = catalogFor "test" executable
 
     let seal (catalog: ProviderCatalog.Catalog) =
         let canonical = ProviderCatalogIntegrity.catalogBytes catalog
@@ -149,7 +196,7 @@ module Authoring =
 
         bytes
 
-    let validate (policyBytes: byte array) (catalogBytes: byte array) =
+    let validateFor (profile: string) (policyBytes: byte array) (catalogBytes: byte array) =
         let policy =
             CatalogScaffoldPolicy.parse (ProviderCatalogIntegrity.digest policyBytes) policyBytes
             |> require
@@ -161,7 +208,7 @@ module Authoring =
         let selected =
             ProviderCatalog.resolve
                 catalog
-                "governance-test-fixture"
+                (providerId profile)
                 [
                     "raw", "Awkward name!?"
                     "packageIdentity", "example.org/explicit/module"
@@ -175,6 +222,8 @@ module Authoring =
         |> require
         |> ignore
 
+    let validate (policyBytes: byte array) (catalogBytes: byte array) = validateFor "test" policyBytes catalogBytes
+
     type Inputs =
         {
             TemplateRoot: string
@@ -182,6 +231,7 @@ module Authoring =
             TestInput: string
             Policy: string
             Output: string
+            Profile: string
         }
 
     let private overrides =
@@ -246,14 +296,14 @@ module Authoring =
         inputFile executable |> ignore
         let policyBytes = inputFile inputs.Policy
         let testBytes = inputFile inputs.TestInput
-        let catalogBytes = catalog executable |> seal
-        validate policyBytes catalogBytes
+        let catalogBytes = catalogFor inputs.Profile executable |> seal
+        validateFor inputs.Profile policyBytes catalogBytes
 
         let selection: CatalogScaffoldWorkflow.CatalogSelection =
             {
                 CatalogBytes = catalogBytes
                 ExpectedRawDigest = ProviderCatalogIntegrity.digest catalogBytes
-                Provider = Some "governance-test-fixture"
+                Provider = Some(providerId inputs.Profile)
                 Overrides = overrides
             }
 
@@ -262,6 +312,13 @@ module Authoring =
         let entries =
             templateEntries root
             @ [ "content/inputs/tests.json", testBytes; "content/out/.gitkeep", [||] ]
+            @ (if inputs.Profile = "build-test-package" then
+                   [
+                       "content/inputs/build.json", Encoding.UTF8.GetBytes "{\"schemaVersion\":1,\"kind\":\"build\"}"
+                       "content/inputs/package.json", Encoding.UTF8.GetBytes "{\"schemaVersion\":1,\"kind\":\"package\"}"
+                   ]
+               else
+                   [])
 
         let names = System.Collections.Generic.HashSet<string>(StringComparer.Ordinal)
 
@@ -322,7 +379,8 @@ module Authoring =
                 policyDigest = ProviderCatalogIntegrity.digest policyBytes
                 archive = archivePath
                 archiveDigest = ProviderCatalogIntegrity.digest (inputFile archivePath)
-                provider = "governance-test-fixture"
+                provider = providerId inputs.Profile
+                profile = inputs.Profile
                 platform = "linux-x64"
                 preflightSeconds = 30
                 scaffoldSeconds = 60
@@ -348,6 +406,29 @@ module Authoring =
                         "with spaces"
                         "$(literal);&"
                     |]
+                // Every declared capability with its literal command and the evidence output it must produce.
+                capabilities =
+                    (let descriptor = (catalogFor inputs.Profile executable).Providers.Head
+
+                     descriptor.Capabilities
+                     |> List.map (fun capability ->
+                         let evidence =
+                             descriptor.Evidence
+                             |> List.find (fun entry -> List.contains entry.Id capability.EvidenceIds)
+
+                         match capability.Binding with
+                         | ProviderCatalog.Command(command, limits) ->
+                             {|
+                                 id = capability.Id
+                                 executable = command.Executable
+                                 arguments = List.toArray command.Arguments
+                                 workingDirectory = limits.WorkingDirectory
+                                 evidenceId = evidence.Id
+                                 evidencePath = evidence.Path
+                                 evidenceFormat = evidence.Format
+                             |}
+                         | ProviderCatalog.SemanticOnly -> failwith "The sample declares only command capabilities.")
+                     |> List.toArray)
             |}
 
         write

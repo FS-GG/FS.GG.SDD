@@ -33,6 +33,7 @@ let init (arguments: string array) =
                         "--test-input"
                         "--policy"
                         "--out"
+                        "--profile"
                     ]
                 && not (Map.containsKey key result)
                 ->
@@ -53,8 +54,9 @@ let init (arguments: string array) =
                 TestInput = selected "--test-input"
                 Policy = selected "--policy"
                 Output = selected "--out"
+                Profile = Map.tryFind "--profile" options |> Option.defaultValue "test"
             }
-    | _ -> invalidArg "arguments" "Use emit with five explicit input/output options, or check <provenance> <summary>."
+    | _ -> invalidArg "arguments" "Use emit with five explicit input/output options (and an optional --profile test|build-test-package), or check <provenance> <summary>."
 
 let interpret =
     function

@@ -14,9 +14,12 @@ records every check with its observed evidence. It proves, from the packed artif
   unsupported-tool wrong tool version and unsupported platform are refused by the product, with the target and
                    owned staging untouched (the wrong-version probe is itself an observed tool invocation)
   malformed        unsupported schema version and a malformed but digest-correct catalog are refused
-  evidence         the artifact's ONE declared required capability (the reference provider declares test:test)
-                   runs through Governance Verify/GateExecution under the capture-lifetime join; missing, stale
-                   and mismatched evidence is refused. Further build/package capabilities are not exercised.
+  evidence         the artifact's declared required test capability runs through Governance Verify/GateExecution
+                   under the capture-lifetime join; missing, stale and mismatched evidence is refused
+  capability       when the artifact also declares build:build and/or package:package, their ACTUAL outputs are
+                   checked, not their labels: the build output equals the declared transformation of its source,
+                   the packed artifact's members equal the files they claim to pack, and each handoff cites the
+                   exact bytes of the output or package (Governance alone accepts a self-consistent wrong one)
   host             the run is on the exact supported host profile
 
 Nothing is skipped silently: a check whose prerequisite failed is recorded as `skipped` and the
@@ -34,10 +37,12 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import io
 import re
 import shutil
 import subprocess
 import sys
+import tarfile
 
 sys.dont_write_bytecode = True
 
@@ -80,8 +85,23 @@ def is_int(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def required_check_ids(evidence_cases=REQUIRED_EVIDENCE_CASES):
-    return [check_id for check_id, _ in STATIC_CHECKS] + ['evidence.' + name for name in evidence_cases]
+CAPABILITY_CHECKS = {'build:build': 'capability.build', 'package:package': 'capability.package'}
+TRANSFORMS = {'identity': lambda raw: raw, 'ascii-uppercase': lambda raw: raw.translate(bytes.maketrans(bytes(range(97, 123)), bytes(range(65, 91))))}
+PACKAGE_FORMATS = ('tar',)
+
+
+def required_check_ids(evidence_cases=REQUIRED_EVIDENCE_CASES, capabilities=()):
+    return ([check_id for check_id, _ in STATIC_CHECKS] + ['evidence.' + name for name in evidence_cases]
+            + [CAPABILITY_CHECKS[c] for c in sorted(capabilities) if c in CAPABILITY_CHECKS])
+
+
+def declared_capabilities(manifest):
+    """The capabilities a packed artifact declares: its `capabilities` list, or the legacy single required one."""
+    listed = manifest.get('capabilities')
+    if listed:
+        return listed
+    return [{'id': manifest['requiredCapabilityId'], 'executable': manifest['fixtureExecutable'], 'arguments': manifest['fixtureArguments'],
+             'workingDirectory': '.', 'evidenceId': None, 'evidencePath': manifest['requiredAbsentOutput'], 'evidenceFormat': manifest['requiredEvidenceFormat']}]
 
 
 def load(name, filename):
@@ -120,10 +140,12 @@ def validate_report(report):
         expect(isinstance(tool, dict) and set(tool) == {'version', 'sha256'} and isinstance(tool.get('version'), str)
                and SHA.fullmatch(str(tool.get('sha256'))), f'{name} tool needs version and sha256')
     artifact = report['artifact']
-    expect(isinstance(artifact, dict) and set(artifact) == {'provider', 'platform', 'catalogDigest', 'policyDigest', 'archiveDigest'}
+    expect(isinstance(artifact, dict) and set(artifact) == {'provider', 'platform', 'capabilities', 'catalogDigest', 'policyDigest', 'archiveDigest'}
+           and isinstance(artifact.get('capabilities'), list) and bool(artifact['capabilities']) and all(isinstance(c, str) and c for c in artifact['capabilities'])
+           and artifact['capabilities'] == sorted(set(artifact['capabilities']))
            and all(isinstance(artifact.get(k), str) and artifact[k] for k in ('provider', 'platform'))
            and all(SHA.fullmatch(str(artifact.get(k))) for k in ('catalogDigest', 'policyDigest', 'archiveDigest')),
-           'artifact identity needs provider, platform and the three sha256 digests')
+           'artifact identity needs provider, platform, sorted declared capabilities and the three sha256 digests')
     checks = report['checks']
     expect(isinstance(checks, list) and checks, 'checks required')
     ids = []
@@ -137,7 +159,9 @@ def validate_report(report):
             expect(check['status'] != 'pass' or check['evidence'], 'a passing check must carry evidence: ' + check['id'])
             expect(check['status'] == 'pass' or check['detail'], 'a failed or skipped check must say why: ' + check['id'])
     expect(len(ids) == len(set(ids)), 'check ids must be unique')
-    missing = [c for c in required_check_ids() if c not in ids]
+    declared = artifact.get('capabilities') if isinstance(artifact, dict) else None
+    declared = declared if isinstance(declared, list) and all(isinstance(c, str) for c in declared) else []
+    missing = [c for c in required_check_ids(capabilities=declared) if c not in ids]
     expect(not missing, 'required checks absent: ' + ', '.join(missing))
     verdict = report['verdict']
     expect(isinstance(verdict, dict) and set(verdict) == {'certified', 'total', 'passed', 'failed', 'skipped'}, 'closed verdict required')
@@ -163,7 +187,18 @@ def validate_report(report):
         need('provenance.inputs-bound', lambda e: e.get('catalogDigest') == artifact['catalogDigest'] and e.get('policyDigest') == artifact['policyDigest']
              and e.get('archiveDigest') == artifact['archiveDigest'] and e.get('platform') == artifact['platform'], 'provenance digests must equal the report artifact digests')
         need('provenance.tools-and-invocations', lambda e: is_int(e.get('invocationCount')) and e['invocationCount'] > 0 and bool(e.get('tools')), 'observed tools and invocations')
-        need('provenance.declared-bindings', lambda e: bool(e.get('capabilityId')) and bool(e.get('evidenceFormat')) and is_int(e.get('argumentCount')) and e['argumentCount'] > 0, 'a declared capability, evidence format and arguments')
+        need('provenance.declared-bindings', lambda e: e.get('capabilityIds') == artifact['capabilities'] and bool(e.get('evidenceFormat'))
+             and is_int(e.get('declaredCommands')) and e['declaredCommands'] == len(artifact['capabilities'])
+             and is_int(e.get('evidenceOutputs')) and e['evidenceOutputs'] == len(artifact['capabilities']) and is_int(e.get('argumentCount')) and e['argumentCount'] > 0,
+             'every declared capability bound to one command and one evidence output, matching the report artifact capabilities')
+        hexdigest = lambda value: isinstance(value, str) and re.fullmatch(r'[0-9a-f]{64}', value) is not None
+        need('capability.build', lambda e: hexdigest(e.get('outputSha256')) and e.get('outputSha256') == e.get('expectedSha256') == e.get('citedSha256')
+             and bool(e.get('outputPath')) and bool(e.get('transform')) and e.get('nodeState') == 'real',
+             'the build output equals the declared transformation of its source and the handoff cites exactly it')
+        need('capability.package', lambda e: hexdigest(e.get('artifactSha256')) and e.get('artifactSha256') == e.get('citedSha256') and e.get('format') in PACKAGE_FORMATS
+             and isinstance(e.get('members'), list) and bool(e['members']) and all(isinstance(m, str) and m for m in e['members'])
+             and e.get('memberBytesMatchSources') is True and e.get('nodeState') == 'real',
+             'the packed artifact identity is cited exactly and every member equals the file it claims to pack')
         need('skill-union.recorded-and-present', lambda e: all(is_int(e.get(k)) for k in ('providerSkills', 'sddOwnedSkills', 'onDisk')) and e['providerSkills'] >= 1 and e['onDisk'] >= e['providerSkills'] + e['sddOwnedSkills'], 'at least one provider skill, all recorded skills on disk')
         need('skill-union.mirrors-equal', lambda e: is_int(e.get('skills')) and e['skills'] >= 1, 'a non-empty mirrored skill set')
         for name, code in NO_PARTIAL_CASES.items():
@@ -244,7 +279,7 @@ class Harness:
         try:
             evidence = function()
             self.record(check_id, group, 'pass', '', evidence)
-        except (AssertionError, KeyError, ValueError, OSError, TypeError, IndexError, StopIteration, subprocess.SubprocessError) as error:
+        except (AssertionError, KeyError, ValueError, OSError, TypeError, IndexError, StopIteration, subprocess.SubprocessError, tarfile.TarError, json.JSONDecodeError) as error:
             self.record(check_id, group, 'fail', type(error).__name__ + ': ' + (str(error) or 'assertion failed'))
 
     # -- lifecycle / provenance / skills
@@ -328,13 +363,18 @@ class Harness:
         self.check('provenance.tools-and-invocations', 'provenance', tools, None if ok_summary else why)
 
         def bindings():
-            declared = [c for c in s['declaredCommands'] if c['capabilityId'] == m['requiredCapabilityId']]
-            assert len(declared) == 1, 'the required capability is not declared exactly once'
-            assert declared[0]['executable'] == m['fixtureExecutable'] and declared[0]['arguments'] == m['fixtureArguments'] and declared[0]['workingDirectory'] == '.'
+            caps = declared_capabilities(m)
             assert hashlib.sha256(Path(m['fixtureExecutable']).read_bytes()).hexdigest() == m['fixtureExecutableSha256'], 'declared executable bytes changed'
-            assert any(e['format'] == m['requiredEvidenceFormat'] and e['path'] == m['requiredAbsentOutput'] for e in s['declaredEvidence']), 'declared evidence output missing'
-            assert not (target / m['requiredAbsentOutput']).exists(), 'declared evidence output exists before execution'
-            return {'capabilityId': m['requiredCapabilityId'], 'evidenceFormat': m['requiredEvidenceFormat'], 'argumentCount': len(declared[0]['arguments'])}
+            assert len(s['declaredCommands']) == len(caps), 'the provenance declares commands the artifact does not'
+            for cap in caps:
+                declared = [c for c in s['declaredCommands'] if c['capabilityId'] == cap['id']]
+                assert len(declared) == 1, f'capability {cap["id"]} is not declared exactly once'
+                assert declared[0]['executable'] == cap['executable'] and declared[0]['arguments'] == cap['arguments'] and declared[0]['workingDirectory'] == cap['workingDirectory'], \
+                    f'capability {cap["id"]} is not bound to its literal command'
+                assert any(e['format'] == cap['evidenceFormat'] and e['path'] == cap['evidencePath'] for e in s['declaredEvidence']), f'evidence output for {cap["id"]} not declared'
+                assert not (target / cap['evidencePath']).exists(), f'evidence output for {cap["id"]} exists before execution'
+            return {'capabilityIds': sorted(c['id'] for c in caps), 'declaredCommands': len(caps), 'evidenceOutputs': len(caps),
+                    'evidenceFormat': m['requiredEvidenceFormat'], 'argumentCount': sum(len(c['arguments']) for c in caps)}
         self.check('provenance.declared-bindings', 'provenance', bindings, None if ok_summary else why)
 
         def skills():
@@ -431,6 +471,9 @@ class Harness:
                 self.record('evidence.' + case['name'], 'evidence', 'skipped', why)
             self.record('evidence.whole-request-refusal', 'evidence', 'skipped', why)
             self.record('evidence.capture-lifetime', 'evidence', 'skipped', why)
+            for capability in declared_capabilities(m):
+                if capability['id'] in CAPABILITY_CHECKS:
+                    self.record(CAPABILITY_CHECKS[capability['id']], 'capability', 'skipped', why)
             return
         workspace = self.output / 'workspace'
         shutil.copytree(self.positive_target, workspace, symlinks=True)
@@ -444,6 +487,8 @@ class Harness:
         git('add', '-A'); git('commit', '-qm', 'governance workspace catalog')
         provenance = '.fsgg/scaffold-provenance.json'
         evidence_path = m['requiredAbsentOutput']
+        capabilities = declared_capabilities(m)
+        self.positive_repo = None
         window = gov['captureLifetime']
         file_sha = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
         base = ['--paths', *gov['verifyPaths'], '--provider-provenance', provenance, '--provider-provenance-sha256', file_sha(workspace / provenance),
@@ -477,8 +522,11 @@ class Harness:
                 if case['expectedExit'] == 0:
                     verdict = json.loads((self.output / 'verify' / (case['name'] + '-verify.json')).read_text())
                     executed = [i.get('execution', {}).get('disposition') for i in verdict.get('passing', [])]
-                    assert verdict.get('verdict') == 'pass' and executed == ['executed'], 'Verify did not execute and pass the declared command'
+                    assert verdict.get('verdict') == 'pass' and executed == ['executed'] * len(capabilities), 'Verify did not execute and pass every declared command'
                     assert produced and content != 'stale', 'declared evidence was not produced by the run'
+                    assert all((repo / c['evidencePath']).is_file() for c in capabilities), 'a declared evidence output was not produced'
+                    if case['name'] == 'positive':
+                        self.positive_repo = repo
                 if case.get('staleEvidence'):
                     assert content == 'stale', 'stale evidence was overwritten or accepted'
                 if case['name'] in EVIDENCE_PRODUCED:
@@ -494,6 +542,45 @@ class Harness:
             assert not produced, 'a refused whole request launched the declared command'
             return {'exit': 3, 'diagnostic': 'RawDigestMismatch', 'commandLaunched': False}
         self.check('evidence.whole-request-refusal', 'evidence', whole_request)
+
+        expectations = gov.get('capabilityExpectations', {})
+        def evidence_document(capability_id):
+            capability = next(c for c in capabilities if c['id'] == capability_id)
+            handoff = json.loads((self.positive_repo / capability['evidencePath']).read_text())
+            nodes = handoff['evidence']['nodes']
+            assert [n['id'] for n in nodes] == [capability_id] and all(n['state'] == 'real' for n in nodes), 'the handoff does not carry exactly this capability as real evidence'
+            return {source['path']: source['digest'] for source in handoff['sources']}, nodes[0]['state']
+        sha_of = lambda raw: hashlib.sha256(raw).hexdigest()
+        def build_check():
+            spec_ = expectations['build']
+            source = (self.positive_repo / spec_['from']).read_bytes()
+            expected = TRANSFORMS[spec_['transform']](source)
+            output = (self.positive_repo / spec_['output']).read_bytes()
+            assert output == expected, f'the build output is not the {spec_["transform"]} of {spec_["from"]}'
+            cited, state = evidence_document('build:build')
+            assert cited.get(spec_['output']) == 'sha256:' + sha_of(output), 'the build handoff does not cite the exact build output bytes'
+            assert cited.get(spec_['from']) == 'sha256:' + sha_of(source), 'the build handoff does not cite the exact source bytes'
+            return {'outputPath': spec_['output'], 'outputSha256': sha_of(output), 'expectedSha256': sha_of(expected), 'citedSha256': cited[spec_['output']][7:],
+                    'transform': spec_['transform'], 'nodeState': state}
+        def package_check():
+            spec_ = expectations['package']
+            pack = (self.positive_repo / spec_['artifact']).read_bytes()
+            with tarfile.open(fileobj=io.BytesIO(pack)) as archive:
+                entries = archive.getmembers()
+                assert all(e.isfile() for e in entries), 'the package holds a member that is not a regular file'
+                assert all(not e.name.startswith('/') and '..' not in e.name.split('/') for e in entries), 'a package member path escapes'
+                members = {e.name: archive.extractfile(e).read() for e in entries}
+            assert len(members) == len(entries) and set(members) == set(spec_['members']), 'the package members are not exactly the declared members: ' + str(sorted(members))
+            for name, source in spec_['members'].items():
+                assert members[name] == (self.positive_repo / source).read_bytes(), f'packed member {name} differs from {source}'
+            cited, state = evidence_document('package:package')
+            assert cited.get(spec_['artifact']) == 'sha256:' + sha_of(pack), 'the package handoff does not cite the exact packed artifact bytes'
+            return {'artifactPath': spec_['artifact'], 'artifactSha256': sha_of(pack), 'citedSha256': cited[spec_['artifact']][7:], 'format': spec_['format'],
+                    'members': sorted(members), 'memberBytesMatchSources': True, 'nodeState': state}
+        positive_ok = self.positive_repo is not None
+        for capability_id, check_id, function in (('build:build', 'capability.build', build_check), ('package:package', 'capability.package', package_check)):
+            if capability_id in {c['id'] for c in capabilities}:
+                self.check(check_id, 'capability', function, None if positive_ok else 'prerequisite evidence.positive did not pass')
 
         def lifetime():
             assert lifetimes, 'no Verify invocation ran'
@@ -540,6 +627,22 @@ def validate_request(request):
             raise ValueError(f'tools.{name} needs version and a sha256:<64 hex> package digest')
     if not Path(request['artifact']['request']).is_file():
         raise ValueError('artifact.request must be the emitted fixture manifest')
+    declared = {c['id'] for c in declared_capabilities(json.loads(Path(request['artifact']['request']).read_text()))}
+    expectations = request['governance'].get('capabilityExpectations', {})
+    if set(expectations) - {'build', 'package'}:
+        raise ValueError('capabilityExpectations allows build and package only')
+    if 'build:build' in declared:
+        build = expectations.get('build')
+        if not isinstance(build, dict) or set(build) != {'from', 'output', 'transform'} or build['transform'] not in TRANSFORMS:
+            raise ValueError('a build:build capability needs capabilityExpectations.build {from, output, transform} with a known transform: ' + ', '.join(TRANSFORMS))
+    if 'package:package' in declared:
+        package = expectations.get('package')
+        if (not isinstance(package, dict) or set(package) != {'artifact', 'format', 'members'} or package['format'] not in PACKAGE_FORMATS
+                or not isinstance(package['members'], dict) or not package['members']):
+            raise ValueError('a package:package capability needs capabilityExpectations.package {artifact, format, members{name: workspace path}}')
+    for path in [v for e in expectations.values() for k, v in e.items() if k in ('from', 'output', 'artifact')] + [v for e in expectations.values() for v in (e.get('members') or {}).values()]:
+        if not isinstance(path, str) or path.startswith('/') or '..' in path.split('/'):
+            raise ValueError('capabilityExpectations paths are contained workspace-relative paths: ' + str(path))
 
 
 def certify(args):
@@ -571,14 +674,14 @@ def certify(args):
                     'sourceTreeSha256': before},
         'host': profile,
         'tools': request['tools'],
-        'artifact': {'provider': manifest['provider'], 'platform': manifest['platform'], 'catalogDigest': manifest['catalogDigest'],
+        'artifact': {'provider': manifest['provider'], 'platform': manifest['platform'], 'capabilities': sorted(c['id'] for c in declared_capabilities(manifest)), 'catalogDigest': manifest['catalogDigest'],
                      'policyDigest': manifest['policyDigest'], 'archiveDigest': manifest['archiveDigest']},
         'checks': harness.checks,
         'scope': SCOPE,
     }
     by = {s: sorted(c['id'] for c in harness.checks if c['status'] == s) for s in STATUSES}
     present = {c['id'] for c in harness.checks}
-    complete = all(c in present for c in required_check_ids())
+    complete = all(c in present for c in required_check_ids(capabilities=report['artifact']['capabilities']))
     report['verdict'] = {'certified': complete and not by['fail'] and not by['skipped'], 'total': len(harness.checks),
                          'passed': len(by['pass']), 'failed': by['fail'], 'skipped': by['skipped']}
     problems = validate_report(report)

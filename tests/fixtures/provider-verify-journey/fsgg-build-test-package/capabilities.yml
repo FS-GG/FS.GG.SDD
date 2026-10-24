@@ -1,0 +1,35 @@
+schemaVersion: 2
+domains:
+  - build
+  - test
+  - package
+pathMap:
+  - glob: "inputs/build.json"
+    capability: build
+  - glob: "inputs/tests.json"
+    capability: test
+  - glob: "inputs/package.json"
+    capability: package
+surfaces: []
+checks:
+  - id: build
+    domain: build
+    command: fixture-build
+    owner: provider
+    cost: cheap
+    environment: local-or-ci
+    maturity: block-on-ship
+  - id: test
+    domain: test
+    command: fixture-test
+    owner: provider
+    cost: cheap
+    environment: local-or-ci
+    maturity: block-on-ship
+  - id: package
+    domain: package
+    command: fixture-package
+    owner: provider
+    cost: cheap
+    environment: local-or-ci
+    maturity: block-on-ship
