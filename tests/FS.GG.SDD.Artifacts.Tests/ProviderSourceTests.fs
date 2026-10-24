@@ -203,7 +203,7 @@ module ProviderSourceTests =
     [<InlineData("fe80::1")>]
     [<InlineData("fc00::1")>]
     [<InlineData("::ffff:127.0.0.1")>]
-    let ``resolved special addresses cannot become allowed by hostname spelling`` address =
+    let ``resolved special addresses cannot become allowed by hostname spelling`` (address: string) =
         Assert.False(ProviderSource.isPublicAddress(IPAddress.Parse address))
 
     [<Fact>]
@@ -290,7 +290,7 @@ module ProviderSourceTests =
     [<InlineData("240.0.0.1")>]
     [<InlineData("2001:db8::1")>]
     [<InlineData("::ffff:192.0.2.1")>]
-    let ``nonpublic special use ranges remain refused after DNS resolution`` address =
+    let ``nonpublic special use ranges remain refused after DNS resolution`` (address: string) =
         Assert.False(ProviderSource.isPublicAddress(IPAddress.Parse address))
 
     [<Fact>]
