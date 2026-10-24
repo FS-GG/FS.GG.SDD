@@ -244,7 +244,9 @@ module ProviderSourceWorkflowTests =
         let drift = Internal.HandlersDoctor.computeDrift model
         Assert.True drift.HasProvenance
         Assert.False drift.IsCoherent
-        Assert.NotEmpty(Internal.Foundation.scaffoldProvenanceDiagnostics DiagnosticSeverity.DiagnosticWarning model)
+        let diagnostics = Internal.Foundation.scaffoldProvenanceDiagnostics DiagnosticSeverity.DiagnosticWarning model
+        Assert.NotEmpty diagnostics
+        Assert.All(diagnostics, fun diagnostic -> Assert.Equal("scaffold.provenanceMalformed", diagnostic.Id))
         let step: CommandTypes.ReconciliationStep =
             { StepId = CommandTypes.ReconciliationStepId.ArtifactReSeed; Kind = CommandTypes.ReconciliationStepId.ArtifactReSeed
               DiffPreview = "synthetic"; Outcome = CommandTypes.ReconciliationOutcome.WouldApply; TargetPaths = [ "AGENTS.md" ] }
@@ -444,17 +446,35 @@ module ProviderSourceWorkflowTests =
         match ProviderSourceEffects.inspectEnvelope 6L valid with
         | Ok files -> Assert.Equal<string list>([ "source.json"; "payload/data.bin" ], List.map fst files)
         | Error errors -> failwithf "%A" errors
-        for bytes, bound in
-            [ envelope [ "a"; "A" ], 100L
-              envelope [ "a"; "A/b.nupkg" ], 100L
-              envelope [ "a/b.nupkg"; "A" ], 100L
-              envelope [ "source.json"; "SOURCE.JSON/child" ], 100L
-              envelope [ "../outside" ], 100L
-              envelope [ "/absolute" ], 100L
-              valid, 5L
-              Array.append valid [| 0uy |], 100L
-              Array.append [| 0uy |] valid, 100L ] do
-            Assert.True(ProviderSourceEffects.inspectEnvelope bound bytes |> Result.isError)
+        for bytes, bound, message in
+            [ envelope [ "a"; "A" ], 100L, "Directory or duplicate/case-alias ZIP member."
+              envelope [ "a"; "A/b.nupkg" ], 100L, "ZIP file/ancestor collision."
+              envelope [ "a/b.nupkg"; "A" ], 100L, "ZIP file/ancestor collision."
+              envelope [ "source.json"; "SOURCE.JSON/child" ], 100L, "ZIP file/ancestor collision."
+              envelope [ "../outside" ], 100L, "Unsafe or excessive ZIP path."
+              envelope [ "/absolute" ], 100L, "Unsafe or excessive ZIP path."
+              valid, 5L, "ZIP advertised aggregate expansion exceeds the remaining source budget."
+              Array.append valid [| 0uy |], 100L, "Missing complete ZIP end record."
+              Array.append [| 0uy |] valid, 100L, "Central directory has unaccounted bytes or ZIP64 records." ] do
+            // Each negative control must fail for its intended invariant, not any incidental error.
+            match ProviderSourceEffects.inspectEnvelope bound bytes with
+            | Error errors -> Assert.Equal<string list>([ message ], errors |> List.map (fun error -> error.Message))
+            | Ok _ -> failwithf "Expected refusal: %s" message
+
+    [<Fact>]
+    let ``envelope decoder accepts DEFLATE members and returns the original bytes`` () =
+        use stream = new System.IO.MemoryStream()
+        let payload = Array.init 4096 (fun index -> byte (index % 7))
+        do
+            use zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, true)
+            for name in [ "source.json"; "payload/data.bin" ] do
+                use output = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal).Open()
+                output.Write(payload, 0, payload.Length)
+        match ProviderSourceEffects.inspectEnvelope 10000L (stream.ToArray()) with
+        | Ok files ->
+            Assert.Equal<string list>([ "source.json"; "payload/data.bin" ], List.map fst files)
+            for _, bytes in files do Assert.Equal<byte[]>(payload, bytes)
+        | Error errors -> failwithf "%A" errors
 
     [<Fact>]
     let ``envelope population allows the fixed manifest plus exactly the maximum payload`` () =

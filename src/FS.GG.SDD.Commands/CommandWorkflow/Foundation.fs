@@ -1353,7 +1353,7 @@ nuget-cache/
         | Ok _ -> []
         | Error findings ->
             findings |> List.map (fun finding ->
-                Diagnostics.create "source.provenanceMalformed" severity None None
+                Diagnostics.create "scaffold.provenanceMalformed" severity None None
                     ("Existing scaffold provenance is invalid: " + finding.Message)
                     "Restore valid schema1/2/3 provenance; do not treat this observed record as absent or rewrite its historical authority." [])
 
