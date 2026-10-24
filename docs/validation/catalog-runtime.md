@@ -228,3 +228,42 @@ Node24.8.0 executable (129,318,464 bytes). Larger opened files refuse before byt
 archive, produced-payload and command-output limits are unchanged. Nuspec XML is parsed
 from its original bounded bytes, including standard UTF8 BOM handling; package identity,
 dependency refusal and the raw archive digest remain mandatory.
+
+## External provider source I/O coverage (#935)
+
+Four `ProviderSourceWorkflowTests` facts use the shared
+`CatalogNamespaceFactAttribute` and `kind=provider-source-native` trait. The
+ordinary unfiltered suites keep 49 source and three new CLI declarations. Unless
+explicitly opted in, the four I/O facts are reported as skipped/not executed,
+never as passes. Theory expansion and pass counts require actual test results.
+The source-census check runs before SDK setup in the gate and Commands release
+job; removing a classification or adding an unclassified I/O consumer fails it.
+
+A separately selected native-runtime plan uses the existing pid-namespace
+backend, sets `FSGG_SDD_NAMESPACE_REGRESSION=1`, and supplies this literal argv
+with the selected SDK executable and a fresh private results directory:
+
+```text
+<SDK401>/dotnet test tests/FS.GG.SDD.Commands.Tests/FS.GG.SDD.Commands.Tests.fsproj --no-build --no-restore -c Debug --filter kind=provider-source-native --logger trx;LogFileName=provider-source-native.trx --results-directory <private-results>
+```
+
+The plan stores this as an argv array; the semicolon is part of the logger
+argument, not a shell separator. The flag merely selects discovery. Neither it
+nor a PID namespace qualifies the carrier. Actual Linux-x64, .NET10.0.12, exact
+glibc2.44 with every required export, complete selected input custody and a
+finite external custodian are still prerequisites. A runner label or ordinary
+SDK setup does not establish them. The namespace runner's existing limitations
+and unknown-resource ownership rules remain unchanged.
+
+Acceptance requires all four named facts executed and passed, zero failures or
+skips, current source/binary/input joins, and actual EOF/retirement evidence:
+
+- no-provider inspection lists every captured provider without resolution or reread;
+- whole-set provider collision refuses before an inspectable handle exists;
+- offline exact cache survives removal of original local sources without acquisition;
+- selected source joins reject changed cache bytes and inspection only scaffold targets.
+
+These four results remain owed pending qualified Home carrier/custodian
+selection. Even passing them does not qualify genuine installed third-party
+creation/build/test, offline re-instantiation, publication or Wizard adoption.
+Ordinary CI cannot close #935 or #928 or grant publication on skipped cases.

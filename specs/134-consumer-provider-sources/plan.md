@@ -155,3 +155,26 @@ pure codecs, provenance readers, acquisition/staging/cache, original-edge join a
 CLI; qualify affected semantic tests, required exact-head CI and independent
 review. Root separately selects the real package-only third-party/native journey,
 publication and public installed acceptance. Retain the same issue/owner/PR.
+
+## Ordinary and native source tests
+
+Exactly four `withInspectionSources` consumers perform real source acquisition
+I/O. Reuse the existing `CatalogNamespaceFactAttribute` from shared test support
+and mark them `kind=provider-source-native`. Ordinary unfiltered CI keeps the
+remaining 49 source and three CLI declarations; the four native facts report
+skipped/not executed unless explicitly selected. Declaration counts are not
+execution results, and a skipped case is never acceptance.
+
+Use the maintained `catalog-runtime-validation.py` native-runtime/pid-namespace
+route for a separately admitted current-binary run selecting all four facts.
+The opt-in flag and namespace provide neither a qualified carrier nor source
+acquisition authority. That run still requires actual Linux-x64, .NET10.0.12,
+exact glibc2.44 plus every required export, complete selected input custody, and
+a finite external custodian. Four executed passes, zero skips, exact source/input
+joins and retirement evidence are required. Home carrier qualification remains
+a prerequisite; ordinary CI does not close #935 or its parent #928.
+
+A small actual-source census in the existing Python runner test suite checks the
+complete four-case set, shared attribute order, trait and CI wiring before SDK
+setup. Causal removals/additions must fail. This static preflight introduces no
+executor, runtime authority or weakened host gate.

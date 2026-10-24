@@ -16,6 +16,54 @@ harness = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(harness)
 
 
+class ProviderSourceClassificationTests(unittest.TestCase):
+    def test_exact_native_source_classification(self):
+        import re
+        root = Path(__file__).parents[2]
+        path = root / 'tests/FS.GG.SDD.Commands.Tests/ProviderSourceWorkflowTests.fs'
+        source = path.read_text()
+        expected = {
+            'no-provider inspection lists every captured provider without resolution or reread',
+            'whole-set provider collision refuses before an inspectable handle exists',
+            'offline exact cache survives removal of original local sources without acquisition',
+            'selected source joins reject changed cache bytes and inspection only scaffold targets',
+        }
+        def check(text):
+            declarations = re.findall(r'(?ms)^    ((?:\[<[^\n]+>\]\n    )+)let ``([^`]+)`` \(\) =\n(.*?)(?=^    (?:\[<|let )|\Z)', text)
+            native = [(attributes, name) for attributes, name, body in declarations if 'withInspectionSources ' in body]
+            self.assertEqual({name for _, name in native}, expected)
+            self.assertEqual(len(native), 4)
+            self.assertEqual(text.count('withInspectionSources'), 5)  # one helper plus four consumers
+            for attributes, _ in native:
+                self.assertIn('CatalogNamespaceFact', attributes)
+                self.assertIn('Trait("kind", "provider-source-native")', attributes)
+                self.assertNotIn('[<Fact', attributes)
+            self.assertEqual(text.count('CatalogNamespaceFact'), 4)
+            self.assertEqual(text.count('provider-source-native'), 4)
+        check(source)
+        for mutant in [
+            source.replace('CatalogNamespaceFact', 'Fact', 1),
+            source.replace('; Trait("kind", "provider-source-native")', '', 1),
+            source.replace('withInspectionSources false', 'omittedFixture false', 1),
+            source + '\n    [<Fact>]\n    let ``extra native consumer`` () =\n        withInspectionSources false ignore\n',
+        ]:
+            with self.assertRaises(AssertionError):
+                check(mutant)
+        project = (root / 'tests/FS.GG.SDD.Commands.Tests/FS.GG.SDD.Commands.Tests.fsproj').read_text()
+        self.assertLess(project.index('TestSupport.fs'), project.index('CatalogNativeFacts.fs'))
+        self.assertLess(project.index('CatalogNativeFacts.fs'), project.index('ProviderSourceWorkflowTests.fs'))
+        self.assertLess(project.index('CatalogNativeFacts.fs'), project.index('CatalogScaffoldLinuxIdentityTests.fs'))
+        shared = (root / 'tests/FS.GG.SDD.Commands.Tests/CatalogNativeFacts.fs').read_text()
+        self.assertIn('type CatalogNamespaceFactAttribute()', shared)
+        self.assertIn('Environment.GetEnvironmentVariable("FSGG_SDD_NAMESPACE_REGRESSION") <> "1"', shared)
+        self.assertNotIn('type CatalogNamespaceFactAttribute()', (root / 'tests/FS.GG.SDD.Commands.Tests/CatalogScaffoldLinuxIdentityTests.fs').read_text())
+        command = 'python3 -I -B scripts/tests/catalog-runtime-validation.test.py ProviderSourceClassificationTests'
+        gate = (root / '.github/workflows/gate.yml').read_text()
+        release = (root / '.github/workflows/release.yml').read_text().split('  commands-tests:', 1)[1].split('  cli-tests:', 1)[0]
+        for workflow in [gate, release]:
+            self.assertLess(workflow.index(command), workflow.index('uses: actions/setup-dotnet'))
+
+
 class HarnessTests(unittest.TestCase):
     def run_fixture(self, code, **options):
         with tempfile.TemporaryDirectory() as output:

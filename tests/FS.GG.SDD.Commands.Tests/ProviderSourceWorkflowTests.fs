@@ -336,7 +336,7 @@ module ProviderSourceWorkflowTests =
             // A failed fixture must not turn unresolved release into path deletion.
             if not cleanupUnknown then System.IO.Directory.Delete(root, true)
 
-    [<Fact>]
+    [<CatalogNamespaceFact; Trait("kind", "provider-source-native")>]
     let ``no-provider inspection lists every captured provider without resolution or reread`` () =
         withInspectionSources false (fun sources request result _ ->
             let prepared = match result with Ok value -> value | Error errors -> failwithf "%A" errors
@@ -360,7 +360,7 @@ module ProviderSourceWorkflowTests =
             System.Array.Fill(request.PolicyBytes, 0uy)
             Assert.Equal<ProviderSourceEffects.SourcePreview list>(views, ProviderSourceEffects.inspect prepared))
 
-    [<Fact>]
+    [<CatalogNamespaceFact; Trait("kind", "provider-source-native")>]
     let ``whole-set provider collision refuses before an inspectable handle exists`` () =
         withInspectionSources true (fun _ request result _ ->
             Assert.Empty(System.IO.Directory.GetFileSystemEntries request.CacheRoot)
@@ -368,7 +368,7 @@ module ProviderSourceWorkflowTests =
             | Error errors -> Assert.Contains(errors, fun error -> error.Code = "source.providerCollision")
             | Ok _ -> failwith "A colliding set must not become inspectable or selectable.")
 
-    [<Fact>]
+    [<CatalogNamespaceFact; Trait("kind", "provider-source-native")>]
     let ``offline exact cache survives removal of original local sources without acquisition`` () =
         withInspectionSources false (fun sources request result releaseOriginal ->
             let unwrap = function Ok value -> value | Error errors -> failwithf "%A" errors
@@ -388,7 +388,7 @@ module ProviderSourceWorkflowTests =
                     Assert.Equal(None, view.ResolvedUri)
             finally releaseOriginal operation)
 
-    [<Fact>]
+    [<CatalogNamespaceFact; Trait("kind", "provider-source-native")>]
     let ``selected source joins reject changed cache bytes and inspection only scaffold targets`` () =
         withInspectionSources false (fun _ _ result _ ->
             let unwrap = function Ok value -> value | Error errors -> failwithf "%A" errors

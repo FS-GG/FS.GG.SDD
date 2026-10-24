@@ -10,6 +10,8 @@
 - [x] Implement bounded local/HTTPS source acquisition, closed staging and verified cache/offline use (source; qualification pending).
 - [x] Join the actual existing scaffold operation before target publication; preserve independent policy/executor (source; qualification pending).
 - [x] Integrate explicit CLI route and deterministic projections/refusals (source; qualification pending).
+- [x] Classify the four real source-I/O facts through the existing native test route; verify the source census without claiming native passes.
+- [ ] Qualify all four source-I/O facts on the supported carrier under finite custody (four passes, zero skips).
 - [ ] Complete causal negative controls, affected suites, surfaces and required exact-head CI.
 - [ ] Obtain independent source review on the complete candidate.
 - [ ] Separately qualify genuine installed third-party creation/build/test and exact offline re-instantiation.

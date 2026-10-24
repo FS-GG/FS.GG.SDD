@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="../Shared/TestShared.fs" />
     <Compile Include="TestSupport.fs" />
+    <Compile Include="CatalogNativeFacts.fs" />
     <Compile Include="CatalogScaffoldWorkflowTests.fs" />
     <Compile Include="ProviderSourceWorkflowTests.fs" />
     <Compile Include="CatalogScaffoldRuntimeTests.fs" />

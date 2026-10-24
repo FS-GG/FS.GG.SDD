@@ -46,6 +46,9 @@ jobs:
           python3 scripts/tests/retained-occupancy-preflight.test.py
           python3 scripts/tests/published-set-qualification.test.py
 
+      - name: Source native-test classification (four carrier cases remain owed)
+        run: python3 -I -B scripts/tests/catalog-runtime-validation.test.py ProviderSourceClassificationTests
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
