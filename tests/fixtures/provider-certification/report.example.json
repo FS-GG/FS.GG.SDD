@@ -1,8 +1,8 @@
 {
   "schema": "fsgg.provider-certification/v1",
   "harness": {
-    "sourceRevision": "b9332c2c0281c27d7d10ac5264eb6b12a589ca91",
-    "sourceTreeSha256": "6729941d98793a692df234a7a8293b37d586bbfe05aef31ef6d5740dad028b0b"
+    "sourceRevision": "a48c208fbb408b4e320206226a359db5d1d1a995",
+    "sourceTreeSha256": "f26575f8d0069bb64a1145184638444de9a04a789f128c71f80b2b3fa0db725b"
   },
   "host": {
     "machine": "x86_64",
@@ -27,11 +27,22 @@
   "artifact": {
     "provider": "governance-test-fixture",
     "platform": "linux-x64",
-    "catalogDigest": "sha256:a31c88d03b72f2b509f067fe75fc79e8874c3a73cae096d19dc0f3aeb4866147",
-    "policyDigest": "sha256:c776f549db8aea16739172446234542a2bc8c95d8552771e2579d1adfa1529a1",
+    "catalogDigest": "sha256:10703f16bba609801e00ddb59fcd55ac22282b7c7f69e76475b71f3a2aa9a32b",
+    "policyDigest": "sha256:7c9cc6c5e140854647deb17ccfd529d05422ea4dd0e1c7430afb422c85614238",
     "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f"
   },
   "checks": [
+    {
+      "id": "host.supported-profile",
+      "group": "host",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "machine": "x86_64",
+        "glibc": "2.44",
+        "runtime": "10.0.12"
+      }
+    },
     {
       "id": "lifecycle.scaffold",
       "group": "lifecycle",
@@ -70,7 +81,10 @@
       "detail": "",
       "evidence": {
         "files": 200,
-        "treeSha256": "6bc42e9c22b96aa61d597a629e2e2cb896a2bbb0637618cb97de671f01d685c9"
+        "treeSha256": "14585ebf05e9f7f6634a27240b38c05daa3946c6eb08fa67a34efd986eaa879f",
+        "provenanceVolatileFields": [
+          "observation.invocations[].timeoutSeconds"
+        ]
       }
     },
     {
@@ -79,8 +93,8 @@
       "status": "pass",
       "detail": "",
       "evidence": {
-        "catalogDigest": "sha256:a31c88d03b72f2b509f067fe75fc79e8874c3a73cae096d19dc0f3aeb4866147",
-        "policyDigest": "sha256:c776f549db8aea16739172446234542a2bc8c95d8552771e2579d1adfa1529a1",
+        "catalogDigest": "sha256:10703f16bba609801e00ddb59fcd55ac22282b7c7f69e76475b71f3a2aa9a32b",
+        "policyDigest": "sha256:7c9cc6c5e140854647deb17ccfd529d05422ea4dd0e1c7430afb422c85614238",
         "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f",
         "platform": "linux-x64"
       }
@@ -319,8 +333,8 @@
   "scope": "Local cooperative profile on the exact Linux-x64 / .NET 10.0.12 / glibc 2.44 host: not hostile containment, not a hosted-runner profile, no authentic blocked-read or uncertain-close case, no distribution.",
   "verdict": {
     "certified": true,
-    "total": 24,
-    "passed": 24,
+    "total": 25,
+    "passed": 25,
     "failed": [],
     "skipped": []
   }
