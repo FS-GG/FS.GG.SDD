@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Qualify the reference provider through the reusable certification harness (SDD928 C3).
+"""Qualify the reference providers through the reusable certification harness (SDD928 C3).
 
 Installs the PUBLISHED SDD CLI and Governance CLI from nuget.org into an empty private cache, builds
 the typed authoring example against published packages, packs the reference provider with `emit`,
 and runs scripts/provider-certification.py against that packed artifact. Then it proves the harness
 is not vacuous: a deliberately bad provider (its fixture writes evidence citing the wrong bytes in the
 positive case) must NOT certify, and tampering with the certified report must be detected.
+
+A second reference provider, the `build-test-package` profile, declares build:build, test:test and
+package:package. It is certified on the same published packages, with its ACTUAL build output and packed
+artifact checked, and two bad variants whose evidence Governance accepts but is wrong must each fail exactly
+their own capability check: a package whose members are not the build output, and a build output that is not
+the declared transformation of its source.
 
 This is ordinary development verification (ADR-0096) on the exact supported host (Linux-x64, .NET
 10.0.12, glibc 2.44) with at most six CPUs, a credential-free environment and nuget.org as the only
@@ -108,7 +114,7 @@ def run(args):
     journey.record('the reference provider certifies from its packed artifact with every required check passing', ok,
                    '' if ok else (json.dumps(report['verdict']) if report else good.stdout[-300:] + good.stderr[-300:]))
     if report:
-        required = certification.required_check_ids()
+        required = certification.required_check_ids(capabilities=report['artifact']['capabilities'])
         journey.record(f'all {len(required)} required checks are present and passed ({report["verdict"]["passed"]} checks)',
                        report['verdict']['passed'] == report['verdict']['total'] and set(required) <= {c['id'] for c in report['checks']})
         checked = subprocess.run([sys.executable, '-I', '-B', str(HERE / 'provider-certification.py'), 'check-report', str(output / 'certification-report.json')],
@@ -164,6 +170,52 @@ def run(args):
                    and {'lifecycle.strict-readback', 'provenance.inputs-bound', 'skill-union.mirrors-equal'} <= set(verdict['skipped'])
                    and all(c['detail'] for c in skipped_report['checks'] if c['status'] != 'pass') and not certification.validate_report(skipped_report),
                    json.dumps(verdict)[:400])
+
+    # ---- the build-test-package provider: build, test and package capabilities certified by their actual outputs
+    required_caps = ('build:build', 'test:test', 'package:package')
+    btp_policy = work / 'inputs/policy-build-test-package.json'
+    btp_policy.write_bytes(json.dumps(jm.fixture_policy(fixture, 'verify-journey-btp-policy', required=required_caps), separators=(',', ':')).encode())
+    btp_artifact = work / 'artifact-build-test-package'
+    actual, out, err = journey.step('pack-build-test-package-provider', [jm.DOTNET, str(dll), 'emit', '--template-root', str(work / 'inputs/template'),
+                                    '--fixture-executable', str(fixture), '--test-input', str(work / 'inputs/tests-input.json'),
+                                    '--policy', str(btp_policy), '--out', str(btp_artifact), '--profile', 'build-test-package'], timeout=120)
+    journey.record('the build-test-package provider packs through the typed authoring example', actual['passed'] and (btp_artifact / 'request.json').is_file(), (out + err)[-300:])
+    if (btp_artifact / 'request.json').is_file():
+        btp = copy.deepcopy(request)
+        btp['artifact'] = {'request': str(btp_artifact / 'request.json')}
+        btp['governance'].update(
+            workspaceCatalog=str(jm.FIXTURES / 'fsgg-build-test-package'), verifyPaths=['inputs/build.json', 'inputs/tests.json', 'inputs/package.json'],
+            capabilityExpectations={'build': {'from': 'product.txt', 'output': 'out/build/product.out', 'transform': 'ascii-uppercase'},
+                                    'package': {'artifact': 'out/package/product.pack', 'format': 'tar', 'members': {'product.out': 'out/build/product.out'}}})
+        good_btp, btp_report, btp_output = run_certify(journey, btp, 'build-test-package-provider', True)
+        required = certification.required_check_ids(capabilities=required_caps)
+        ok = (good_btp.returncode == 0 and btp_report is not None and btp_report['verdict']['certified'] and not certification.validate_report(btp_report)
+              and btp_report['artifact']['capabilities'] == sorted(required_caps) and {'capability.build', 'capability.package'} <= {c['id'] for c in btp_report['checks']})
+        journey.record(f'the build-test-package provider certifies with its build output and packed artifact checked ({len(required)} required checks)', ok,
+                       '' if ok else (json.dumps(btp_report['verdict']) if btp_report else good_btp.stdout[-300:] + good_btp.stderr[-300:]))
+        if btp_report:
+            by_id = {c['id']: c for c in btp_report['checks']}
+            journey.record('the build evidence is the real output: equals the ascii-uppercase of product.txt and the handoff cites exactly it',
+                           by_id['capability.build']['status'] == 'pass' and by_id['capability.build']['evidence']['outputSha256'] == by_id['capability.build']['evidence']['expectedSha256']
+                           == by_id['capability.build']['evidence']['citedSha256'])
+            journey.record('the package evidence is the real artifact: a tar of exactly product.out, cited by its exact digest',
+                           by_id['capability.package']['status'] == 'pass' and by_id['capability.package']['evidence']['members'] == ['product.out']
+                           and by_id['capability.package']['evidence']['artifactSha256'] == by_id['capability.package']['evidence']['citedSha256'])
+            summary['buildTestPackageChecks'] = btp_report['verdict']
+        for label, variable, expected_check in (('a package whose members are not the build output', 'FSGG_FIXTURE_PACKAGE_MODE', 'capability.package'),
+                                                ('a build output that is not the declared transformation of its source', 'FSGG_FIXTURE_BUILD_MODE', 'capability.build')):
+            bad_btp = copy.deepcopy(btp)
+            for case in bad_btp['governance']['evidenceCases']:
+                if case['name'] == 'positive':
+                    case['environment'] = {'FSGG_FIXTURE_MODE': 'write', variable: 'wrong-content' if 'PACKAGE' in variable else 'wrong-output'}
+            bad_run, bad_btp_report, _ = run_certify(journey, bad_btp, 'bad-' + expected_check.replace('.', '-'), False)
+            verdict = bad_btp_report['verdict'] if bad_btp_report else {}
+            # Governance accepts these (the handoff is consistent with what was written): only the harness can tell.
+            accepted = bool(bad_btp_report) and {c['id']: c for c in bad_btp_report['checks']}['evidence.positive']['status'] == 'pass'
+            journey.record(f'{label}, accepted by Governance, is NOT certified and fails exactly {expected_check}',
+                           bad_run.returncode == 1 and bad_btp_report is not None and not verdict['certified'] and verdict['failed'] == [expected_check]
+                           and not verdict['skipped'] and accepted and not certification.validate_report(bad_btp_report),
+                           json.dumps(verdict)[:300] if bad_btp_report else bad_run.stdout[-300:])
     return finish(journey, facts, tools, summary, report)
 
 

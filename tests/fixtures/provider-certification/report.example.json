@@ -1,8 +1,8 @@
 {
   "schema": "fsgg.provider-certification/v1",
   "harness": {
-    "sourceRevision": "a48c208fbb408b4e320206226a359db5d1d1a995",
-    "sourceTreeSha256": "f26575f8d0069bb64a1145184638444de9a04a789f128c71f80b2b3fa0db725b"
+    "sourceRevision": "9fd4d35d677aed3c0ba3b82c68782db2c2b79fe2",
+    "sourceTreeSha256": "e83eef2373e15fbc76a60c2762b6443e05c3ddff5c47817b7bc18a0093ba3657"
   },
   "host": {
     "machine": "x86_64",
@@ -27,8 +27,11 @@
   "artifact": {
     "provider": "governance-test-fixture",
     "platform": "linux-x64",
-    "catalogDigest": "sha256:10703f16bba609801e00ddb59fcd55ac22282b7c7f69e76475b71f3a2aa9a32b",
-    "policyDigest": "sha256:7c9cc6c5e140854647deb17ccfd529d05422ea4dd0e1c7430afb422c85614238",
+    "capabilities": [
+      "test:test"
+    ],
+    "catalogDigest": "sha256:ab3d27e28a50e0d517eb84688ce4231ee31395129128f2b71008b1e22fdbcbc9",
+    "policyDigest": "sha256:5cc475e9db4a64946ce5b042e02367470831c3855bb3803965807edc9214b149",
     "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f"
   },
   "checks": [
@@ -84,7 +87,8 @@
         "treeSha256": "14585ebf05e9f7f6634a27240b38c05daa3946c6eb08fa67a34efd986eaa879f",
         "provenanceVolatileFields": [
           "observation.invocations[].timeoutSeconds"
-        ]
+        ],
+        "volatileFieldsTrackedIn": "FS-GG/FS.GG.SDD#1136"
       }
     },
     {
@@ -93,8 +97,8 @@
       "status": "pass",
       "detail": "",
       "evidence": {
-        "catalogDigest": "sha256:10703f16bba609801e00ddb59fcd55ac22282b7c7f69e76475b71f3a2aa9a32b",
-        "policyDigest": "sha256:7c9cc6c5e140854647deb17ccfd529d05422ea4dd0e1c7430afb422c85614238",
+        "catalogDigest": "sha256:ab3d27e28a50e0d517eb84688ce4231ee31395129128f2b71008b1e22fdbcbc9",
+        "policyDigest": "sha256:5cc475e9db4a64946ce5b042e02367470831c3855bb3803965807edc9214b149",
         "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f",
         "platform": "linux-x64"
       }
@@ -120,7 +124,11 @@
       "status": "pass",
       "detail": "",
       "evidence": {
-        "capabilityId": "test:test",
+        "capabilityIds": [
+          "test:test"
+        ],
+        "declaredCommands": 1,
+        "evidenceOutputs": 1,
         "evidenceFormat": "fsgg.governance-handoff@2.0.0",
         "argumentCount": 8
       }

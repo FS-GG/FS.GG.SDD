@@ -1,0 +1,10 @@
+schemaVersion: 1
+id: verify-journey-build-test-package-workspace
+governedRoot: .
+domains:
+  - build
+  - test
+  - package
+packageSurfaces: []
+policyRef: .fsgg/policy.yml
+capabilitiesRef: .fsgg/capabilities.yml
