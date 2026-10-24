@@ -109,11 +109,16 @@ class DeclarationTests(unittest.TestCase):
                 result = {'exitCode': exit_code, 'firstFailure': failure, 'durationSeconds': duration,
                           'streams': {'stderr': {'log': str(log)}}}
                 return harness.classify_capture({'workSeconds': 1, 'cleanupEndSeconds': 2, 'startupAllowanceSeconds': 1}, result, 9)
-            for code in (0, 1, 3):
+            for code in (0, 1):
                 settled = classify(code, None if code == 0 else 'nonzero-exit', '')
                 self.assertEqual('host-exited-after-settlement', settled['outcome'], code)
                 self.assertTrue(settled['hostSettled'])
-            # Only the host's own mapping reserves 0/1/3 for a settled session: a crash, a usage error
+            refused = classify(3, 'nonzero-exit', '')
+            self.assertEqual('host-refused-input-unavailable', refused['outcome'])
+            self.assertFalse(refused['hostSettled'])
+            self.assertTrue(refused['withinAdmittedWindow'])
+            self.assertEqual('host-exited-after-its-window', classify(3, 'nonzero-exit', '', duration=4.5)['outcome'])
+            # Only the host's own mapping reserves 0/1 for a settled session: a crash, a usage error
             # and the tool error do not prove settlement, whatever the stderr says or omits.
             for code in (2, 139, 137):
                 result = classify(code, 'nonzero-exit', '')

@@ -287,8 +287,10 @@ installed CLI through `catalog-cli-acceptance.py` (positive and 7 negatives), th
 `fsgg-governance verify` in provider mode through GateExecution under the join (positive, missing,
 stale, mismatched and non-zero evidence, a detached TERM-ignoring descendant, a declared deadline, four
 whole-request refusals, and the ends-not-supplied refusal). Result on the supported Linux-x64/.NET
-10.0.12/glibc 2.44 host with six CPUs: 27 of 27, every Verify host settled inside the admitted window
-and every witnessed descendant absent afterwards. Ordinary verification under ADR-0096; the policy,
+10.0.12/glibc 2.44 host with six CPUs: 27 of 27. In the seven cases where the host held and released
+a capture (pass/blocked exits) it settled inside the admitted window; the five exit-3 refusals (four
+whole-request refusals, ends not supplied) carry their intended diagnostics and claim no settlement.
+Every witnessed descendant was absent afterwards and a non-cooperative worker scan was empty. Ordinary verification under ADR-0096; the policy,
 fixture and Governance catalog are SDD-owner fixtures (independent of the sample, not third-party
 supplied). Still owned elsewhere: an authentic blocked regular-file read and an independently
 observed uncertain close (Governance#423 prerequisite b), hostile containment and a hosted profile.

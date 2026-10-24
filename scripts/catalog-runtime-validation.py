@@ -54,10 +54,13 @@ DEFAULT_STARTUP_ALLOWANCE_SECONDS = 5
 HOST_RESIDENT_REPORT = 'stays resident while a read may be pending'
 HOST_RETAINED_REPORT = 'is retained after the original cleanup end'
 HOST_UNSETTLED_REPORT = 'did not settle cleanly'
-# Verify exit codes whose mapping proves the host itself settled the capture (Loop.exitCode):
-# 0 pass, 1 blocked, 3 input unavailable. 2 is usage and 4 is the tool error the host also uses to
-# replace an exit of a session that did not settle cleanly, so neither proves a settlement.
-SETTLED_EXIT_CODES = (0, 1, 3)
+# Verify exit codes whose mapping reflects a capture session the host held and released (Loop.exitCode):
+# 0 pass, 1 blocked. 3 (input unavailable) is also what the host returns for a refusal BEFORE any session
+# exists (digest, policy, platform, absent ends) and for a planning rejection after one, so it proves no
+# settlement either way. 2 is usage and 4 is the tool error the host also uses to replace an exit of a
+# session that did not settle cleanly.
+SETTLED_EXIT_CODES = (0, 1)
+INPUT_UNAVAILABLE_EXIT_CODE = 3
 WORKER_MARKER = 'FSGG_RUNNER_WORKER_ID'
 
 
@@ -137,8 +140,9 @@ def worker_survivors(marker):
 def classify_capture(declared, result, timeout):
     """Describe how the capture lifetime ended, from facts the runner itself observed.
 
-    `hostSettled` is true only when the host exited by itself, with an exit code its own mapping
-    reserves for a settled session, without any unsettled report, inside the admitted window.
+    `hostSettled` is true only when the host exited by itself with a pass (0) or blocked (1) result,
+    without any unsettled report, inside the admitted window. An input-unavailable exit (3) is
+    reported as `host-refused-input-unavailable`: it does not say whether a session was ever held.
     """
     stderr = ''
     log = result.get('streams', {}).get('stderr', {}).get('log')
@@ -163,8 +167,13 @@ def classify_capture(declared, result, timeout):
         outcome = 'host-exited-with-retained-session'
     elif unsettled_report or code == 4:
         outcome = 'host-exited-with-unsettled-session'
-    elif code in SETTLED_EXIT_CODES:
-        outcome = 'host-exited-after-settlement' if within_window else 'host-exited-after-its-window'
+    elif code in SETTLED_EXIT_CODES or code == INPUT_UNAVAILABLE_EXIT_CODE:
+        if not within_window:
+            outcome = 'host-exited-after-its-window'
+        elif code == INPUT_UNAVAILABLE_EXIT_CODE:
+            outcome = 'host-refused-input-unavailable'
+        else:
+            outcome = 'host-exited-after-settlement'
     else:
         outcome = 'host-exited-without-settlement-proof'
     return dict(declared, outcome=outcome, outerRuntimeEnded=outer_end,

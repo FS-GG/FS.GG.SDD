@@ -56,8 +56,9 @@ harness = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(harness)
 
 
-# nuget.org whole-file SHA-256 of the published tool packages, recorded independently of this script:
-# SDD 2.5.1 in FS-GG/FS.GG.SDD#935 (comment 6387941247); Governance 1.15.0 in FS-GG/FS.GG.SDD#928 (comment 6363029199).
+# nuget.org whole-file SHA-256 of the published tool packages. The leading eight characters are recorded
+# on FS-GG/FS.GG.SDD#935 (SDD 2.5.1, comment 6387941247) and #928 (Governance 1.15.0, comment 6363029199);
+# the full values were verified against fresh nuget.org downloads by an independent reviewer on 2026-10-24.
 PUBLISHED_SHA256 = {
     'FS.GG.SDD.Cli.2.5.1': '94e20819a011419531b696cc8510c122edc5cce2f2dbe93bb09864a391cfe241',
     'FS.GG.Governance.Cli.1.15.0': '9eb3eed64cacdd84ba3d82439d8e3b6ffb3c9e035c6e5de00a1520094227879b',
@@ -375,10 +376,13 @@ def verify_cases(journey, tools, workspace):
         witnessed = actual.get('descendantWitness', {})
         ok = actual['exitCode'] == expected and actual['cleanup'] == 'direct-child-reaped-streams-eof'
         if supply_ends:
-            # The host exited by itself, with an exit code its own mapping reserves for a settled session
-            # and no unsettled report, inside the admitted window; the outer runtime never had to end it.
-            ok = ok and capture is not None and capture['hostSettled'] and not capture['outerRuntimeEnded']
-            ok = ok and capture['withinAdmittedWindow'] and actual['durationSeconds'] < CAPTURE_CLEANUP_END
+            # The host exited by itself inside the admitted window and the outer runtime never had to end it.
+            # A pass/blocked exit means the host held and released the session (hostSettled); exit 3 is a
+            # refusal that says nothing about whether a session was ever held, so it is not claimed settled.
+            ok = ok and capture is not None and not capture['outerRuntimeEnded'] and capture['withinAdmittedWindow']
+            ok = ok and capture['outcome'] == ('host-refused-input-unavailable' if expected == 3 else 'host-exited-after-settlement')
+            ok = ok and capture['hostSettled'] == (expected != 3)
+            ok = ok and actual['durationSeconds'] < CAPTURE_CLEANUP_END
             ok = ok and actual.get('workerScan', {}).get('survivors') == []
         ok = ok and witnessed.get('survivors') == []
         if reason is not None:
@@ -408,7 +412,8 @@ def verify_cases(journey, tools, workspace):
                          'descendantWitness': {k: witnessed.get(k) for k in ('observed', 'survivors')}, 'workerScan': actual.get('workerScan'),
                          'descendantTeardown': actual.get('descendantTeardown'), 'durationSeconds': actual['durationSeconds'],
                          'cleanup': actual['cleanup'], 'firstFailure': actual['firstFailure'], 'stderr': err.strip()[:600]}
-        window = ('host exited by itself with a settled-session exit inside the admitted window' if supply_ends
+        window = ('host exited by itself inside the admitted window, session released' if supply_ends and expected != 3
+                  else 'host refused (exit 3) inside the admitted window, no settlement claimed' if supply_ends
                   else 'host refused before any capture (no outer ends supplied)')
         journey.record(f'verify {name}: exit {actual["exitCode"]} (expected {expected}), {window}, '
                        f'descendants {witnessed.get("observed")} witnessed / {len(witnessed.get("survivors") or [])} surviving, '

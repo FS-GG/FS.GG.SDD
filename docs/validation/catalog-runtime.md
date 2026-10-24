@@ -307,13 +307,14 @@ in `environment` is refused, so there is a single supplier.
 The result's `captureLifetime.outcome` is derived only from what the runner
 observed (the host's own exit mapping and reports, never a runner inference):
 
-- `host-exited-after-settlement`: the host exited by itself with an exit code
-  its own mapping reserves for a settled session (0 pass, 1 blocked, 3 input
-  unavailable), with none of its unsettled reports, inside the admitted window.
-  This is the only outcome with `hostSettled: true`. Exits 3 can also be a
-  refusal before any capture session existed (for example an unsupported
-  platform); the result does not distinguish them, the case's expected
-  diagnostic does.
+- `host-exited-after-settlement`: the host exited by itself with a pass (0) or
+  blocked (1) result, none of its unsettled reports, inside the admitted
+  window. This is the only outcome with `hostSettled: true`.
+- `host-refused-input-unavailable`: exit 3 inside the window. The host returns
+  it both for refusals before any capture session exists (digest, policy,
+  platform, absent ends) and for a planning rejection after one, so it proves
+  no settlement and none is claimed; the case's expected diagnostic
+  distinguishes the refusal.
 - `host-exited-with-retained-session` and `host-exited-with-unsettled-session`:
   exit 4 (the tool error the host also uses to replace an exit of a session that
   did not settle cleanly), or any exit accompanied by the host's "retained",
@@ -364,10 +365,10 @@ cache, at most six CPUs and nuget.org as the only package source:
    deadline, four whole-request refusals and the ends-not-supplied refusal.
 
 Each Verify case must also end with the host having exited by itself with a
-settled-session exit inside the admitted window, every witnessed descendant
+pass/blocked exit inside the admitted window (refusals: exit 3 with their intended diagnostic, no settlement claimed), every witnessed descendant
 absent and the worker scan empty, and each refusal must carry its intended
 diagnostic. The published tool package SHA-256 values are pinned in the script
-from their independent records. The policy, fixture and
+(prefixes recorded on #935/#928, full values checked against nuget.org downloads). The policy, fixture and
 Governance catalog are SDD-owner authored fixtures: independent of the sample,
 but not supplied by a third party. This is ordinary verification on the
 supported Linux-x64/.NET 10.0.12/glibc 2.44 profile, a local cooperative
