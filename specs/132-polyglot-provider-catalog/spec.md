@@ -136,6 +136,19 @@ qualified archives. This bounded slice does not close C3.1, distribution or prov
 - Out of scope: an authentic blocked regular-file read and an independently observed uncertain
   close (Governance#423 prerequisite b); hostile containment; provider certification; distribution.
 
+### SDD928-C3 — provider qualification harness and certification report (#1134)
+
+- FR-021: A maintained harness (`scripts/provider-certification.py`) qualifies a PACKED provider artifact
+  through the installed SDD CLI and installed Governance CLI and emits a closed
+  `fsgg.provider-certification/v1` report: lifecycle, provenance, skill-union, no-partial-state,
+  unsupported-tool, malformed/wrong-version provider controls and build/test/package evidence through
+  Governance Verify/GateExecution under the FR-019/020 capture-lifetime join.
+- FR-022: A leg that cannot run is `skipped` with a reason and the verdict is not certified; an
+  admission-side validator (`check-report`) rejects a report with a missing, duplicated, unevidenced or
+  inconsistent check, a verdict that overstates the checks, or a machine-specific path.
+- Out of scope: distribution (C4), the schema-v1 window, concrete language providers, hosted or hostile
+  profiles, and Governance#423 prerequisite (b).
+
 ## Selected-template data transport follow-up
 
 This bounded internal transport extension implements the accepted Templates441/SDD928

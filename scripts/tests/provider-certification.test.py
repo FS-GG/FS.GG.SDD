@@ -117,6 +117,19 @@ class ReportIntegrityTests(unittest.TestCase):
             self.assertTrue(cert.validate_report(value))
 
 
+class ExampleTests(unittest.TestCase):
+    def test_the_committed_example_is_a_valid_certified_report(self):
+        example = json.loads((ROOT / 'tests/fixtures/provider-certification/report.example.json').read_text())
+        self.assertEqual([], cert.validate_report(example))
+        self.assertTrue(example['verdict']['certified'])
+        self.assertEqual(sorted(cert.required_check_ids() + ['evidence.nonzero-exit']), sorted(c['id'] for c in example['checks']))
+
+    def test_the_committed_example_fails_when_tampered(self):
+        example = json.loads((ROOT / 'tests/fixtures/provider-certification/report.example.json').read_text())
+        example['checks'][0]['status'] = 'fail'
+        self.assertTrue(cert.validate_report(example))
+
+
 class RequestTests(unittest.TestCase):
     def request(self, tmp):
         manifest = Path(tmp) / 'request.json'

@@ -373,3 +373,72 @@ Governance catalog are SDD-owner authored fixtures: independent of the sample,
 but not supplied by a third party. This is ordinary verification on the
 supported Linux-x64/.NET 10.0.12/glibc 2.44 profile, a local cooperative
 profile, not hostile containment or provider certification.
+
+## Provider qualification harness and certification report (SDD928 C3, #1134)
+
+`scripts/provider-certification.py` is the reusable harness a provider author
+(or a catalog admitter) runs against a PACKED provider artifact, using the
+INSTALLED SDD CLI and the INSTALLED Governance CLI. It writes a closed,
+versioned report, `fsgg.provider-certification/v1`, suitable for catalog
+admission. The reference provider is the opaque-template fixture packed by the
+typed authoring example's `emit`.
+
+```sh
+python3 -I -B scripts/provider-certification.py certify --request request.json --output FRESH_DIR
+python3 -I -B scripts/provider-certification.py check-report FRESH_DIR/certification-report.json
+```
+
+`certify` exits 0 only when every required check passed. `check-report` is the
+admission-side validator: it requires the closed schema, every required check
+present exactly once, a passing check to carry evidence, a failed or skipped
+check to say why, verdict counts that match the checks, `certified` true only
+when every required check is present and passed, exact tool/artifact digests,
+and no machine-specific absolute path. A committed example is
+`tests/fixtures/provider-certification/report.example.json`.
+
+The request (`fsgg.provider-certification-request/v1`, closed) names
+`sourceRoot`/`identityPaths` (the harness source identity), `environment` (a
+credential-free environment for every child), `sdd` (`cliCommand` prefix and
+`transportExecutable`), `authoring.checkCommand` (the strict schema-2 readback
+command), `artifact.request` (the fixture manifest `emit` wrote: catalog, policy,
+archive, digests, overrides, capability and evidence declarations),
+`governance` (`tool`, `workspaceCatalog` directory of `.fsgg/*.yml`,
+`verifyPaths`, `captureLifetime`, `evidenceCases`) and `tools` (`version` and
+`sha256:` package digest of each installed tool).
+`evidenceCases` must include `positive` (exit 0) and `missing`, `stale`,
+`mismatched`; extra cases are reported as `evidence.<name>`.
+
+| Group | Check ids | What it proves from the packed artifact |
+|---|---|---|
+| lifecycle | `scaffold`, `dry-run`, `strict-readback`, `deterministic-instantiation` | settled, no owned staging; dry run observes and creates nothing; the strict production codec reads the provenance; two instantiations into different parents are byte-equal |
+| provenance | `inputs-bound`, `tools-and-invocations`, `declared-bindings` | schema-2 digests and effective parameters equal the packed inputs; the declared tool at its exact version and the literal template argv; the declared command, arguments and evidence output |
+| skill-union | `recorded-and-present`, `mirrors-equal` | recorded provider and SDD-owned skills exist and do not collide; the whole neutral skill set and its `.claude` mirror are equal byte for byte |
+| no-partial-state | `occupied-target`, `catalog-digest`, `policy-digest`, `archive-tamper`, `malformed-catalog`, `unsupported-schema-version`, `wrong-tool-version`, `unsupported-platform` | each is refused by the product with its intended diagnostic (not an outer timeout), ownership settled, the target unchanged or never created, no owned staging |
+| evidence | `positive`, `missing`, `stale`, `mismatched`, ..., `whole-request-refusal`, `capture-lifetime` | the declared build/test/package command runs through Governance Verify/GateExecution; the evidence is produced and accepted; missing, stale and mismatched evidence is refused; a bad provenance digest is refused before the command launches; every Verify host exits inside the admitted window with no surviving worker process |
+
+Malformed-provider and wrong-version controls are derived from the packed
+artifact: a digest-correct catalog with an unknown member (`catalog.malformed`),
+the same with `schemaVersion` 99 (`catalog.unsupportedSchema`), and a policy
+whose tool probe reports a different version (`catalog.toolVersionRefused`).
+
+Nothing is skipped silently. If a prerequisite fails its dependants are
+recorded as `skipped` with the reason and the verdict is not certified; a
+changed harness source tree during the run adds a failing check.
+
+`scripts/qualify-reference-provider.py run --work <fresh-dir>` is the
+package-only qualification of the reference provider: published SDD CLI and
+Governance CLI from nuget.org in an empty private cache, the typed example
+compiled against published packages, the artifact packed, certified, and the
+report validated. It also proves the harness is not vacuous: a deliberately bad
+provider (its positive-case fixture writes evidence citing the wrong bytes) is
+NOT certified and fails exactly `evidence.positive`, and each of six
+tamperings with the certified report is detected by `check-report`.
+
+Scope: ordinary verification under ADR-0096 on the exact Linux-x64 / .NET
+10.0.12 / glibc 2.44 profile; a local cooperative profile, not hostile
+containment or a hosted-runner profile. Not covered: distribution (C4), the
+schema-v1 window, concrete language providers (Templates#441), and the
+authentic blocked-read/uncertain-close cases (Governance#423 prerequisite b).
+The policy, fixture and Governance catalog are SDD-owner fixtures. A third
+party must supply its own artifact, fixture and workspace catalog; the report
+certifies that artifact only.

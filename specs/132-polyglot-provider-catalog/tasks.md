@@ -63,6 +63,17 @@ refusals and strict real schema2 check. These task results do not close C3.1-03 
 archive/CLI→Verify qualification, protected source delivery and distribution remain separate.
 
 
+## C3 provider qualification harness and certification report (#1134)
+
+- [x] C3-H1 Specify the closed `fsgg.provider-certification/v1` report and request; implement the
+  admission-side integrity validator with controls for every way of faking or truncating a report.
+- [x] C3-H2 Implement `scripts/provider-certification.py certify` over a packed artifact: lifecycle,
+  provenance, skill-union, no-partial-state, unsupported-tool, malformed/wrong-version controls and
+  Governance Verify/GateExecution evidence under the capture-lifetime join; skipped legs cannot certify.
+- [x] C3-H3 Qualify the reference provider through `scripts/qualify-reference-provider.py` against the
+  published SDD 2.5.1 and Governance 1.15.0 packages, including a deliberately bad provider that must not
+  certify. C4 distribution and the schema-v1 window remain open on #928.
+
 ## SDD1115 literal parameter repair
 
 - [ ] Specify Tier1 literal argv, display/provenance and unchanged API/schema boundary.

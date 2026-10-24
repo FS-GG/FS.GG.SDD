@@ -1,0 +1,327 @@
+{
+  "schema": "fsgg.provider-certification/v1",
+  "harness": {
+    "sourceRevision": "b9332c2c0281c27d7d10ac5264eb6b12a589ca91",
+    "sourceTreeSha256": "6729941d98793a692df234a7a8293b37d586bbfe05aef31ef6d5740dad028b0b"
+  },
+  "host": {
+    "machine": "x86_64",
+    "glibc": "2.44",
+    "runtimes": [
+      "10.0.11",
+      "10.0.12",
+      "6.0.36",
+      "9.0.20"
+    ]
+  },
+  "tools": {
+    "sdd": {
+      "version": "2.5.1",
+      "sha256": "sha256:94e20819a011419531b696cc8510c122edc5cce2f2dbe93bb09864a391cfe241"
+    },
+    "governance": {
+      "version": "1.15.0",
+      "sha256": "sha256:9eb3eed64cacdd84ba3d82439d8e3b6ffb3c9e035c6e5de00a1520094227879b"
+    }
+  },
+  "artifact": {
+    "provider": "governance-test-fixture",
+    "platform": "linux-x64",
+    "catalogDigest": "sha256:a31c88d03b72f2b509f067fe75fc79e8874c3a73cae096d19dc0f3aeb4866147",
+    "policyDigest": "sha256:c776f549db8aea16739172446234542a2bc8c95d8552771e2579d1adfa1529a1",
+    "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f"
+  },
+  "checks": [
+    {
+      "id": "lifecycle.scaffold",
+      "group": "lifecycle",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "status": "succeeded",
+        "ownership": "Settled",
+        "stagingRemaining": 0
+      }
+    },
+    {
+      "id": "lifecycle.dry-run",
+      "group": "lifecycle",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "status": "prepared",
+        "targetCreated": false
+      }
+    },
+    {
+      "id": "lifecycle.strict-readback",
+      "group": "lifecycle",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "schemaVersion": 2,
+        "invocationCount": 5
+      }
+    },
+    {
+      "id": "lifecycle.deterministic-instantiation",
+      "group": "lifecycle",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "files": 200,
+        "treeSha256": "6bc42e9c22b96aa61d597a629e2e2cb896a2bbb0637618cb97de671f01d685c9"
+      }
+    },
+    {
+      "id": "provenance.inputs-bound",
+      "group": "provenance",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "catalogDigest": "sha256:a31c88d03b72f2b509f067fe75fc79e8874c3a73cae096d19dc0f3aeb4866147",
+        "policyDigest": "sha256:c776f549db8aea16739172446234542a2bc8c95d8552771e2579d1adfa1529a1",
+        "archiveDigest": "sha256:eecf572fa5f3a1a45a1d1412841b70cd09ecbe2eb79c2536f2bdde8d72e4a18f",
+        "platform": "linux-x64"
+      }
+    },
+    {
+      "id": "provenance.tools-and-invocations",
+      "group": "provenance",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "tools": [
+          {
+            "id": "governance-test-fixture",
+            "version": "1.0.0"
+          }
+        ],
+        "invocationCount": 5
+      }
+    },
+    {
+      "id": "provenance.declared-bindings",
+      "group": "provenance",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "capabilityId": "test:test",
+        "evidenceFormat": "fsgg.governance-handoff@2.0.0",
+        "argumentCount": 8
+      }
+    },
+    {
+      "id": "skill-union.recorded-and-present",
+      "group": "skill-union",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "providerSkills": 1,
+        "sddOwnedSkills": 21,
+        "seededUnrecorded": 6,
+        "onDisk": 28
+      }
+    },
+    {
+      "id": "skill-union.mirrors-equal",
+      "group": "skill-union",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "skills": 28,
+        "recordedMirrors": 1
+      }
+    },
+    {
+      "id": "no-partial-state.occupied-target",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.targetExists",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "no-partial-state.catalog-digest",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.rawDigestMismatch",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "no-partial-state.policy-digest",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.policyInvalid",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "no-partial-state.archive-tamper",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.archiveDigestMismatch",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "no-partial-state.malformed-catalog",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.malformed",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "no-partial-state.unsupported-schema-version",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.unsupportedSchema",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "no-partial-state.wrong-tool-version",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.toolVersionRefused",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "no-partial-state.unsupported-platform",
+      "group": "no-partial-state",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "diagnostic": "catalog.admission.UnresolvedPlatform",
+        "status": "failed",
+        "ownership": "Settled",
+        "targetUnchanged": true,
+        "stagingUnchanged": true
+      }
+    },
+    {
+      "id": "evidence.positive",
+      "group": "evidence",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "exit": 0,
+        "diagnostic": null,
+        "evidenceProduced": true
+      }
+    },
+    {
+      "id": "evidence.missing",
+      "group": "evidence",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "exit": 1,
+        "diagnostic": "was not produced by the run",
+        "evidenceProduced": false
+      }
+    },
+    {
+      "id": "evidence.stale",
+      "group": "evidence",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "exit": 1,
+        "diagnostic": "existed before launch",
+        "evidenceProduced": false
+      }
+    },
+    {
+      "id": "evidence.mismatched",
+      "group": "evidence",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "exit": 1,
+        "diagnostic": "sources do not match the workspace",
+        "evidenceProduced": true
+      }
+    },
+    {
+      "id": "evidence.nonzero-exit",
+      "group": "evidence",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "exit": 1,
+        "diagnostic": "exited 2",
+        "evidenceProduced": true
+      }
+    },
+    {
+      "id": "evidence.whole-request-refusal",
+      "group": "evidence",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "exit": 3,
+        "diagnostic": "RawDigestMismatch",
+        "commandLaunched": false
+      }
+    },
+    {
+      "id": "evidence.capture-lifetime",
+      "group": "evidence",
+      "status": "pass",
+      "detail": "",
+      "evidence": {
+        "invocations": 6,
+        "settledCaptures": 5,
+        "workerSurvivors": 0,
+        "admittedWindowSeconds": 80
+      }
+    }
+  ],
+  "scope": "Local cooperative profile on the exact Linux-x64 / .NET 10.0.12 / glibc 2.44 host: not hostile containment, not a hosted-runner profile, no authentic blocked-read or uncertain-close case, no distribution.",
+  "verdict": {
+    "certified": true,
+    "total": 24,
+    "passed": 24,
+    "failed": [],
+    "skipped": []
+  }
+}

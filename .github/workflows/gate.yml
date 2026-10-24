@@ -55,6 +55,9 @@ jobs:
       - name: Verify capture-lifetime declaration controls (namespace controls are run locally)
         run: python3 -I -B scripts/tests/capture-lifetime.test.py DeclarationTests JourneyFixtureTests
 
+      - name: Provider certification report integrity controls (the installed qualification is run locally)
+        run: python3 -I -B scripts/tests/provider-certification.test.py
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
