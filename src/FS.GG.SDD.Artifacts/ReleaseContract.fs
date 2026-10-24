@@ -278,7 +278,7 @@ module ReleaseContract =
         let compatibility =
             [
                 {
-                    SddVersionLine = "2.4.x"
+                    SddVersionLine = "2.5.x"
                     SpecKitRange = ">=0.8.5"
                     GovernanceContractVersionRange = Some "2.x"
                 }
