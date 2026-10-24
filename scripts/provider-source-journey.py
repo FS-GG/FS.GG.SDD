@@ -270,19 +270,28 @@ def run_journeys(args):
                       '--source-cache', str(https_cache)]
         ok, code, out, err = journey.cli_call('https-inspect', 'catalog', 'inspect', *https_args, '--json')
         journey.record('https: catalog inspect fetches and lists the pinned envelope', ok and PROVIDER in out, f'exit={code} {(out + err)[-400:] if not ok else ""}')
+        # A separate empty cache so the scaffold performs its own genuine fetch (not a cache read).
+        fetch_cache = work / 'cache-https-scaffold'
+        fetch_cache.mkdir()
+        fetch_args = https_args[:-1] + [str(fetch_cache)]
         https_target = work / 'products' / 'https'
-        ok, code, out, err = journey.cli_call('https-scaffold', 'scaffold', *https_args, *params, '--root', str(https_target), *common_exec)
+        ok, code, out, err = journey.cli_call('https-scaffold', 'scaffold', *fetch_args, *params, '--root', str(https_target), *common_exec)
         journey.record('https: scaffold from the pinned HTTPS envelope succeeds', ok and https_target.is_dir(), f'exit={code} {(out + err)[-500:] if not ok else ""}')
         if https_target.is_dir():
             document = verify_product(journey, 'https', https_target)
             source = document.get('source', {})
-            journey.record('https: provenance records the fetch with a connected endpoint and status 200',
-                           source.get('acquisition') in ('https-fetch', 'cache-read') and source.get('revision') == REVISION,
-                           json.dumps({k: source.get(k) for k in ('acquisition', 'resolvedUri', 'networkHops')})[:300])
+            hops = source.get('networkHops') or []
+            journey.record('https: provenance records a genuine fetch with the connected public endpoint and status 200',
+                           source.get('acquisition') == 'https-fetch' and source.get('resolvedUri') == args.https_url
+                           and source.get('revision') == REVISION and bool(hops) and hops[-1].get('statusCode') == 200,
+                           json.dumps({k: source.get(k) for k in ('acquisition', 'resolvedUri', 'networkHops')})[:400])
             build_and_test(journey, 'https', https_target)
             https_offline = work / 'products' / 'https-offline'
-            ok, code, out, err = journey.cli_call('https-offline', 'scaffold', *https_args, '--offline', *params, '--root', str(https_offline), *common_exec)
-            journey.record('https: offline scaffold from the fetched cache succeeds with no network', ok and https_offline.is_dir(), f'exit={code}')
+            ok, code, out, err = journey.cli_call('https-offline', 'scaffold', *fetch_args, '--offline', *params, '--root', str(https_offline), *common_exec)
+            offline_doc = json.loads((https_offline / '.fsgg/scaffold-provenance.json').read_text()) if https_offline.is_dir() else {}
+            journey.record('https: offline scaffold from the fetched cache succeeds with empty network observations',
+                           ok and offline_doc.get('source', {}).get('acquisition') == 'cache-read' and offline_doc['source']['networkHops'] == [],
+                           f'exit={code}')
         # origin not allowed by the independently selected policy
         denied_policy = work / 'https-denied.json'
         denied_sha = acquisition_policy(denied_policy, ['https://example.org'])
@@ -290,7 +299,7 @@ def run_journeys(args):
         denied_cache.mkdir()
         ok, code, out, err = journey.cli_call('https-denied', 'catalog', 'inspect', '--source-set', str(https_set), '--source-set-sha256', https_set_sha,
                                               '--acquisition-policy', str(denied_policy), '--acquisition-policy-sha256', denied_sha,
-                                              '--source-cache', str(denied_cache), '--json', expect_exit=1)
+                                              '--source-cache', str(denied_cache), '--json', expect_exit=1, expect_text='source.originDenied')
         journey.record('https: an origin outside the acquisition policy is refused', ok and not any(denied_cache.iterdir()), f'exit={code}')
 
     # Negative controls on a fresh local source ----------------------------------------
