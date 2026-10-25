@@ -484,10 +484,28 @@ module internal Drift =
     let private computeSkillDrift
         (provenance: ScaffoldProvenanceRecord option)
         (skillBodies: Map<string, string>)
+        (skillRawDigests: Map<string, string>)
         (unobservedSubjects: string list)
         : SkillDriftClasses =
-        let expected = expectedSkills provenance
-        let ownerExpected = ownerSourcedSkillFiles provenance
+        let declaredExpected = expectedSkills provenance
+        let declaredOwners = ownerSourcedSkillFiles provenance
+        // Schema-2/3 catalogue provenance addresses exact bytes with tagged SHA-256.
+        // Legacy provenance addresses decoded, CRLF-normalized text with bare SHA-256.
+        // Never accept either domain interchangeably or rewrite the stored declaration.
+        let isRaw (digest: string) = digest.StartsWith("sha256:", System.StringComparison.Ordinal)
+        let rawDeclarations =
+            [
+                for skill in declaredExpected do
+                    if isRaw skill.Sha256 then yield (skill.Id, "SKILL.md"), skill.Sha256
+                for skill in declaredOwners do
+                    for file in skill.Files do
+                        if isRaw file.Sha256 then yield (skill.Id, file.RelativePath), file.Sha256
+            ] |> Map.ofList
+        let canonicalDigest digest = if isRaw digest then "" else digest
+        let expected = declaredExpected |> List.map (fun skill -> { skill with Sha256 = canonicalDigest skill.Sha256 })
+        let ownerExpected =
+            declaredOwners |> List.map (fun skill ->
+                { skill with Files = skill.Files |> List.map (fun file -> { file with Sha256 = canonicalDigest file.Sha256 }) })
 
         // FS-GG/FS.GG.SDD#747, and this is the clause that makes the ignore rule SAFE (AC3,
         // condition 4): a file the provenance DECLARES is never ignored, whatever it is called.
@@ -625,6 +643,20 @@ module internal Drift =
                         }
             ]
 
+        let rawMismatchRoots id relative =
+            match Map.tryFind (id, relative) rawDeclarations with
+            | None -> []
+            | Some expectedDigest ->
+                agentSkillRoots |> List.filter (fun root ->
+                    let path = SkillMirror.skillFilePath root id relative
+                    let observable =
+                        unobservedSubjects |> List.exists (fun subject ->
+                            path = subject || path.StartsWith(subject + "/", System.StringComparison.Ordinal)) |> not
+                    observable
+                    && (copyFiles root id |> Option.exists (List.exists (fun file -> file.RelativePath = relative)))
+                    // A decoded-only snapshot cannot prove a raw declaration, including a BOM.
+                    && Map.tryFind path skillRawDigests <> Some expectedDigest)
+
         // The facts, normalized off the two verify shapes so ONE classification rule sees both.
         // `verifyFiles` reports `SkillFileDrift`, `verifyFileSet` reports `DeclaredFileDrift`; their
         // first three fields are the SAME three independent facts with the same meanings, so the
@@ -733,6 +765,8 @@ module internal Drift =
                         if not (List.isEmpty undeclaredRoots) then
                             undeclaredRoots |> List.map (fun root -> UndeclaredAt, root)
                         else
+                            let hashMismatchRoots =
+                                hashMismatchRoots @ rawMismatchRoots id relativePath |> List.distinct
                             let divergentRoots =
                                 if divergent && List.isEmpty hashMismatchRoots then
                                     rootsWithFile relativePath
@@ -780,20 +814,8 @@ module internal Drift =
         // first and put the class split in `SkillDriftClasses` instead, where the other three live,
         // so the summaries keep carrying only the union and no persisted schema moves.
         //
-        // FACT 3 NOW SPANS ONE DIGEST DOMAIN, which is why there is no filter here any more.
-        //
-        // #751 shipped a mitigation: a `HashMismatchRoots` entry was DROPPED when an un-normalized
-        // raw comparison cleared it, because `DriverPaths[].Sha256` could hold either a raw or a
-        // canonical digest and this fold could not tell which. Accepting either domain is strictly
-        // weaker than knowing which to expect — a body could clear on the domain it was not
-        // recorded in — and #751 said so, deferring the fix to FS-GG/FS.GG.SDD#752 AC4. This is it.
-        //
-        // Both producers of the field now record `SkillMirror.sha256` of the body they wrote
-        // (`DriverSkills` and `GameSkills` alike), and `HandlersUpgrade.preservedFilesVerified`
-        // compares it the same way. `verifyFileSet` arbitrates with `SkillMirror.sha256`, so the
-        // comparison here is already exactly the recorded domain and the allowance has nothing left
-        // to forgive: the CRLF case matches outright, and the raw domain — the one no read seam can
-        // reproduce for a BOM-prefixed file — is no longer accepted at all.
+        // Bare legacy declarations retain canonical text verification. Tagged catalogue
+        // declarations are verified against the existing exact-byte snapshots above.
         let ownerClassified =
             SkillMirror.verifyObservedFileSet agentSkillRoots ownerExpected actual unobserved
             |> List.collect (fun drift ->
@@ -808,7 +830,13 @@ module internal Drift =
                          file.HashMismatchRoots,
                          file.UndeclaredRoots)))
 
-        let classified = processProductClassified @ ownerClassified
+        // Raw-only changes (BOM/line endings) can decode to identical canonical text and
+        // therefore produce no library drift row. Retain those exact-byte failures explicitly.
+        let rawClassified =
+            rawDeclarations |> Map.toList |> List.collect (fun ((id, relative), _) ->
+                rawMismatchRoots id relative |> List.map (fun root ->
+                    DivergentAt, SkillMirror.skillFilePath root id relative))
+        let classified = processProductClassified @ ownerClassified @ rawClassified
 
         let pathsOf condition =
             classified
@@ -904,7 +932,7 @@ module internal Drift =
     /// members reach the mirror fold, where they are WITHHELD from the drift classes rather than
     /// read as absences. Withholding is not clearing: the caller still owns reporting them and
     /// still owns refusing to call the run coherent over them, which `computeDoctorNext` does.
-    let computeObserved
+    let computeObservedWithRawDigests
         (provenance: ScaffoldProvenanceRecord option)
         (descriptor: ProviderDescriptor option)
         (workspaceFloor: string option)
@@ -912,6 +940,7 @@ module internal Drift =
         (presentArtifacts: Set<string>)
         (skillBodies: Map<string, string>)
         (unobservedSubjects: string list)
+        (skillRawDigests: Map<string, string>)
         : DriftReport =
         let workspaceCandidate =
             workspaceFloor
@@ -1025,7 +1054,7 @@ module internal Drift =
             // 058/ADR-0014 §Decision 3: the content-addressed union verify over process +
             // product skills. Non-empty ⇒ content drift (advisory), which also makes the
             // scaffold not coherent alongside the CLI-axis / missing-artifact drivers.
-            let skillDrift = computeSkillDrift provenance skillBodies unobservedSubjects
+            let skillDrift = computeSkillDrift provenance skillBodies skillRawDigests unobservedSubjects
 
             let hasActionableWork =
                 steps
@@ -1056,6 +1085,11 @@ module internal Drift =
                 Steps = steps
                 IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All
             }
+
+    /// Decoded-only callers retain the legacy contract. A tagged raw declaration cannot
+    /// be cleared without exact observed bytes and is reported divergent instead.
+    let computeObserved provenance descriptor workspaceFloor installedVersion presentArtifacts skillBodies unobservedSubjects =
+        computeObservedWithRawDigests provenance descriptor workspaceFloor installedVersion presentArtifacts skillBodies unobservedSubjects Map.empty
 
     /// `computeObserved` for a caller that observed everything it fed in — the spelling that
     /// predates the third state (FS-GG/FS.GG.SDD#760), unchanged in arity and in behaviour.
