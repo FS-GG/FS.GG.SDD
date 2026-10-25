@@ -11,6 +11,7 @@
     <Compile Include="ProviderSourceWorkflowTests.fs" />
     <Compile Include="CatalogScaffoldRuntimeTests.fs" />
     <Compile Include="CatalogScaffoldLinuxIdentityTests.fs" />
+    <Compile Include="CatalogInputRevalidationTests.fs" />
     <Compile Include="ProviderCapabilityAdmissionTests.fs" />
     <Compile Include="GenerationSourceSnapshotTests.fs" />
     <Compile Include="GenerationSourceRaceCharacterizationTests.fs" />

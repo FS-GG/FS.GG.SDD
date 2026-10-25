@@ -1,5 +1,12 @@
 # Tasks
 
+## Transport revalidation storage repair (#928 / #3010)
+
+- [x] Release native read buffers only from their original worker; preserve uncertain custody.
+- [x] Return only comparison results from revalidation tasks; retain exact bytes/hash/binding checks.
+- [x] Qualify bounded repeated-read, mutation/substitution, failure and cleanup controls; preserve
+  historical OOM uncertainty and keep full scaffold/publication acceptance separate.
+
 - [x] T001 Specify closed wire contract and additive signatures.
 - [x] T002 Author public semantic tests and golden catalog fixtures.
 - [x] T003 Implement pure validator/resolver and strict YAML parser.

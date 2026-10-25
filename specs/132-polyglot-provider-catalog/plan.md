@@ -1,5 +1,11 @@
 # SDD928 provider/catalog plan
 
+Transport revalidation repair: use the existing custody and opened-file verification seam; retire
+the synchronous read buffer inside its registered worker under the original cleanup end and project
+revalidation to a boolean before completing its task. Keep the first captured payload as authority
+and preserve KnownFiles binding checks. Measure actual owned allocation sizes and retained capture
+task results using bounded fixtures; no transport/profile/schema/version change is selected.
+
 Use sibling `Fsgg.ProviderCatalog` in the BCL-only shared Contracts leaf. Write signature,
 public API semantic tests, then body. The pure Artifacts parser reuses the hardened YAML reader
 and returns catalog-specific typed diagnostics; it does not broaden global SchemaVersion.

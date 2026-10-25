@@ -237,3 +237,13 @@ Doctor and Upgrade must verify schema-2/3 tagged skill declarations against exac
 bytes, including BOM and line endings. Legacy bare declarations retain canonical decoded-text
 normalization. A raw declaration cannot pass from decoded text alone. Preserve read-only doctor,
 existing mirror/missing/undeclared classifications and persisted provenance bytes.
+
+## Transport input revalidation storage (SDK #928 / Wizard #3010)
+
+Repeated validation of captured SDK/runtime/template inputs must not retain a new whole-payload
+native buffer or managed capture result per pass. Exact bytes, SHA256, original physical file/root
+bindings and work/cleanup ends remain enforced. A buffer may retire only after its original native
+user stops using it; unfinished tasks or expired/uncertain cleanup retain original custody.
+Bounded small-file controls distinguish owned allocations and completed task results from RSS,
+exercise repeated checks, byte/hash mutation and identical-byte substitution, and verify failed
+read/stopped-work cleanup. They do not establish a historical OOM's cause or qualify a full scaffold.

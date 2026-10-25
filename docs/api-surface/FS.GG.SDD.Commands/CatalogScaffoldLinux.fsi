@@ -111,6 +111,10 @@ module internal CatalogScaffoldLinux =
         maximumBytes: int ->
             CapturedFile
 
+    /// Rechecks the same held physical binding and exact bytes/hash without retaining
+    /// a fresh payload in the completed task. Native read buffers retire inside that task.
+    val fileMatches: custody: Custody -> budget: PhaseBudget -> root: DirectoryCustody -> original: CapturedFile -> bool
+
     val writeFile:
         custody: Custody ->
         budget: PhaseBudget ->
