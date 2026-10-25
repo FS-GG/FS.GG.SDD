@@ -302,6 +302,22 @@ module internal HandlersDoctor =
         @ (agentSkillRoots |> List.map (fun root -> enumerationOf (root + "/skills") model))
         |> unreadablePathsOf
 
+    // The same reads supply text for legacy/mirror checks and exact bytes for tagged
+    // catalogue declarations. No extra read or filesystem effect is introduced.
+    let skillRawDigests model =
+        skillBodies model
+        |> Map.toList
+        |> List.choose (fun (path, _) ->
+            match readOf path model with
+            | Bytes snapshot ->
+                snapshot.RawBytes
+                |> Option.map (fun bytes ->
+                    path,
+                    "sha256:"
+                    + System.Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData bytes))
+            | _ -> None)
+        |> Map.ofList
+
     let computeDrift model =
         let provenance = resolveProvenance model
         let descriptor = resolveDriftDescriptor model provenance
@@ -313,7 +329,7 @@ module internal HandlersDoctor =
         // same set still blocks the coherence verdict in `computeDoctorNext`; this stops it ALSO
         // being reported as drift.
         let drift =
-            Drift.computeObserved
+            Drift.computeObservedWithRawDigests
                 provenance
                 descriptor
                 (resolveWorkspaceFloor model)
@@ -321,6 +337,7 @@ module internal HandlersDoctor =
                 (presentArtifacts model)
                 (skillBodies model)
                 (unreadableSubjects model)
+                (skillRawDigests model)
 
         let guidance = ownerGuidancePlan (selectedOwnerGuidanceFiles model) model
 

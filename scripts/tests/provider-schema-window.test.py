@@ -10,6 +10,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[2]
+SOURCE_VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "Directory.Build.local.props").read_text()).group(1)
 spec = importlib.util.spec_from_file_location('window_checker', ROOT / 'scripts/check-provider-schema-window.py')
 checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
@@ -83,7 +84,7 @@ class WindowGateTests(unittest.TestCase):
         self.assertTrue(any('isSupportedContract' in p for p in problems), problems)
 
     def test_a_major_bump_without_revisiting_the_window_fails(self):
-        problems = self.problems(lambda r: rewrite(r, 'Directory.Build.local.props', '<Version>2.5.1</Version>', '<Version>3.0.0</Version>'))
+        problems = self.problems(lambda r: rewrite(r, 'Directory.Build.local.props', f'<Version>{SOURCE_VERSION}</Version>', '<Version>3.0.0</Version>'))
         self.assertTrue(any('current line 3.x' in p for p in problems), problems)
         self.assertTrue(any('4.0.0' in p for p in problems), problems)
 
@@ -111,7 +112,7 @@ class WindowGateTests(unittest.TestCase):
         self.assertTrue(any('isSupportedContract' in p for p in self.problems(lambda r: rewrite(r, scaffold, '| Some 2 -> stableVersion version |> Option.isSome', '| Some 2 -> true'))))
 
     def test_a_prerelease_current_version_does_not_fail_the_gate(self):
-        self.assertEqual([], self.problems(lambda r: rewrite(r, 'Directory.Build.local.props', '<Version>2.5.1</Version>', '<Version>2.6.0-preview.1</Version>')))
+        self.assertEqual([], self.problems(lambda r: rewrite(r, 'Directory.Build.local.props', f'<Version>{SOURCE_VERSION}</Version>', '<Version>2.6.0-preview.1</Version>')))
 
     def test_catalog_and_source_route_schema_drift_fails(self):
         self.assertTrue(self.problems(lambda r: rewrite(r, 'src/FS.GG.SDD.Artifacts/CatalogScaffoldProvenance.fs', 'r.SchemaVersion <> 2', 'r.SchemaVersion <> 5')))

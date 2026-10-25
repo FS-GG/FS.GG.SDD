@@ -172,3 +172,11 @@ failure and exact source/input/exit/EOF/staging facts for both production caller
 No build/native execution is selected by these source edits. Required full source
 CI remains; its disposable compatibility packages are not retained release custody.
 No version, release, publication or installed adoption is selected.
+
+## Catalogue skill digest reconciliation
+
+Use the existing FileSnapshot.RawBytes in the shared Doctor/Upgrade drift calculation. Tagged
+raw declarations use exact SHA-256; bare legacy declarations keep SkillMirror canonical hashing.
+Do not strip prefixes or rewrite provenance. Verify LF, CRLF, UTF-8 BOM, byte tampering, missing
+raw snapshots and legacy normalization, including the real filesystem read seam and both callers.
+Source acceptance does not establish public SDD successor publication or fresh installed doctor coherence.

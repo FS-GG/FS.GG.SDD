@@ -230,3 +230,10 @@ This source slice does not select any package version, publication or installed
 receiver effect. Retained c8/2.3 artifacts and SDD1113 occupancy Unknown remain
 unchanged. Parent `.github#4642` owns the Wizard bindingTarget repair, new coherent
 publication and installed bindings journey.
+
+## Catalogue skill digest reconciliation (Wizard #3010)
+
+Doctor and Upgrade must verify schema-2/3 tagged skill declarations against exact observed file
+bytes, including BOM and line endings. Legacy bare declarations retain canonical decoded-text
+normalization. A raw declaration cannot pass from decoded text alone. Preserve read-only doctor,
+existing mirror/missing/undeclared classifications and persisted provenance bytes.
