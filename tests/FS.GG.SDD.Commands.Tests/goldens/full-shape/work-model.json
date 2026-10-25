@@ -41,7 +41,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "00058de8c64c4d07079ce8af3c8fe160fe95d9093889c18fa4f4b43bf9a3549d"
+        "value": "7ed374b8d9a035e34f36ad53ea9b87ba8ab0011f1cdb09122fadc925d3ebbc85"
       }
     },
     {
@@ -424,7 +424,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "2.5.1"
+        "version": "2.5.2"
       },
       "sources": [
         {
@@ -447,7 +447,7 @@
           "path": ".fsgg/scaffold-provenance.json",
           "digest": {
             "algorithm": "sha256",
-            "value": "00058de8c64c4d07079ce8af3c8fe160fe95d9093889c18fa4f4b43bf9a3549d"
+            "value": "7ed374b8d9a035e34f36ad53ea9b87ba8ab0011f1cdb09122fadc925d3ebbc85"
           },
           "schemaVersion": 1
         },
@@ -510,7 +510,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "667acd3e3e238ef24729669f1e5230be51964ead780f830c0c2021fede9ff20e"
+        "value": "bf8bd89cba4635175fb33a9f6c0ad5888c180f1f52717b413839ef95aee27054"
       },
       "currency": "current"
     }

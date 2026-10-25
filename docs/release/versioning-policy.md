@@ -19,7 +19,7 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.1`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.2`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
@@ -27,8 +27,8 @@ sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.1`**
 - `FS.GG.SDD.Knowledge` (the standalone concise findings SDK)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.5.1"` and
-`generatorVersion.version = "2.5.1"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.5.2"` and
+`generatorVersion.version = "2.5.2"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
@@ -50,6 +50,13 @@ The 2.5.1 patch fixes FS-GG/FS.GG.SDD#1127: the catalog parser accepts an explic
 typed catalog with a default-less parameter now round-trips through `catalogBytes` and `parse`
 without post-processing. Canonical bytes and semantic digests are unchanged and previously accepted
 catalogs parse identically. No public member changes.
+
+The prepared 2.5.2 patch fixes false skill drift in schema-2/3 catalog workspaces
+([Wizard delivery #3010](https://github.com/FS-GG/.github/issues/3010)). Doctor and Upgrade verify
+tagged `sha256:` skill declarations against exact observed bytes, including BOM and line endings;
+bare legacy declarations retain canonical text normalization. No public API, schema or persisted
+provenance changes. Published Contracts 7.6.0 is unchanged. This source selection does not establish
+package publication or installed Doctor acceptance.
 
 ## Change class to bump rule
 
