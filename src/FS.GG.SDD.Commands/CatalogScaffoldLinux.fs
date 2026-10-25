@@ -234,7 +234,7 @@ module internal CatalogScaffoldLinux =
             {
                 Gate: obj
                 Descriptors: ResizeArray<int>
-                Pointers: ResizeArray<nativeint>
+                Pointers: Dictionary<nativeint, int>
                 Utf8: ResizeArray<nativeint>
                 UncertainDescriptors: ResizeArray<int>
                 UncertainPointers: ResizeArray<nativeint>
@@ -280,7 +280,7 @@ module internal CatalogScaffoldLinux =
         {
             Gate = obj ()
             Descriptors = ResizeArray()
-            Pointers = ResizeArray()
+            Pointers = Dictionary()
             Utf8 = ResizeArray()
             UncertainDescriptors = ResizeArray()
             UncertainPointers = ResizeArray()
@@ -436,9 +436,30 @@ module internal CatalogScaffoldLinux =
 
     let private allocate (custody: Custody) (count: int) : nativeint =
         let pointer = Marshal.AllocHGlobal(count)
-        lock custody.Gate (fun () -> custody.Pointers.Add pointer)
+        lock custody.Gate (fun () -> custody.Pointers.Add(pointer, count))
         Marshal.Copy(Array.zeroCreate<byte> count, 0, pointer, count)
         pointer
+
+    // Only the synchronous user of this buffer calls this, inside its registered
+    // IO task. An expired caller cannot release a buffer still used by that task.
+    let private releaseBuffer (custody: Custody) (budget: PhaseBudget) (pointer: nativeint) =
+        checkCleanup budget
+
+        lock custody.Gate (fun () ->
+            if not (custody.Pointers.ContainsKey pointer) then
+                unknown "catalog.bufferSlotUnavailable" "The original buffer slot is unavailable."
+
+            custody.UncertainPointers.Add pointer
+            custody.Pointers.Remove pointer |> ignore)
+
+        try
+            checkCleanup budget
+            Marshal.FreeHGlobal pointer
+            lock custody.Gate (fun () -> custody.UncertainPointers.Remove pointer |> ignore)
+            checkCleanup budget
+        with error ->
+            custody.Unknown <- true
+            raise error
 
     let private registerTask (custody: Custody) (task: Task) =
         lock custody.Gate (fun () -> custody.Tasks.Add task)
@@ -704,41 +725,45 @@ module internal CatalogScaffoldLinux =
             refuse "catalog.inputSize" "The actual opened file exceeds its byte ceiling."
 
         let buffer = allocate custody (max 1 (int size + 1))
-        let mutable total = 0
-        let mutable eof = false
 
-        while not eof do
-            checkWork budget
+        try
+            let mutable total = 0
+            let mutable eof = false
 
-            let count =
-                Native.read (fd, buffer + nativeint total, unativeint (int size + 1 - total))
+            while not eof do
+                checkWork budget
 
-            if count = nativeint 0 then
-                eof <- true
-            elif count < nativeint 0 then
-                if Marshal.GetLastPInvokeError() <> 4 then
-                    refuse "catalog.fileRead" "The owned input read failed."
-            else
-                total <- total + int count
+                let count =
+                    Native.read (fd, buffer + nativeint total, unativeint (int size + 1 - total))
 
-                if total > int size then
-                    refuse "catalog.fileChanged" "The opened file grew during capture."
+                if count = nativeint 0 then
+                    eof <- true
+                elif count < nativeint 0 then
+                    if Marshal.GetLastPInvokeError() <> 4 then
+                        refuse "catalog.fileRead" "The owned input read failed."
+                else
+                    total <- total + int count
 
-        let objectAfter, after = stamp custody (fun () -> checkWork budget) fd
+                    if total > int size then
+                        refuse "catalog.fileChanged" "The opened file grew during capture."
 
-        let relevant (value: byte array) =
-            Array.concat [ value[16..19]; value[32..47]; value[96..127]; value[136..151] ]
+            let objectAfter, after = stamp custody (fun () -> checkWork budget) fd
 
-        if
-            total <> int size
-            || objectAfter <> objectBefore
-            || relevant before <> relevant after
-        then
-            refuse "catalog.fileChanged" "The captured physical file changed during its read."
+            let relevant (value: byte array) =
+                Array.concat [ value[16..19]; value[32..47]; value[96..127]; value[136..151] ]
 
-        let bytes = Array.zeroCreate<byte> total
-        Marshal.Copy(buffer, bytes, 0, total)
-        bytes
+            if
+                total <> int size
+                || objectAfter <> objectBefore
+                || relevant before <> relevant after
+            then
+                refuse "catalog.fileChanged" "The captured physical file changed during its read."
+
+            let bytes = Array.zeroCreate<byte> total
+            Marshal.Copy(buffer, bytes, 0, total)
+            bytes
+        finally
+            releaseBuffer custody budget buffer
 
     let private rememberFile (custody: Custody) (parent: DirectoryCustody) (name: string) (actual: ObjectIdentity) =
         lock custody.Gate (fun () ->
@@ -748,13 +773,14 @@ module internal CatalogScaffoldLinux =
             | true, _ -> ()
             | _ -> custody.KnownFiles[(parent.Identity, name)] <- actual)
 
-    let readFile
+    let private readFileWith
         (custody: Custody)
         (budget: PhaseBudget)
         (root: DirectoryCustody)
         (relative: string)
         (maximumBytes: int)
-        : CapturedFile =
+        (project: CapturedFile -> 'a)
+        : 'a =
         if maximumBytes < 0 then
             refuse "catalog.inputSize" "A nonnegative capture ceiling is required."
 
@@ -767,11 +793,21 @@ module internal CatalogScaffoldLinux =
             rememberFile custody parent name actual
             closeFd budget custody fd
 
-            {
-                Path = relative
-                Bytes = bytes
-                Sha256 = hash bytes
-            })
+            project
+                {
+                    Path = relative
+                    Bytes = bytes
+                    Sha256 = hash bytes
+                })
+
+    let readFile custody budget root relative maximumBytes =
+        readFileWith custody budget root relative maximumBytes id
+
+    // Return only the comparison result from the registered task: Task<CapturedFile>
+    // would retain a new whole-file managed array until final operation release.
+    let fileMatches custody budget root (original: CapturedFile) =
+        readFileWith custody budget root original.Path original.Bytes.Length (fun current ->
+            current.Sha256 = original.Sha256 && current.Bytes = original.Bytes)
 
     let writeFile
         (custody: Custody)
@@ -2160,7 +2196,7 @@ module internal CatalogScaffoldLinux =
                         custody.UncertainUtf8.Remove pointer |> ignore
                         checkCleanup budget
 
-                    for pointer in custody.Pointers.ToArray() do
+                    for pointer in custody.Pointers.Keys |> Seq.toArray do
                         checkCleanup budget
                         custody.UncertainPointers.Add pointer
                         custody.Pointers.Remove pointer |> ignore

@@ -1638,10 +1638,7 @@ module CatalogScaffoldEffects =
             for original in held.Files do
                 Linux.checkWork budget
 
-                let current =
-                    Linux.readFile operation.Native budget held.Root original.Path original.Bytes.Length
-
-                if current.Sha256 <> original.Sha256 || current.Bytes <> original.Bytes then
+                if not (Linux.fileMatches operation.Native budget held.Root original) then
                     refuse
                         "catalog.consumedInputChanged"
                         "The captured executable/SDK/runtime/template input changed before consumption or publication."
