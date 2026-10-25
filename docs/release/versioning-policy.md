@@ -19,7 +19,7 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.2`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.3`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
@@ -27,8 +27,8 @@ sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.2`**
 - `FS.GG.SDD.Knowledge` (the standalone concise findings SDK)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.5.2"` and
-`generatorVersion.version = "2.5.2"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.5.3"` and
+`generatorVersion.version = "2.5.3"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
@@ -51,12 +51,21 @@ typed catalog with a default-less parameter now round-trips through `catalogByte
 without post-processing. Canonical bytes and semantic digests are unchanged and previously accepted
 catalogs parse identically. No public member changes.
 
-The prepared 2.5.2 patch fixes false skill drift in schema-2/3 catalog workspaces
+The 2.5.2 patch fixes false skill drift in schema-2/3 catalog workspaces
 ([Wizard delivery #3010](https://github.com/FS-GG/.github/issues/3010)). Doctor and Upgrade verify
 tagged `sha256:` skill declarations against exact observed bytes, including BOM and line endings;
 bare legacy declarations retain canonical text normalization. No public API, schema or persisted
-provenance changes. Published Contracts 7.6.0 is unchanged. This source selection does not establish
-package publication or installed Doctor acceptance.
+provenance changes. Published Contracts 7.6.0 is unchanged. Its publication and public Doctor
+acceptance remain recorded on [SDD #928](https://github.com/FS-GG/FS.GG.SDD/issues/928).
+
+The prepared 2.5.3 patch fixes catalog transport-input revalidation retaining a whole native read
+buffer and managed capture result on each pass. The original IO worker retires its read buffer after
+synchronous use under the original cleanup end; revalidation returns only a match result while
+preserving exact bytes, hashes and original physical bindings. Bounded small-file controls prove the
+accumulation mechanism; the historical carrier OOM cause remains Unknown. A matching contained
+glibc 2.44 carrier and actual same-archive qualification remain required. Public API, schema and
+persisted provenance stay unchanged, as does published Contracts 7.6.0. Public 2.5.2 bytes and accepted
+receipts are retained; this source preparation neither republishes them nor establishes 2.5.3 publication.
 
 ## Change class to bump rule
 
