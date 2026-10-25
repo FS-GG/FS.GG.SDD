@@ -305,12 +305,18 @@ module internal HandlersDoctor =
     // The same reads supply text for legacy/mirror checks and exact bytes for tagged
     // catalogue declarations. No extra read or filesystem effect is introduced.
     let skillRawDigests model =
-        skillBodies model |> Map.toList |> List.choose (fun (path, _) ->
+        skillBodies model
+        |> Map.toList
+        |> List.choose (fun (path, _) ->
             match readOf path model with
             | Bytes snapshot ->
-                snapshot.RawBytes |> Option.map (fun bytes ->
-                    path, "sha256:" + System.Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData bytes))
-            | _ -> None) |> Map.ofList
+                snapshot.RawBytes
+                |> Option.map (fun bytes ->
+                    path,
+                    "sha256:"
+                    + System.Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData bytes))
+            | _ -> None)
+        |> Map.ofList
 
     let computeDrift model =
         let provenance = resolveProvenance model

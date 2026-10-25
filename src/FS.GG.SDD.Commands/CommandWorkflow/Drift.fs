@@ -492,20 +492,41 @@ module internal Drift =
         // Schema-2/3 catalogue provenance addresses exact bytes with tagged SHA-256.
         // Legacy provenance addresses decoded, CRLF-normalized text with bare SHA-256.
         // Never accept either domain interchangeably or rewrite the stored declaration.
-        let isRaw (digest: string) = digest.StartsWith("sha256:", System.StringComparison.Ordinal)
+        let isRaw (digest: string) =
+            digest.StartsWith("sha256:", System.StringComparison.Ordinal)
+
         let rawDeclarations =
             [
                 for skill in declaredExpected do
-                    if isRaw skill.Sha256 then yield (skill.Id, "SKILL.md"), skill.Sha256
+                    if isRaw skill.Sha256 then
+                        yield (skill.Id, "SKILL.md"), skill.Sha256
                 for skill in declaredOwners do
                     for file in skill.Files do
-                        if isRaw file.Sha256 then yield (skill.Id, file.RelativePath), file.Sha256
-            ] |> Map.ofList
+                        if isRaw file.Sha256 then
+                            yield (skill.Id, file.RelativePath), file.Sha256
+            ]
+            |> Map.ofList
+
         let canonicalDigest digest = if isRaw digest then "" else digest
-        let expected = declaredExpected |> List.map (fun skill -> { skill with Sha256 = canonicalDigest skill.Sha256 })
+
+        let expected =
+            declaredExpected
+            |> List.map (fun skill ->
+                { skill with
+                    Sha256 = canonicalDigest skill.Sha256
+                })
+
         let ownerExpected =
-            declaredOwners |> List.map (fun skill ->
-                { skill with Files = skill.Files |> List.map (fun file -> { file with Sha256 = canonicalDigest file.Sha256 }) })
+            declaredOwners
+            |> List.map (fun skill ->
+                { skill with
+                    Files =
+                        skill.Files
+                        |> List.map (fun file ->
+                            { file with
+                                Sha256 = canonicalDigest file.Sha256
+                            })
+                })
 
         // FS-GG/FS.GG.SDD#747, and this is the clause that makes the ignore rule SAFE (AC3,
         // condition 4): a file the provenance DECLARES is never ignored, whatever it is called.
@@ -647,13 +668,20 @@ module internal Drift =
             match Map.tryFind (id, relative) rawDeclarations with
             | None -> []
             | Some expectedDigest ->
-                agentSkillRoots |> List.filter (fun root ->
+                agentSkillRoots
+                |> List.filter (fun root ->
                     let path = SkillMirror.skillFilePath root id relative
+
                     let observable =
-                        unobservedSubjects |> List.exists (fun subject ->
-                            path = subject || path.StartsWith(subject + "/", System.StringComparison.Ordinal)) |> not
+                        unobservedSubjects
+                        |> List.exists (fun subject ->
+                            path = subject
+                            || path.StartsWith(subject + "/", System.StringComparison.Ordinal))
+                        |> not
+
                     observable
-                    && (copyFiles root id |> Option.exists (List.exists (fun file -> file.RelativePath = relative)))
+                    && (copyFiles root id
+                        |> Option.exists (List.exists (fun file -> file.RelativePath = relative)))
                     // A decoded-only snapshot cannot prove a raw declaration, including a BOM.
                     && Map.tryFind path skillRawDigests <> Some expectedDigest)
 
@@ -767,6 +795,7 @@ module internal Drift =
                         else
                             let hashMismatchRoots =
                                 hashMismatchRoots @ rawMismatchRoots id relativePath |> List.distinct
+
                             let divergentRoots =
                                 if divergent && List.isEmpty hashMismatchRoots then
                                     rootsWithFile relativePath
@@ -833,9 +862,12 @@ module internal Drift =
         // Raw-only changes (BOM/line endings) can decode to identical canonical text and
         // therefore produce no library drift row. Retain those exact-byte failures explicitly.
         let rawClassified =
-            rawDeclarations |> Map.toList |> List.collect (fun ((id, relative), _) ->
-                rawMismatchRoots id relative |> List.map (fun root ->
-                    DivergentAt, SkillMirror.skillFilePath root id relative))
+            rawDeclarations
+            |> Map.toList
+            |> List.collect (fun ((id, relative), _) ->
+                rawMismatchRoots id relative
+                |> List.map (fun root -> DivergentAt, SkillMirror.skillFilePath root id relative))
+
         let classified = processProductClassified @ ownerClassified @ rawClassified
 
         let pathsOf condition =
@@ -1054,7 +1086,8 @@ module internal Drift =
             // 058/ADR-0014 §Decision 3: the content-addressed union verify over process +
             // product skills. Non-empty ⇒ content drift (advisory), which also makes the
             // scaffold not coherent alongside the CLI-axis / missing-artifact drivers.
-            let skillDrift = computeSkillDrift provenance skillBodies skillRawDigests unobservedSubjects
+            let skillDrift =
+                computeSkillDrift provenance skillBodies skillRawDigests unobservedSubjects
 
             let hasActionableWork =
                 steps
@@ -1088,8 +1121,24 @@ module internal Drift =
 
     /// Decoded-only callers retain the legacy contract. A tagged raw declaration cannot
     /// be cleared without exact observed bytes and is reported divergent instead.
-    let computeObserved provenance descriptor workspaceFloor installedVersion presentArtifacts skillBodies unobservedSubjects =
-        computeObservedWithRawDigests provenance descriptor workspaceFloor installedVersion presentArtifacts skillBodies unobservedSubjects Map.empty
+    let computeObserved
+        provenance
+        descriptor
+        workspaceFloor
+        installedVersion
+        presentArtifacts
+        skillBodies
+        unobservedSubjects
+        =
+        computeObservedWithRawDigests
+            provenance
+            descriptor
+            workspaceFloor
+            installedVersion
+            presentArtifacts
+            skillBodies
+            unobservedSubjects
+            Map.empty
 
     /// `computeObserved` for a caller that observed everything it fed in — the spelling that
     /// predates the third state (FS-GG/FS.GG.SDD#760), unchanged in arity and in behaviour.
