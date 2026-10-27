@@ -227,6 +227,8 @@ no API, schema, dependency, decoder, executable recipe or runtime change is made
 Retain accepted public2.5.3/source PR1142 and author qualification evidence. Governance423(b), actual
 contained consumer/builder acceptance and all remaining #928 acceptance stay open. SDD Atlas record
 `sdd/workspace-execution-correspondence` records this design boundary with immutable source citations;
-it does not establish installed qualification. The existing
-Coordination Atlas record's obsolete309046c citation remains a Coordination-owned correction gap;
-use the verified protected69a582f contract, not the absent historical path, for this design.
+it does not establish installed qualification. Coordination Atlas record
+`coordination/ordinary-assignment-source-boundary` has valid functional provenance at
+`309046c178a79dc05ba052daf3bd50e19a136cdf`; all five cited paths and hashes verify after fetching
+that immutable commit. The protected69a582f source remains the selected shared contract reference.
+An earlier local object-acquisition failure did not establish a missing source path or citation defect.
