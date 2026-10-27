@@ -10,6 +10,52 @@ Compile and test the integrated CLI immediately, then validate one complete gene
 Earlier stage plans below retain their product contracts and historical context; their process-only
 ordering is superseded by that profile. C2.2 acceptance and C3/C4 publication remain separate.
 
+## Workspace execution contract incorporation — 2026-10-27
+
+The [accepted October21 amendment](https://github.com/FS-GG/FS.GG.SDD/issues/928#issuecomment-6419854208)
+adds SDD's workspace/lifecycle contribution to the shared
+[deterministic orchestration design](https://github.com/FS-GG/.github/issues/4647).
+The retained source owner is `sdd_provider_catalog`; Programme/root owns the cross-repository
+contract and consumer join. This section records the selected design and current source boundary.
+It does not implement an adapter or qualify a runtime.
+
+Reuse Coordination's existing
+[`OrdinaryAssignment` contracts](https://github.com/FS-GG/FS.GG.Coordination/blob/69a582f98813922ff8801f84d7f7980fb1b77f84/src/FS.GG.Coordination.Core/OrdinaryAssignment.fsi),
+introduced by protected PR1040. `WorkspaceExecutionContract` carries workspace/provider identity,
+repository revisions, components and source references; its surrounding `Requirements` and
+`ExecutionProfile` carry execution obligations and capability observations. SDD does not create
+another aggregate, lifecycle, scheduler or compatibility decoder.
+
+| SDD-owned input | Shared contract correspondence and boundary |
+| --- | --- |
+| Accepted `WorkspaceModel`, its fingerprint, modules and evidence links; accepted `ChangeProposal` semantics | Retain SDD's single revisioned workspace authority and accepted change history. Bind its exact source references to the selected workspace; a board card does not supply workspace identity. |
+| `ProviderCatalog.Catalog`, `Descriptor` and `PreparedConfiguration` | Preserve exact catalog/provider identities and effective parameters. Project declared language, product shape, commands and source references into workspace/components/source closure under the agreed producer mapping. |
+| Declared tools, capabilities, evidence and skills | Populate the corresponding `Requirements` obligations without treating declarations as available or enforced capabilities. Evidence paths/formats remain declarations until supplied and verified by their owners. |
+| Exact repository/component revisions and content-addressed sources | Preserve each repository revision and component's source closure; never replace them with one observation revision. The producer independently supplies complete authoritative obligations and expected population. |
+| Actual host/provider observations | Join separate `ExecutionProfile.Capabilities` observations and their evidence through Coordination/Governance owners. Catalog validation, a source digest or a scaffold success cannot manufacture these observations. |
+
+The existing SDD sources are
+[`ProviderCatalog`](../../src/FS.GG.Contracts/ProviderCatalog.fsi) and
+[`WorkspaceLifecycle`](../../src/FS.GG.SDD.Artifacts/TypedSpecifications/WorkspaceLifecycle.fsi).
+Governance owns capability meanings, evidence normalization and execution obligations; Templates
+owns provider payloads and skill declarations; Wizard owns selection and consumer composition.
+Root must freeze their actual producer/consumer revision and provenance mapping before any
+serialization, catalog-scaffold contract, dependency or runtime change. The existing domain represents
+multi-repository and local work, but that does not extend the current production projection's supported
+single-repository source slice. Unsupported projections remain explicit refusals.
+
+The [implementation plan](../../specs/132-polyglot-provider-catalog/plan.md#workspace-execution-contract-source-boundary--2026-10-27)
+records the next source cohort's correspondence and refusal cases. Framework repositories, generated
+products, multi-language components and local-only work use the same accepted lifecycle; none gains
+execution authority from this design. Missing, stale or conflicting source/obligation evidence remains
+an attributed gap, never an empty set or an inferred capability.
+
+Accepted PR1142 at `893fdb07baf8de73f44c4413160aeac22e3c22e8` and public SDD2.5.3
+qualification remain accepted at their scopes; this incorporation does not repeat or reopen them.
+Governance423(b)'s authentic blocked-read/uncertain-close evidence, contained actual-consumer
+qualification and the complete original #928 promise remain outstanding. Source incorporation,
+publication, consumer adoption and installed outcome acceptance remain distinct.
+
 Reuse the existing schema-v1 Provider records/registry, generic scaffold invocation, default overrides,
 legacy F# identifier route, scaffold provenance and reserved-tree/skill-union boundaries. Descriptor
 protocol 2.0.0 remains knowledge admission; it is not the new catalog protocol.
