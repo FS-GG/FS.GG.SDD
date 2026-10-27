@@ -186,3 +186,49 @@ raw declarations use exact SHA-256; bare legacy declarations keep SkillMirror ca
 Do not strip prefixes or rewrite provenance. Verify LF, CRLF, UTF-8 BOM, byte tampering, missing
 raw snapshots and legacy normalization, including the real filesystem read seam and both callers.
 Source acceptance does not establish public SDD successor publication or fresh installed doctor coherence.
+
+
+## Workspace execution contract source boundary — 2026-10-27
+
+Incorporate the accepted October21 design through the
+[owning roadmap's correspondence](../../docs/roadmaps/sdd-928-provider-catalog.md#workspace-execution-contract-incorporation--2026-10-27),
+under retained owner `sdd_provider_catalog`. This is design incorporation into the existing provider
+cohort, with Programme/root retaining the Coordination/Governance/Templates/Wizard join.
+Reuse Coordination's protected
+[`OrdinaryAssignment` source contract](https://github.com/FS-GG/FS.GG.Coordination/blob/69a582f98813922ff8801f84d7f7980fb1b77f84/src/FS.GG.Coordination.Core/OrdinaryAssignment.fsi):
+`WorkspaceExecutionContract` plus `Requirements`, `ExecutionProfile.Capabilities` and independently
+supplied `AuthoritativeObligations` completeness. No additional aggregate or wire format is selected.
+
+The producer mapping must preserve accepted WorkspaceModel/change semantics, pinned catalog/provider
+and effective prepared configuration, exact per-repository/component revisions and source hashes,
+declared tool/command/capability/evidence/skill obligations, and separate observed capability evidence.
+A successful descriptor resolution proves declarations only. Independently supplied expected population
+and complete authoritative obligations must not be inferred from the candidate being verified.
+
+The next contract/consumer design must make these cases explicit:
+
+| Case | Required design disposition |
+| --- | --- |
+| Maintained framework repository | Resolve its maintained workspace/work-model inputs without requiring product scaffolding or a fabricated board issue. |
+| Generated product | Bind actual effective catalog/provider/provenance inputs and accepted workspace identity; retain SDD-owned and provider-owned boundaries. |
+| Multiple languages/components/repositories | Preserve component roots, declarations and each exact revision/source closure; refuse unsupported consumer projection rather than collapsing to a single revision. |
+| Local-only work | Retain Coordination's local work identity and the same lifecycle; do not invent board membership or claim current production projection support. |
+| Missing, stale or contradictory model/source/obligation inputs | Keep the affected result incomplete or conflicting, with its evidence owner; never substitute empty requirements or a remembered revision. |
+| Declared capability without current observed supplier evidence | Retain the requirement and withhold dependent execution; do not label a tool available because a descriptor names it. |
+| Unsupported consumer/protocol projection | Refuse that projection while retaining the complete domain value; do not add a parallel decoder or compatibility runtime. |
+
+Before implementation or serialization, Root must identify the authoritative SDD producer and
+completeness manifest, exact source/freshness joins, Governance semantic/evidence bindings and the
+Templates/Wizard consumer revisions. The selected domain contract already exists; its representation
+does not by itself settle those producer/consumer decisions or prove that a runtime enforces them.
+Later implementation needs its own feature contract, focused positive/refusal controls and source review;
+no API, schema, dependency, decoder, executable recipe or runtime change is made by this plan update.
+
+Retain accepted public2.5.3/source PR1142 and author qualification evidence. Governance423(b), actual
+contained consumer/builder acceptance and all remaining #928 acceptance stay open. SDD Atlas record
+`sdd/workspace-execution-correspondence` records this design boundary with immutable source citations;
+it does not establish installed qualification. Coordination Atlas record
+`coordination/ordinary-assignment-source-boundary` has valid functional provenance at
+`309046c178a79dc05ba052daf3bd50e19a136cdf`; all five cited paths and hashes verify after fetching
+that immutable commit. The protected69a582f source remains the selected shared contract reference.
+An earlier local object-acquisition failure did not establish a missing source path or citation defect.
