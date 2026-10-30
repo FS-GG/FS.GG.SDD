@@ -461,7 +461,7 @@ jobs:
         if: inputs.promotion_candidate_run != ''
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.401"
+          dotnet-version: "10.0.403"
       - name: Authenticate explicitly selected retained candidate with current verifier
         id: retained
         if: inputs.promotion_candidate_run != ''
@@ -556,7 +556,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.401"
+          dotnet-version: "10.0.403"
 
       - name: Download the reviewed package bytes
         if: inputs.promotion_candidate_run == ''
@@ -703,7 +703,7 @@ jobs:
       - name: Set up package verification runtime
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.401"
+          dotnet-version: "10.0.403"
       - name: Authenticate and extract this publisher's bounded immutable receipt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -921,7 +921,7 @@ jobs:
       - name: Set up package verification runtime
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.401"
+          dotnet-version: "10.0.403"
       - name: Authenticate the original retained candidate and read back both feeds within the bounded indexing wait
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1088,7 +1088,7 @@ jobs:
       - name: Set up signature verifier only
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.401"
+          dotnet-version: "10.0.403"
       - name: Authenticate original candidate and run strict read-only occupancy
         env:
           FSGG_PACKAGES_READ_TOKEN: ${{ secrets.FSGG_PACKAGES_READ_TOKEN }}

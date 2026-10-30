@@ -1414,6 +1414,23 @@ module internal CatalogScaffoldLinux =
                 projected
                 @ chargeDiagnostics budget [ diagnostic "catalog.abiRetirementUnknown" error.Message ]
 
+    type HostProfile =
+        {
+            Sdk: string
+            Runtime: Version
+        }
+
+    // SDK 10.0.401 ships runtime 10.0.12; SDK 10.0.403 ships runtime 10.0.14. Adding a pair here is a
+    // separately qualified decision, never a range.
+    let hostProfiles: HostProfile list =
+        [
+            { Sdk = "10.0.401"; Runtime = Version(10, 0, 12) }
+            { Sdk = "10.0.403"; Runtime = Version(10, 0, 14) }
+        ]
+
+    let tryHostProfile (runtime: Version) : HostProfile option =
+        hostProfiles |> List.tryFind (fun profile -> profile.Runtime = runtime)
+
     let observeAbi
         (custody: Custody)
         (budget: PhaseBudget)

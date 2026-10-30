@@ -270,6 +270,20 @@ source tree identity stable and direct-child exit/EOF observed. Ordinary CI stil
 cannot close #935 or #928 or grant publication on skipped cases; the installed third-party journeys
 are run by `scripts/provider-source-journey.py` against the published tool.
 
+## Accepted SDK and runtime pairs (SDK-PATCH-01, FS-GG/.github#4935 Q5)
+
+The catalog transport and the provider-source edge accept exactly one of two SDK and
+runtime pairs, chosen by the runtime of the running host: SDK10.0.401 with
+.NET10.0.12, or SDK10.0.403 with .NET10.0.14. The private `global.json` the executor
+writes, the captured `sdk/<version>`, `shared/Microsoft.NETCore.App/<runtime>` and
+`host/fxr/<runtime>` roots, the engine cache path `engine/dotnetcli/<version>/templatecache.json`,
+the `--version` check and the recorded transport version all derive from that one pair.
+A runtime outside the set, or a pair whose bytes are not installed, is refused; there is
+no range and no roll-forward. The unit tests cover the closed set and the cache binding.
+The native results above were produced on the 10.0.401 / 10.0.12 pair only: no native
+qualification of the 10.0.403 / 10.0.14 pair has been run, so that pair is admitted by
+source and tests but is not claimed as natively qualified.
+
 ## Governance Verify capture lifetime (SDD928 C3.1-03, #1131)
 
 One Governance Verify provider invocation owns exactly one capture session

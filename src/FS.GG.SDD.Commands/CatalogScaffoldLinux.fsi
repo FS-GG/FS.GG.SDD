@@ -71,6 +71,19 @@ module internal CatalogScaffoldLinux =
     exception CustodyUnknown of Fsgg.ProviderCatalog.Diagnostic list
     val createCustody: unit -> Custody
 
+    /// One qualified SDK and the exact .NET runtime that ships with it (SDK-PATCH-01, FS-GG/.github#4935 Q5).
+    type HostProfile =
+        {
+            Sdk: string
+            Runtime: System.Version
+        }
+
+    /// The closed set of accepted SDK/runtime pairs. Each pair is exact: neither a floating SDK band nor an SDK
+    /// paired with another pair's runtime is accepted, and a pair without installed bytes is refused by capture.
+    val hostProfiles: HostProfile list
+    /// The profile whose runtime is exactly the supplied host runtime; None refuses the host.
+    val tryHostProfile: runtime: System.Version -> HostProfile option
+
     /// Caller owns the preheld library slot before probing; original phase governs its retirement.
     /// This probe is permitted only after the exact first-host ABI fixture qualification.
     val observeAbi:

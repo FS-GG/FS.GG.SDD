@@ -1127,6 +1127,7 @@ module CatalogScaffoldEffects =
 
     let private verifyTransportCache
         (template: ArchiveTemplate)
+        (sdk: string)
         (builtinMounts: Set<string>)
         installed
         (files: Linux.CapturedFile list)
@@ -1140,7 +1141,7 @@ module CatalogScaffoldEffects =
             refuse "catalog.transportStateEscape" "SDK engine state appeared outside the explicitly held private hive."
 
         let cacheBytes =
-            (requiredCapture "engine/dotnetcli/10.0.401/templatecache.json" files).Bytes
+            (requiredCapture ("engine/dotnetcli/" + sdk + "/templatecache.json") files).Bytes
 
         use cache = parseSdkCacheJson cacheBytes
 
@@ -1746,19 +1747,27 @@ module CatalogScaffoldEffects =
         (budget: Linux.PhaseBudget)
         (policy: CatalogScaffoldPolicy.Policy)
         (selected: Fsgg.ProviderCatalog.PreparedConfiguration)
-        =
+        : Linux.HostProfile =
         Linux.checkWork budget
 
-        if
-            not (OperatingSystem.IsLinux())
-            || Runtime.InteropServices.RuntimeInformation.ProcessArchitecture
-               <> Runtime.InteropServices.Architecture.X64
-            || Environment.Version <> Version(10, 0, 12)
-            || operation.Request.SelectedPlatform <> "linux-x64"
-        then
-            refuse
-                "catalog.hostProfileRefused"
-                "The first transport profile requires the actual Linux-x64 .NET 10.0.12 host and matching explicit platform."
+        let profile =
+            if
+                not (OperatingSystem.IsLinux())
+                || Runtime.InteropServices.RuntimeInformation.ProcessArchitecture
+                   <> Runtime.InteropServices.Architecture.X64
+                || operation.Request.SelectedPlatform <> "linux-x64"
+            then
+                None
+            else
+                Linux.tryHostProfile Environment.Version
+
+        let profile =
+            match profile with
+            | Some profile -> profile
+            | None ->
+                refuse
+                    "catalog.hostProfileRefused"
+                    "The transport profile requires the actual Linux-x64 host with .NET 10.0.12 (SDK 10.0.401) or .NET 10.0.14 (SDK 10.0.403) and the matching explicit platform."
 
         for capability in selected.Descriptor.Capabilities do
             match capability.Binding with
@@ -1782,8 +1791,9 @@ module CatalogScaffoldEffects =
         | Error diagnostics -> raise (Linux.Refused diagnostics)
 
         Linux.checkWork budget
+        profile
 
-    let private createPrivateRoot (operation: Operation) (budget: Linux.PhaseBudget) =
+    let private createPrivateRoot (operation: Operation) (budget: Linux.PhaseBudget) (profile: Linux.HostProfile) =
         let target = operation.Request.TargetRoot.TrimEnd(Path.DirectorySeparatorChar)
         let parentPath = Path.GetDirectoryName target |> requiredText
         let targetLeaf = Path.GetFileName target |> requiredText
@@ -1817,7 +1827,11 @@ module CatalogScaffoldEffects =
             budget
             root
             "global.json"
-            (utf8.GetBytes "{\"sdk\":{\"version\":\"10.0.401\",\"rollForward\":\"disable\",\"allowPrerelease\":false}}")
+            (utf8.GetBytes(
+                "{\"sdk\":{\"version\":\""
+                + profile.Sdk
+                + "\",\"rollForward\":\"disable\",\"allowPrerelease\":false}}"
+            ))
             false
 
         Linux.writeFile
@@ -1830,24 +1844,25 @@ module CatalogScaffoldEffects =
 
         root, targetLeaf
 
-    let private captureTransportInputs (operation: Operation) (budget: Linux.PhaseBudget) =
+    let private captureTransportInputs (operation: Operation) (budget: Linux.PhaseBudget) (profile: Linux.HostProfile) =
+        let runtime = profile.Runtime.ToString()
         let executable = operation.Host.TransportExecutable
         captureInputFile operation budget executable (64 * 1024 * 1024) |> ignore
         // Paths are derived from the explicit selected muxer, never from PATH or an
         // inherited SDK selector. Exact captured bytes remain held and are revalidated.
         let installation = Path.GetDirectoryName executable |> requiredText
 
-        captureInputRoot operation budget (Path.Combine(installation, "sdk", "10.0.401")) (512 * 1024 * 1024)
+        captureInputRoot operation budget (Path.Combine(installation, "sdk", profile.Sdk)) (512 * 1024 * 1024)
         |> ignore
 
         captureInputRoot
             operation
             budget
-            (Path.Combine(installation, "shared", "Microsoft.NETCore.App", "10.0.12"))
+            (Path.Combine(installation, "shared", "Microsoft.NETCore.App", runtime))
             (128 * 1024 * 1024)
         |> ignore
 
-        captureInputRoot operation budget (Path.Combine(installation, "host", "fxr", "10.0.12")) (32 * 1024 * 1024)
+        captureInputRoot operation budget (Path.Combine(installation, "host", "fxr", runtime)) (32 * 1024 * 1024)
         |> ignore
 
         let templateRoot = Path.Combine(installation, "templates")
@@ -2179,7 +2194,7 @@ module CatalogScaffoldEffects =
 
         try
             let preview, policy, selected, association = declaredInputs operation.Request
-            supportedHost operation initial policy selected
+            let profile = supportedHost operation initial policy selected
 
             match operation.Source with
             | None -> ()
@@ -2247,9 +2262,9 @@ module CatalogScaffoldEffects =
                 if Workflow.outcome operation.Model = Workflow.Failed then
                     raise (Linux.Refused(Workflow.diagnostics operation.Model))
 
-                let root, targetLeaf = createPrivateRoot operation initial
+                let root, targetLeaf = createPrivateRoot operation initial profile
                 Linux.writeFile operation.Native initial root "input.nupkg" archiveFile.Bytes false
-                let capturedBuiltinMounts = captureTransportInputs operation initial
+                let capturedBuiltinMounts = captureTransportInputs operation initial profile
                 revalidateInputs operation initial
 
                 ProviderCapabilityAdmission.resolve policy operation.Request.SelectedPlatform selected.Descriptor
@@ -2259,8 +2274,10 @@ module CatalogScaffoldEffects =
                 let version, versionInvocation =
                     transport operation initial [ Linux.Literal "--version" ] [ "--version" ]
 
-                if utf8.GetString(version.Stdout).TrimEnd('\r', '\n') <> "10.0.401" then
-                    refuse "catalog.sdkVersionRefused" "The actual explicit transport did not select SDK 10.0.401."
+                if utf8.GetString(version.Stdout).TrimEnd('\r', '\n') <> profile.Sdk then
+                    refuse
+                        "catalog.sdkVersionRefused"
+                        ("The actual explicit transport did not select SDK " + profile.Sdk + ".")
 
                 let tools = probeTools operation initial policy selected
 
@@ -2279,7 +2296,7 @@ module CatalogScaffoldEffects =
                 let configSnapshot = captureSdkSnapshot operation initial "preflight-config"
 
                 let builtinMounts =
-                    verifyTransportCache template capturedBuiltinMounts false configSnapshot
+                    verifyTransportCache template profile.Sdk capturedBuiltinMounts false configSnapshot
 
                 let preflight: CatalogScaffoldProvenance.Observation =
                     {
@@ -2289,7 +2306,7 @@ module CatalogScaffoldEffects =
                         Transport =
                             {
                                 Executable = "dotnet"
-                                Version = "10.0.401"
+                                Version = profile.Sdk
                             }
                         Invocations = [ versionInvocation; configInvocation ]
                         Result = "succeeded"
@@ -2342,7 +2359,7 @@ module CatalogScaffoldEffects =
                         [ "new"; "install"; "input.nupkg"; "--debug:custom-hive"; "engine" ]
 
                 let installed = captureSdkSnapshot operation scaffold "scaffold-install"
-                verifyTransportCache template builtinMounts true installed |> ignore
+                verifyTransportCache template profile.Sdk builtinMounts true installed |> ignore
                 revalidateInputs operation scaffold
 
                 let help, helpInvocation =
@@ -2385,7 +2402,7 @@ module CatalogScaffoldEffects =
                          @ overrideArguments)
 
                 let createdSnapshot = captureSdkSnapshot operation scaffold "scaffold-create"
-                verifyTransportCache template builtinMounts true createdSnapshot |> ignore
+                verifyTransportCache template profile.Sdk builtinMounts true createdSnapshot |> ignore
                 let original = Linux.files operation.Native scaffold workspace (8 * 1024 * 1024)
                 verifyTemplatePayload template original
 
