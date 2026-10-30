@@ -64,6 +64,7 @@
     <Compile Include="CommandWorkflow/HandlersRefresh.fs" />
     <Compile Include="CommandWorkflow/ScaffoldMutation.fs" />
     <Compile Include="CommandWorkflow/HandlersScaffold.fs" />
+    <Compile Include="CatalogHostProfile.fs" />
     <Compile Include="CatalogScaffoldLinux.fsi" />
     <Compile Include="CatalogScaffoldLinux.fs" />
     <Compile Include="ProviderSourceEffects.fsi" />

@@ -64,8 +64,10 @@ an inspection-only handle cannot later authorize an arbitrary target.
 
 The existing catalog executor validates the selected nupkg identity, TemplateId,
 tool/capability policy and supported host. Its current host contract remains Linux
-x64, .NET10.0.12 and exact glibc2.44 with the required native exports. The source
-edge uses that same physical-custody contract. No origin label, digest or fixture
+x64, exact glibc2.44 with the required native exports, and one exact SDK and
+runtime pair from a closed set: SDK10.0.401 with .NET10.0.12, or SDK10.0.403 with
+.NET10.0.14 (SDK-PATCH-01, FS-GG/.github#4935 Q5). A floating band or a mixed pair
+is refused. The source edge uses that same physical-custody contract. No origin label, digest or fixture
 substitutes for host or genuine installed-provider qualification.
 
 ## Offline use and provenance

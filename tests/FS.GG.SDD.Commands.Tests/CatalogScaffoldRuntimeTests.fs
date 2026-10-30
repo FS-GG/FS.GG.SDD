@@ -162,6 +162,17 @@ module CatalogScaffoldRuntimeTests =
             failwithf "The actual CLI fixture declaration must prepare before native execution: %A" diagnostics
 
     [<Fact>]
+    let ``host profile is the closed exact SDK and runtime pair set`` () =
+        let pair (runtime: Version) =
+            CatalogHostProfile.tryHostProfile runtime |> Option.map (fun profile -> profile.Sdk)
+
+        Assert.Equal(Some "10.0.401", pair (Version(10, 0, 12)))
+        Assert.Equal(Some "10.0.403", pair (Version(10, 0, 14)))
+
+        for rejected in [ Version(10, 0, 11); Version(10, 0, 13); Version(10, 0, 15); Version(9, 0, 12); Version(11, 0, 14) ] do
+            Assert.Equal(None, pair rejected)
+
+    [<Fact>]
     let ``actual SDK cache parser handles only full BOM and preserves captured bytes`` () =
         let assembly = typeof<CatalogScaffoldEffects.HostSelection>.Assembly
 
@@ -937,17 +948,31 @@ module CatalogScaffoldRuntimeTests =
                 )
                 |> nonNull
 
-        let verify () =
+        // The cache path names the SDK that produced it; the verifier is told which accepted SDK it must be.
+        let verifyWith cacheSdk selectedSdk =
             let files =
                 [
                     captured
-                        "engine/dotnetcli/10.0.401/templatecache.json"
+                        ("engine/dotnetcli/" + cacheSdk + "/templatecache.json")
                         (Encoding.UTF8.GetBytes(cache.ToJsonString()))
                     captured "engine/packages.json" (Encoding.UTF8.GetBytes(packages.ToJsonString()))
                     captured ("engine/packages/" + archive.Id + "." + archive.Version + ".nupkg") [||]
                 ]
 
-            method.Invoke(null, [| parsed; box Set.empty<string>; box true; box files |])
+            method.Invoke(null, [| parsed; box selectedSdk; box Set.empty<string>; box true; box files |])
+            |> ignore
+
+        let verify () = verifyWith "10.0.401" "10.0.401"
+
+        // SDK-PATCH-01 (FS-GG/.github#4935 Q5): exactly the closed set {10.0.401, 10.0.403} is accepted, each
+        // with its own engine cache path, and no SDK's cache satisfies another SDK's selection.
+        Assert.Equal<string list>([ "10.0.401"; "10.0.403" ], CatalogHostProfile.hostProfiles |> List.map (fun p -> p.Sdk))
+
+        for profile in CatalogHostProfile.hostProfiles do
+            verifyWith profile.Sdk profile.Sdk
+
+        for cacheSdk, selectedSdk in [ "10.0.401", "10.0.403"; "10.0.403", "10.0.401"; "10.0.402", "10.0.403" ] do
+            Assert.Throws<System.Reflection.TargetInvocationException>(fun () -> verifyWith cacheSdk selectedSdk)
             |> ignore
 
         verify ()
