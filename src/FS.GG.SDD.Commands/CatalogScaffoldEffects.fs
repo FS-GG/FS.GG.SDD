@@ -1747,7 +1747,7 @@ module CatalogScaffoldEffects =
         (budget: Linux.PhaseBudget)
         (policy: CatalogScaffoldPolicy.Policy)
         (selected: Fsgg.ProviderCatalog.PreparedConfiguration)
-        : Linux.HostProfile =
+        : CatalogHostProfile.HostProfile =
         Linux.checkWork budget
 
         let profile =
@@ -1759,7 +1759,7 @@ module CatalogScaffoldEffects =
             then
                 None
             else
-                Linux.tryHostProfile Environment.Version
+                CatalogHostProfile.tryHostProfile Environment.Version
 
         let profile =
             match profile with
@@ -1793,7 +1793,7 @@ module CatalogScaffoldEffects =
         Linux.checkWork budget
         profile
 
-    let private createPrivateRoot (operation: Operation) (budget: Linux.PhaseBudget) (profile: Linux.HostProfile) =
+    let private createPrivateRoot (operation: Operation) (budget: Linux.PhaseBudget) (profile: CatalogHostProfile.HostProfile) =
         let target = operation.Request.TargetRoot.TrimEnd(Path.DirectorySeparatorChar)
         let parentPath = Path.GetDirectoryName target |> requiredText
         let targetLeaf = Path.GetFileName target |> requiredText
@@ -1844,7 +1844,7 @@ module CatalogScaffoldEffects =
 
         root, targetLeaf
 
-    let private captureTransportInputs (operation: Operation) (budget: Linux.PhaseBudget) (profile: Linux.HostProfile) =
+    let private captureTransportInputs (operation: Operation) (budget: Linux.PhaseBudget) (profile: CatalogHostProfile.HostProfile) =
         let runtime = profile.Runtime.ToString()
         let executable = operation.Host.TransportExecutable
         captureInputFile operation budget executable (64 * 1024 * 1024) |> ignore

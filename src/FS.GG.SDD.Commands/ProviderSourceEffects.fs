@@ -634,7 +634,7 @@ module ProviderSourceEffects =
         let mutable result: PreparedSet option = None
         try
             if not (OperatingSystem.IsLinux()) || Runtime.InteropServices.RuntimeInformation.ProcessArchitecture <> Runtime.InteropServices.Architecture.X64
-               || (Linux.tryHostProfile Environment.Version).IsNone then
+               || (CatalogHostProfile.tryHostProfile Environment.Version).IsNone then
                 refuse "source.hostProfile" "Source filesystem custody requires the existing Linux-x64 catalog host profile: .NET 10.0.12 (SDK 10.0.401) or .NET 10.0.14 (SDK 10.0.403)."
             Linux.observeAbi operation.Native phase |> unwrap |> ignore
             operation.Cache <- Some(Linux.openDirectory operation.Native phase operation.Request.CacheRoot)

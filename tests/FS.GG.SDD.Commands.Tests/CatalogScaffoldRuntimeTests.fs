@@ -164,7 +164,7 @@ module CatalogScaffoldRuntimeTests =
     [<Fact>]
     let ``host profile is the closed exact SDK and runtime pair set`` () =
         let pair (runtime: Version) =
-            CatalogScaffoldLinux.tryHostProfile runtime |> Option.map (fun profile -> profile.Sdk)
+            CatalogHostProfile.tryHostProfile runtime |> Option.map (fun profile -> profile.Sdk)
 
         Assert.Equal(Some "10.0.401", pair (Version(10, 0, 12)))
         Assert.Equal(Some "10.0.403", pair (Version(10, 0, 14)))
@@ -966,9 +966,9 @@ module CatalogScaffoldRuntimeTests =
 
         // SDK-PATCH-01 (FS-GG/.github#4935 Q5): exactly the closed set {10.0.401, 10.0.403} is accepted, each
         // with its own engine cache path, and no SDK's cache satisfies another SDK's selection.
-        Assert.Equal<string list>([ "10.0.401"; "10.0.403" ], CatalogScaffoldLinux.hostProfiles |> List.map (fun p -> p.Sdk))
+        Assert.Equal<string list>([ "10.0.401"; "10.0.403" ], CatalogHostProfile.hostProfiles |> List.map (fun p -> p.Sdk))
 
-        for profile in CatalogScaffoldLinux.hostProfiles do
+        for profile in CatalogHostProfile.hostProfiles do
             verifyWith profile.Sdk profile.Sdk
 
         for cacheSdk, selectedSdk in [ "10.0.401", "10.0.403"; "10.0.403", "10.0.401"; "10.0.402", "10.0.403" ] do
