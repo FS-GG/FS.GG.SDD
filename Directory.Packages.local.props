@@ -6,9 +6,9 @@
        NU1504/NU1011 on a duplicate PackageVersion). ManagePackageVersionsCentrally
        is owned by the canonical file and is intentionally not re-set here. -->
   <ItemGroup>
-    <!-- V2-PROC candidate: public receiver adoption waits for the original pair publication. -->
-    <PackageVersion Include="FS.GG.Execution.Contracts" Version="[0.3.0]" />
-    <PackageVersion Include="FS.GG.Execution.Processes" Version="[0.3.0]" />
+    <!-- V2-PROC: Execution pair 0.3.1, published to nuget.org and GitHub Packages (Refs FS-GG/FS.GG.Coordination#1026). -->
+    <PackageVersion Include="FS.GG.Execution.Contracts" Version="[0.3.1]" />
+    <PackageVersion Include="FS.GG.Execution.Processes" Version="[0.3.1]" />
     <!-- Reuse the published org contract; do not rebuild an equal-version dependency. -->
     <PackageVersion Include="FS.GG.Contracts" Version="[7.6.0]" />
     <!-- Use published Config0.3.0; SDD release and downstream adoption remain separate. -->
