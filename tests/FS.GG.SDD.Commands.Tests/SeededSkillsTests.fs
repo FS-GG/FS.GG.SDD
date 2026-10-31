@@ -100,7 +100,7 @@ module SeededSkillsTests =
                 let b =
                     File.ReadAllBytes(Path.Combine(second, path.Replace('/', Path.DirectorySeparatorChar)))
 
-                Assert.Equal<byte[]>(a, b)
+                Assert.Equal<byte>(a, b)
                 Assert.DoesNotMatch(dateOrTime, TestSupport.readRelative first path)
 
     // ---------- T012 (US3 / INV-2, FR-002/SC-004): runtime-root parity ----------
@@ -117,7 +117,7 @@ module SeededSkillsTests =
             let agents =
                 File.ReadAllBytes(Path.Combine(root, (agentsPath name).Replace('/', Path.DirectorySeparatorChar)))
 
-            Assert.Equal<byte[]>(claude, agents)
+            Assert.Equal<byte>(claude, agents)
 
     // ---------- 056 T006 (P1–P4): the strict isSddTree/isSddOwned truth table ----------
 
@@ -162,7 +162,7 @@ module SeededSkillsTests =
         for name in SeededSkills.skillNames do
             let claude = bytesAt (claudePath name)
             let agents = bytesAt (agentsPath name)
-            Assert.Equal<byte[]>(claude, agents)
+            Assert.Equal<byte>(claude, agents)
 
     [<Fact>]
     let ``two init runs produce byte-stable two-root skill trees`` () =
@@ -186,7 +186,7 @@ module SeededSkillsTests =
                 let b =
                     File.ReadAllBytes(Path.Combine(second, path.Replace('/', Path.DirectorySeparatorChar)))
 
-                Assert.Equal<byte[]>(a, b)
+                Assert.Equal<byte>(a, b)
 
     // ---------- T013 (US3 / INV-7, FR-010/SC-005): membership + embedded drift guard ----------
 

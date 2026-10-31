@@ -415,7 +415,7 @@ module ProviderSourceWorkflowTests =
             let original = ProviderSourceEffects.catalogBytes selected
             let exposed = ProviderSourceEffects.catalogSelection selected
             System.Array.Fill(exposed.CatalogBytes, 0uy)
-            Assert.Equal<byte array>(original, ProviderSourceEffects.catalogBytes selected)
+            Assert.Equal<byte>(original, ProviderSourceEffects.catalogBytes selected)
             let captured = ProviderSourceEffects.inputFiles selected |> List.map (fun file -> file.AbsolutePath, System.IO.File.ReadAllBytes file.AbsolutePath)
             Assert.True(ProviderSourceEffects.verifyCaptured selected captured |> Result.isOk)
             let path, bytes = captured.Head
@@ -473,7 +473,7 @@ module ProviderSourceWorkflowTests =
         match ProviderSourceEffects.inspectEnvelope 10000L (stream.ToArray()) with
         | Ok files ->
             Assert.Equal<string list>([ "source.json"; "payload/data.bin" ], List.map fst files)
-            for _, bytes in files do Assert.Equal<byte[]>(payload, bytes)
+            for _, bytes in files do Assert.Equal<byte>(payload, bytes)
         | Error errors -> failwithf "%A" errors
 
     [<Fact>]

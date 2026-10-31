@@ -2,6 +2,12 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System
 open System.Diagnostics
+open System.IO
+open System.Security.Cryptography
+open System.Threading
+open System.Threading.Tasks
+open FS.GG.Execution.Contracts
+open FS.GG.Execution.Processes
 open FS.GG.SDD.TestShared
 open Xunit
 
@@ -104,6 +110,7 @@ module ChildProcessTests =
 
         Assert.Contains("pipes were still held", ex.Message)
         Assert.Equal(TestShared.ChildProcess.PipesHeldAfterExit, ex.Reason)
+        if OperatingSystem.IsLinux() then Assert.True(ex.Data["ChildProcessSessionRetained"] :?> bool)
 
         Assert.True(
             elapsed.ElapsedMilliseconds < 20_000L,
@@ -183,6 +190,79 @@ module ChildProcessTests =
 
         Assert.Equal("clean-result", cleanValue)
         Assert.True(cleanFailure.IsNone)
+
+    // Literal arguments/environment and nonzero exits exercise the actual package
+    // session path; shell policy remains explicit in this synthetic command.
+    [<Fact; Trait("tier", "slow")>]
+    let ``shared session preserves literal argv environment and nonzero exit`` () =
+        let before = TestShared.ChildProcess.retainedSessionCount ()
+        let info = ProcessStartInfo "sh"
+        info.ArgumentList.Add "-c"
+        info.ArgumentList.Add "printf '%s|%s|%s' \"$1\" \"$SDD_PROCESS_LITERAL\" \"${HOME+x}\"; printf 'literal-stderr' >&2; exit 7"
+        info.ArgumentList.Add "synthetic"
+        info.ArgumentList.Add "space ; $value"
+        info.Environment.Clear()
+        info.Environment["SDD_PROCESS_LITERAL"] <- "environment $literal"
+        let completion = TestShared.ChildProcess.runBounded 5_000 info
+        Assert.Equal(7, completion.ExitCode)
+        Assert.Equal("space ; $value|environment $literal|", completion.StandardOutput)
+        Assert.Equal("literal-stderr", completion.StandardError)
+        Assert.Equal(before, TestShared.ChildProcess.retainedSessionCount ())
+
+    // Preserve the ordinary StreamReader BOM contract after shared byte capture.
+    // The input is finite synthetic UTF-8 output from the actual child process.
+    [<Fact; Trait("tier", "slow")>]
+    let ``shared byte capture preserves the existing BOM-aware text decoder`` () =
+        let info = ProcessStartInfo "sh"
+        info.ArgumentList.Add "-c"
+        info.ArgumentList.Add "printf '\\357\\273\\277decoded-text'"
+        let completion = TestShared.ChildProcess.runBounded 5_000 info
+        Assert.Equal("decoded-text", completion.StandardOutput)
+
+    // One byte beyond the per-stream allocation must refuse complete capture;
+    // silently returning a truncated successful Completion would corrupt callers.
+    [<Fact; Trait("tier", "slow")>]
+    let ``output omitted by finite shared capture is never a successful completion or live app timeout`` () =
+        if OperatingSystem.IsLinux() then
+            let info = stderrFlood false
+            info.ArgumentList.Clear()
+            info.ArgumentList.Add "-c"
+            info.ArgumentList.Add "i=0; while [ $i -lt 128 ]; do printf '%01024d' 0; i=$((i+1)); done >&2; printf X >&2; sleep 3600"
+            let elapsed = Stopwatch.StartNew()
+            let failure =
+                Assert.Throws<TestShared.ChildProcess.ChildProcessCaptureFailure>(fun () ->
+                    TestShared.ChildProcess.runBounded 5_000 info |> ignore)
+            elapsed.Stop()
+            Assert.Contains("bounded capture", failure.Message)
+            Assert.Contains("[truncated]", failure.Message)
+            Assert.True(failure.Message.Length < 35_000)
+            Assert.False(failure.Data["ChildProcessSessionRetained"] :?> bool)
+            Assert.True(elapsed.ElapsedMilliseconds < 10_000L)
+
+    // A finite child can exit with its overflow in the final observation. Complete
+    // exit/EOF must never turn that omitted byte into a successful result.
+    [<Fact; Trait("tier", "slow")>]
+    let ``finite child overflow remains capture failure after exit and release`` () =
+        if OperatingSystem.IsLinux() then
+            let info = ProcessStartInfo "sh"
+            info.ArgumentList.Add "-c"
+            info.ArgumentList.Add "i=0; while [ $i -lt 128 ]; do printf '%01024d' 0; i=$((i+1)); done; printf X"
+            let failure =
+                Assert.Throws<TestShared.ChildProcess.ChildProcessCaptureFailure>(fun () ->
+                    TestShared.ChildProcess.runBounded 5_000 info |> ignore)
+            Assert.Contains("bounded capture", failure.Message)
+            Assert.Contains("[truncated]", failure.Message)
+            Assert.False(failure.Data["ChildProcessSessionRetained"] :?> bool)
+
+    // Command validation occurs before any session launch and never guesses the
+    // shell/Windows quoting semantics of ProcessStartInfo.Arguments.
+    [<Fact>]
+    let ``raw argument strings are refused before a bounded child launch`` () =
+        if OperatingSystem.IsLinux() then
+            let before = TestShared.ChildProcess.retainedSessionCount ()
+            let info = ProcessStartInfo("sh", "-c exit")
+            Assert.True((TestShared.ChildProcess.tryRunBounded 5_000 info).IsNone)
+            Assert.Equal(before, TestShared.ChildProcess.retainedSessionCount ())
 
     [<Fact>]
     let ``browser selection honors declarations and only missing executables select another driver`` () =
@@ -323,3 +403,140 @@ module ChildProcessTests =
         Assert.Contains("exit 1", versionFailure.Message)
         Assert.Contains("synthetic driver failure", versionFailure.Message)
         Assert.Single(calls) |> ignore
+
+    // This pilot deliberately uses the raw public factory. The SDD adapter owns
+    // text decoding; adding the producer's text API must not change its byte path.
+    // Sessions and original Run tasks remain rooted after a failed assertion
+    // until accountable testhost/outer cleanup observes both.
+    type private PilotCall =
+        { Session: IProcessSession
+          OriginalBudget: ExecutionBudget
+          mutable RunTask: Task<ExecutionResult> option }
+
+    let private pilotCustody = ResizeArray<PilotCall>()
+
+    let private prepareRawPilot policy script workMs =
+        let domain = { Id = Guid.NewGuid(); Frequency = Stopwatch.Frequency }
+        let clock =
+            { new IMonotonicClock with
+                member _.Now() = { Domain = domain; Ticks = Stopwatch.GetTimestamp() } }
+        let budget =
+            Budget.create (clock.Now()) (TimeSpan.FromMilliseconds(float (workMs + 5_000)))
+                (TimeSpan.FromMilliseconds 5_000.)
+            |> function Ok value -> value | Error error -> failwithf "%A" error
+        let digest =
+            File.ReadAllBytes(Path.Combine(TestShared.repoRoot, "tests/FS.GG.SDD.Commands.Tests/ChildProcessTests.fs"))
+            |> SHA256.HashData |> Convert.ToHexStringLower
+        let identity =
+            { InvocationId = Guid.NewGuid(); Execution = None; LaunchOrdinal = 0UL
+              SourceDigest = digest; ProfileId = "sdd-raw-consumer-pilot"; ProfileDigest = digest }
+        let owner =
+            { OwnerId = $"sdd-pilot-testhost:{Environment.ProcessId}"
+              Evidence = { Kind = "caller-lifetime"; Reference = identity.InvocationId.ToString("D"); Digest = None } }
+        let command: CommandSpec =
+            { Executable = "/bin/sh"; Arguments = [ "-c"; script ]; WorkingDirectory = Path.GetTempPath()
+              Environment = Replace Map.empty; Input = Closed
+              Capture =
+                { TotalBytes = 4096L; TerminalReserveBytes = 256
+                  StdoutPrefixBytes = 1024; StdoutTailBytes = 256
+                  StderrPrefixBytes = 1024; StderrTailBytes = 256
+                  ReadChunkBytes = 512; MaximumFrameBytes = 1024; MaximumIncompleteLineBytes = 1024 }
+              Capabilities = [ { Capability = BoundedReturnWithRetainedCustody; Required = true } ]
+              Resources =
+                { MemoryBytes = None; CpuQuota = None; CpuAffinity = None; MaxKernelTasks = None
+                  MaxOwnedProcesses = None; MaxClrProcesses = None } }
+        let session =
+            (ProcessSessions.createFactoryWithRetirement policy).Prepare(command, identity, budget, clock, owner)
+            |> function Ok value -> value | Error errors -> failwithf "%A" errors
+        let call = { Session = session; OriginalBudget = budget; RunTask = None }
+        pilotCustody.Add call
+        call, budget, clock
+
+    let private runRawPilot (call: PilotCall) cancellation =
+        Assert.True(call.RunTask.IsNone, "pilot must request only one original Run task")
+        let running = call.Session.RunAsync cancellation
+        call.RunTask <- Some running
+        running
+
+    let private releaseRawPilot (call: PilotCall) budget (clock: IMonotonicClock) =
+        Assert.Equal(Budget.describe call.OriginalBudget, Budget.describe budget)
+        let running =
+            call.RunTask
+            |> Option.defaultWith (fun () -> failwith "No original Run task requested; pilot custody remains retained")
+        let session = call.Session
+        let mutable result = session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+        while not running.IsCompleted
+              || not (match result.Cleanup.LocalTasks with Known(Settled, _) -> true | _ -> false) do
+            let delay =
+                Budget.clip (clock.Now()) Cleanup (TimeSpan.FromMilliseconds 5.) budget
+                |> function Ok value -> value | Error error -> failwithf "%A" error
+            Assert.True(delay > TimeSpan.Zero, "original pilot cleanup budget expired; session remains retained")
+            Thread.Sleep delay
+            result <- session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+        // Await only the observed-complete original task; never infer its result
+        // from session cleanup or replace it with a second Run invocation.
+        running.GetAwaiter().GetResult() |> ignore
+        Assert.Equal(ResourcesReleased, session.TryRelease())
+        pilotCustody.Remove call |> ignore
+        Assert.Equal(Budget.describe budget, Budget.describe result.OriginalBudget)
+        result
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``raw consumer pilot retains undecodable transport bytes without text API admission`` () =
+        if OperatingSystem.IsLinux() then
+            let call, budget, clock =
+                prepareRawPilot RetirementPolicy.BestEffortProcessTree "printf '\\377\\300A'" 5_000
+            runRawPilot call CancellationToken.None |> ignore
+            let result = releaseRawPilot call budget clock
+            Assert.Equal<byte>([| 255uy; 192uy; 65uy |], result.Stdout.Prefix.ToArray())
+            Assert.True(result.FirstFailure.IsNone)
+            Assert.Equal(NotRequested, result.Stop)
+            Assert.True(match result.Exit with Known(Exited 0, _) -> true | _ -> false)
+            Assert.True(match result.Cleanup.WorkloadEmpty with Unknown _ -> true | _ -> false)
+
+    [<Theory; Trait("tier", "slow")>]
+    [<InlineData(true)>]
+    [<InlineData(false)>]
+    let ``raw consumer pilot keeps cancellation and deadline causes under original custody`` cancelled =
+        if OperatingSystem.IsLinux() then
+            let call, budget, clock =
+                prepareRawPilot RetirementPolicy.BestEffortProcessTree "printf ready; exec /bin/sleep 20" 500
+            let session = call.Session
+            use cancellation = new CancellationTokenSource()
+            runRawPilot call cancellation.Token |> ignore
+            let mutable observed = session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+            while not (match observed.Launch with Started _ -> true | _ -> false) do
+                let delay =
+                    Budget.clip (clock.Now()) Work (TimeSpan.FromMilliseconds 5.) budget
+                    |> function Ok value -> value | Error error -> failwithf "%A" error
+                Assert.True(delay > TimeSpan.Zero, "pilot never observed launch within original work budget")
+                Thread.Sleep delay
+                observed <- session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+            if cancelled then
+                cancellation.Cancel()
+            let result = releaseRawPilot call budget clock
+            let expected = if cancelled then CallerCancellation else WorkDeadline
+            Assert.True(match result.Stop with Requested(reason, _) -> reason = expected | _ -> false)
+            Assert.True(match result.Cleanup.WorkloadEmpty with Unknown _ -> true | _ -> false)
+
+    [<Theory>]
+    [<InlineData(true)>]
+    [<InlineData(false)>]
+    let ``raw consumer pilot cannot release prepared no Run custody as terminal cleanup`` tree =
+        if OperatingSystem.IsLinux() then
+            let policy = if tree then RetirementPolicy.BestEffortProcessTree else RetirementPolicy.DirectChild
+            let call, budget, clock = prepareRawPilot policy "exit 73" 5_000
+            Assert.True(call.RunTask.IsNone)
+            let refusal = Assert.Throws<Exception>(fun () -> releaseRawPilot call budget clock |> ignore)
+            Assert.Equal("No original Run task requested; pilot custody remains retained", refusal.Message)
+            Assert.True(pilotCustody |> Seq.exists (fun retained -> obj.ReferenceEquals(retained, call)))
+            Assert.True(call.RunTask.IsNone)
+            let prepared = call.Session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
+            Assert.Equal(Prepared, prepared.Phase)
+            Assert.Equal(NotStarted, prepared.Launch)
+            Assert.False(match prepared.Cleanup.LocalTasks with Known(Settled, _) -> true | _ -> false)
+            Assert.Equal(Budget.describe budget, Budget.describe prepared.OriginalBudget)
+            runRawPilot call (CancellationToken(true)) |> ignore
+            let result = releaseRawPilot call budget clock
+            Assert.Equal(NotStarted, result.Launch)
+            Assert.Equal(NoEffect, result.Cleanup.Custody)
