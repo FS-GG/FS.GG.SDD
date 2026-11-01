@@ -19,7 +19,7 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.3`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.4`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
@@ -27,8 +27,8 @@ sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.3`**
 - `FS.GG.SDD.Knowledge` (the standalone concise findings SDK)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.5.3"` and
-`generatorVersion.version = "2.5.3"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.5.4"` and
+`generatorVersion.version = "2.5.4"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
@@ -58,14 +58,24 @@ bare legacy declarations retain canonical text normalization. No public API, sch
 provenance changes. Published Contracts 7.6.0 is unchanged. Its publication and public Doctor
 acceptance remain recorded on [SDD #928](https://github.com/FS-GG/FS.GG.SDD/issues/928).
 
-The prepared 2.5.3 patch fixes catalog transport-input revalidation retaining a whole native read
+The 2.5.3 patch fixes catalog transport-input revalidation retaining a whole native read
 buffer and managed capture result on each pass. The original IO worker retires its read buffer after
 synchronous use under the original cleanup end; revalidation returns only a match result while
 preserving exact bytes, hashes and original physical bindings. Bounded small-file controls prove the
 accumulation mechanism; the historical carrier OOM cause remains Unknown. A matching contained
 glibc 2.44 carrier and actual same-archive qualification remain required. Public API, schema and
 persisted provenance stay unchanged, as does published Contracts 7.6.0. Public 2.5.2 bytes and accepted
-receipts are retained; this source preparation neither republishes them nor establishes 2.5.3 publication.
+receipts are retained.
+
+The prepared 2.5.4 patch carries SDK-PATCH-01
+([FS-GG/FS.GG.SDD#1144](https://github.com/FS-GG/FS.GG.SDD/pull/1144), FS-GG/.github#4935). The
+repository builds on SDK 10.0.403. The catalog transport and provider-source host profile accept exactly
+one SDK and runtime pair from a closed set: SDK 10.0.401 with .NET 10.0.12, or SDK 10.0.403 with
+.NET 10.0.14. A floating band or a mixed pair is refused. The 10.0.403 pair is admitted by source and
+tests; its native catalog qualification is not claimed (see `docs/validation/catalog-runtime.md`).
+Test projects also pin the published Execution pair 0.3.1; no shipped package gains a dependency.
+Public API, schema and persisted provenance are unchanged, as is published Contracts 7.6.0. Public
+2.5.3 bytes and receipts are retained; this source preparation does not establish 2.5.4 publication.
 
 ## Change class to bump rule
 
