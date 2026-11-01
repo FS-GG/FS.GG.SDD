@@ -60,8 +60,12 @@ spec.loader.exec_module(harness)
 # nuget.org whole-file SHA-256 of the published tool packages. The leading eight characters are recorded
 # on FS-GG/FS.GG.SDD#935 (SDD 2.5.1, comment 6387941247) and #928 (Governance 1.15.0, comment 6363029199);
 # the full values were verified against fresh nuget.org downloads by an independent reviewer on 2026-10-24.
+# SDD 2.5.4 (FS-GG/FS.GG.SDD#1148) was downloaded on 2026-11-01 from
+# https://api.nuget.org/v3-flatcontainer/fs.gg.sdd.cli/2.5.4/fs.gg.sdd.cli.2.5.4.nupkg (5130244 bytes) and hashed;
+# it is byte-equal to the copy installed by `dotnet tool install -g` on fdev.
 PUBLISHED_SHA256 = {
     'FS.GG.SDD.Cli.2.5.1': '94e20819a011419531b696cc8510c122edc5cce2f2dbe93bb09864a391cfe241',
+    'FS.GG.SDD.Cli.2.5.4': '33446643086545283cda6276660b31d0a1a2b75a10d6c061cfcd8999c8fc10eb',
     'FS.GG.Governance.Cli.1.15.0': '9eb3eed64cacdd84ba3d82439d8e3b6ffb3c9e035c6e5de00a1520094227879b',
 }
 
@@ -482,7 +486,7 @@ def main():
     run.add_argument('--governance-version', default='1.15.0')
     run.add_argument('--expect-sha256', action='append', metavar='PACKAGE_ID.VERSION=HEX',
                      help='override or add an independently recorded nuget.org whole-file SHA-256 of a tool package '
-                          '(the published SDD 2.5.1 and Governance 1.15.0 values are built in)')
+                          '(the published SDD 2.5.1 and 2.5.4 and Governance 1.15.0 values are built in)')
     args = parser.parse_args()
     return run_journey(args)
 
