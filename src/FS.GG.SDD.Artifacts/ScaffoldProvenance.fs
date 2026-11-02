@@ -55,14 +55,16 @@ module ScaffoldProvenance =
             // `sha256`. Externally owned like `GameSkillPaths`, so `refresh` excludes them. Additive;
             // empty when none materialized (schema stays v1).
             RenderingSkillPaths: ScaffoldProducedPath list
-            // FS.GG.SDD#1155: per-skill owner-package versions (the never-downgrade bound).
-            // Additive; serialized only when non-empty (schema stays v1).
-            OwnerSkillVersions: OwnerSkillVersion list
-            // FS.GG.SDD#1155: the CLI version that last ran `upgrade` against this workspace (`Generator`
-            // is the CLI that PRODUCED it and never moves). The never-downgrade fallback for a skill with
-            // no recorded version is bounded by the last writer. Serialized only when present.
-            UpgradedBy: string option
             EffectiveParameters: (string * string) list
+        }
+
+    // Owner refresh adds optional schema-v1 JSON fields without changing the published
+    // record's fourteen-field CLR constructor or its ordinary F# value semantics.
+    type OwnerSkillProvenance =
+        {
+            Ownership: ScaffoldProvenanceRecord
+            OwnerSkillVersions: OwnerSkillVersion list
+            UpgradedBy: string option
         }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
@@ -103,8 +105,6 @@ module ScaffoldProvenance =
             DriverPaths = []
             GameSkillPaths = []
             RenderingSkillPaths = []
-            OwnerSkillVersions = []
-            UpgradedBy = None
             EffectiveParameters = []
         }
 
@@ -134,7 +134,8 @@ module ScaffoldProvenance =
         | Some value when not (String.IsNullOrWhiteSpace value) -> Some value
         | _ -> None
 
-    let serialize (record: ScaffoldProvenanceRecord) =
+    let serializeOwnerSkillProvenance (state: OwnerSkillProvenance) =
+        let record = state.Ownership
         use stream = new MemoryStream()
         use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
 
@@ -259,10 +260,10 @@ module ScaffoldProvenance =
 
         // FS.GG.SDD#1155: additive per-skill owner-package versions, emitted only when present so a
         // record without them is byte-identical to its pre-#1155 form.
-        if not (List.isEmpty record.OwnerSkillVersions) then
+        if not (List.isEmpty state.OwnerSkillVersions) then
             writer.WriteStartArray("ownerSkillVersions")
 
-            record.OwnerSkillVersions
+            state.OwnerSkillVersions
             |> List.sortBy (fun entry -> entry.SkillId)
             |> List.iter (fun entry ->
                 writer.WriteStartObject()
@@ -273,7 +274,7 @@ module ScaffoldProvenance =
 
             writer.WriteEndArray()
 
-        match record.UpgradedBy with
+        match state.UpgradedBy with
         | Some version when not (String.IsNullOrWhiteSpace version) -> writer.WriteString("upgradedBy", version)
         | _ -> ()
 
@@ -292,7 +293,13 @@ module ScaffoldProvenance =
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
 
-    let tryParse (text: string) =
+    let serialize (record: ScaffoldProvenanceRecord) =
+        serializeOwnerSkillProvenance
+            { Ownership = record
+              OwnerSkillVersions = []
+              UpgradedBy = None }
+
+    let tryParseOwnerSkillProvenance (text: string) =
         try
             use document = JsonDocument.Parse text
             let root = document.RootElement
@@ -471,7 +478,7 @@ module ScaffoldProvenance =
                         // ⇒ `None`, so records written before this field still parse.
                         let requiredMinimumCliVersion = jsonString "requiredMinimumCliVersion" root
 
-                        Some
+                        let ownership =
                             {
                                 SchemaVersion = version
                                 Generator =
@@ -490,12 +497,17 @@ module ScaffoldProvenance =
                                 DriverPaths = driverPaths
                                 GameSkillPaths = gameSkillPaths
                                 RenderingSkillPaths = renderingSkillPaths
-                                OwnerSkillVersions = ownerSkillVersions
-                                UpgradedBy = jsonString "upgradedBy" root
                                 EffectiveParameters = effectiveParameters
                             }
+                        Some
+                            { Ownership = ownership
+                              OwnerSkillVersions = ownerSkillVersions
+                              UpgradedBy = jsonString "upgradedBy" root }
                     | _ -> None
                 | None -> None
             | _ -> None
         with _ ->
             None
+
+    let tryParse (text: string) =
+        tryParseOwnerSkillProvenance text |> Option.map _.Ownership

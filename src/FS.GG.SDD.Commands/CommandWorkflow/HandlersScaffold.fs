@@ -1134,40 +1134,35 @@ module internal HandlersScaffold =
                                  else
                                      Some sha256)
                         })
-                // FS.GG.SDD#1155: the owner-package version each materialized owner skill came from,
-                // so a later `upgrade` can refuse to replace it with an OLDER pack. Only skills this
-                // scaffold actually wrote are recorded, and only when this build stamped a version.
-                OwnerSkillVersions =
-                    [
-                        yield! driverPaths |> List.map (fun (path, _) -> path, ArtifactOwner.Driver)
-                        yield! gameSkillPaths |> List.map (fun (path, _) -> path, ArtifactOwner.GameSkill)
-                        yield!
-                            renderingSkillPaths
-                            |> List.map (fun (path, _) -> path, ArtifactOwner.RenderingSkill)
-
-                        yield! audioSkillPaths |> List.map (fun (path, _) -> path, ArtifactOwner.AudioSkill)
-                    ]
-                    |> List.choose (fun (path, owner) ->
-                        OwnerSkillRefresh.skillCopyOf path
-                        |> Option.bind (fun (_, id, _) ->
-                            OwnerPackages.embeddedFor owner
-                            |> Option.map (fun (package, version) ->
-                                ({
-                                    SkillId = id
-                                    Channel = package
-                                    Version = version
-                                }
-                                : ScaffoldProvenance.OwnerSkillVersion))))
-                    |> List.distinctBy (fun entry -> entry.SkillId)
-                    |> List.sortBy (fun entry -> entry.SkillId)
-                UpgradedBy = None
                 // `Map.toList` is already ascending by key — the FR-003 effective set
                 // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
                 EffectiveParameters = Map.toList effective
             }
 
+        // The owner package versions are an additive schema-v1 envelope, leaving the
+        // published ownership record and its fourteen-argument constructor intact.
+        let ownerSkillVersions =
+            [
+                yield! driverPaths |> List.map (fun (path, _) -> path, ArtifactOwner.Driver)
+                yield! gameSkillPaths |> List.map (fun (path, _) -> path, ArtifactOwner.GameSkill)
+                yield! renderingSkillPaths |> List.map (fun (path, _) -> path, ArtifactOwner.RenderingSkill)
+                yield! audioSkillPaths |> List.map (fun (path, _) -> path, ArtifactOwner.AudioSkill)
+            ]
+            |> List.choose (fun (path, owner) ->
+                OwnerSkillRefresh.skillCopyOf path
+                |> Option.bind (fun (_, id, _) ->
+                    OwnerPackages.embeddedFor owner
+                    |> Option.map (fun (package, version) ->
+                        ({ SkillId = id; Channel = package; Version = version }
+                         : ScaffoldProvenance.OwnerSkillVersion))))
+            |> List.distinctBy (fun entry -> entry.SkillId)
+            |> List.sortBy (fun entry -> entry.SkillId)
+
+        let state: ScaffoldProvenance.OwnerSkillProvenance =
+            { Ownership = record; OwnerSkillVersions = ownerSkillVersions; UpgradedBy = None }
+
         [
-            WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize record, StructuredSource)
+            WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serializeOwnerSkillProvenance state, StructuredSource)
         ]
 
     // The create outcome classified from the interpreted-effect log. A **terminal**

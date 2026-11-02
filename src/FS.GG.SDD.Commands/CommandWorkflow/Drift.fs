@@ -959,8 +959,9 @@ module internal Drift =
     /// members reach the mirror fold, where they are WITHHELD from the drift classes rather than
     /// read as absences. Withholding is not clearing: the caller still owns reporting them and
     /// still owns refusing to call the run coherent over them, which `computeDoctorNext` does.
-    let computeObservedWithRawDigests
+    let computeObservedWithRawDigestsAndOwnerState
         (provenance: ScaffoldProvenanceRecord option)
+        (ownerSkillState: OwnerSkillProvenance option)
         (descriptor: ProviderDescriptor option)
         (workspaceFloor: string option)
         (installedVersion: string)
@@ -1045,9 +1046,15 @@ module internal Drift =
             // missing owner skill is still a missing expected artifact, so it is reconciled by the
             // same no-clobber `artifactReSeed` step (its `TargetPaths` union, below).
             // FS.GG.SDD#1155: owner skills that changed upstream are replaced as a unit when safe.
+            let refreshState =
+                ownerSkillState
+                |> Option.defaultValue
+                    { Ownership = record
+                      OwnerSkillVersions = []
+                      UpgradedBy = None }
             let refreshPlan =
                 OwnerSkillRefresh.plan
-                    record
+                    refreshState
                     installedVersion
                     (OwnerSkillRefresh.embeddedDesired record)
                     OwnerPackages.embeddedFor
@@ -1159,6 +1166,13 @@ module internal Drift =
                 Steps = steps
                 IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All
             }
+
+    // Existing internal callers that have only the published ownership record retain
+    // the old call shape and the pre-owner-version fallback.
+    let computeObservedWithRawDigests
+        provenance descriptor workspaceFloor installedVersion presentArtifacts skillBodies unobservedSubjects skillRawDigests =
+        computeObservedWithRawDigestsAndOwnerState
+            provenance None descriptor workspaceFloor installedVersion presentArtifacts skillBodies unobservedSubjects skillRawDigests
 
     /// Decoded-only callers retain the legacy contract. A tagged raw declaration cannot
     /// be cleared without exact observed bytes and is reported divergent instead.

@@ -212,8 +212,6 @@ evidence:
             DriverPaths = []
             GameSkillPaths = []
             RenderingSkillPaths = []
-            OwnerSkillVersions = []
-            UpgradedBy = None
             EffectiveParameters = []
         }
 

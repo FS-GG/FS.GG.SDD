@@ -74,6 +74,15 @@ module internal HandlersDoctor =
         // The report separately retains these parse diagnostics and refuses coherence.
         | Error _ -> None
 
+    // The legacy ownership projection deliberately carries only the published
+    // fourteen fields. Owner refresh reads its optional schema-v1 envelope from
+    // the very same observed bytes so preview and upgrade use the same version bound.
+    let resolveOwnerSkillState model =
+        match scaffoldProvenanceDocument model, snapshot provenancePath model with
+        | Ok(Some(FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.Legacy _)), Some observed ->
+            tryParseOwnerSkillProvenance observed.Text
+        | _ -> None
+
     let resolveDriftDescriptor model (provenance: ScaffoldProvenanceRecord option) =
         match provenance with
         | Some record ->
@@ -334,6 +343,7 @@ module internal HandlersDoctor =
 
     let computeDrift model =
         let provenance = resolveProvenance model
+        let ownerSkillState = resolveOwnerSkillState model
         let descriptor = resolveDriftDescriptor model provenance
 
         // #760: the drift fold is handed the subjects this run could NOT observe, alongside the
@@ -343,8 +353,9 @@ module internal HandlersDoctor =
         // same set still blocks the coherence verdict in `computeDoctorNext`; this stops it ALSO
         // being reported as drift.
         let drift =
-            Drift.computeObservedWithRawDigests
+            Drift.computeObservedWithRawDigestsAndOwnerState
                 provenance
+                ownerSkillState
                 descriptor
                 (resolveWorkspaceFloor model)
                 model.Request.GeneratorVersion.Version

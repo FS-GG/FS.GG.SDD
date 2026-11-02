@@ -80,14 +80,20 @@ module OwnerSkillRefreshTests =
                 DriverPaths =
                     (record.DriverPaths |> List.filter (fun row -> not (agedPaths.Contains row.Path)))
                     @ agedRows
-                OwnerSkillVersions = versions
             }
 
-        TestSupport.writeRelative root provenanceFile (serialize updated)
+        TestSupport.writeRelative root provenanceFile
+            (serializeOwnerSkillProvenance
+                { Ownership = updated
+                  OwnerSkillVersions = versions
+                  UpgradedBy = None })
         root, rows |> List.map (fun row -> row.Path), retired
 
     let private recordOf root =
         tryParse (File.ReadAllText(Path.Combine(root, provenanceFile))) |> Option.get
+
+    let private stateOf root =
+        tryParseOwnerSkillProvenance (File.ReadAllText(Path.Combine(root, provenanceFile))) |> Option.get
 
     let private hint root =
         (upgradeYes root).Upgrade.Value.NextActionHint
@@ -145,7 +151,7 @@ module OwnerSkillRefreshTests =
         let package, version = embeddedPackage ()
 
         let entry =
-            record.OwnerSkillVersions |> List.find (fun entry -> entry.SkillId = skillId)
+            (stateOf root).OwnerSkillVersions |> List.find (fun entry -> entry.SkillId = skillId)
 
         Assert.Equal(package, entry.Channel)
         Assert.Equal(version, entry.Version)
@@ -314,7 +320,7 @@ module OwnerSkillRefreshTests =
 
         Assert.Equal(
             "999.0.0",
-            (recordOf root).OwnerSkillVersions
+            (stateOf root).OwnerSkillVersions
             |> List.find (fun e -> e.SkillId = skillId)
             |> fun e -> e.Version
         )
@@ -481,7 +487,7 @@ module OwnerSkillRefreshTests =
         for row in others do
             Assert.Equal(oldBody row.Path, read root row.Path)
 
-        Assert.DoesNotContain((recordOf root).OwnerSkillVersions, fun entry -> entry.SkillId = skillId)
+        Assert.DoesNotContain((stateOf root).OwnerSkillVersions, fun entry -> entry.SkillId = skillId)
 
     [<Fact>]
     let ``a skill the pack no longer ships at all is never deleted`` () =
@@ -625,16 +631,17 @@ module OwnerSkillRefreshTests =
             })
 
     let private baseRecord rows versions =
-        { (embeddedRecord () |> snd) with
-            Generator = { Id = "fsgg-sdd"; Version = "1.0.0" }
-            ProducedPaths = []
-            MirroredPaths = []
-            SddOwnedPaths = []
-            DriverPaths = rows
-            GameSkillPaths = []
-            RenderingSkillPaths = []
-            OwnerSkillVersions = versions
-        }
+        { Ownership =
+            { (embeddedRecord () |> snd) with
+                Generator = { Id = "fsgg-sdd"; Version = "1.0.0" }
+                ProducedPaths = []
+                MirroredPaths = []
+                SddOwnedPaths = []
+                DriverPaths = rows
+                GameSkillPaths = []
+                RenderingSkillPaths = [] }
+          OwnerSkillVersions = versions
+          UpgradedBy = None }
 
     let private embedded version =
         fun (_: ArtifactOwner) -> Some("Pkg", version)
@@ -724,7 +731,7 @@ module OwnerSkillRefreshTests =
         let plan =
             OwnerSkillRefresh.plan
                 { record with
-                    ProducedPaths = [ provider ]
+                    Ownership = { record.Ownership with ProducedPaths = [ provider ] }
                 }
                 "2.0.0"
                 (ownerFiles [ ".agents/skills/s/SKILL.md", "new\n" ])
@@ -759,7 +766,7 @@ module OwnerSkillRefreshTests =
     [<Fact>]
     let ``owner skill versions survive a provenance round trip and add nothing when absent`` () =
         let _, record = embeddedRecord ()
-        let without = serialize { record with OwnerSkillVersions = [] }
+        let without = serialize record
         Assert.DoesNotContain("ownerSkillVersions", without)
 
         let entry: OwnerSkillVersion =
@@ -770,13 +777,13 @@ module OwnerSkillRefreshTests =
             }
 
         let withVersions =
-            serialize
-                { record with
-                    OwnerSkillVersions = [ entry ]
-                }
+            serializeOwnerSkillProvenance
+                { Ownership = record
+                  OwnerSkillVersions = [ entry ]
+                  UpgradedBy = None }
 
-        Assert.Equal<OwnerSkillVersion list>([ entry ], (tryParse withVersions |> Option.get).OwnerSkillVersions)
-        Assert.Equal(withVersions, serialize (tryParse withVersions |> Option.get))
+        Assert.Equal<OwnerSkillVersion list>([ entry ], (tryParseOwnerSkillProvenance withVersions |> Option.get).OwnerSkillVersions)
+        Assert.Equal(withVersions, serializeOwnerSkillProvenance (tryParseOwnerSkillProvenance withVersions |> Option.get))
 
     // ---------- .gitattributes ----------
 
@@ -866,7 +873,7 @@ module OwnerSkillRefreshTests =
         |> fun row -> row.Sha256
 
     let private versionOf root =
-        (recordOf root).OwnerSkillVersions
+        (stateOf root).OwnerSkillVersions
         |> List.tryFind (fun entry -> entry.SkillId = skillId)
 
     let private assertConverged root =
@@ -1105,7 +1112,7 @@ module OwnerSkillRefreshTests =
     let ``upgrade records the CLI that last wrote the workspace`` () =
         let root, _, _ = aged "0.1.0" []
         upgradeYes root |> ignore
-        Assert.Equal(Some installedVersion, (recordOf root).UpgradedBy)
+        Assert.Equal(Some installedVersion, (stateOf root).UpgradedBy)
 
     [<Fact>]
     let ``a record with no versions is bounded by the last upgrade, not only the producing CLI`` () =
@@ -1115,10 +1122,10 @@ module OwnerSkillRefreshTests =
         TestSupport.writeRelative
             root
             provenanceFile
-            (serialize
-                { record with
-                    UpgradedBy = Some "999.0.0"
-                })
+            (serializeOwnerSkillProvenance
+                { Ownership = record
+                  OwnerSkillVersions = []
+                  UpgradedBy = Some "999.0.0" })
 
         let summary = (upgradeYes root).Upgrade.Value
 
@@ -1147,10 +1154,10 @@ module OwnerSkillRefreshTests =
         TestSupport.writeRelative
             root
             provenanceFile
-            (serialize
-                { record with
-                    UpgradedBy = Some installedVersion
-                })
+            (serializeOwnerSkillProvenance
+                { Ownership = record
+                  OwnerSkillVersions = []
+                  UpgradedBy = Some installedVersion })
 
         upgradeYes root |> ignore
 
@@ -1173,10 +1180,10 @@ module OwnerSkillRefreshTests =
         TestSupport.writeRelative
             root
             provenanceFile
-            (serialize
-                { record with
-                    OwnerSkillVersions = [ floor ]
-                })
+            (serializeOwnerSkillProvenance
+                { Ownership = record
+                  OwnerSkillVersions = [ floor ]
+                  UpgradedBy = None })
 
         let summary = (upgradeYes root).Upgrade.Value
 
@@ -1190,18 +1197,13 @@ module OwnerSkillRefreshTests =
         let old = [ ".agents/skills/s/SKILL.md", "old\n" ]
 
         let record =
-            { baseRecord
-                  (rowsFor old)
-                  [
-                      {
-                          SkillId = "other"
-                          Channel = "Pkg"
-                          Version = "0.98.0"
-                      }
-                  ] with
-                Generator = { Id = "fsgg-sdd"; Version = "2.5.4" }
-                UpgradedBy = Some "2.5.4"
-            }
+            let state =
+                baseRecord
+                    (rowsFor old)
+                    [ { SkillId = "other"; Channel = "Pkg"; Version = "0.98.0" } ]
+            { state with
+                Ownership = { state.Ownership with Generator = { Id = "fsgg-sdd"; Version = "2.5.4" } }
+                UpgradedBy = Some "2.5.4" }
 
         let plan =
             OwnerSkillRefresh.plan
@@ -1226,18 +1228,13 @@ module OwnerSkillRefreshTests =
 
         let run upgradedBy embeddedVersion =
             let record =
-                { baseRecord
-                      (rowsFor old)
-                      [
-                          {
-                              SkillId = "other"
-                              Channel = "Pkg"
-                              Version = "0.98.0"
-                          }
-                      ] with
-                    Generator = { Id = "fsgg-sdd"; Version = "2.5.4" }
-                    UpgradedBy = upgradedBy
-                }
+                let state =
+                    baseRecord
+                        (rowsFor old)
+                        [ { SkillId = "other"; Channel = "Pkg"; Version = "0.98.0" } ]
+                { state with
+                    Ownership = { state.Ownership with Generator = { Id = "fsgg-sdd"; Version = "2.5.4" } }
+                    UpgradedBy = upgradedBy }
 
             OwnerSkillRefresh.plan
                 record
@@ -1277,7 +1274,7 @@ module OwnerSkillRefreshTests =
 
             try
                 upgradeYes root |> ignore
-                Assert.Equal(None, (recordOf root).UpgradedBy)
+                Assert.Equal(None, (stateOf root).UpgradedBy)
             finally
                 File.SetUnixFileMode(blocked, original)
 
@@ -1294,7 +1291,7 @@ module OwnerSkillRefreshTests =
 
         Assert.NotEqual<string>(text, broken)
         TestSupport.writeRelative root provenanceFile broken
-        let parsed = recordOf root
+        let parsed = stateOf root
         Assert.Equal(2, parsed.OwnerSkillVersions.Length)
 
         let summary = (upgradeYes root).Upgrade.Value
@@ -1313,7 +1310,7 @@ module OwnerSkillRefreshTests =
             text.Replace("\"effectiveParameters\"", "\"ownerSkillVersions\": \"oops\",\n  \"effectiveParameters\"")
 
         TestSupport.writeRelative root provenanceFile broken
-        Assert.Equal(1, (recordOf root).OwnerSkillVersions.Length)
+        Assert.Equal(1, (stateOf root).OwnerSkillVersions.Length)
 
     [<Fact>]
     let ``the planner treats a file already at the pack's digest as unedited`` () =
@@ -1434,8 +1431,8 @@ module OwnerSkillRefreshTests =
                 )
 
                 // and the skill, which did not land in full, carries no version
-                Assert.DoesNotContain(record.OwnerSkillVersions, fun entry -> entry.SkillId = newSkill)
-                Assert.Equal(None, record.UpgradedBy)
+                Assert.DoesNotContain((stateOf root).OwnerSkillVersions, fun entry -> entry.SkillId = newSkill)
+                Assert.Equal(None, (stateOf root).UpgradedBy)
             finally
                 File.SetUnixFileMode(skills, original)
 

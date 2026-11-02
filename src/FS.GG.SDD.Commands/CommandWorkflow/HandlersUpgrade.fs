@@ -191,6 +191,12 @@ module internal HandlersUpgrade =
     let ownerBackfillEffects model (targets: string list) =
         match resolveProvenance model with
         | Some record ->
+            let ownerState: ScaffoldProvenance.OwnerSkillProvenance =
+                resolveOwnerSkillState model
+                |> Option.defaultValue
+                    { Ownership = record
+                      OwnerSkillVersions = []
+                      UpgradedBy = None }
             let targetSet = targets |> Set.ofList
 
             let presentIds =
@@ -224,7 +230,7 @@ module internal HandlersUpgrade =
 
             let refreshPlan =
                 OwnerSkillRefresh.plan
-                    record
+                    ownerState
                     model.Request.GeneratorVersion.Version
                     (OwnerSkillRefresh.embeddedDesired record)
                     OwnerPackages.embeddedFor
@@ -483,7 +489,7 @@ module internal HandlersUpgrade =
                         then
                             Ok []
                         else
-                            let updated =
+                            let updatedOwnership =
                                 { record with
                                     ProducedPaths = refreshManifestDigests record.ProducedPaths
                                     MirroredPaths = refreshManifestDigests record.MirroredPaths
@@ -493,8 +499,13 @@ module internal HandlersUpgrade =
                                         mergeProducedRows
                                             (withoutDropped record.RenderingSkillPaths)
                                             (newRenderingSkillPaths @ newAudioSkillPaths)
+                                }
+
+                            let updated =
+                                { ownerState with
+                                    Ownership = updatedOwnership
                                     OwnerSkillVersions =
-                                        (record.OwnerSkillVersions
+                                        (ownerState.OwnerSkillVersions
                                          |> List.filter (fun entry ->
                                              not (newVersions |> List.exists (fun fresh -> fresh.SkillId = entry.SkillId))))
                                         @ newVersions
@@ -505,12 +516,11 @@ module internal HandlersUpgrade =
                                         (if Set.isEmpty failedPaths then
                                              Some model.Request.GeneratorVersion.Version
                                          else
-                                             record.UpgradedBy)
-                                }
+                                             ownerState.UpgradedBy) }
 
                             match scaffoldProvenanceDocument model with
                             | Ok(Some(FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.Legacy _)) ->
-                                Ok [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
+                                Ok [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serializeOwnerSkillProvenance updated, GeneratedView) ]
                             | _ ->
                                 Error "Catalog/source provenance binds original observed path hashes; owner backfill cannot rewrite those observations or downgrade the wrapper."
 

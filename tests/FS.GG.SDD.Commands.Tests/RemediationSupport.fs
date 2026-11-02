@@ -421,8 +421,6 @@ sdd:
             DriverPaths = []
             GameSkillPaths = []
             RenderingSkillPaths = []
-            OwnerSkillVersions = []
-            UpgradedBy = None
             EffectiveParameters = []
         }
 
