@@ -29,6 +29,9 @@ rerun `fsgg-sdd typed-sdd sync --root <root> --work <id> --cache <cache-root>
 --java-home <jre> --apalache-dist <distribution>`. Normal `verify` and `ship` require
 `--sync-cache`, `--sync-java-home`, and `--sync-apalache-dist`; both run a fresh check.
 A prior sync JSON never supplies current evidence.
+For an exact pre-sync profile-2 2.5.4 authority, use `typed-sdd sync --adopt-legacy`
+with the same paths; it preserves source bytes and records a new revision-zero
+baseline with unknown earlier history. A missing link in current authority blocks.
 
 Omitting `--backend` selects Quint. Pass `--backend fsharp-specification-v1` for
 manifest-v1 compatibility authoring. Never hand-edit generated authority files.

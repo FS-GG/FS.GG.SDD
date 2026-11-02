@@ -25,6 +25,23 @@ about 194 seconds under the same cap:
   the repaired source fails closed on a missing link. A revision-four deletion,
   refusal, exact-link restoration and fresh revision-four recovery are in the
   acceptance journey.
+- The manifest now inventories the revision link as a digest-bound artifact.
+  New authority carries a reserved sync-session marker; removing the link or
+  stripping its role while retaining that marker fails closed. A full rewrite
+  of the manifest, session and source is outside this local-hash threat model.
+  An actual retained pre-link profile-2 workspace copy with producer identity
+  `FS.GG.SDD.Artifacts/2.5.4` adopted in place: old manifest SHA-256
+  `47ee002e65d3cada694e015f637d4c1bc935e0d643e5b53384993480cce58fd3`
+  is recorded in the new link, source SHA-256
+  `37816c400324cec96e56e4536b5d28f9532623d8148579d47aca03765dd17271`
+  stayed unchanged, and fresh sync reported revision zero, seven scenarios and
+  three adapter actions. Revision zero is a newly observed baseline; older
+  revision history remains unknown. The expanded acceptance script passed
+  under one CPU/four GiB, including failed legacy precheck preserving authority,
+  in-flight source mutation refusal before commit, stripped-current refusal,
+  injected crash after the first transaction move, journal recovery and
+  successful adoption. Its private retained log is
+  `qualification/acceptance-adoption-final2.log` under the admitted scratch root.
 - Accepted authoring wrote a satisfied fresh sync receipt. A prior forged
   `outcome: satisfied` JSON plus changed source could not pass normal verify.
 - A missing verifier blocked; restoring it recovered fresh success.
@@ -79,6 +96,8 @@ the first reported failures were three stale process skill manifest assertions,
 which the regenerated manifest and focused rerun resolved. No full-suite green
 claim is made from that timed-out attempt. API surface projection was checked
 coherent with 98 mirrored declarations after adding the public `.fsi` mirrors.
+After the adoption repair, full local CLI tests passed 246/246 and Artifacts
+tests passed 759/759 under separate one CPU/two GiB caps.
 The old pushed-head hosted gate completed in 17m58s with a synthetic public
 `QuintSync` method and two skill-content digests in the command-report golden
 as the only failures: CLI 245 passed/1 failed; Commands 1671 passed/1 failed/13

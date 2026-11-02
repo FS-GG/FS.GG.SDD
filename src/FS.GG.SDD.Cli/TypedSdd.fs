@@ -736,33 +736,25 @@ module TypedSdd =
                     | Error findings -> Error findings
                     | Ok output ->
                         try
-                            let writes =
-                                output.Writes
-                                |> List.map (fun (relative, bytes) ->
-                                    match containedPath rootPath relative with
-                                    | Some path -> path, bytes
-                                    | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
                             let proposedSync =
                                 if profile = QuintGeneralProfile.identity then
                                     match optionValue "--java-home" args, optionValue "--apalache-dist" args with
                                     | Some javaHome, Some apalacheDist ->
                                         QuintSync.prepareProposed rootPath workId cache javaHome apalacheDist output.Writes
-                                        |> Result.map Some
                                     | _ -> Error "Profile-2 authoring requires --java-home and --apalache-dist before acceptance."
-                                else Ok None
+                                else Ok output.Writes
                             match proposedSync with
                             | Error reason ->
                                 Error [ diagnostic "typedSdd.proposedSyncBlocked" reason "Repair the proposed model or declared tools before accepting it." ]
-                            | Ok link ->
-                                let linkWrites =
-                                    match link with
-                                    | None -> []
-                                    | Some(relative, bytes) ->
+                            | Ok finalWrites ->
+                                let writes =
+                                    finalWrites
+                                    |> List.map (fun (relative, bytes) ->
                                         match containedPath rootPath relative with
-                                        | Some path -> [ path, bytes ]
-                                        | None -> invalidOp "Proposed sync link escaped the selected root."
-                                atomicReplaceUnlocked rootPath (writes @ linkWrites) []
-                                Ok((output.Writes |> List.map fst) @ (link |> Option.map fst |> Option.toList))
+                                        | Some path -> path, bytes
+                                        | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
+                                atomicReplaceUnlocked rootPath writes []
+                                Ok(finalWrites |> List.map fst)
                         with ex ->
                             Error
                                 [
@@ -1984,9 +1976,57 @@ module TypedSdd =
 
         loop Set.empty args
 
+    let private adoptLegacySync (args: string list) =
+        let required = [ "--root"; "--work"; "--cache"; "--java-home"; "--apalache-dist" ]
+        let validShape =
+            args.Length = 11
+            && (args |> List.filter ((=) "--adopt-legacy") |> List.length) = 1
+            && (required |> List.forall (fun key -> args |> List.filter ((=) key) |> List.length = 1))
+            && (required |> List.forall (fun key ->
+                optionValue key args
+                |> Option.exists (fun value -> not (value.StartsWith("-", StringComparison.Ordinal)))))
+        let blocked reason =
+            emit
+                { Operation = "sync-adopt-legacy"; Outcome = "blocked"; Classification = Some "quint-specification-v1"
+                  ChangedPaths = []; SemanticDiff = []; RollbackSourceSha256 = None
+                  Diagnostics = [ diagnostic "typedSdd.legacySyncBlocked" reason "Restore the exact legacy authority and qualified tool closure." ] }
+        if not validShape then blocked "Pass --adopt-legacy and each required sync path exactly once."
+        else
+            let rootPath = root args
+            let workId = optionValue "--work" args |> Option.get
+            if not (validWorkId workId) then blocked "Work id must be one contained path segment."
+            else
+                try
+                    use transactionLock = acquireAuthorityLock rootPath
+                    let cache = optionValue "--cache" args |> Option.get
+                    let javaHome = optionValue "--java-home" args |> Option.get
+                    let apalacheDist = optionValue "--apalache-dist" args |> Option.get
+                    match QuintSync.prepareLegacyAdoption rootPath workId cache javaHome apalacheDist with
+                    | Error reason -> blocked reason
+                    | Ok(originalClosure, finalWrites) ->
+                        let unchanged =
+                            originalClosure
+                            |> List.forall (fun (relative, digest) ->
+                                match containedPath rootPath relative with
+                                | Some path when File.Exists path ->
+                                    TypedAuthorityManifest.sha256 (File.ReadAllBytes path) = digest
+                                | _ -> false)
+                        if not unchanged then blocked "Legacy accepted manifest or source closure changed during adoption."
+                        else
+                            let writes =
+                                finalWrites
+                                |> List.map (fun (relative, bytes) ->
+                                    match containedPath rootPath relative with
+                                    | Some path -> path, bytes
+                                    | None -> invalidOp "Legacy adoption produced an unsafe path.")
+                            atomicReplaceUnlocked rootPath writes []
+                            QuintSync.run (args |> List.filter ((<>) "--adopt-legacy"))
+                with ex -> blocked $"Legacy sync adoption failed: {ex.Message}"
+
     let run args =
         match args with
         | "provision" :: rest -> QuintProvision.run rest
+        | "sync" :: rest when has "--adopt-legacy" rest -> adoptLegacySync rest
         | "sync" :: rest -> QuintSync.run rest
         | operation :: rest when
             Set.contains operation (set [ "author"; "inspect"; "migrate"; "rollback"; "reconcile"; "correspond" ])

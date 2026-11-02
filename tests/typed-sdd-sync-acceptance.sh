@@ -48,6 +48,100 @@ assert_json "$receipt" outcome satisfied
 assert_json "$link" revision 0
 assert_json "$receipt" acceptedRevision 0
 
+# Synthesize the strict pre-sync profile-2 inventory emitted by the original
+# host. Adoption rechecks that closed inventory and preserves its source bytes.
+cp -a "$scratch/work" "$scratch/legacy"
+python3 - "$scratch/legacy/readiness/sync/typed-authority.json" <<'PY'
+from pathlib import Path
+import json, sys
+path = Path(sys.argv[1])
+value = json.loads(path.read_text())
+value['artifacts'] = [row for row in value['artifacts'] if row['id'] != 'sync-revision']
+value['authoringSession'] = 'legacy-fixture'
+value['packageIdentity'] = 'FS.GG.SDD.Artifacts/2.5.4'
+path.write_text(json.dumps(value, indent=2) + '\n')
+PY
+rm "$scratch/legacy/readiness/sync/quint/sync-authority.json"
+legacy_manifest="$scratch/legacy/readiness/sync/typed-authority.json"
+legacy_manifest_sha="$(sha256sum "$legacy_manifest" | cut -d' ' -f1)"
+legacy_source_sha="$(sha256sum "$scratch/legacy/specification.md" | cut -d' ' -f1)"
+legacy_sync=(typed-sdd sync --root "$scratch/legacy" --work sync --cache "$scratch/cache"
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST")
+if cli "${legacy_sync[@]}" >"$scratch/legacy-normal.json"; then
+  fail 'legacy inventory silently passed normal sync'
+fi
+grep -F 'legacy inventory' "$scratch/legacy-normal.json" >/dev/null || fail 'legacy refusal had another cause'
+if cli typed-sdd sync --adopt-legacy --root "$scratch/legacy" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$scratch/unavailable" >"$scratch/legacy-no-verifier.json"; then
+  fail 'legacy adoption passed without verifier'
+fi
+grep -F 'Legacy proposed model sync refused' "$scratch/legacy-no-verifier.json" >/dev/null || fail 'legacy precheck refusal had another cause'
+[[ "$(sha256sum "$legacy_manifest" | cut -d' ' -f1)" == "$legacy_manifest_sha" ]] || fail 'failed legacy precheck replaced manifest'
+
+# Mutate the real accepted source after the adoption staging captured its
+# original closure. The final same-lock recheck must refuse the commit.
+touch "$scratch/adopt-start-marker"
+cli "${legacy_sync[@]}" --adopt-legacy >"$scratch/legacy-in-flight.json" &
+adopt_pid=$!
+adopt_stage_seen=0
+for _ in $(seq 1 200); do
+  if find "$scratch/tmp" -maxdepth 1 -type d -name 'fsgg-sync-adopt-*' -newer "$scratch/adopt-start-marker" -print -quit | grep -q .; then
+    adopt_stage_seen=1
+    break
+  fi
+  sleep 0.05
+done
+[[ "$adopt_stage_seen" == 1 ]] || fail 'legacy adoption did not reach staged model run'
+printf '\n<!-- changed during adoption -->\n' >>"$scratch/legacy/specification.md"
+if wait "$adopt_pid"; then fail 'in-flight legacy source change passed adoption'; fi
+grep -F 'changed during adoption' "$scratch/legacy-in-flight.json" >/dev/null || fail 'in-flight adoption refusal had another cause'
+[[ "$(sha256sum "$legacy_manifest" | cut -d' ' -f1)" == "$legacy_manifest_sha" ]] || fail 'in-flight adoption replaced manifest'
+cp "$scratch/work/specification.md" "$scratch/legacy/specification.md"
+[[ "$(sha256sum "$scratch/legacy/specification.md" | cut -d' ' -f1)" == "$legacy_source_sha" ]] || fail 'legacy source restoration mismatched'
+cp -a "$scratch/legacy" "$scratch/downgrade"
+cli "${legacy_sync[@]}" --adopt-legacy >"$scratch/legacy-adopted.json" || fail 'closed legacy inventory did not adopt'
+assert_json "$scratch/legacy-adopted.json" outcome satisfied
+assert_json "$scratch/legacy-adopted.json" acceptedRevision 0
+assert_json "$scratch/legacy/readiness/sync/quint/sync-authority.json" priorManifestSha256 "$legacy_manifest_sha"
+[[ "$(sha256sum "$scratch/legacy/specification.md" | cut -d' ' -f1)" == "$legacy_source_sha" ]] || fail 'legacy adoption changed source bytes'
+
+# A current manifest with its link role stripped retains the current marker and
+# cannot enter the legacy path. Full manifest rewrites are outside this local
+# authority threat model; stripping only the role and sidecar is detected.
+cp -a "$scratch/work" "$scratch/stripped-current"
+python3 - "$scratch/stripped-current/readiness/sync/typed-authority.json" <<'PY'
+from pathlib import Path
+import json, sys
+path = Path(sys.argv[1])
+value = json.loads(path.read_text())
+value['artifacts'] = [row for row in value['artifacts'] if row['id'] != 'sync-revision']
+path.write_text(json.dumps(value, indent=2) + '\n')
+PY
+rm "$scratch/stripped-current/readiness/sync/quint/sync-authority.json"
+if cli typed-sdd sync --adopt-legacy --root "$scratch/stripped-current" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" >"$scratch/stripped-current.json"; then
+  fail 'stripped current authority adopted as legacy'
+fi
+grep -F 'exact pre-sync profile-2 producer inventory and session' "$scratch/stripped-current.json" >/dev/null || fail 'stripped-current refusal had another cause'
+
+# The shared authority journal rolls back a crash after the link move and
+# permits the same closed legacy inventory to be adopted afterward.
+if FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE=1 dotnet "$SYNC_CLI_DLL" typed-sdd sync --adopt-legacy \
+  --root "$scratch/downgrade" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/legacy-crash.json" 2>"$scratch/legacy-crash.err"; then
+  fail 'injected legacy transaction crash returned success'
+fi
+find "$scratch/downgrade/.fsgg/typed-sdd-transactions" -name journal.json -print -quit | grep -q . || fail 'injected legacy crash left no recovery journal'
+cli typed-sdd sync --adopt-legacy --root "$scratch/downgrade" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/legacy-recovered.json" || fail 'legacy journal recovery did not adopt'
+assert_json "$scratch/legacy-recovered.json" acceptedRevision 0
+if find "$scratch/downgrade/.fsgg/typed-sdd-transactions" -name journal.json -print -quit | grep -q .; then
+  fail 'recovered legacy transaction retained an active journal'
+fi
+[[ "$(sha256sum "$scratch/downgrade/specification.md" | cut -d' ' -f1)" == "$legacy_source_sha" ]] || fail 'recovered adoption changed source bytes'
+
 # A damaged accepted revision link cannot be used as the next transaction base.
 cp "$link" "$scratch/accepted-link.json"
 python3 - "$link" <<'PY'
@@ -224,12 +318,12 @@ if cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache
   fail 'missing accepted revision link reset the accepted revision'
 fi
 assert_json "$scratch/missing-link.json" outcome blocked
-grep -F 'no sync revision link' "$scratch/missing-link.json" >/dev/null || fail 'missing-link refusal had another cause'
+grep -F 'syncRevisionMissing' "$scratch/missing-link.json" >/dev/null || fail 'missing-link refusal had another cause'
 cp "$scratch/revision-four-link.json" "$link"
 cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
   --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
   >"$scratch/recovered-revision-four.json" || fail 'revision-four link repair did not recover'
 assert_json "$scratch/recovered-revision-four.json" acceptedRevision 4
 
-printf 'typed-sdd-sync acceptance: positive, invariant break, unreachable scenario, repair, already-satisfied property, stale in-flight source, forged receipt, missing verifier and conflicting assumptions passed\n'
+printf 'typed-sdd-sync acceptance: positive, preaccept refusal, revision continuity, legacy adoption, stripped-current refusal, journal recovery, code/source drift, verifier and assumption controls passed\n'
 rm -rf -- "$scratch"

@@ -22,3 +22,6 @@ it does not grant verify or ship. Run `fsgg-sdd typed-sdd sync` with the same pa
 inspect a fresh report. Normal `verify` and `ship` require `--sync-cache`,
 `--sync-java-home`, and `--sync-apalache-dist` and repeat the checks against current
 source and implementation bytes. A prior JSON report never supplies success.
+For an exact pre-sync profile-2 2.5.4 authority, run `typed-sdd sync
+--adopt-legacy` with the same paths to adopt in place. Earlier revision history
+remains unknown; missing current revision links block.

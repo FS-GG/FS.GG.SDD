@@ -210,9 +210,25 @@ the prior accepted workspace revision by one. Authoring then runs a fresh
 `typed-sdd sync` and writes
 `readiness/<work>/quint/sync-report.json`. A failed sync leaves the
 accepted revision available for repair and replaces any prior success receipt
-with a blocked result. The revision link is required on every accepted profile-2
-workspace: restore its exact accepted bytes if it is lost. A profile-2 root
-created before sync links existed must be authored into a new workspace root.
+with a blocked result. The manifest inventories the revision link; restore its
+exact accepted bytes if it is lost. A retained profile-2 root with the closed
+pre-sync 2.5.4 producer inventory can be adopted in place:
+
+```sh
+fsgg-sdd typed-sdd sync --adopt-legacy --root . --work demo \
+  --cache /qualified/quint-cache --java-home /qualified/jre \
+  --apalache-dist /qualified/apalache-parent
+```
+
+Adoption validates the original source and artifact closure, runs the full
+model/reducer gate against staged upgraded authority, then atomically commits
+only the manifest and revision link through the normal authority journal. The
+link records the old manifest digest and revision zero as a newly observed
+baseline; historical revision count is unknown. A failed precheck leaves the
+old authority intact. A current manifest whose link was deleted or whose link
+role was stripped cannot enter this legacy path.
+These local hashes identify accepted bytes; they do not authenticate an attacker
+who can rewrite the complete manifest, authoring receipt, and source together.
 To repeat the check explicitly, run:
 
 ```sh

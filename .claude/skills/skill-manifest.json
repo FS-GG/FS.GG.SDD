@@ -186,13 +186,13 @@
     {
       "id": "fs-gg-sdd-typed-author",
       "scope": "process",
-      "sha256": "1540302031f98c08a12e3979c8f1705594983e3f0048642d57ac772d90b3b9f3",
+      "sha256": "562b48b6946b7cbe75f5c87035289054e32eebed3d4de3dfd0cca879fbb0cb3a",
       "resolvablePath": ".agents/skills/fs-gg-sdd-typed-author/SKILL.md",
       "materializes-when": "always",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "1540302031f98c08a12e3979c8f1705594983e3f0048642d57ac772d90b3b9f3"
+          "sha256": "562b48b6946b7cbe75f5c87035289054e32eebed3d4de3dfd0cca879fbb0cb3a"
         }
       ]
     },

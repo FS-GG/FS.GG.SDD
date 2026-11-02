@@ -193,7 +193,13 @@ module internal QuintSync =
     type private RevisionLink =
         { ManifestSha256: string; Revision: int64; WorkspaceFingerprint: string; PriorManifestSha256: string }
 
+    let private syncSessionPrefix = "fsgg-sync-authority/v1:"
     let private revisionPath work = Path.Combine("readiness", work, "quint", "sync-authority.json")
+
+    let private coreManifestBytes (manifest: QuintAuthorityManifest) =
+        { manifest with Artifacts = manifest.Artifacts |> List.filter (fun item -> item.Id <> "sync-revision") }
+        |> TypedAuthority.serializeQuintV2
+        |> Encoding.UTF8.GetBytes
 
     let private encodeRevisionLink value =
         use stream = new MemoryStream()
@@ -208,6 +214,26 @@ module internal QuintSync =
         writer.Flush()
         stream.WriteByte(byte '\n')
         stream.ToArray()
+
+    let private bindRevision work (manifest: QuintAuthorityManifest) revision priorSha contract =
+        let model =
+            WorkspaceSync.deriveModel revision contract
+            |> Result.defaultWith (fun findings -> invalidOp (sprintf "Workspace join refused: %s" (findings |> List.map _.Code |> String.concat ", ")))
+        let fingerprint =
+            WorkspaceLifecycle.fingerprint model |> Result.defaultWith (sprintf "%A" >> invalidOp)
+        let coreBytes = coreManifestBytes manifest
+        let linkBytes =
+            encodeRevisionLink
+                { ManifestSha256 = sha coreBytes; Revision = revision
+                  WorkspaceFingerprint = fingerprint; PriorManifestSha256 = priorSha }
+        let linkPath = revisionPath work
+        let finalManifest =
+            { manifest with
+                Artifacts =
+                    { Id = "sync-revision"; Path = linkPath; Sha256 = sha linkBytes }
+                    :: (manifest.Artifacts |> List.filter (fun item -> item.Id <> "sync-revision")) }
+        let finalBytes = TypedAuthority.serializeQuintV2 finalManifest |> Encoding.UTF8.GetBytes
+        finalBytes, linkBytes
 
     let private readRevisionLink root work expectedManifestSha =
         let path = Path.Combine(root, revisionPath work)
@@ -235,19 +261,29 @@ module internal QuintSync =
                     else Ok link
             with ex -> Error $"Accepted sync revision link is unreadable: {ex.Message}"
 
-    let private deriveAccepted root work manifestBytes contract =
-        match readRevisionLink root work (sha manifestBytes) with
-        | Error reason -> Error reason
-        | Ok link ->
-            match WorkspaceSync.deriveModel link.Revision contract with
-            | Error findings -> Error(sprintf "Workspace authority join refused: %s" (findings |> List.map _.Code |> String.concat ", "))
-            | Ok accepted ->
-                match WorkspaceLifecycle.fingerprint accepted with
-                | Error findings -> Error(sprintf "Workspace fingerprint refused: %A" findings)
-                | Ok fingerprint ->
-                    if link.WorkspaceFingerprint <> fingerprint then
-                        Error "Accepted sync revision link fingerprint differs from the compiled workspace."
-                    else Ok accepted
+    let private deriveAccepted root work (manifestBytes: byte array) contract =
+        let manifest =
+            match Encoding.UTF8.GetString manifestBytes |> TypedAuthority.deserialize with
+            | Ok(QuintSpecificationV1 value) -> value
+            | _ -> invalidOp "Accepted profile-2 manifest is invalid."
+        let revisionArtifact = manifest.Artifacts |> List.tryFind (fun item -> item.Id = "sync-revision")
+        if revisionArtifact.IsNone then
+            Error "Accepted profile-2 workspace has legacy inventory; use explicit typed-sdd sync --adopt-legacy."
+        elif revisionArtifact.Value.Path <> revisionPath work then
+            Error "Accepted sync revision role has the wrong work path."
+        else
+            match readRevisionLink root work (sha (coreManifestBytes manifest)) with
+            | Error reason -> Error reason
+            | Ok link ->
+                match WorkspaceSync.deriveModel link.Revision contract with
+                | Error findings -> Error(sprintf "Workspace authority join refused: %s" (findings |> List.map _.Code |> String.concat ", "))
+                | Ok accepted ->
+                    match WorkspaceLifecycle.fingerprint accepted with
+                    | Error findings -> Error(sprintf "Workspace fingerprint refused: %A" findings)
+                    | Ok fingerprint ->
+                        if link.WorkspaceFingerprint <> fingerprint then
+                            Error "Accepted sync revision link fingerprint differs from the compiled workspace."
+                        else Ok accepted
 
     let private correspondence (accepted: WorkspaceModel) contract sourcePath implementationPath testDigest verifyDigest =
         match WorkspaceLifecycle.fingerprint accepted with
@@ -552,20 +588,17 @@ module internal QuintSync =
                 match QuintContractV2.deserialize (Encoding.UTF8.GetString contractBytes) with
                 | Ok value -> value
                 | Error _ -> invalidOp "Proposed compiled contract is invalid."
-            let model =
-                match WorkspaceSync.deriveModel revision contract with
-                | Ok value -> value
-                | Error findings -> invalidOp (sprintf "Proposed workspace join refused: %s" (findings |> List.map _.Code |> String.concat ", "))
-            let fingerprint =
-                WorkspaceLifecycle.fingerprint model |> Result.defaultWith (sprintf "%A" >> invalidOp)
-            let linkBytes =
-                encodeRevisionLink
-                    { ManifestSha256 = sha proposedManifestBytes; Revision = revision
-                      WorkspaceFingerprint = fingerprint; PriorManifestSha256 = priorManifestSha }
-            let linkWrite = revisionPath work, linkBytes
+            let marked =
+                { manifest with AuthoringSession = syncSessionPrefix + manifest.AuthoringSession }
+            let finalManifestBytes, linkBytes = bindRevision work marked revision priorManifestSha contract
+            let finalWrites =
+                writes
+                |> List.map (fun (path, bytes) ->
+                    if path = manifestPath then path, finalManifestBytes else path, bytes)
+                |> fun rows -> rows @ [ revisionPath work, linkBytes ]
             let staging = Path.Combine(Path.GetTempPath(), "fsgg-sync-proposed-" + Guid.NewGuid().ToString("N"))
             Directory.CreateDirectory staging |> ignore
-            for relative, bytes in writes @ [ linkWrite ] do
+            for relative, bytes in finalWrites do
                 match contained staging relative with
                 | None -> invalidOp $"Proposed authority emitted unsafe path {relative}."
                 | Some path ->
@@ -577,8 +610,72 @@ module internal QuintSync =
             | Error reason -> Error $"Proposed model sync refused: {reason}; retained staging: {staging}"
             | Ok _ ->
                 Directory.Delete(staging, true)
-                Ok linkWrite
+                Ok finalWrites
         with ex -> Error $"Proposed model sync could not prepare: {ex.Message}"
+
+    /// Upgrade only the closed pre-sync profile-2 producer inventory. Its old
+    /// manifest digest is retained as provenance; revision zero is a newly
+    /// observed baseline, not a reconstruction of historical revisions.
+    let prepareLegacyAdoption root work cache javaHome apalacheDist =
+        try
+            let root = Path.GetFullPath root
+            let manifestRelative = TypedAuthorityManifest.path work
+            let originalBytes = File.ReadAllBytes(Path.Combine(root, manifestRelative))
+            let legacy =
+                match Encoding.UTF8.GetString originalBytes |> TypedAuthority.deserialize with
+                | Ok(QuintSpecificationV1 value) when value.ProfileIdentity = QuintGeneralProfile.identity -> value
+                | _ -> invalidOp "Legacy adoption requires a valid profile-2 Quint authority."
+            let legacyProducer = "FS.GG.SDD.Artifacts/2.5.4"
+            if legacy.PackageIdentity <> legacyProducer
+               || legacy.AuthoringSession.StartsWith(syncSessionPrefix, StringComparison.Ordinal)
+               || (legacy.Artifacts |> List.exists (fun item -> item.Id = "sync-revision")) then
+                invalidOp "Legacy adoption requires the exact pre-sync profile-2 producer inventory and session."
+            let originalArtifacts =
+                legacy.Artifacts
+                |> List.map (fun item ->
+                    match contained root item.Path with
+                    | Some path when File.Exists path -> item, File.ReadAllBytes path
+                    | _ -> invalidOp $"Legacy artifact {item.Id} is missing or unsafe.")
+            let observations =
+                originalArtifacts
+                |> List.map (fun (item, bytes) ->
+                    { Path = item.Path; State = QuintAuthorityArtifactState.Present bytes })
+            let findings = TypedAuthority.validateQuintV2 legacyProducer observations legacy
+            if not findings.IsEmpty then
+                invalidOp (sprintf "Legacy authority closure refused: %s" (findings |> List.map _.Id |> String.concat ", "))
+            let contractBytes =
+                originalArtifacts |> List.find (fun (item, _) -> item.Id = "compiled-contract") |> snd
+            let contract =
+                match QuintContractV2.deserialize (Encoding.UTF8.GetString contractBytes) with
+                | Ok value -> value
+                | Error _ -> invalidOp "Legacy compiled contract is invalid."
+            let currentProducer = $"FS.GG.SDD.Artifacts/{SchemaVersion.currentGeneratorVersion().Version}"
+            let upgraded =
+                { legacy with PackageIdentity = currentProducer
+                              AuthoringSession = syncSessionPrefix + "legacy-adopted:" + legacy.AuthoringSession }
+            let manifestBytes, linkBytes = bindRevision work upgraded 0L (sha originalBytes) contract
+            let staging = Path.Combine(Path.GetTempPath(), "fsgg-sync-adopt-" + Guid.NewGuid().ToString("N"))
+            Directory.CreateDirectory staging |> ignore
+            let staged =
+                (originalArtifacts |> List.map (fun (item, bytes) -> item.Path, bytes))
+                @ [ manifestRelative, manifestBytes; revisionPath work, linkBytes ]
+            for relative, bytes in staged do
+                match contained staging relative with
+                | None -> invalidOp $"Legacy adoption found unsafe path {relative}."
+                | Some path ->
+                    Path.GetDirectoryName path
+                    |> Option.ofObj
+                    |> Option.iter (fun parent -> Directory.CreateDirectory parent |> ignore)
+                    File.WriteAllBytes(path, bytes)
+            match runAccepted staging work (Path.GetFullPath cache) (Path.GetFullPath javaHome) (Path.GetFullPath apalacheDist) with
+            | Error reason -> Error $"Legacy proposed model sync refused: {reason}; retained staging: {staging}"
+            | Ok _ ->
+                Directory.Delete(staging, true)
+                let originalClosure =
+                    (manifestRelative, sha originalBytes)
+                    :: (originalArtifacts |> List.map (fun (item, bytes) -> item.Path, sha bytes))
+                Ok(originalClosure, [ manifestRelative, manifestBytes; revisionPath work, linkBytes ])
+        with ex -> Error $"Legacy sync adoption could not prepare: {ex.Message}"
 
     let private blockedReport root work cache javaHome apalacheDist reason =
         let fileDigest path =
