@@ -1384,7 +1384,7 @@ nuget-cache/
     // FS.GG.SDD#1156. `hasPlanned` / `hasInterpreted` are asked once per effect of a read phase, and
     // each answer used to re-derive `effectKey` (a string build) for EVERY effect in the log: O(n) per
     // question, so O(n^2) per phase and a fresh phase per interpreted result. That was invisible while
-    // a workspace carried a few dozen skill files; the `atlas` driver skill brings its seed archive (509
+    // a workspace carried a few dozen skill files; the `atlas` driver skill brings its seed archive (536
     // files, two roots), and `doctor` over a fresh scaffold went from 0.3 s to 11.7 s. The log lists are
     // immutable and a tick asks about the SAME list object many times, so the key set is built once per
     // list instance (weakly held, so it dies with the list) and every question after the first is a

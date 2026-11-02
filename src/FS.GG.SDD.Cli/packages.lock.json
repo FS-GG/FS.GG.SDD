@@ -13,9 +13,9 @@
       },
       "FSharp.Core": {
         "type": "Direct",
-        "requested": "[10.1.401, )",
-        "resolved": "10.1.401",
-        "contentHash": "/lvOK51KD8IangBYkfDVna3/HrE/r4VUnX3dI01KDspctoYXmind3POeoYkqWKeXHwiKlf6Hc9TxwSnoSCWcjw=="
+        "requested": "[10.1.403, )",
+        "resolved": "10.1.403",
+        "contentHash": "SpKxPt90eSC3pfSKGLnSyucXXKVWokv1KVMTy2uQG36seOgJg14qUxjlcaWjZNWgxJtG5MeH9WpI6PQg4OR4tA=="
       },
       "Spectre.Console": {
         "type": "Direct",
@@ -35,7 +35,7 @@
         "type": "Project",
         "dependencies": {
           "FS.GG.Contracts": "[7.6.0, 7.6.0]",
-          "FSharp.Core": "[10.1.401, )",
+          "FSharp.Core": "[10.1.403, )",
           "FsQuint": "[0.1.0, 0.1.0]",
           "YamlDotNet": "[18.1.0, )"
         }
@@ -45,19 +45,19 @@
         "dependencies": {
           "FS.GG.Audio.Skills": "[0.1.0, )",
           "FS.GG.Contracts": "[7.6.0, 7.6.0]",
-          "FS.GG.Drivers": "[0.114.3, )",
+          "FS.GG.Drivers": "[0.114.4, )",
           "FS.GG.Game.Skills": "[0.9.0, )",
           "FS.GG.Governance.Config": "[0.3.0, )",
           "FS.GG.Rendering.Skills": "[0.2.0, )",
           "FS.GG.SDD.Artifacts": "[2.6.0, )",
           "FS.GG.SDD.Knowledge": "[2.6.0, )",
-          "FSharp.Core": "[10.1.401, )"
+          "FSharp.Core": "[10.1.403, )"
         }
       },
       "fs.gg.sdd.knowledge": {
         "type": "Project",
         "dependencies": {
-          "FSharp.Core": "[10.1.401, )"
+          "FSharp.Core": "[10.1.403, )"
         }
       },
       "fs.gg.sdd.validation": {
@@ -65,7 +65,7 @@
         "dependencies": {
           "FS.GG.SDD.Artifacts": "[2.6.0, )",
           "FS.GG.SDD.Commands": "[2.6.0, )",
-          "FSharp.Core": "[10.1.401, )"
+          "FSharp.Core": "[10.1.403, )"
         }
       },
       "FS.GG.Audio.Skills": {
@@ -76,9 +76,9 @@
       },
       "FS.GG.Drivers": {
         "type": "CentralTransitive",
-        "requested": "[0.114.3, )",
-        "resolved": "0.114.3",
-        "contentHash": "LmeeBP8XYNm4ruHp7GyrQ+zc/1kV0AIXldCOgxjOFAHY/t174+Qzzpz9V8e1nlv1Q9kAUFHGzalENeOytbnUIQ=="
+        "requested": "[0.114.4, )",
+        "resolved": "0.114.4",
+        "contentHash": "a6kU/z38ceFU4fmPJjn8XLBkeVrv6euARRtqAdCpFrKdrbmhtOdocAgixvdDP4x9Rfm99GOJnFCGr1LE4OM2/w=="
       },
       "FS.GG.Game.Skills": {
         "type": "CentralTransitive",

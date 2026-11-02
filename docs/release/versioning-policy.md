@@ -77,7 +77,9 @@ Test projects also pin the published Execution pair 0.3.1; no shipped package ga
 Public API, schema and persisted provenance are unchanged, as is published Contracts 7.6.0. Public
 2.5.3 bytes and receipts are retained.
 
-The prepared 2.6.0 minor carries the FS.GG.Drivers 0.114.3 pin
+The prepared 2.6.0 minor carries the FS.GG.Drivers 0.114.4 pin and the
+FS.GG.Kit 0.114.4 receiver pin. The kit materializer supplies the shared
+FSharp.Core 10.1.403 baseline; the solution lockfiles record that baseline.
 ([FS-GG/FS.GG.SDD#1157](https://github.com/FS-GG/FS.GG.SDD/pull/1157): the `atlas` driver skill and
 the newer driver skills reach every new workspace) and the owner-skill refresh of `fsgg-sdd upgrade`
 ([#1158](https://github.com/FS-GG/FS.GG.SDD/pull/1158), hardened in

@@ -6,7 +6,7 @@ ADR-0061 (structural scope; semantic enforcement at the consumer).*
 
 A **driver** skill is authored not by a producer repo but by `.github` itself, delivered as bytes
 and materialized into a scaffolded product's skill roots. The always-on set is whatever the pinned package's manifest marks
-`materializes-when: always`; at `FS.GG.Drivers 0.114.3` that is `atlas`, `agent-handoff`,
+`materializes-when: always`; at `FS.GG.Drivers 0.114.4` that is `atlas`, `agent-handoff`,
 `continue-from-handoff`, `padd-item`, `routine-decisions`, `stop-with-handoff`, `work-board`,
 `work-board-best`, `work-board-normal`, `work-programme` and `work-roadmap`. This page
 describes how `fsgg-sdd scaffold` obtains and lays down those bytes. It embeds **no** `.github`- or
@@ -51,11 +51,11 @@ For each row in the embedded `driver-skill-manifest.json`, in id order
    members receive their executable bit. A provider-owned same-id skill owns its complete
    directory, so SDD never creates a mixed provider/driver tree.
 
-The delivered `FS.GG.Drivers 0.114.3` ships eleven `scope: driver`, `materializes-when: always` rows
+The delivered `FS.GG.Drivers 0.114.4` ships eleven `scope: driver`, `materializes-when: always` rows
 (listed above). It also carries `drive-board`, its routed variants, `work-board-coord`, `p-add`,
 `lane-steward`, `board-analyst`, `publishing-and-deployment` and `cut-nuget-release` as
 `scope: operator`, `materializes-when: false`; those operator commands are withheld from product
-workspaces. The `atlas` skill is the largest row (509 files, including its `scripts/atlas.py` helper
+workspaces. The `atlas` skill is the largest row (536 files, including its `scripts/atlas.py` helper
 and the `assets/seed` archive), so a freshly scaffolded workspace can run
 `python3 .agents/skills/atlas/scripts/atlas.py --archive <pack> search <term>` offline.
 `padd-item` files a described issue onto the product workspace's explicitly configured organization,
