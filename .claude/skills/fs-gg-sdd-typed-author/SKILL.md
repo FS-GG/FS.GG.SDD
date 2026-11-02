@@ -14,11 +14,13 @@ with `author --accept`; use migration to retain authenticated rollback.
 
 For `--profile fsgg-quint-profile/2`, author the model in `--source` and select its
 declarations with `--bindings`. Supply `--java-home` and `--apalache-dist` with the
-provisioned `--cache`: authoring checks the proposed model before acceptance,
-commits its revision link with the authority, then runs bounded Quint
+provisioned `--cache`: authoring checks the proposed model before acceptance
+without issuing alignment success, commits its revision link with the authority,
+then runs bounded Quint
 typecheck, named scenarios, simulation, Apalache verification, and the SDD reducer
-adapter. A blocked sync after commit leaves the accepted manifest visible for repair;
-it does not grant verify or ship. Run `fsgg-sdd typed-sdd sync` with the same paths to
+adapter. A blocked sync after commit leaves the accepted manifest visible for
+implementation or test repair without weakening the accepted property; it does
+not grant verify or ship. Run `fsgg-sdd typed-sdd sync` with the same paths to
 inspect a fresh report. Normal `verify` and `ship` require `--sync-cache`,
 `--sync-java-home`, and `--sync-apalache-dist` and repeat the checks against current
 source and implementation bytes. A prior JSON report never supplies success.

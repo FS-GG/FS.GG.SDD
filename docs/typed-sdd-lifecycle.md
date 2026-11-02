@@ -204,15 +204,25 @@ for the declaration shape.
 
 Provision the exact Quint and lmt objects, then author with `--profile fsgg-quint-profile/2`,
 `--source`, `--bindings`, `--cache`, `--java-home`, and `--apalache-dist`. The
-proposed output is staged and checked before it can replace accepted bytes.
+proposed output is staged for model-only checks (typecheck, named scenarios,
+simulation and required symbolic verification) before it can replace accepted
+bytes. This stage produces no implementation-alignment success receipt.
 The authority transaction commits a revision link beside the manifest, advancing
 the prior accepted workspace revision by one. Authoring then runs a fresh
 `typed-sdd sync` and writes
 `readiness/<work>/quint/sync-report.json`. A failed sync leaves the
 accepted revision available for repair and replaces any prior success receipt
 with a blocked result. The manifest inventories the revision link; restore its
-exact accepted bytes if it is lost. A retained profile-2 root with the closed
-pre-sync 2.5.4 producer inventory can be adopted in place:
+exact accepted bytes if it is lost.
+
+A valid accepted specification may expose a production defect. In that case,
+the accepted manifest and revision link remain advanced while the fresh sync
+receipt blocks verify and ship. Repair implementation or tests, then rerun
+`typed-sdd sync` against that same accepted manifest. Do not change the
+accepted property to make the code pass.
+
+A retained profile-2 root with the closed pre-sync 2.5.4 producer inventory
+can be adopted in place:
 
 ```sh
 fsgg-sdd typed-sdd sync --adopt-legacy --root . --work demo \

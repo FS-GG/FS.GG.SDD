@@ -4,7 +4,7 @@ Feature 135 · FS.GG.SDD#1164 · routine source window. The existing literate Qu
 
 ## User journey
 
-An agent edits the literate source and declares finite checks and executable bindings. Authoring validates its model before the existing explicit acceptance. After the accepted transaction commits, `typed-sdd sync --work ID --cache PATH` checks the accepted revision against the qualified model tools and the built implementation. A failed or interrupted sync leaves acceptance intact but blocks verify and ship. A repair repeats sync against the same accepted meaning. A source or implementation change also triggers a fresh check without relying on a supplied correspondence JSON document.
+An agent edits the literate source and declares finite checks and executable bindings. Authoring validates the proposed model before the existing explicit acceptance without issuing implementation-alignment success. After the accepted transaction commits, `typed-sdd sync --work ID --cache PATH` checks the accepted revision against the qualified model tools and the built implementation. A failed or interrupted sync leaves acceptance intact but blocks verify and ship. An implementation or test repair repeats sync against the same accepted meaning. A source or implementation change also triggers a fresh check without relying on a supplied correspondence JSON document.
 
 ## Contract
 

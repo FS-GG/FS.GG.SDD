@@ -348,25 +348,9 @@ jobs:
           fi
           /usr/bin/unshare --user --map-root-user --net -- /usr/bin/true
 
-      - name: Exact package-only neutral Quint compiler and Typed SDD v2 acceptance
-        env:
-          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
-          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
-          FABLE_BIN: ${{ runner.temp }}/quint-q2-tools/fable/fable
-          Q2_JUNIT_OUT: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
-          Q2_EXACT_IR_JUNIT_OUT: artifacts/test-results/quint-q2-exact-ir.junit.xml
-          Q3_JUNIT_OUT: artifacts/test-results/quint-q3-typed-sdd-acceptance.junit.xml
-          Q3_TOOLCHAIN_OUT: artifacts/test-results/quint-q3-toolchain.json
-        run: bash tests/quint-svg-workspace-installed-acceptance.sh
-
-      # The profile-2 sync journey exercises accepted authoring, fresh reducer
-      # replay and symbolic checking. Archive bytes are pinned before extraction;
-      # the CLI additionally checks the Java binary and complete Apalache tree.
-      - name: Accepted Typed SDD sync and failure controls
-        id: typed-sync
-        env:
-          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
-          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
+      # Both the package-only profile-2 journey and the accepted sync journey
+      # use this same pinned symbolic verifier closure.
+      - name: Provision exact Typed SDD sync verifier tools
         run: |
           set -euo pipefail
           tools="$RUNNER_TEMP/typed-sdd-sync-tools"
@@ -385,8 +369,32 @@ jobs:
             "$tools/apalache-0.56.1.tgz" | sha256sum --check --strict
           tar -xzf "$tools/temurin21-jre.tar.gz" -C "$tools/jre"
           tar -xzf "$tools/apalache-0.56.1.tgz" -C "$tools/apalache-dist/apalache" --strip-components=1
-          SYNC_JAVA_HOME="$tools/jre/jdk-21.0.9+10-jre" \
-          SYNC_APALACHE_DIST="$tools/apalache-dist" \
+
+      - name: Exact package-only neutral Quint compiler and Typed SDD v2 acceptance
+        env:
+          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
+          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
+          FABLE_BIN: ${{ runner.temp }}/quint-q2-tools/fable/fable
+          SYNC_JAVA_HOME: ${{ runner.temp }}/typed-sdd-sync-tools/jre/jdk-21.0.9+10-jre
+          SYNC_APALACHE_DIST: ${{ runner.temp }}/typed-sdd-sync-tools/apalache-dist
+          Q2_JUNIT_OUT: artifacts/test-results/quint-q2-compiler-acceptance.junit.xml
+          Q2_EXACT_IR_JUNIT_OUT: artifacts/test-results/quint-q2-exact-ir.junit.xml
+          Q3_JUNIT_OUT: artifacts/test-results/quint-q3-typed-sdd-acceptance.junit.xml
+          Q3_TOOLCHAIN_OUT: artifacts/test-results/quint-q3-toolchain.json
+        run: bash tests/quint-svg-workspace-installed-acceptance.sh
+
+      # The profile-2 sync journey exercises accepted authoring, fresh reducer
+      # replay and symbolic checking. Archive bytes are pinned before extraction;
+      # the CLI additionally checks the Java binary and complete Apalache tree.
+      - name: Accepted Typed SDD sync and failure controls
+        id: typed-sync
+        env:
+          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
+          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
+          SYNC_JAVA_HOME: ${{ runner.temp }}/typed-sdd-sync-tools/jre/jdk-21.0.9+10-jre
+          SYNC_APALACHE_DIST: ${{ runner.temp }}/typed-sdd-sync-tools/apalache-dist
+        run: |
+          set -euo pipefail
           timeout -k 10s 10m bash tests/typed-sdd-sync-acceptance.sh
 
       - name: Retain failed Typed SDD sync attempt

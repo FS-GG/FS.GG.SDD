@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 ulimit -c 0
+
+# Keep the first failing source location when a redirected package/tool command
+# exits under `set -e`. Print only its command name; arguments may contain feed
+# locations or credentials supplied by a caller.
+trap 'status=$?; if [[ $- == *e* ]]; then printf "SVG-WORKSPACE-QUINT-ERROR: %s:%s command=%s exit=%s\n" "${BASH_SOURCE[0]:-$0}" "$LINENO" "${BASH_COMMAND%% *}" "$status" >&2; exit "$status"; fi' ERR
 
 repo_root="$(git rev-parse --show-toplevel)"
 : "${QUINT_BIN:?preseed exact Quint 0.32.0 binary in QUINT_BIN}"
 : "${LMT_BIN:?preseed exact lmt binary in LMT_BIN}"
 : "${FABLE_BIN:?preseed exact Fable 5.13.0 executable in FABLE_BIN}"
 : "${FABLE_SDK_BINDING:?preseed retained SDK provision binding in FABLE_SDK_BINDING}"
+: "${SYNC_JAVA_HOME:?preseed exact Temurin JRE root in SYNC_JAVA_HOME}"
+: "${SYNC_APALACHE_DIST:?preseed exact Apalache distribution in SYNC_APALACHE_DIST}"
 
 fail() { printf 'SVG-WORKSPACE-QUINT-REFUSAL: %s\n' "$*" >&2; exit 1; }
 sha() { sha256sum "$1" | cut -d' ' -f1; }
@@ -72,6 +79,8 @@ if [[ "${SVG_WORKSPACE_OFFLINE_STAGE:-0}" != '1' ]]; then
     LMT_BIN="$LMT_BIN"
     FABLE_BIN="$FABLE_BIN"
     FABLE_SDK_BINDING="$FABLE_SDK_BINDING"
+    SYNC_JAVA_HOME="$SYNC_JAVA_HOME"
+    SYNC_APALACHE_DIST="$SYNC_APALACHE_DIST"
     Q3_PACKAGE_SOURCE="$package_source"
     Q2_JUNIT_OUT="${Q2_JUNIT_OUT:-}"
     Q2_EXACT_IR_JUNIT_OUT="${Q2_EXACT_IR_JUNIT_OUT:-}"
@@ -213,6 +222,21 @@ done
 cmp "$scratch/extraction-a/$general_fixture/cooperative.qnt" "$scratch/extraction-b/$general_fixture/cooperative.qnt" >/dev/null || fail 'neutral lmt extractions differ'
 cmp "$scratch/extraction-a/cooperative.typed.json" "$scratch/extraction-b/cooperative.typed.json" >/dev/null || fail 'neutral Quint typecheck observations differ'
 
+# A neutral consumer model still typechecks, but it cannot claim SDD alignment:
+# profile-2 acceptance requires the joined SDD module catalogue.
+neutral_root="$scratch/neutral-refusal"
+mkdir -p "$neutral_root/$fixture"
+cp "$repo_root/$fixture/scene.md" "$repo_root/$fixture/bindings.json" "$neutral_root/$fixture/"
+if "$cli" typed-sdd author --root "$neutral_root" --work scene --title 'Neutral model' \
+  --agent acceptance --session neutral --backend quint-specification-v1 --cache "$scratch/cache" \
+  --profile fsgg-quint-profile/2 --source "$fixture/scene.md" --bindings "$fixture/bindings.json" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/neutral-refusal.json"; then
+  fail 'neutral model claimed SDD alignment without an accepted module catalogue'
+fi
+grep -F 'SYNC-MODULES-MISSING' "$scratch/neutral-refusal.json" >/dev/null || fail 'neutral model refused for another reason'
+[[ ! -f "$neutral_root/readiness/scene/typed-authority.json" ]] || fail 'neutral model wrote accepted SDD authority'
+
 # Retain the package-only exact-IR boundary over the neutral requirements and coordination
 # compiler slices. The adapter script independently applies all 17 malformed-IR mutations.
 ir_root="$scratch/exact-ir"
@@ -234,47 +258,66 @@ grep -F 'Exact Quint 0.32.0 Q1 IR corpus and 17 fail-closed mutations passed.' \
 
 for run in a b; do
   root="$scratch/author-$run"
-  mkdir -p "$root/$fixture"
-  cp "$repo_root/$fixture/scene.md" "$root/$fixture/scene.md"
-  cp "$repo_root/$fixture/bindings.json" "$root/$fixture/bindings.json"
-  "$cli" typed-sdd author --root "$root" --work scene --title 'Neutral retained reducer' \
+  mkdir -p "$root"
+  cp "$repo_root/tests/fixtures/typed-sdd-sync/specification.md" "$root/specification.md"
+  cp "$repo_root/tests/fixtures/typed-sdd-sync/bindings.json" "$root/bindings.json"
+  "$cli" typed-sdd author --root "$root" --work scene --title 'Accepted SDD reducer' \
     --agent acceptance --session exact --backend quint-specification-v1 --cache "$scratch/cache" \
-    --profile fsgg-quint-profile/2 --source "$fixture/scene.md" --bindings "$fixture/bindings.json" \
+    --profile fsgg-quint-profile/2 --source specification.md --bindings bindings.json \
+    --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
     >"$scratch/author-$run.json"
   "$cli" typed-sdd inspect --root "$root" --work scene >"$scratch/inspect-$run.json"
   grep -F '"outcome": "succeeded"' "$scratch/author-$run.json" >/dev/null || fail "author $run failed"
   grep -F '"outcome": "succeeded"' "$scratch/inspect-$run.json" >/dev/null || fail "inspect $run failed"
 done
-diff -ru "$scratch/author-a" "$scratch/author-b" >/dev/null || fail 'isolated author roots differ'
+# Accepted authority bytes must be deterministic. Fresh sync receipts include
+# verifier timestamps, temporary output paths and sampled run timings, so
+# compare their stable authority/obligation fields separately.
+diff -ru --exclude=sync-report.json "$scratch/author-a" "$scratch/author-b" >/dev/null || fail 'isolated accepted authority roots differ'
 cmp "$scratch/author-a.json" "$scratch/author-b.json" >/dev/null || fail 'isolated author reports differ'
-grep -F 'ACT-Choose' "$scratch/author-a/readiness/scene/quint/bindings.fs" >/dev/null || fail 'action correspondence is absent'
+python3 - "$scratch/author-a/readiness/scene/quint/sync-report.json" \
+  "$scratch/author-b/readiness/scene/quint/sync-report.json" <<'PY' || fail 'installed sync receipts disagree on authority or obligations'
+import json, sys
+with open(sys.argv[1], encoding='utf-8-sig') as source:
+    first = json.load(source)
+with open(sys.argv[2], encoding='utf-8-sig') as source:
+    second = json.load(source)
+def require(condition, message):
+    if not condition:
+        raise SystemExit(message)
+stable = ('schema', 'operation', 'outcome', 'acceptedSha256', 'contractSha256',
+          'generatedSha256', 'toolSha256', 'hostToolSha256', 'verifierToolSha256',
+          'implementationSha256', 'adapterSha256', 'packageIdentity',
+          'acceptedRevision', 'seed', 'maxSamples', 'maxSteps', 'scenarioCount',
+          'actionCount')
+require(all(key in first and key in second for key in stable), 'stable receipt field missing')
+require(all(first.get(key) == second.get(key) for key in stable), 'stable receipt fields differ')
+for report in (first, second):
+    require(report['outcome'] == 'satisfied', 'alignment was not satisfied')
+    require(report['acceptedRevision'] == 0, 'initial revision drifted')
+    require(report['scenarioCount'] == 7 and report['actionCount'] == 3, 'model/reducer coverage drifted')
+    require(report['correspondenceSha256'] and report['runSha256'], 'correspondence/run evidence missing')
+    require([step['name'] for step in report['steps']] == ['typecheck', 'test', 'run', 'verify'], 'model steps drifted')
+    require(all(step['exitCode'] == 0 for step in report['steps']), 'model step failed')
+PY
+grep -F 'PROD-001' "$scratch/author-a/readiness/scene/quint/bindings.fs" >/dev/null || fail 'accepted module identity is absent'
 grep -F 'sandbox-contract' "$scratch/author-a/readiness/scene/quint/contract.json" >/dev/null || fail 'contract digest closure is absent'
-
-general_root="$scratch/general-authority"
-mkdir -p "$general_root/$general_fixture"
-cp "$repo_root/$general_fixture/model.md" "$general_root/$general_fixture/model.md"
-cp "$repo_root/$general_fixture/bindings.json" "$general_root/$general_fixture/bindings.json"
-"$cli" typed-sdd author --root "$general_root" --work cooperative --title 'Neutral cooperative authority' \
-  --agent acceptance --session general --backend quint-specification-v1 --cache "$scratch/cache" \
-  --profile fsgg-quint-profile/2 --source "$general_fixture/model.md" --bindings "$general_fixture/bindings.json" \
-  >"$scratch/general-author.json"
-"$cli" typed-sdd inspect --root "$general_root" --work cooperative >"$scratch/general-inspect.json"
-general_contract="$general_root/readiness/cooperative/quint/contract.json"
+general_contract="$scratch/author-a/readiness/scene/quint/contract.json"
 for section in relationships verificationProfiles bounds impacts compatibility; do
-  grep -F '"'"$section"'":[{' "$general_contract" >/dev/null || fail "neutral general authority lacks $section"
+  grep -F '"'"$section"'":' "$general_contract" >/dev/null || fail "accepted SDD contract lacks $section"
 done
-grep -F 'ACT-Advance' "$general_root/readiness/cooperative/quint/bindings.fs" >/dev/null || fail 'neutral general action binding is absent'
+grep -F 'SYNC-MAX-STEPS' "$scratch/author-a/readiness/scene/quint/bindings.fs" >/dev/null || fail 'accepted bound binding is absent'
 
 probe="$scratch/fable-probe"
 mkdir -p "$probe"
-cp "$general_root/readiness/cooperative/quint/bindings.fs" "$probe/Bindings.fs"
+cp "$scratch/author-a/readiness/scene/quint/bindings.fs" "$probe/Bindings.fs"
 printf '%s\n' \
   '<Project Sdk="Microsoft.NET.Sdk">' \
   '  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup>' \
   '  <ItemGroup><Compile Include="Bindings.fs" /><Compile Include="Program.fs" /></ItemGroup>' \
   '</Project>' >"$probe/Probe.fsproj"
 printf '%s\n' \
-  'open CooperativeTurnGenerated' \
+  'open WorkspaceLifecycle' \
   'printfn "%s" ContractFingerprint' \
   'printfn "%s" CanonicalContractJson' >"$probe/Program.fs"
 dotnet run --project "$probe/Probe.fsproj" --no-restore >"$scratch/native.txt"
@@ -452,7 +495,7 @@ cat >"${Q3_JUNIT_OUT:-$scratch/q3.xml}" <<'EOF'
   <testcase classname="SvgWorkspaceQuintQ3" name="invalid-cache-path-refusal" />
   <testcase classname="SvgWorkspaceQuintQ3" name="cache-source-alias-idempotence" />
   <testcase classname="SvgWorkspaceQuintQ3" name="executable-mode-repair" />
-  <testcase classname="SvgWorkspaceQuintQ3" name="neutral-general-profile-authority" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="accepted-sdd-profile2-authority-and-neutral-refusal" />
   <testcase classname="SvgWorkspaceQuintQ3" name="author-crash-recovery-every-boundary" />
   <testcase classname="SvgWorkspaceQuintQ3" name="concurrent-inspect-transaction-lock" />
   <testcase classname="SvgWorkspaceQuintQ3" name="missing-cache-no-write" />
@@ -471,5 +514,5 @@ if [[ -n "${Q3_TOOLCHAIN_OUT:-}" ]]; then
   printf '%s\n' '{"schema":"fsgg.svg-workspace.quint-toolchain/v1","profile":"fsgg-quint-profile/2","platform":"linux/amd64","quintSha256":"939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f","lmtSha256":"37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"}' >"$Q3_TOOLCHAIN_OUT"
 fi
 
-printf 'SVG-WORKSPACE-QUINT-ACCEPTED: package=%s version=%s profile2=author-inspect-parity migration=rollback-exact profile1=retained exact-ir=17-refusals\n' \
+printf 'SVG-WORKSPACE-QUINT-ACCEPTED: package=%s version=%s profile2=accepted-sync-parity migration=rollback-exact profile1=retained exact-ir=17-refusals\n' \
   "$package_origin" "$version"

@@ -22,10 +22,12 @@ verification declarations, finite bounds, and external-algorithm registrations i
 source. The host accepts only the closed profile-2 value vocabulary and bounded resource envelope.
 
 For profile 2, also pass `--java-home` and `--apalache-dist`. Authoring checks the
-proposed model before acceptance, then commits a revision link and runs a fresh
-bounded Quint typecheck, explicitly named tests, simulation, Apalache verification,
-and the production SDD reducer adapter. If the post-commit check blocks, repair and
-rerun `fsgg-sdd typed-sdd sync --root <root> --work <id> --cache <cache-root>
+proposed model before acceptance without issuing alignment success, then commits
+a revision link and runs fresh bounded Quint typecheck, explicitly named tests,
+simulation, Apalache verification,
+and the production SDD reducer adapter. If the post-commit check blocks, retain
+the accepted revision, repair the implementation or tests, and rerun
+`fsgg-sdd typed-sdd sync --root <root> --work <id> --cache <cache-root>
 --java-home <jre> --apalache-dist <distribution>`. Normal `verify` and `ship` require
 `--sync-cache`, `--sync-java-home`, and `--sync-apalache-dist`; both run a fresh check.
 A prior sync JSON never supplies current evidence.

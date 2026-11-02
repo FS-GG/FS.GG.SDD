@@ -16,8 +16,8 @@ CPU/four GiB cgroup. The first `tests/typed-sdd-sync-acceptance.sh` passed in
 content comparison, and proposed-model checks, the repaired journey passed in
 about 194 seconds under the same cap:
 
-- Proposed authoring ran the model and reducer checks before authority
-  replacement. A false but type-valid invariant and an unreachable scenario
+- Proposed authoring ran model-only checks before authority replacement; it
+  emitted no satisfied implementation-alignment receipt. A false but type-valid invariant and an unreachable scenario
   left the accepted manifest, revision link and satisfied receipt unchanged.
   Repaired accepted edits advanced the transaction-bound revision from zero
   through four. A damaged link blocked and restoring it recovered revision zero.
@@ -56,6 +56,50 @@ real reducer, then compares abstract observations with a model-produced
 four-state witness. It exercises three observed actions and an independent
 stale-base refusal. The full relevant obligation set is selected when impact
 coverage is incomplete; this window makes no narrower dependency claim.
+
+## Accepted spec edit needing code repair
+
+Independent review found that the first preaccept path ran the reducer adapter,
+so a valid model could not be accepted while its implementation needed repair.
+The repaired path runs only typecheck, named scenario/non-vacuity, bounded
+simulation and required symbolic checks before acceptance. A disposable
+production build disabled the exact-base guard in `WorkspaceLifecycle` while
+an agent restored the stale-base scenario and invariant to an initially
+six-scenario accepted profile-2 model. The proposed model checks passed and
+the accepted manifest advanced from SHA-256
+`b13c111aea8ab0515039deb02346a42f4c2af815635919bfabc96d9eba20cad0`
+at revision zero to
+`1d8021da2a29123f9bc003b8e02ad381ff82bbe5abafe73b7ad1b72d5e8cc019`
+at revision one. The postcommit sync blocked with `SYNC-STALE-ACCEPTED` against
+mutant Artifacts assembly SHA-256
+`786e3e1fec03deb0aa735c97900ca44bf43eb4e11fcd254f3c8db55e1de5cef2`.
+Restoring only the real implementation guard and rerunning `typed-sdd sync`
+passed seven scenarios and three reducer actions at the same accepted manifest
+SHA-256 and revision, with repaired assembly SHA-256
+`44af710fd7d6f3522d1f5b508be653d86d1fa583391437f83c75f245bc5eda63`.
+The private original, blocked and repaired outputs are retained under
+`qualification/modelonly-*.json`. This is a bounded SDD reducer witness, not
+general implementation equivalence.
+
+## Installed candidate gate integration
+
+The first hosted deterministic gate on source head `814330d3` failed in
+`tests/quint-svg-workspace-installed-acceptance.sh` after 53 seconds without a
+script diagnostic (run `41465506846`, job `125345187717`). The original
+step and failure remain retained. A bounded local package-only reproduction
+with a line/status diagnostic found the positive profile-2 author lacked the
+exact verifier paths. After supplying them, the old neutral fixture was
+correctly refused with `SYNC-MODULES-MISSING`: it has no accepted SDD module
+catalogue. The repaired candidate journey provisions the same pinned Temurin
+and Apalache closure before both installed and source journeys, tests that
+neutral refusal explicitly, and uses the accepted SDD fixture for installed
+author/inspect/sync. Its two accepted authority roots and author reports were
+byte-identical; fresh sync receipts differed only in run-specific verifier
+paths and timings, so the test compares their stable authority, tool, bound,
+scenario, reducer and model-step fields while requiring both correspondence
+digests. The repaired candidate package-only journey passed under one CPU,
+four GiB and ten minutes with 22 Q3 cases and 17 exact-IR mutation refusals.
+This candidate feed is not publication or retained public-package acceptance.
 
 ## Code-only defect and repair
 

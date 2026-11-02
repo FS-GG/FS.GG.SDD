@@ -336,7 +336,7 @@ module internal QuintSync =
                     |> sha
                     |> Ok
 
-    let private runAccepted root work cache javaHome apalacheDist =
+    let private runAccepted requireAlignment root work cache javaHome apalacheDist =
         let manifestPath = Path.Combine(root, TypedAuthorityManifest.path work)
         if not (File.Exists manifestPath) then Error "The accepted Typed SDD authority manifest is missing."
         else
@@ -463,7 +463,9 @@ module internal QuintSync =
                                                                 elif not (sampled.Output.Contains("[ok] No violation found", StringComparison.Ordinal)) then
                                                                     Error "Bounded simulation did not report a passing invariant check."
                                                                 else
-                                                                    let implementationBytes = File.ReadAllBytes typeof<WorkspaceModel>.Assembly.Location
+                                                                    let implementationBytes =
+                                                                        if requireAlignment then File.ReadAllBytes typeof<WorkspaceModel>.Assembly.Location
+                                                                        else [||]
                                                                     let adapterBytes = implementationBytes
                                                                     let quintHome = Path.Combine(temp, "quint-home")
                                                                     Directory.CreateDirectory quintHome |> ignore
@@ -486,28 +488,42 @@ module internal QuintSync =
                                                                               ToolFingerprint = expectedTool.Sha256; ProfileFingerprint = QuintToolchain.fingerprint QuintToolchain.general
                                                                               ContractFingerprint = sha contractBytes; AdapterFingerprint = sha adapterBytes
                                                                               ImplementationFingerprint = sha implementationBytes }
-                                                                        match WorkspaceReducerAdapter.replayCoherent accepted (File.ReadAllBytes witnesses[0]) environment,
-                                                                              WorkspaceReducerAdapter.checkStaleBase accepted with
-                                                                        | Ok QuintReplayResult.Equivalent, Ok() ->
+                                                                        let alignment =
+                                                                            if not requireAlignment then Ok 0
+                                                                            else
+                                                                                match WorkspaceReducerAdapter.replayCoherent accepted (File.ReadAllBytes witnesses[0]) environment,
+                                                                                      WorkspaceReducerAdapter.checkStaleBase accepted with
+                                                                                | Ok QuintReplayResult.Equivalent, Ok() -> Ok 3
+                                                                                | Ok(QuintReplayResult.Diverged divergence), _ -> Error $"Production reducer diverged at {divergence.Action}: {divergence.Reason}"
+                                                                                | Error findings, _ -> Error(sprintf "Production reducer replay refused: %s" (findings |> List.map _.Code |> String.concat ", "))
+                                                                                | _, Error findings -> Error(sprintf "Stale-base adapter refused: %s" (findings |> List.map _.Code |> String.concat ", "))
+                                                                        match alignment with
+                                                                        | Error reason -> Error reason
+                                                                        | Ok actionCount ->
                                                                             let unchanged =
                                                                                 sha (File.ReadAllBytes manifestPath) = sha manifestBytes
                                                                                 && (if File.Exists linkPath then sha (File.ReadAllBytes linkPath) else "") = linkDigest
                                                                                 && sha (File.ReadAllBytes(Path.Combine(root, sourceArtifact.Path))) = sha sourceBytes
                                                                                 && sha (File.ReadAllBytes(Path.Combine(root, generatedArtifact.Path))) = sha generatedBytes
                                                                                 && sha (File.ReadAllBytes(Path.Combine(root, contractArtifact.Path))) = sha contractBytes
-                                                                                && sha (File.ReadAllBytes typeof<WorkspaceModel>.Assembly.Location) = sha implementationBytes
+                                                                                && (not requireAlignment || sha (File.ReadAllBytes typeof<WorkspaceModel>.Assembly.Location) = sha implementationBytes)
                                                                                 && sha (File.ReadAllBytes toolPath) = expectedTool.Sha256
                                                                                 && sha (File.ReadAllBytes javaPath) = "e865867065e48928c58293f30e7ae26a79c842f8607fa51d7e2e9fb90b602786"
                                                                                 && treeSha apalacheDist = "3466d07f06d7ac80ee0f171a96383183cee9d91bf1b5995d897d4f15c004569f"
                                                                                 && hostToolClosure () = hostTools
                                                                             if not unchanged then Error "Accepted/source/implementation/tool dependency changed during sync."
                                                                             else
-                                                                                match correspondence accepted contract sourceArtifact.Path typeof<WorkspaceModel>.Assembly.Location tested.Sha256 verified.Sha256 with
+                                                                                let correspondenceResult =
+                                                                                    if requireAlignment then
+                                                                                        correspondence accepted contract sourceArtifact.Path typeof<WorkspaceModel>.Assembly.Location tested.Sha256 verified.Sha256
+                                                                                    else Ok ""
+                                                                                match correspondenceResult with
                                                                                 | Error reason -> Error reason
                                                                                 | Ok correspondenceSha ->
                                                                                     succeeded <- true
+                                                                                    let implementationSha = if requireAlignment then sha implementationBytes else ""
                                                                                     Ok
-                                                                                        { (report "satisfied" []) with
+                                                                                        { (report (if requireAlignment then "satisfied" else "model-valid") []) with
                                                                                             AcceptedSha256 = sha manifestBytes
                                                                                             ContractSha256 = sha contractBytes
                                                                                             GeneratedSha256 = sha generatedBytes
@@ -523,12 +539,12 @@ module internal QuintSync =
                                                                                                 (sha (File.ReadAllBytes javaPath) + "\n" + treeSha apalacheDist + "\n")
                                                                                                 |> Encoding.UTF8.GetBytes
                                                                                                 |> sha
-                                                                                            ImplementationSha256 = sha implementationBytes
-                                                                                            AdapterSha256 = sha adapterBytes
+                                                                                            ImplementationSha256 = implementationSha
+                                                                                            AdapterSha256 = implementationSha
                                                                                             CorrespondenceSha256 = correspondenceSha
                                                                                             RunSha256 =
-                                                                                                [ sha manifestBytes; sha implementationBytes; typed.Sha256; tested.Sha256
-                                                                                                  sampled.Sha256; verified.Sha256; correspondenceSha ]
+                                                                                                [ sha manifestBytes; typed.Sha256; tested.Sha256; sampled.Sha256; verified.Sha256 ]
+                                                                                                @ (if requireAlignment then [ implementationSha; correspondenceSha ] else [])
                                                                                                 |> String.concat "\n"
                                                                                                 |> Encoding.UTF8.GetBytes
                                                                                                 |> sha
@@ -538,11 +554,8 @@ module internal QuintSync =
                                                                                             MaxSamples = maxSamples
                                                                                             MaxSteps = maxSteps
                                                                                             ScenarioCount = testCount
-                                                                                            ActionCount = 3
+                                                                                            ActionCount = actionCount
                                                                                             Steps = [ typed; tested; sampled; verified ] }
-                                                                        | Ok(QuintReplayResult.Diverged divergence), _ -> Error $"Production reducer diverged at {divergence.Action}: {divergence.Reason}"
-                                                                        | Error findings, _ -> Error(sprintf "Production reducer replay refused: %s" (findings |> List.map _.Code |> String.concat ", "))
-                                                                        | _, Error findings -> Error(sprintf "Stale-base adapter refused: %s" (findings |> List.map _.Code |> String.concat ", "))
                                                             | Error message -> Error message
                                                         finally
                                                             if succeeded then Directory.Delete(temp, true)
@@ -606,8 +619,10 @@ module internal QuintSync =
                     |> Option.ofObj
                     |> Option.iter (fun parent -> Directory.CreateDirectory parent |> ignore)
                     File.WriteAllBytes(path, bytes)
-            match runAccepted staging work (Path.GetFullPath cache) (Path.GetFullPath javaHome) (Path.GetFullPath apalacheDist) with
+            match runAccepted false staging work (Path.GetFullPath cache) (Path.GetFullPath javaHome) (Path.GetFullPath apalacheDist) with
             | Error reason -> Error $"Proposed model sync refused: {reason}; retained staging: {staging}"
+            | Ok value when value.Outcome <> "model-valid" ->
+                Error $"Proposed model preflight returned an unexpected alignment outcome; retained staging: {staging}"
             | Ok _ ->
                 Directory.Delete(staging, true)
                 Ok finalWrites
@@ -667,7 +682,7 @@ module internal QuintSync =
                     |> Option.ofObj
                     |> Option.iter (fun parent -> Directory.CreateDirectory parent |> ignore)
                     File.WriteAllBytes(path, bytes)
-            match runAccepted staging work (Path.GetFullPath cache) (Path.GetFullPath javaHome) (Path.GetFullPath apalacheDist) with
+            match runAccepted true staging work (Path.GetFullPath cache) (Path.GetFullPath javaHome) (Path.GetFullPath apalacheDist) with
             | Error reason -> Error $"Legacy proposed model sync refused: {reason}; retained staging: {staging}"
             | Ok _ ->
                 Directory.Delete(staging, true)
@@ -741,7 +756,7 @@ module internal QuintSync =
             let cache = Path.GetFullPath cache
             let javaHome = Path.GetFullPath javaHome
             let apalacheDist = Path.GetFullPath apalacheDist
-            match runAccepted root work cache javaHome apalacheDist with
+            match runAccepted true root work cache javaHome apalacheDist with
             | Ok value -> saveReceipt root work value; Ok()
             | Error reason -> saveReceipt root work (blockedReport root work cache javaHome apalacheDist reason); Error reason
         with ex -> Error $"Sync failed: {ex.Message}"
@@ -788,7 +803,7 @@ module internal QuintSync =
                 emit format (report "blocked" [ "Work id must be one contained path segment." ])
             else
                 try
-                    match runAccepted root work cache javaHome apalacheDist with
+                    match runAccepted true root work cache javaHome apalacheDist with
                     | Error reason ->
                         let blocked = blockedReport root work cache javaHome apalacheDist reason
                         saveReceipt root work blocked
