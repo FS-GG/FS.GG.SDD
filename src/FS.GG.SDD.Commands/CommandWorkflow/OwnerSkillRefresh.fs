@@ -23,8 +23,9 @@ open FS.GG.SDD.Artifacts.ScaffoldProvenance
 ///      path is occupied by a file the record does not attest;
 ///   3. every file was readable;
 ///   4. it would not DOWNGRADE: the embedded owner package is strictly newer than the version the
-///      skill was last materialized from (or, for a record that predates version tracking, the
-///      running CLI is not older than the CLI that last wrote the workspace).
+///      skill was last materialized from (or, for a skill with no recorded version, the pack is not
+///      below the highest version recorded for its channel and the running CLI is newer than the CLI
+///      that last wrote the workspace, or equal to it with a complete upgrade by it recorded).
 ///
 /// Anything else is HELD, never overwritten, and keeps today's behavior and warnings.
 module internal OwnerSkillRefresh =
@@ -73,7 +74,7 @@ module internal OwnerSkillRefresh =
         /// The embedded owner package is OLDER than the one the skill was last materialized from.
         | WouldDowngrade of recorded: string * embedded: string
         /// Newer-ness cannot be proved: no embedded version, a changed package, an equal version
-        /// with different bytes, or a legacy record whose CLI is older than its last writer.
+        /// with different bytes, or a legacy skill whose CLI is not newer than its last writer.
         | VersionUnprovable of detail: string
         /// A file of the skill could not be read, so no verdict over the whole unit is possible.
         | Unreadable
@@ -156,22 +157,48 @@ module internal OwnerSkillRefresh =
                     )
                 | None -> Error(VersionUnprovable $"version {recorded.Version} or {version} is not comparable")
             | None ->
-                // A record that predates version tracking. The CLI that last wrote the workspace is the
-                // only bound available (`Generator` is the one that produced it and never moves;
-                // `UpgradedBy` is the last COMPLETE `upgrade`): a CLI that is not OLDER than that writer
-                // cannot carry an older pack than the one it wrote. Equal is allowed on purpose: the
-                // same release embeds the same packs, and refusing it would strand the very run that
-                // finishes an interrupted or just-unblocked refresh (a partial run, an edit the user
-                // has since reverted).
-                let lastWriter = defaultArg record.UpgradedBy record.Generator.Version
+                // A record with no version for THIS skill (it predates version tracking, or the skill was
+                // never written by a versioning `upgrade`). Two bounds, both required.
+                //
+                // 1. The channel floor, applied generally: no pack older than the highest version this
+                //    record already holds for the channel. This is a fact about the workspace, not about
+                //    which CLI is running, so it also stops a DEV build whose version string equals the
+                //    last writer's but whose embedded pack is older.
+                // 2. The writer bound. `Generator` is the CLI that PRODUCED the workspace and never moves;
+                //    `UpgradedBy` is the CLI of the last upgrade in which every file landed. A CLI strictly
+                //    NEWER than that writer carries a pack at least as new as the one it wrote. An EQUAL
+                //    version is allowed only when `UpgradedBy` names this very CLI: then a complete run of
+                //    this release already vouched for the workspace, and this run is the one that finishes
+                //    a refresh an edit, a link or a read-only directory had blocked. An equal version with
+                //    no such run is not proof of anything (two builds can share a version string), so it
+                //    holds.
+                let belowFloor =
+                    record.OwnerSkillVersions
+                    |> List.tryPick (fun entry ->
+                        if entry.Channel = package && entry.Version <> "" then
+                            match CommandVersion.compare version entry.Version with
+                            | Some c when c < 0 -> Some(Error(WouldDowngrade(entry.Version, version)))
+                            | None ->
+                                Some(
+                                    Error(VersionUnprovable $"version {entry.Version} or {version} is not comparable")
+                                )
+                            | _ -> None
+                        else
+                            None)
 
-                match CommandVersion.compare cliVersion lastWriter with
-                | Some c when c >= 0 -> Ok(Some(package, version))
-                | _ ->
-                    Error(
-                        VersionUnprovable
-                            $"the record carries no package version and CLI {cliVersion} is older than the {lastWriter} that last wrote it"
-                    )
+                match belowFloor with
+                | Some verdict -> verdict
+                | None ->
+                    let lastWriter = defaultArg record.UpgradedBy record.Generator.Version
+
+                    match CommandVersion.compare cliVersion lastWriter with
+                    | Some c when c > 0 -> Ok(Some(package, version))
+                    | Some 0 when record.UpgradedBy = Some cliVersion -> Ok(Some(package, version))
+                    | _ ->
+                        Error(
+                            VersionUnprovable
+                                $"the record carries no package version and CLI {cliVersion} is not newer than the {lastWriter} that last wrote it, and no complete upgrade by this CLI is recorded"
+                        )
 
     /// Decide, per recorded owner-sourced skill, whether it is replaced as a unit or held.
     ///

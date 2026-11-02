@@ -1052,9 +1052,19 @@ module CommandEffects =
                 // So this arm matches `readFile` rather than `tryRead`: `tryRead` has already
                 // collapsed both causes into one `Unreadable`, which is right for every FOLD and
                 // wrong for the only two callers that choose a diagnostic.
+                // FS.GG.SDD#1155: an owner skill is written under a skill root, so every write that
+                // lands in one is held to the containment rule - the replacement AND the no-clobber
+                // backfill of a skill that is not there yet (a skill directory that is a link out of
+                // the workspace would otherwise receive the whole pack, hundreds of files, outside it).
+                let ownerSkillGuarded =
+                    match kind with
+                    | OwnerSkillRefresh _ -> true
+                    | AgentGuidanceTarget -> (Internal.OwnerSkillRefresh.skillCopyOf path).IsSome
+                    | _ -> false
+
                 let writeRead =
                     match kind with
-                    | OwnerSkillRefresh _ ->
+                    | _ when ownerSkillGuarded ->
                         match ownerSkillPathRefusal projectRoot path with
                         | Some reason -> IoRefusal reason
                         | None -> readFile projectRoot path
@@ -1065,11 +1075,7 @@ module CommandEffects =
                     | _ -> readFile projectRoot path
 
                 match writeRead with
-                | IoRefusal reason when
-                    (match kind with
-                     | OwnerSkillRefresh _ -> true
-                     | _ -> false)
-                    ->
+                | IoRefusal reason when ownerSkillGuarded && (ownerSkillPathRefusal projectRoot path).IsSome ->
                     failure effect (Unreadable(path, reason)) (ownerSkillPathRefused path reason)
                 | IoRefusal reason ->
                     failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)

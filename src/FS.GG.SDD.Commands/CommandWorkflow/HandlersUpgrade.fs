@@ -584,10 +584,24 @@ module internal HandlersUpgrade =
         match drift.OwnerSkillHeld with
         | [] -> hint
         | held ->
+            let isCollision (h: OwnerSkillRefresh.HeldSkill) =
+                match h.Reason with
+                | OwnerSkillRefresh.NameCollision _ -> true
+                | _ -> false
+
+            let collisions, others = held |> List.partition isCollision
+            let render hs = hs |> List.map OwnerSkillRefresh.heldText |> String.concat "; "
+
+            // A colliding skill was never installed, so it did not "change upstream": say what is true.
             hint
-            + " Owner skills changed upstream but were not replaced: "
-            + (held |> List.map OwnerSkillRefresh.heldText |> String.concat "; ")
-            + "."
+            + (if List.isEmpty others then
+                   ""
+               else
+                   " Owner skills changed upstream but were not replaced: " + render others + ".")
+            + (if List.isEmpty collisions then
+                   ""
+               else
+                   " Delivered skills not installed because the name is already taken: " + render collisions + ".")
 
     /// Append the #747 exclusion to an advisory when — and only when — it actually fired.
     let private withIgnoredJunk (drift: Drift.DriftReport) (hint: string) =
@@ -1003,9 +1017,26 @@ module internal HandlersUpgrade =
         },
         []
 
+    /// FS.GG.SDD#1155. True while a write, removal or mode change this run already emitted is still being
+    /// interpreted. The driver folds one `update` per interpreted result, and everything `upgrade` decides
+    /// from (the read gate, the drift, the embedded owner packs, every skill body) costs hundreds of
+    /// milliseconds once the atlas skill is in the workspace, so re-deriving it per result made a refresh
+    /// of a few hundred files take minutes. With effects in flight there is nothing to decide: waiting is
+    /// exactly what the recomputation would have concluded, and the plan is derived again once the last
+    /// result is in.
+    let private writesInFlight model =
+        model.PendingEffects
+        |> List.exists (fun effect ->
+            match effect with
+            | WriteFile _
+            | RemoveFile _
+            | SetExecutable _ -> not (hasInterpreted (effectKey effect) model)
+            | _ -> false)
+
     let computeUpgradeNext model =
         match model.Upgrade with
         | Some _ -> model, []
+        | None when writesInFlight model -> model, []
         | None ->
 
             // 058/ADR-0014 P1: bring the provider product-skill copies into snapshots (read-only)
