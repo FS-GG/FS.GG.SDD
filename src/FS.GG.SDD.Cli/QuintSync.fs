@@ -137,20 +137,19 @@ module internal QuintSync =
                 start.ArgumentList.Add part
             use child = Process.Start start |> Option.ofObj |> Option.defaultWith (fun () -> failwith "process did not start")
             let readBounded (reader: StreamReader) =
-                task {
+                Task.Run(fun () ->
                     let buffer = Array.zeroCreate<char> 4096
                     let retained = StringBuilder()
                     let mutable total = 0
                     let mutable reading = true
                     while reading do
-                        let! count = reader.ReadAsync(buffer.AsMemory())
+                        let count = reader.Read(buffer, 0, buffer.Length)
                         if count = 0 then reading <- false
                         else
                             total <- total + count
                             if retained.Length < 524288 then
                                 retained.Append(buffer, 0, min count (524288 - retained.Length)) |> ignore
-                    return retained.ToString(), total
-                }
+                    retained.ToString(), total)
             let stdout = readBounded child.StandardOutput
             let stderr = readBounded child.StandardError
             if not (child.WaitForExit 60000) then
@@ -212,7 +211,7 @@ module internal QuintSync =
 
     let private readRevisionLink root work expectedManifestSha =
         let path = Path.Combine(root, revisionPath work)
-        if not (File.Exists path) then Ok None
+        if not (File.Exists path) then Error "Accepted profile-2 workspace has no sync revision link; restore the accepted link before sync or author a new workspace root."
         else
             try
                 use document = JsonDocument.Parse(File.ReadAllBytes path)
@@ -233,24 +232,22 @@ module internal QuintSync =
                     if link.ManifestSha256 <> expectedManifestSha || link.Revision < 0L
                        || not (Regex.IsMatch(link.WorkspaceFingerprint, "^[0-9a-f]{64}$")) then
                         Error "Accepted sync revision link does not bind the current manifest and workspace."
-                    else Ok(Some link)
+                    else Ok link
             with ex -> Error $"Accepted sync revision link is unreadable: {ex.Message}"
 
     let private deriveAccepted root work manifestBytes contract =
         match readRevisionLink root work (sha manifestBytes) with
         | Error reason -> Error reason
         | Ok link ->
-            let revision = link |> Option.map _.Revision |> Option.defaultValue 0L
-            match WorkspaceSync.deriveModel revision contract with
+            match WorkspaceSync.deriveModel link.Revision contract with
             | Error findings -> Error(sprintf "Workspace authority join refused: %s" (findings |> List.map _.Code |> String.concat ", "))
             | Ok accepted ->
                 match WorkspaceLifecycle.fingerprint accepted with
                 | Error findings -> Error(sprintf "Workspace fingerprint refused: %A" findings)
                 | Ok fingerprint ->
-                    match link with
-                    | Some prior when prior.WorkspaceFingerprint <> fingerprint ->
+                    if link.WorkspaceFingerprint <> fingerprint then
                         Error "Accepted sync revision link fingerprint differs from the compiled workspace."
-                    | _ -> Ok accepted
+                    else Ok accepted
 
     let private correspondence (accepted: WorkspaceModel) contract sourcePath implementationPath testDigest verifyDigest =
         match WorkspaceLifecycle.fingerprint accepted with

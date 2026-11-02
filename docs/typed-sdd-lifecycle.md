@@ -203,14 +203,16 @@ accepted manifest. See the [profile-2 fixture](../tests/fixtures/typed-sdd-sync/
 for the declaration shape.
 
 Provision the exact Quint and lmt objects, then author with `--profile fsgg-quint-profile/2`,
-`--source`, `--bindings`, `--cache`, `--java-home`, and `--apalache-dist`. After the
+`--source`, `--bindings`, `--cache`, `--java-home`, and `--apalache-dist`. The
 proposed output is staged and checked before it can replace accepted bytes.
 The authority transaction commits a revision link beside the manifest, advancing
 the prior accepted workspace revision by one. Authoring then runs a fresh
 `typed-sdd sync` and writes
 `readiness/<work>/quint/sync-report.json`. A failed sync leaves the
 accepted revision available for repair and replaces any prior success receipt
-with a blocked result.
+with a blocked result. The revision link is required on every accepted profile-2
+workspace: restore its exact accepted bytes if it is lost. A profile-2 root
+created before sync links existed must be authored into a new workspace root.
 To repeat the check explicitly, run:
 
 ```sh

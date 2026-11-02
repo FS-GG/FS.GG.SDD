@@ -21,6 +21,10 @@ about 194 seconds under the same cap:
   left the accepted manifest, revision link and satisfied receipt unchanged.
   Repaired accepted edits advanced the transaction-bound revision from zero
   through four. A damaged link blocked and restoring it recovered revision zero.
+  Independent review then found that deleting the link reset revision to zero;
+  the repaired source fails closed on a missing link. A revision-four deletion,
+  refusal, exact-link restoration and fresh revision-four recovery are in the
+  acceptance journey.
 - Accepted authoring wrote a satisfied fresh sync receipt. A prior forged
   `outcome: satisfied` JSON plus changed source could not pass normal verify.
 - A missing verifier blocked; restoring it recovered fresh success.
@@ -75,6 +79,14 @@ the first reported failures were three stale process skill manifest assertions,
 which the regenerated manifest and focused rerun resolved. No full-suite green
 claim is made from that timed-out attempt. API surface projection was checked
 coherent with 98 mirrored declarations after adding the public `.fsi` mirrors.
+The old pushed-head hosted gate completed in 17m58s with a synthetic public
+`QuintSync` method and two skill-content digests in the command-report golden
+as the only failures: CLI 245 passed/1 failed; Commands 1671 passed/1 failed/13
+skipped. Replacing the task reader removed the synthetic method and its named
+surface test passed 1/1. At this source version, only the two
+skill-content-dependent digest operands were regenerated; #1163 independently
+owns the same golden's version and release-dependent digest, which must be
+regenerated after source and release assembly.
 Exact-head CI and independent repair review remain required.
 
 ## Toolchain lesson

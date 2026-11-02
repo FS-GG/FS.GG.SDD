@@ -214,5 +214,21 @@ fi
 assert_json "$scratch/conflicting.json" outcome blocked
 assert_json "$link" revision 4
 
+# Removing the link after four accepted edits must not reset the next revision.
+cp "$link" "$scratch/revision-four-link.json"
+rm "$link"
+if cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/missing-link.json"; then
+  fail 'missing accepted revision link reset the accepted revision'
+fi
+assert_json "$scratch/missing-link.json" outcome blocked
+cp "$scratch/revision-four-link.json" "$link"
+cp "$repo_root/tests/fixtures/typed-sdd-sync/specification.md" "$scratch/work/specification.md"
+cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/recovered-revision-four.json" || fail 'revision-four link repair did not recover'
+assert_json "$scratch/recovered-revision-four.json" acceptedRevision 4
+
 printf 'typed-sdd-sync acceptance: positive, invariant break, unreachable scenario, repair, already-satisfied property, stale in-flight source, forged receipt, missing verifier and conflicting assumptions passed\n'
 rm -rf -- "$scratch"
