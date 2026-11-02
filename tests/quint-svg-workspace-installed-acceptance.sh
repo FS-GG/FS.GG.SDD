@@ -256,6 +256,30 @@ dotnet fsi --reference:"$artifact_assembly" --exec \
 grep -F 'Exact Quint 0.32.0 Q1 IR corpus and 17 fail-closed mutations passed.' \
   "$scratch/exact-ir.log" >/dev/null || fail 'exact IR mutation corpus did not pass'
 
+# Preserve package-only generic profile-2 compilation as a separate Artifacts
+# consumer. Its S.I.R. model is not an SDD authority and must not acquire an
+# implementation-alignment receipt. The installed assembly promotes the exact
+# observed typed effect to a nonempty contract and generated bindings.
+sir_root="$scratch/general-sir"
+mkdir -p "$sir_root"
+cp "$repo_root/tests/fixtures/quint-general-sir/sir-combat.md" "$sir_root/"
+(cd "$sir_root" && "$LMT_BIN" sir-combat.md)
+"$QUINT_BIN" typecheck --out="$sir_root/sir-combat.qnt.typed.json" "$sir_root/sir-combat.qnt" >/dev/null
+dotnet fsi --reference:"$artifact_assembly" --exec \
+  "$repo_root/tests/FS.GG.SDD.Artifacts.Tests/QuintGeneralSirAcceptance.fsx" \
+  "$sir_root/sir-combat.qnt.typed.json" \
+  "$repo_root/tests/fixtures/quint-general-sir/profile-bindings.json" \
+  "$repo_root/tests/fixtures/quint-general-sir/sir-combat.md" \
+  "$sir_root/sir-combat.qnt" \
+  "$scratch/profile2-general" >"$scratch/profile2-general.log"
+grep -F 'PROFILE-2-SIR-ACCEPTED: rules=16 properties=7 relationships=14 bounds=4 verifications=3 impacts=1 compatibility=1 actions=5' \
+  "$scratch/profile2-general.log" >/dev/null || fail 'installed generic profile-2 compilation did not promote the declared catalogue'
+general_contract="$scratch/profile2-general/contract.json"
+for section in relationships verificationProfiles bounds impacts compatibility; do
+  grep -F '"'"$section"'":[{' "$general_contract" >/dev/null || fail "generic installed contract lacks nonempty $section"
+done
+grep -F 'ACT-Step' "$scratch/profile2-general/bindings.fs" >/dev/null || fail 'generic installed action binding is absent'
+
 for run in a b; do
   root="$scratch/author-$run"
   mkdir -p "$root"
@@ -302,25 +326,23 @@ for report in (first, second):
 PY
 grep -F 'PROD-001' "$scratch/author-a/readiness/scene/quint/bindings.fs" >/dev/null || fail 'accepted module identity is absent'
 grep -F 'sandbox-contract' "$scratch/author-a/readiness/scene/quint/contract.json" >/dev/null || fail 'contract digest closure is absent'
-general_contract="$scratch/author-a/readiness/scene/quint/contract.json"
-for section in relationships verificationProfiles bounds impacts compatibility; do
-  grep -F '"'"$section"'":' "$general_contract" >/dev/null || fail "accepted SDD contract lacks $section"
-done
 grep -F 'SYNC-MAX-STEPS' "$scratch/author-a/readiness/scene/quint/bindings.fs" >/dev/null || fail 'accepted bound binding is absent'
 
 probe="$scratch/fable-probe"
 mkdir -p "$probe"
-cp "$scratch/author-a/readiness/scene/quint/bindings.fs" "$probe/Bindings.fs"
+cp "$scratch/profile2-general/bindings.fs" "$probe/Bindings.fs"
 printf '%s\n' \
   '<Project Sdk="Microsoft.NET.Sdk">' \
   '  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup>' \
   '  <ItemGroup><Compile Include="Bindings.fs" /><Compile Include="Program.fs" /></ItemGroup>' \
   '</Project>' >"$probe/Probe.fsproj"
 printf '%s\n' \
-  'open WorkspaceLifecycle' \
+  'open SirCombatGenerated' \
   'printfn "%s" ContractFingerprint' \
+  'Catalogue |> List.filter (fun row -> row.ExportId = "EXPORT-Rules") |> List.map _.Id |> String.concat "," |> printfn "%s"' \
   'printfn "%s" CanonicalContractJson' >"$probe/Program.fs"
 dotnet run --project "$probe/Probe.fsproj" --no-restore >"$scratch/native.txt"
+cmp "$scratch/profile2-general/native.txt" "$scratch/native.txt" >/dev/null || fail 'generic compiled native binding drifted'
 "$FABLE_BIN" "$probe/Probe.fsproj" --outDir "$scratch/fable" --noRestore --noCache --silent
 node "$scratch/fable/Program.js" >"$scratch/fable.txt"
 cmp "$scratch/native.txt" "$scratch/fable.txt" >/dev/null || fail '.NET/Fable projection parity failed'
@@ -483,7 +505,7 @@ cat >"${Q2_EXACT_IR_JUNIT_OUT:-$scratch/q2-exact-ir.xml}" <<'EOF'
 EOF
 cat >"${Q3_JUNIT_OUT:-$scratch/q3.xml}" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
-<testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ3" tests="22" failures="0">
+<testsuite name="FS.GG.SDD.SvgWorkspaceQuintQ3" tests="23" failures="0">
   <testcase classname="SvgWorkspaceQuintQ3" name="fresh-cache-install-before-isolation" />
   <testcase classname="SvgWorkspaceQuintQ3" name="installed-staged-provisioning" />
   <testcase classname="SvgWorkspaceQuintQ3" name="wrong-tool-refusal" />
@@ -496,6 +518,7 @@ cat >"${Q3_JUNIT_OUT:-$scratch/q3.xml}" <<'EOF'
   <testcase classname="SvgWorkspaceQuintQ3" name="cache-source-alias-idempotence" />
   <testcase classname="SvgWorkspaceQuintQ3" name="executable-mode-repair" />
   <testcase classname="SvgWorkspaceQuintQ3" name="accepted-sdd-profile2-authority-and-neutral-refusal" />
+  <testcase classname="SvgWorkspaceQuintQ3" name="installed-generic-sir-compiler-and-binding-parity" />
   <testcase classname="SvgWorkspaceQuintQ3" name="author-crash-recovery-every-boundary" />
   <testcase classname="SvgWorkspaceQuintQ3" name="concurrent-inspect-transaction-lock" />
   <testcase classname="SvgWorkspaceQuintQ3" name="missing-cache-no-write" />
@@ -514,5 +537,5 @@ if [[ -n "${Q3_TOOLCHAIN_OUT:-}" ]]; then
   printf '%s\n' '{"schema":"fsgg.svg-workspace.quint-toolchain/v1","profile":"fsgg-quint-profile/2","platform":"linux/amd64","quintSha256":"939b64095b706017f2f202c6f99c860c40be7c31bddc2b98557316e50f42cd7f","lmtSha256":"37e0b0365c2641edce40b48605471f61fa12e97c3e2376152f0e849abdc31f10"}' >"$Q3_TOOLCHAIN_OUT"
 fi
 
-printf 'SVG-WORKSPACE-QUINT-ACCEPTED: package=%s version=%s profile2=accepted-sync-parity migration=rollback-exact profile1=retained exact-ir=17-refusals\n' \
+printf 'SVG-WORKSPACE-QUINT-ACCEPTED: package=%s version=%s profile2=accepted-sync-parity generic=sir-compiler-parity migration=rollback-exact profile1=retained exact-ir=17-refusals\n' \
   "$package_origin" "$version"

@@ -81,6 +81,23 @@ The private original, blocked and repaired outputs are retained under
 `qualification/modelonly-*.json`. This is a bounded SDD reducer witness, not
 general implementation equivalence.
 
+Independent receipt review found that the first blocked report defaulted its
+`acceptedRevision` to zero even when its accepted manifest and link were at
+revision one. The repaired report derives the revision only from the
+manifest-inventoried canonical link whose digest and core-manifest binding
+match; missing or damaged authority yields `-1` (unknown). The full bounded
+acceptance run now checks a blocked revision-four verifier refusal reports
+revision four and an absent-link refusal reports unknown, then recovers the
+same revision-four authority. A retained copy of the accepted revision-one
+workspace reran the original mutant Artifacts assembly and produced a blocked
+receipt at `qualification/modelonly-mutant-blocked-receipt-repaired.json`
+(SHA-256 `03d0da2b72662911e734711d65476084178d0a0b7b30944eed424c5a5a4e6ed4`):
+it binds manifest SHA-256 `1d8021da2a29123f9bc003b8e02ad381ff82bbe5abafe73b7ad1b72d5e8cc019`,
+revision one and mutant assembly SHA-256 `786e3e1fec03deb0aa735c97900ca44bf43eb4e11fcd254f3c8db55e1de5cef2`,
+and reports `SYNC-STALE-ACCEPTED`. This later sync reproduces the original
+postcommit block; the original author JSON and unchanged manifest are retained
+separately.
+
 ## Installed candidate gate integration
 
 The first hosted deterministic gate on source head `814330d3` failed in
@@ -97,8 +114,13 @@ author/inspect/sync. Its two accepted authority roots and author reports were
 byte-identical; fresh sync receipts differed only in run-specific verifier
 paths and timings, so the test compares their stable authority, tool, bound,
 scenario, reducer and model-step fields while requiring both correspondence
-digests. The repaired candidate package-only journey passed under one CPU,
-four GiB and ten minutes with 22 Q3 cases and 17 exact-IR mutation refusals.
+digests. To retain generic compiler coverage without claiming SDD alignment,
+the installed Artifacts assembly separately compiled the exact S.I.R. typed
+effect into a contract with 14 relationships, three verification profiles,
+four bounds, one impact and one compatibility row, five action bindings, and
+matching native/Fable projections. The repaired candidate package-only
+journey passed under one CPU, four GiB and ten minutes with 23 Q3 cases and
+17 exact-IR mutation refusals.
 This candidate feed is not publication or retained public-package acceptance.
 
 ## Code-only defect and repair

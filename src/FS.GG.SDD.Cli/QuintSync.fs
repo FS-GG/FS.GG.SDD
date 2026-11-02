@@ -727,8 +727,22 @@ module internal QuintSync =
             with _ -> ""
         let implementationDigest = fileDigest typeof<WorkspaceModel>.Assembly.Location
         let acceptedDigest = fileDigest manifestPath
+        let acceptedRevision =
+            try
+                match File.ReadAllText manifestPath |> TypedAuthority.deserialize with
+                | Ok(QuintSpecificationV1 manifest) ->
+                    match manifest.Artifacts |> List.tryFind (fun item -> item.Id = "sync-revision") with
+                    | Some artifact when artifact.Path = revisionPath work
+                                         && artifact.Sha256 = fileDigest (Path.Combine(root, artifact.Path)) ->
+                        match readRevisionLink root work (sha (coreManifestBytes manifest)) with
+                        | Ok link -> link.Revision
+                        | Error _ -> -1L
+                    | _ -> -1L
+                | _ -> -1L
+            with _ -> -1L
         { (report "blocked" [ reason ]) with
             AcceptedSha256 = acceptedDigest
+            AcceptedRevision = acceptedRevision
             ContractSha256 = artifactDigest "compiled-contract"
             GeneratedSha256 = artifactDigest "generated-modules"
             ToolSha256 = toolDigest

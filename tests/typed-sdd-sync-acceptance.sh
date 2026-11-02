@@ -310,6 +310,14 @@ assert_json "$link" revision 4
 
 # Removing the link after four accepted edits must not reset the next revision.
 cp "$repo_root/tests/fixtures/typed-sdd-sync/specification.md" "$scratch/work/specification.md"
+if cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$scratch/unavailable" \
+  >"$scratch/revision-four-no-verifier.json"; then
+  fail 'revision-four accepted model passed without its verifier'
+fi
+assert_json "$receipt" outcome blocked
+assert_json "$receipt" acceptedRevision 4
+assert_json "$receipt" acceptedSha256 "$(sha256sum "$manifest" | cut -d' ' -f1)"
 cp "$link" "$scratch/revision-four-link.json"
 rm "$link"
 if cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
@@ -318,6 +326,7 @@ if cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache
   fail 'missing accepted revision link reset the accepted revision'
 fi
 assert_json "$scratch/missing-link.json" outcome blocked
+assert_json "$receipt" acceptedRevision -1
 grep -F 'syncRevisionMissing' "$scratch/missing-link.json" >/dev/null || fail 'missing-link refusal had another cause'
 cp "$scratch/revision-four-link.json" "$link"
 cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
