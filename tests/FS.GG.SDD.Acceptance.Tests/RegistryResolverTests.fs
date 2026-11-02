@@ -111,6 +111,21 @@ module RegistryResolverTests =
             else
                 None)
 
+    [<Fact>]
+    let ``child work budget starts after preparation queue delay`` () =
+        skipUnlessBash ()
+
+        if not (OperatingSystem.IsLinux()) then
+            raise (Xunit.Sdk.SkipException.ForSkip "Qualified child sessions require Linux.")
+
+        let bash = bashPath |> Option.get
+        let info = ProcessStartInfo(FileName = bash, WorkingDirectory = AppContext.BaseDirectory)
+        info.ArgumentList.Add "-c"
+        info.ArgumentList.Add "printf ready"
+        let result = TestShared.ChildProcess.runBoundedAfterQueueDelayForTest 2_000 2_500 info
+        Assert.Equal(0, result.ExitCode)
+        Assert.Equal("ready", result.StandardOutput)
+
     // ---------- T006 (US1 / FR-002/FR-008): dispatch source, verbatim materialization ----------
 
     [<Fact>]

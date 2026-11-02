@@ -324,17 +324,11 @@ module TestShared =
                 { MemoryBytes = None; CpuQuota = None; CpuAffinity = None
                   MaxKernelTasks = None; MaxOwnedProcesses = None; MaxClrProcesses = None } }
 
-        let private runPrepared timeoutMs (command: CommandSpec) =
+        let private runPrepared timeoutMs prePrepareDelayMs (command: CommandSpec) =
             let domain = { Id = Guid.NewGuid(); Frequency = Stopwatch.Frequency }
             let clock =
                 { new IMonotonicClock with
                     member _.Now() = { Domain = domain; Ticks = Stopwatch.GetTimestamp() } }
-            let budget =
-                match Budget.create (clock.Now()) (TimeSpan.FromMilliseconds(float (int64 timeoutMs + int64 drainGraceMs)))
-                                      (TimeSpan.FromMilliseconds(float drainGraceMs)) with
-                | Ok value -> value
-                | Error reason -> invalidArg "timeoutMs" ($"Invalid child budget: {reason}")
-            let description = Budget.describe budget
             let profile = $"sdd-test-bcl-tree-v1;work+5000ms;stdout={command.Capture.StdoutPrefixBytes};stderr={command.Capture.StderrPrefixBytes};256KiB-retained;512KiB-charged;retained-custody"
             let identity =
                 { InvocationId = Guid.NewGuid(); Execution = None; LaunchOrdinal = 0UL
@@ -343,6 +337,10 @@ module TestShared =
             let owner =
                 { OwnerId = $"sdd-test-assembly:{Environment.ProcessId}"
                   Evidence = { Kind = "caller-lifetime"; Reference = identity.InvocationId.ToString("D"); Digest = None } }
+            // Named regression control can queue this call before custody admission.
+            // Normal callers pass zero; the delay has no effect on child execution.
+            if prePrepareDelayMs > 0 then Thread.Sleep prePrepareDelayMs
+
             let prepared =
                 lock retentionGate (fun () ->
                     // Reserve caller custody before preparation, so a full registry
@@ -351,15 +349,22 @@ module TestShared =
                     for previous in releasable do release previous |> ignore
                     if retained.Count >= maximumRetainedCalls then
                         raise (ChildProcessCaptureFailure "Test assembly has unresolved child custody; launch refused.")
+                    // Custody admission and identity preparation may queue behind another
+                    // call. Start the work budget only when this call can prepare its child.
+                    let budget =
+                        match Budget.create (clock.Now()) (TimeSpan.FromMilliseconds(float (int64 timeoutMs + int64 drainGraceMs)))
+                                              (TimeSpan.FromMilliseconds(float drainGraceMs)) with
+                        | Ok value -> value
+                        | Error reason -> invalidArg "timeoutMs" ($"Invalid child budget: {reason}")
                     match factory.Prepare(command, identity, budget, clock, owner) with
                     | Error errors -> Error(exn ($"Child command preparation refused: {errors}"))
                     | Ok session ->
                         let call = { Session = session; RunTask = None }
                         retained.Add(identity.InvocationId, call)
-                        Ok call)
+                        Ok(call, Budget.describe budget))
             match prepared with
             | Error error -> Error error
-            | Ok call ->
+            | Ok(call, description) ->
                 let session = call.Session
                 call.RunTask <- Some(session.RunAsync CancellationToken.None)
                 let mutable observed = session.ObserveAsync(CancellationToken.None).GetAwaiter().GetResult()
@@ -561,7 +566,19 @@ module TestShared =
                 with error -> Error error
             match command with
             | Error error -> Error error
-            | Ok value -> runPrepared timeoutMs value
+            | Ok value -> runPrepared timeoutMs 0 value
+
+        /// Test the budget's start boundary under a deliberate pre-admission delay.
+        /// This is test-harness-only; ordinary child calls pass no delay.
+        let runBoundedAfterQueueDelayForTest timeoutMs delayMs (startInfo: ProcessStartInfo) : Completion =
+            if not (OperatingSystem.IsLinux()) then
+                invalidOp "The qualified session backend is Linux-only."
+
+            let command = commandSpec Balanced startInfo
+
+            match runPrepared timeoutMs delayMs command with
+            | Ok completion -> completion
+            | Error ex -> raise (exn ($"Failed to start `{startInfo.FileName}`: {ex.Message}", ex))
 
         // The producer's qualified profile is Linux-only. Retain the previously
         // supported portable runner until those platforms have their own accepted
