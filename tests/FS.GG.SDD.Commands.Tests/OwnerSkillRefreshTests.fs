@@ -1219,6 +1219,44 @@ module OwnerSkillRefreshTests =
         Assert.Equal<string list>([ ".agents/skills/s/SKILL.md"; ".agents/skills/s/b.md" ], refresh.Stale)
 
     [<Fact>]
+    let ``the planner treats an unrecorded file already at the pack's bytes as ours`` () =
+        // a file the NEW pack adds, written by an interrupted run before the record could name it
+        let old = [ ".agents/skills/s/SKILL.md", "old\n" ]
+
+        let desired =
+            ownerFiles [ ".agents/skills/s/SKILL.md", "new\n"; ".agents/skills/s/added.md", "added\n" ]
+
+        let bodies =
+            Map.ofList [ ".agents/skills/s/SKILL.md", "old\n"; ".agents/skills/s/added.md", "added\n" ]
+
+        let plan =
+            OwnerSkillRefresh.plan (baseRecord (rowsFor old) []) "2.0.0" desired (embedded "2.0.0") bodies Set.empty
+
+        Assert.Empty plan.Held
+        let refresh = List.head plan.Refreshed
+        Assert.Equal(Fsgg.SkillMirror.sha256 "added\n", refresh.ExpectedBefore[".agents/skills/s/added.md"])
+
+    [<Fact>]
+    let ``the planner holds an unrecorded file at a wanted path that is not the pack's bytes`` () =
+        let old = [ ".agents/skills/s/SKILL.md", "old\n" ]
+
+        let desired =
+            ownerFiles [ ".agents/skills/s/SKILL.md", "new\n"; ".agents/skills/s/added.md", "added\n" ]
+
+        let bodies =
+            Map.ofList
+                [
+                    ".agents/skills/s/SKILL.md", "old\n"
+                    ".agents/skills/s/added.md", "someone else's\n"
+                ]
+
+        let plan =
+            OwnerSkillRefresh.plan (baseRecord (rowsFor old) []) "2.0.0" desired (embedded "2.0.0") bodies Set.empty
+
+        Assert.Empty plan.Refreshed
+        Assert.Equal(OwnerSkillRefresh.LocallyEdited, (List.head plan.Held).Reason)
+
+    [<Fact>]
     let ``the planner holds a colliding name and leaves its files out of the plan`` () =
         let desired =
             ownerFiles [ ".agents/skills/s/SKILL.md", "pack\n"; ".agents/skills/s/b.md", "pack b\n" ]
