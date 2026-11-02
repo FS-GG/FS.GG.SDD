@@ -499,7 +499,13 @@ module internal HandlersUpgrade =
                                              not (newVersions |> List.exists (fun fresh -> fresh.SkillId = entry.SkillId))))
                                         @ newVersions
                                         |> List.sortBy (fun entry -> entry.SkillId)
-                                    UpgradedBy = Some model.Request.GeneratorVersion.Version
+                                    // Only a run in which every file landed names its CLI as the last writer: a
+                                    // partial run that did so would bar its own completion.
+                                    UpgradedBy =
+                                        (if Set.isEmpty failedPaths then
+                                             Some model.Request.GeneratorVersion.Version
+                                         else
+                                             record.UpgradedBy)
                                 }
 
                             match scaffoldProvenanceDocument model with

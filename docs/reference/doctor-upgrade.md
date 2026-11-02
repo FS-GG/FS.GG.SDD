@@ -175,26 +175,39 @@ these hold, judged over every file of the skill in **every** skill root together
 | Condition | Rule |
 |---|---|
 | Changed upstream | a desired file's digest differs from the recorded one, a desired file is not recorded, or a recorded file is no longer shipped |
-| Not edited | every recorded file carries a digest (**a missing recorded digest counts as edited**), every present recorded file still matches it, and no file the new pack wants sits at a path the record does not attest |
+| Not edited | every recorded file carries a digest (**a missing recorded digest counts as edited**), every present recorded file still matches it **or is already exactly the pack's bytes** (what an interrupted run leaves), and no file the new pack wants sits at a path the record does not attest unless it is exactly the pack's bytes |
 | Readable | every file of the skill was read |
-| Never a downgrade | the embedded package is **strictly newer** than the version recorded for the skill (`ownerSkillVersions` in `.fsgg/scaffold-provenance.json`); a record that predates version tracking falls back to the CLI that wrote it, and the CLI must be strictly newer |
+| Never a downgrade | the embedded package is **strictly newer** than the version recorded for the skill (`ownerSkillVersions` in `.fsgg/scaffold-provenance.json`, named by delivery channel). A record that predates versions falls back to the CLI that last wrote the workspace (`upgradedBy`, recorded only by an `upgrade` in which every file landed, else the producing CLI); the running CLI must not be older than it. An unreadable version entry is kept, counted unprovable, and holds the skill |
 
 A skill that fails any condition is **held**: nothing in it is touched, it keeps today's content-drift
-warning, and the closing `upgrade` advisory names it and the reason. A skill the pack no longer ships
-at all is never deleted.
+warning, and the closing `upgrade` advisory names it and the reason (`fsgg-sdd doctor` states the same
+as an informational `doctor.ownerSkillsNotRefreshable` advisory, without changing its verdict). A skill
+the pack no longer ships at all is never deleted.
+
+**A name collision is held, not failed.** A skill the pack delivers whose name a workspace skill already
+occupies with other bytes (the user's own `atlas`, say; the 0.114.3 pack added six always-installed
+names) is reported by name with the fix ("Rename or remove your skill, then re-run"), left untouched,
+and kept out of the backfill, so it cannot fail the re-seed of every other skill.
 
 When a skill is replaced:
 
 - every desired file is written in every root; a file that **disappeared from the new manifest** is
   removed if it is still exactly what provenance attested (an edited one holds the whole skill);
-- the **new digests** are recorded, the rows of removed files are dropped, and the package version is
-  recorded for the skill;
+- the provenance is written **last**, only after every file write and removal of the step has been
+  interpreted, and it claims only what landed. A refreshed skill is recorded **all-or-nothing** (new
+  digests, dropped rows, package version): a read-only directory, a refused write or a killed process
+  records nothing for that skill, and the next `upgrade` completes it;
 - each write is **re-checked at the write edge** against the file's current digest (`OwnerSkillRefresh`
-  write kind, `RemoveFile` effect), so an edit made after planning is refused, not overwritten;
-- the workspace's `.gitattributes` declares the skill roots and `docs/atlas/**` as `-text`. SDD's own
-  digest folds `\r\n`, but `atlas.py` hashes exact bytes, so a checkout that rewrote line endings would
-  corrupt a pack. A new workspace gets the rules at scaffold time; for an existing one the missing
-  rules are appended to its file without touching any existing line.
+  write kind, `RemoveFile` effect), so an edit made after planning is refused, not overwritten, and a
+  path that is, or sits under, a symbolic link resolving outside the workspace is refused with a
+  diagnostic naming it (`upgrade.ownerSkillPathRefused`); links that stay inside, such as a skill-view
+  root, are allowed;
+- the workspace's `.gitattributes` declares `-text` for the skills SDD delivered
+  (`<root>/skills/<name>/**`, per root) and `docs/atlas/**`, never a whole skill root, so a workspace's
+  own skills keep their own rules. SDD's own digest folds `\r\n`, but `atlas.py` hashes exact bytes, so a
+  checkout that rewrote line endings would corrupt a pack. A new workspace gets the rules at scaffold
+  time; for an existing one the missing rules are appended in the file's own line ending, keeping every
+  existing line and a leading byte-order mark.
 
 ## Exit codes
 

@@ -1128,6 +1128,43 @@ module OwnerSkillRefreshTests =
         Assert.Contains("999.0.0 that last wrote it", summary.NextActionHint)
 
     [<Fact>]
+    let ``a record without versions is refreshed by the same CLI that wrote it`` () =
+        // The same release embeds the same packs, so equal is not older: it must be able to finish an
+        // interrupted run or a refresh the user has just unblocked.
+        let root, _, _ = aged installedVersion []
+        upgradeYes root |> ignore
+
+        for file in desiredOf (recordOf root) do
+            Assert.Equal(file.Text, read root file.Path)
+
+    [<Fact>]
+    let ``a skill the user reverted to its recorded bytes is refreshed by the next run`` () =
+        let root, paths, _ = aged "0.1.0" []
+        let edited = List.head paths
+        TestSupport.writeRelative root edited (oldBody edited + "mine\n")
+        upgradeYes root |> ignore
+        Assert.Equal(oldBody edited + "mine\n", read root edited)
+
+        TestSupport.writeRelative root edited (oldBody edited)
+        assertConverged root
+
+    [<Fact>]
+    let ``a partial run does not name its CLI the last writer`` () =
+        if System.OperatingSystem.IsWindows() then
+            ()
+        else
+            let root, _, _ = aged "0.1.0" []
+            let blocked = Path.Combine(root, ".claude/skills", skillId, "references")
+            let original = File.GetUnixFileMode blocked
+            File.SetUnixFileMode(blocked, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
+
+            try
+                upgradeYes root |> ignore
+                Assert.Equal(None, (recordOf root).UpgradedBy)
+            finally
+                File.SetUnixFileMode(blocked, original)
+
+    [<Fact>]
     let ``a malformed version entry is kept, counted unprovable, and holds every owner skill`` () =
         let root, paths, _ = aged "0.1.0" []
         let text = read root provenanceFile

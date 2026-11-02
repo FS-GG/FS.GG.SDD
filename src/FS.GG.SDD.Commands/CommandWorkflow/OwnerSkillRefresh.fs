@@ -24,7 +24,7 @@ open FS.GG.SDD.Artifacts.ScaffoldProvenance
 ///   3. every file was readable;
 ///   4. it would not DOWNGRADE: the embedded owner package is strictly newer than the version the
 ///      skill was last materialized from (or, for a record that predates version tracking, the
-///      running CLI is strictly newer than the CLI that wrote it).
+///      running CLI is not older than the CLI that last wrote the workspace).
 ///
 /// Anything else is HELD, never overwritten, and keeps today's behavior and warnings.
 module internal OwnerSkillRefresh =
@@ -73,7 +73,7 @@ module internal OwnerSkillRefresh =
         /// The embedded owner package is OLDER than the one the skill was last materialized from.
         | WouldDowngrade of recorded: string * embedded: string
         /// Newer-ness cannot be proved: no embedded version, a changed package, an equal version
-        /// with different bytes, or a legacy record whose CLI is not strictly older.
+        /// with different bytes, or a legacy record whose CLI is older than its last writer.
         | VersionUnprovable of detail: string
         /// A file of the skill could not be read, so no verdict over the whole unit is possible.
         | Unreadable
@@ -158,16 +158,19 @@ module internal OwnerSkillRefresh =
             | None ->
                 // A record that predates version tracking. The CLI that last wrote the workspace is the
                 // only bound available (`Generator` is the one that produced it and never moves;
-                // `UpgradedBy` is the last `upgrade`): a strictly newer CLI cannot be an older pack
-                // than the one it wrote.
+                // `UpgradedBy` is the last COMPLETE `upgrade`): a CLI that is not OLDER than that writer
+                // cannot carry an older pack than the one it wrote. Equal is allowed on purpose: the
+                // same release embeds the same packs, and refusing it would strand the very run that
+                // finishes an interrupted or just-unblocked refresh (a partial run, an edit the user
+                // has since reverted).
                 let lastWriter = defaultArg record.UpgradedBy record.Generator.Version
 
                 match CommandVersion.compare cliVersion lastWriter with
-                | Some c when c > 0 -> Ok(Some(package, version))
+                | Some c when c >= 0 -> Ok(Some(package, version))
                 | _ ->
                     Error(
                         VersionUnprovable
-                            $"the record carries no package version and CLI {cliVersion} is not newer than the {lastWriter} that last wrote it"
+                            $"the record carries no package version and CLI {cliVersion} is older than the {lastWriter} that last wrote it"
                     )
 
     /// Decide, per recorded owner-sourced skill, whether it is replaced as a unit or held.
