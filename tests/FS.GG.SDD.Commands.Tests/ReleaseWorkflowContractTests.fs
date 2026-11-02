@@ -57,6 +57,23 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("Path(str(path) + \".entries\").write_text(", verifier)
         Assert.Contains("Path(str(path) + \".payloads\").write_text(", verifier)
 
+    // FS.GG.SDD#1156: the skills-package staleness policy is enforced where a release is prepared, not
+    // only written down, and a retained promotion (already-built bytes) is not blocked by it.
+    [<Fact>]
+    let ``release preparation enforces the skills-package staleness bound`` () =
+        let resolver =
+            let start = workflow.IndexOf("  resolve-versions:", StringComparison.Ordinal)
+            let stop = workflow.IndexOf("\n  contracts-tests:", start, StringComparison.Ordinal)
+            workflow.Substring(start, stop - start)
+
+        let step =
+            resolver.IndexOf("name: Skills-package pins are within the staleness bound", StringComparison.Ordinal)
+
+        Assert.True(step > 0, "resolve-versions must run the staleness check")
+        Assert.Contains("check-skills-pin-staleness.py", resolver.Substring step)
+        Assert.Contains("if: inputs.promotion_candidate_run == ''", resolver.Substring(step, 200))
+        Assert.True(step > resolver.IndexOf("check-release-custody.py", StringComparison.Ordinal))
+
     [<Fact>]
     let ``release publishes the independently consumable artifacts package to both feeds`` () =
         Assert.Equal(1, count "\n  publish-artifacts:\n" workflow)

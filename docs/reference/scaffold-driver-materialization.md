@@ -95,9 +95,10 @@ versions behind; the `atlas` skill was therefore absent from every workspace).
 
 - **Target.** The `FS.GG.Drivers` pin and each `FS.GG.*.Skills` owner-package pin trail their
   published feed by **at most five stable versions**.
-- **When it is checked.** At SDD release preparation, with
-  `python3 scripts/check-skills-pin-staleness.py` (exit 1 on a pin beyond the bound; `--max-behind`
-  overrides). It reads `Directory.Packages.local.props` and the nuget.org flat-container index. It is
+- **When it is checked.** At SDD release preparation, enforced by the `release.yml` `resolve-versions`
+  job (step "Skills-package pins are within the staleness bound", skipped for a retained promotion
+  of already-built bytes), which runs `python3 scripts/check-skills-pin-staleness.py` (exit 1 on a pin
+  beyond the bound; `--max-behind` overrides); `ReleaseWorkflowContractTests` pins the step. It reads `Directory.Packages.local.props` and the nuget.org flat-container index. It is
   not a pull-request gate, because the feed moves independently of a PR and a gate would turn an
   unrelated upstream publication into a red check; its offline controls
   (`scripts/tests/check-skills-pin-staleness.test.py`) do run in `gate.yml`.
