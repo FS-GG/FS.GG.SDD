@@ -157,6 +157,7 @@ providers:
             DriverPaths = []
             GameSkillPaths = []
             RenderingSkillPaths = []
+            OwnerSkillVersions = []
             EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ]
         }
 

@@ -1134,6 +1134,32 @@ module internal HandlersScaffold =
                                  else
                                      Some sha256)
                         })
+                // FS.GG.SDD#1155: the owner-package version each materialized owner skill came from,
+                // so a later `upgrade` can refuse to replace it with an OLDER pack. Only skills this
+                // scaffold actually wrote are recorded, and only when this build stamped a version.
+                OwnerSkillVersions =
+                    [
+                        yield! driverPaths |> List.map (fun (path, _) -> path, ArtifactOwner.Driver)
+                        yield! gameSkillPaths |> List.map (fun (path, _) -> path, ArtifactOwner.GameSkill)
+                        yield!
+                            renderingSkillPaths
+                            |> List.map (fun (path, _) -> path, ArtifactOwner.RenderingSkill)
+
+                        yield! audioSkillPaths |> List.map (fun (path, _) -> path, ArtifactOwner.AudioSkill)
+                    ]
+                    |> List.choose (fun (path, owner) ->
+                        OwnerSkillRefresh.skillCopyOf path
+                        |> Option.bind (fun (_, id, _) ->
+                            OwnerPackages.embeddedFor owner
+                            |> Option.map (fun (package, version) ->
+                                ({
+                                    SkillId = id
+                                    Package = package
+                                    Version = version
+                                }
+                                : ScaffoldProvenance.OwnerSkillVersion))))
+                    |> List.distinctBy (fun entry -> entry.SkillId)
+                    |> List.sortBy (fun entry -> entry.SkillId)
                 // `Map.toList` is already ascending by key — the FR-003 effective set
                 // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
                 EffectiveParameters = Map.toList effective
@@ -1931,8 +1957,25 @@ module internal HandlersScaffold =
                     else
                         []
 
+                // FS.GG.SDD#1155: pack and skill files are compared by exact bytes, so the workspace
+                // declares them `-text`. No-clobber: a provider that ships its own `.gitattributes`
+                // keeps it, and the next `upgrade` that touches an owner skill appends the missing
+                // rules to it without editing a line of the provider's.
+                let attributesEffects =
+                    let providerOwnsIt =
+                        producedPaths
+                        |> List.exists (fun path -> normalizeRelativePath path = gitattributesPath)
+
+                    if providerOwnsIt || List.isEmpty driverOutcome.ProvenancePaths then
+                        []
+                    else
+                        match gitattributesWithExactBytes None with
+                        | Some text -> [ WriteFile(gitattributesPath, text, AgentGuidanceTarget) ]
+                        | None -> []
+
                 let effects =
                     knowledgeEffects
+                    @ attributesEffects
                     @ driverOutcome.Writes
                     @ gameSkillOutcome.Writes
                     @ renderingSkillOutcome.Writes

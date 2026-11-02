@@ -37,6 +37,8 @@
     <Compile Include="CommandWorkflow/GameSkills.fs" />
     <Compile Include="CommandWorkflow/RenderingSkills.fs" />
     <Compile Include="CommandWorkflow/AudioSkills.fs" />
+    <Compile Include="CommandWorkflow/OwnerPackages.fs" />
+    <Compile Include="CommandWorkflow/OwnerSkillRefresh.fs" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fsi" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fs" />
     <Compile Include="CommandWorkflow/Drift.fs" />
@@ -178,6 +180,22 @@
     <EmbeddedResource Include="$(FsggRenderingSkillsContentDir)/skills/**/*">
       <LogicalName>RenderingSkill.skill/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- FS.GG.SDD#1155: stamp each owner channel's pinned package id + version as assembly metadata,
+       read back by `OwnerPackages`. The version is the restored package directory's own name (the
+       exact pin), so it cannot drift from the bytes embedded above. -->
+  <PropertyGroup>
+    <FsggOwnerDriverVersion>$([System.IO.Path]::GetFileName($([System.IO.Path]::TrimEndingDirectorySeparator('$(PkgFS_GG_Drivers)'))))</FsggOwnerDriverVersion>
+    <FsggOwnerGameVersion>$([System.IO.Path]::GetFileName($([System.IO.Path]::TrimEndingDirectorySeparator('$(PkgFS_GG_Game_Skills)'))))</FsggOwnerGameVersion>
+    <FsggOwnerRenderingVersion>$([System.IO.Path]::GetFileName($([System.IO.Path]::TrimEndingDirectorySeparator('$(PkgFS_GG_Rendering_Skills)'))))</FsggOwnerRenderingVersion>
+    <FsggOwnerAudioVersion>$([System.IO.Path]::GetFileName($([System.IO.Path]::TrimEndingDirectorySeparator('$(PkgFS_GG_Audio_Skills)'))))</FsggOwnerAudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="OwnerPackage.driver" Value="FS.GG.Drivers|$(FsggOwnerDriverVersion)" />
+    <AssemblyMetadata Include="OwnerPackage.gameSkill" Value="FS.GG.Game.Skills|$(FsggOwnerGameVersion)" />
+    <AssemblyMetadata Include="OwnerPackage.renderingSkill" Value="FS.GG.Rendering.Skills|$(FsggOwnerRenderingVersion)" />
+    <AssemblyMetadata Include="OwnerPackage.audioSkill" Value="FS.GG.Audio.Skills|$(FsggOwnerAudioVersion)" />
   </ItemGroup>
 
   <ItemGroup>

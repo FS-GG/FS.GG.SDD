@@ -2111,6 +2111,7 @@ module CatalogScaffoldEffects =
                 DriverPaths = owned ArtifactRef.Driver
                 GameSkillPaths = owned ArtifactRef.GameSkill
                 RenderingSkillPaths = owned ArtifactRef.RenderingSkill
+                OwnerSkillVersions = []
                 EffectiveParameters = selected.EffectiveParameters
             }
 

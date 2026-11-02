@@ -18,6 +18,19 @@ module ScaffoldProvenance =
             Sha256: string option
         }
 
+    /// FS.GG.SDD#1155: the owner-package version a skill's files were last materialized from. It is
+    /// what lets `upgrade` refuse to REPLACE a newer pack with an older CLI's embedded one (the
+    /// never-downgrade rule); a skill with no entry is a pre-#1155 record and falls back to the
+    /// recorded `Generator` CLI version.
+    type OwnerSkillVersion =
+        {
+            SkillId: string
+            /// The owner package id the skill was delivered from (for example the drivers package).
+            Package: string
+            /// The package version whose bytes were materialized.
+            Version: string
+        }
+
     type ScaffoldProvenanceRecord =
         {
             SchemaVersion: int
@@ -72,6 +85,10 @@ module ScaffoldProvenance =
             /// path, serialized immediately after `gameSkillPaths`; `tryParse` defaults absent/null
             /// to `[]` (schema stays v1, additive). Empty when none materialized.
             RenderingSkillPaths: ScaffoldProducedPath list
+            /// FS.GG.SDD#1155: per-skill owner-package versions, sorted ascending by skill id and
+            /// serialized after `renderingSkillPaths` ONLY when non-empty, so a record that carries
+            /// none stays byte-identical to its pre-#1155 form (schema stays v1, additive).
+            OwnerSkillVersions: OwnerSkillVersion list
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none. Records the

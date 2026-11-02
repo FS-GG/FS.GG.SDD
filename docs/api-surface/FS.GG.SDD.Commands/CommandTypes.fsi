@@ -60,6 +60,13 @@ module CommandTypes =
         | StructuredSource
         | GeneratedView
         | AgentGuidanceTarget
+        /// FS.GG.SDD#1155: the replacement of an owner-sourced skill file by the embedded,
+        /// content-verified upstream body. It may overwrite an existing file ONLY when that file's
+        /// current digest (`Fsgg.SkillMirror.sha256` of its decoded text) equals `expectedSha256`, the
+        /// digest provenance recorded for it; `""` means the destination must be absent. The
+        /// permission is therefore decided at the write edge from the bytes actually on disk, not
+        /// from the planner's earlier read.
+        | OwnerSkillRefresh of expectedSha256: string
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module MergePolicy =
@@ -994,6 +1001,10 @@ module CommandTypes =
         /// be read — an advisory, never a false drift (ADR-0002 / #266).
         | ReadPackageSurface of packageId: string * version: string
         | SetExecutable of path: string
+        /// FS.GG.SDD#1155: remove a file an owner pack no longer ships. Interpreted only when the
+        /// file's current digest still equals `expectedSha256`; an edited file is refused, never
+        /// deleted. A directory left empty by the removal is removed too.
+        | RemoveFile of path: string * expectedSha256: string
         /// Requests per-step confirmation for one reconciliation step (R7). Interpreted
         /// at the edge by a stdin read when `IsInteractive`; the pure `update` re-derives
         /// the next step from the confirmed results in the interpreted-effect log.

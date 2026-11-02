@@ -19,6 +19,14 @@ module ScaffoldProvenance =
             Sha256: string option
         }
 
+    // FS.GG.SDD#1155: the owner-package version a skill's files were last materialized from.
+    type OwnerSkillVersion =
+        {
+            SkillId: string
+            Package: string
+            Version: string
+        }
+
     type ScaffoldProvenanceRecord =
         {
             SchemaVersion: int
@@ -47,6 +55,9 @@ module ScaffoldProvenance =
             // `sha256`. Externally owned like `GameSkillPaths`, so `refresh` excludes them. Additive;
             // empty when none materialized (schema stays v1).
             RenderingSkillPaths: ScaffoldProducedPath list
+            // FS.GG.SDD#1155: per-skill owner-package versions (the never-downgrade bound).
+            // Additive; serialized only when non-empty (schema stays v1).
+            OwnerSkillVersions: OwnerSkillVersion list
             EffectiveParameters: (string * string) list
         }
 
@@ -88,6 +99,7 @@ module ScaffoldProvenance =
             DriverPaths = []
             GameSkillPaths = []
             RenderingSkillPaths = []
+            OwnerSkillVersions = []
             EffectiveParameters = []
         }
 
@@ -239,6 +251,23 @@ module ScaffoldProvenance =
             writer.WriteEndObject())
 
         writer.WriteEndArray()
+
+        // FS.GG.SDD#1155: additive per-skill owner-package versions, emitted only when present so a
+        // record without them is byte-identical to its pre-#1155 form.
+        if not (List.isEmpty record.OwnerSkillVersions) then
+            writer.WriteStartArray("ownerSkillVersions")
+
+            record.OwnerSkillVersions
+            |> List.sortBy (fun entry -> entry.SkillId)
+            |> List.iter (fun entry ->
+                writer.WriteStartObject()
+                writer.WriteString("skill", entry.SkillId)
+                writer.WriteString("package", entry.Package)
+                writer.WriteString("version", entry.Version)
+                writer.WriteEndObject())
+
+            writer.WriteEndArray()
+
         writer.WriteStartArray("effectiveParameters")
 
         record.EffectiveParameters
@@ -389,6 +418,29 @@ module ScaffoldProvenance =
                                         }
                                 | _ -> None)
 
+                        // FS.GG.SDD#1155: absent/null ⇒ `[]` (a pre-#1155 record); an entry missing
+                        // any of its three strings is dropped rather than half-trusted.
+                        let ownerSkillVersions =
+                            jsonArray "ownerSkillVersions" root
+                            |> List.choose (fun element ->
+                                match
+                                    jsonString "skill" element,
+                                    jsonString "package" element,
+                                    jsonString "version" element
+                                with
+                                | Some skill, Some package, Some version when
+                                    not (String.IsNullOrWhiteSpace skill)
+                                    && not (String.IsNullOrWhiteSpace package)
+                                    && not (String.IsNullOrWhiteSpace version)
+                                    ->
+                                    Some
+                                        {
+                                            SkillId = skill
+                                            Package = package
+                                            Version = version
+                                        }
+                                | _ -> None)
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -422,6 +474,7 @@ module ScaffoldProvenance =
                                 DriverPaths = driverPaths
                                 GameSkillPaths = gameSkillPaths
                                 RenderingSkillPaths = renderingSkillPaths
+                                OwnerSkillVersions = ownerSkillVersions
                                 EffectiveParameters = effectiveParameters
                             }
                     | _ -> None

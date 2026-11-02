@@ -76,6 +76,13 @@ module CommandTypes =
         | StructuredSource
         | GeneratedView
         | AgentGuidanceTarget
+        /// FS.GG.SDD#1155: the replacement of an owner-sourced skill file by the embedded,
+        /// content-verified upstream body. It may overwrite an existing file ONLY when that file's
+        /// current digest (`Fsgg.SkillMirror.sha256` of its decoded text) equals `expectedSha256`, the
+        /// digest provenance recorded for it; `""` means the destination must be absent. The
+        /// permission is therefore decided at the write edge from the bytes actually on disk, not
+        /// from the planner's earlier read.
+        | OwnerSkillRefresh of expectedSha256: string
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module MergePolicy =
@@ -905,6 +912,7 @@ module CommandTypes =
         | RunProcess of command: string * args: string list * workingDir: string
         | ReadPackageSurface of packageId: string * version: string
         | SetExecutable of path: string
+        | RemoveFile of path: string * expectedSha256: string
         | Confirm of stepId: string * prompt: string
         /// Read a regular file through contained, non-linked path components.
         | ReadContainedFile of path: string * observationId: string
@@ -1161,6 +1169,7 @@ module CommandTypes =
         | StructuredSource -> "structuredSource"
         | GeneratedView -> "generatedView"
         | AgentGuidanceTarget -> "agentGuidance"
+        | OwnerSkillRefresh _ -> "ownerSkillRefresh"
 
     let artifactOperationValue (operation: ArtifactOperation) =
         match operation with
@@ -1292,5 +1301,6 @@ module CommandTypes =
         | WriteFile(path, _, _) -> Some path
         | RunProcess(_, _, workingDir) -> Some workingDir
         | SetExecutable path -> Some path
+        | RemoveFile(path, _) -> Some path
         | ReadPackageSurface _ -> None
         | Confirm _ -> None

@@ -399,6 +399,11 @@ module CommandEffects =
         | Some snapshot, _ when snapshot.Text = text -> true
         | Some _, HybridArtifact _ -> true
         | Some _, GeneratedView -> true
+        // FS.GG.SDD#1155: replace an owner-skill file only if it is still byte-for-byte (in the
+        // recorded digest domain) what provenance attested, so an edit made after planning, or
+        // an unattested file, is never overwritten.
+        | Some snapshot, OwnerSkillRefresh expected ->
+            expected <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expected
         | Some _, _ -> false
 
     /// Exact-byte counterpart for the narrowly-scoped provider composition seam. A binary write
@@ -410,6 +415,8 @@ module CommandEffects =
         | Some snapshot, _ when snapshot.RawBytes |> Option.exists (fun current -> current = bytes) -> true
         | Some _, HybridArtifact _ -> true
         | Some _, GeneratedView -> true
+        | Some snapshot, OwnerSkillRefresh expected ->
+            expected <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expected
         | Some _, _ -> false
 
     /// `Snapshot` is DERIVED from `Read` here and nowhere else, so the two cannot drift apart —
@@ -1116,6 +1123,49 @@ module CommandEffects =
                             Confirmed = None
                             Diagnostic = None
                         }
+            | RemoveFile(path, expectedSha256) ->
+                // FS.GG.SDD#1155. A file an owner pack no longer ships is removed ONLY while it is
+                // still what provenance attested. Undecidable (unreadable, undecodable) means
+                // refuse, exactly as the write edge does; an absent file is already removed.
+                match readFile projectRoot path with
+                | Missing -> success effect Absent
+                | IoRefusal reason ->
+                    failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)
+                | DecodeRefusal byteOffset ->
+                    failure
+                        effect
+                        (Unreadable(path, undecodableReason byteOffset))
+                        (Diagnostics.undecodableWriteTarget path byteOffset)
+                | Body snapshot ->
+                    if expectedSha256 <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expectedSha256 then
+                        if not dryRun then
+                            File.Delete(fullPath projectRoot path)
+
+                            // Drop the directories the removal emptied, never above the skill's own
+                            // directory: `skillCopyOf` is `None` for `<root>/skills` itself.
+                            let rec prune (relativeDirectory: string) =
+                                match Internal.OwnerSkillRefresh.skillCopyOf (relativeDirectory + "/x") with
+                                | Some _ ->
+                                    let absolute = fullPath projectRoot relativeDirectory
+
+                                    if
+                                        Directory.Exists absolute
+                                        && Seq.isEmpty (Directory.EnumerateFileSystemEntries absolute)
+                                    then
+                                        Directory.Delete absolute
+
+                                        match relativeDirectory.LastIndexOf '/' with
+                                        | -1 -> ()
+                                        | cut -> prune (relativeDirectory.Substring(0, cut))
+                                | None -> ()
+
+                            match path.Replace('\\', '/').LastIndexOf '/' with
+                            | -1 -> ()
+                            | cut -> prune (path.Replace('\\', '/').Substring(0, cut))
+
+                        success effect (Bytes snapshot)
+                    else
+                        failure effect (Bytes snapshot) (unsafeOverwrite path)
             | Confirm(_, prompt) -> confirm dryRun effect prompt
         with ex ->
             let path = CommandTypes.effectPath effect

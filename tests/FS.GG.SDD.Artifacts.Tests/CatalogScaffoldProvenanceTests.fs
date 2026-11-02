@@ -49,6 +49,7 @@ module CatalogScaffoldProvenanceTests =
                 DriverPaths = [ path Driver ".agents/skills/driver/SKILL.md" ]
                 GameSkillPaths = [ path GameSkill ".agents/skills/game/SKILL.md" ]
                 RenderingSkillPaths = [ path RenderingSkill ".agents/skills/render/SKILL.md" ]
+                OwnerSkillVersions = []
                 EffectiveParameters = prepared.EffectiveParameters
             }
 
