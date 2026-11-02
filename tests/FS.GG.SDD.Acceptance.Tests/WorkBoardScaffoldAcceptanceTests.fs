@@ -188,7 +188,7 @@ module WorkBoardScaffoldAcceptanceTests =
             )
 
         for entry in record.OwnerSkillVersions do
-            Assert.False(System.String.IsNullOrWhiteSpace entry.Package)
+            Assert.False(System.String.IsNullOrWhiteSpace entry.Channel)
             Assert.False(System.String.IsNullOrWhiteSpace entry.Version)
 
         let attributes = File.ReadAllText(Path.Combine(root, ".gitattributes"))

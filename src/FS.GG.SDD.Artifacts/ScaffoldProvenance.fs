@@ -23,7 +23,7 @@ module ScaffoldProvenance =
     type OwnerSkillVersion =
         {
             SkillId: string
-            Package: string
+            Channel: string
             Version: string
         }
 
@@ -262,7 +262,7 @@ module ScaffoldProvenance =
             |> List.iter (fun entry ->
                 writer.WriteStartObject()
                 writer.WriteString("skill", entry.SkillId)
-                writer.WriteString("package", entry.Package)
+                writer.WriteString("channel", entry.Channel)
                 writer.WriteString("version", entry.Version)
                 writer.WriteEndObject())
 
@@ -425,18 +425,18 @@ module ScaffoldProvenance =
                             |> List.choose (fun element ->
                                 match
                                     jsonString "skill" element,
-                                    jsonString "package" element,
+                                    jsonString "channel" element,
                                     jsonString "version" element
                                 with
-                                | Some skill, Some package, Some version when
+                                | Some skill, Some channel, Some version when
                                     not (String.IsNullOrWhiteSpace skill)
-                                    && not (String.IsNullOrWhiteSpace package)
+                                    && not (String.IsNullOrWhiteSpace channel)
                                     && not (String.IsNullOrWhiteSpace version)
                                     ->
                                     Some
                                         {
                                             SkillId = skill
-                                            Package = package
+                                            Channel = channel
                                             Version = version
                                         }
                                 | _ -> None)

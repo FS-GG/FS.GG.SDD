@@ -912,10 +912,12 @@ module CommandTypes =
         | RunProcess of command: string * args: string list * workingDir: string
         | ReadPackageSurface of packageId: string * version: string
         | SetExecutable of path: string
-        | RemoveFile of path: string * expectedSha256: string
         | Confirm of stepId: string * prompt: string
         /// Read a regular file through contained, non-linked path components.
         | ReadContainedFile of path: string * observationId: string
+        /// FS.GG.SDD#1155: remove a file an owner pack no longer ships, only while its current digest
+        /// is still `expectedSha256`. LAST, so the published tag ordinals of the cases above are unchanged.
+        | RemoveFile of path: string * expectedSha256: string
 
     type ProcessRunResult =
         {

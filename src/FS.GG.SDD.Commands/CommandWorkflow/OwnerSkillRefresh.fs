@@ -95,7 +95,7 @@ module internal OwnerSkillRefresh =
             /// Recorded files that disappeared upstream and are already absent (only the record row
             /// has to go).
             Dropped: string list
-            /// The `(package, version)` the skill will be recorded as materialized from.
+            /// The `(channel, version)` the skill will be recorded as materialized from.
             Version: (string * string) option
         }
 
@@ -128,10 +128,10 @@ module internal OwnerSkillRefresh =
         | None -> Error(VersionUnprovable "this CLI build records no version for the owner package")
         | Some(package, version) ->
             match record.OwnerSkillVersions |> List.tryFind (fun entry -> entry.SkillId = id) with
-            | Some recorded when recorded.Package <> package ->
+            | Some recorded when recorded.Channel <> package ->
                 Error(
                     VersionUnprovable
-                        $"the skill was materialized from package {recorded.Package}, not the embedded {package}"
+                        $"the skill was materialized from channel {recorded.Channel}, not the embedded {package}"
                 )
             | Some recorded ->
                 match CommandVersion.compare version recorded.Version with

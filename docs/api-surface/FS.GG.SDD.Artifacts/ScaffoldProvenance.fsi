@@ -21,12 +21,14 @@ module ScaffoldProvenance =
     /// FS.GG.SDD#1155: the owner-package version a skill's files were last materialized from. It is
     /// what lets `upgrade` refuse to REPLACE a newer pack with an older CLI's embedded one (the
     /// never-downgrade rule); a skill with no entry is a pre-#1155 record and falls back to the
-    /// recorded `Generator` CLI version.
+    /// recorded `Generator` CLI version. The package is named by its delivery CHANNEL (`driver`,
+    /// `gameSkill`, `renderingSkill`, `audioSkill`), never by a package id: generic SDD source
+    /// carries no owner package identity (`scaffold` FR-002 / SC-005).
     type OwnerSkillVersion =
         {
             SkillId: string
-            /// The owner package id the skill was delivered from (for example the drivers package).
-            Package: string
+            /// The delivery channel the skill came from.
+            Channel: string
             /// The package version whose bytes were materialized.
             Version: string
         }

@@ -1731,7 +1731,13 @@ module MultiFileSkillDriftTests =
             // Not vacuous: the two domains genuinely disagree on this body.
             Assert.NotEqual<string>(Fsgg.SkillMirror.sha256 crlfBody, rawDigest crlfBody)
             Assert.Empty report.SkillDriftPaths
-            Assert.True report.IsCoherent
+            // FS.GG.SDD#1155: the recorded digest here is a synthetic one, so the recorded skill
+            // differs from the embedded pack and `upgrade` may offer to refresh it. That offer is
+            // not drift: nothing is missing, divergent, undeclared or lost.
+            Assert.Empty report.MissingArtifactPaths
+            Assert.Empty report.SkillDivergentPaths
+            Assert.Empty report.SkillUndeclaredPaths
+            Assert.Empty report.SkillLostPaths
 
     // AC4: the surviving comparison REDS on the domain that is no longer accepted. This is the exact
     // shape #751 let through — a body that matches only the raw digest — and it is the reason the

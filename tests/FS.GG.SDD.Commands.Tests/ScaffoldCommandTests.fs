@@ -1032,7 +1032,9 @@ providers:
 
         let preexisting =
             Set.ofList (
-                [ provenancePath; toolManifestPath; ".fsgg/providers.yml" ]
+                // `.gitattributes` is SDD's own write (FS.GG.SDD#1155: skill and pack files are
+                // declared `-text`), not the provider's.
+                [ provenancePath; toolManifestPath; ".fsgg/providers.yml"; ".gitattributes" ]
                 @ driverPaths
                 @ renderingSkillPaths
             )

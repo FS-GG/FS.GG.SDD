@@ -377,7 +377,7 @@ module internal HandlersUpgrade =
                                         |> Option.map (fun (package, version) ->
                                             ({
                                                 SkillId = id
-                                                Package = package
+                                                Channel = package
                                                 Version = version
                                             }
                                             : ScaffoldProvenance.OwnerSkillVersion))
@@ -413,7 +413,14 @@ module internal HandlersUpgrade =
                 // workspace declares them (and the knowledge archive) `-text`. A merge result: the
                 // existing text is preserved byte for byte and only missing rules are appended.
                 let attributesWrites =
-                    if Set.isEmpty affectedSkillIds then
+                    // Owner-sourced content only: re-seeding a missing SDD-seeded skill (which also
+                    // has a skill id) touches no pack and must not write the attributes file.
+                    if
+                        List.isEmpty newDriverPaths
+                        && List.isEmpty newGameSkillPaths
+                        && List.isEmpty newRenderingSkillPaths
+                        && List.isEmpty newAudioSkillPaths
+                    then
                         []
                     else
                         let existing = snapshot gitattributesPath model |> Option.map (fun file -> file.Text)

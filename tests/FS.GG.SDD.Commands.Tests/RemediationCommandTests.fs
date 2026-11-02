@@ -768,8 +768,12 @@ module UpgradeCommandTests =
 
             let summary = upgrade (upgradeYes root)
 
-            Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
-            // Verification finishes before any recovery write, so nothing was written…
+            // FS.GG.SDD#1155: a skill that changed upstream and has an edited file is HELD as a whole
+            // (so the missing sibling is not backfilled around the edit), rather than failing the
+            // re-seed of every other skill. The edit is preserved and the skill is named.
+            Assert.DoesNotContain(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+            Assert.Contains("edited locally", summary.NextActionHint)
+            // Nothing was written into the skill…
             Assert.False(TestSupport.existsRelative root missing)
             Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root preserved)
             // …and nothing was attested.
@@ -888,6 +892,7 @@ module UpgradeCommandTests =
                 || change.Path.StartsWith(".agents/skills/")
                 || change.Path = ".fsgg/early-stage-guidance.md"
                 || change.Path = ".gitignore"
+                || change.Path = ".gitattributes"
 
             Assert.True(allowed, $"upgrade wrote an unexpected path: {change.Path}")
 

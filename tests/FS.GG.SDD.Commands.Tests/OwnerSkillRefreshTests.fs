@@ -147,7 +147,7 @@ module OwnerSkillRefreshTests =
         let entry =
             record.OwnerSkillVersions |> List.find (fun entry -> entry.SkillId = skillId)
 
-        Assert.Equal(package, entry.Package)
+        Assert.Equal(package, entry.Channel)
         Assert.Equal(version, entry.Version)
 
     [<Fact>]
@@ -300,7 +300,7 @@ module OwnerSkillRefreshTests =
                 [
                     {
                         SkillId = skillId
-                        Package = package
+                        Channel = package
                         Version = "999.0.0"
                     }
                 ]
@@ -329,7 +329,7 @@ module OwnerSkillRefreshTests =
                 [
                     {
                         SkillId = skillId
-                        Package = package
+                        Channel = package
                         Version = version
                     }
                 ]
@@ -349,7 +349,7 @@ module OwnerSkillRefreshTests =
                 [
                     {
                         SkillId = skillId
-                        Package = package
+                        Channel = package
                         Version = "0.0.1"
                     }
                 ]
@@ -380,7 +380,7 @@ module OwnerSkillRefreshTests =
                 [
                     {
                         SkillId = skillId
-                        Package = "Some.Other.Package"
+                        Channel = "someOtherChannel"
                         Version = "0.0.1"
                     }
                 ]
@@ -757,7 +757,7 @@ module OwnerSkillRefreshTests =
         let entry: OwnerSkillVersion =
             {
                 SkillId = "s"
-                Package = "Pkg"
+                Channel = "driver"
                 Version = "1.2.3"
             }
 

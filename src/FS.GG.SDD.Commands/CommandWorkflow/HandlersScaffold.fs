@@ -1154,7 +1154,7 @@ module internal HandlersScaffold =
                             |> Option.map (fun (package, version) ->
                                 ({
                                     SkillId = id
-                                    Package = package
+                                    Channel = package
                                     Version = version
                                 }
                                 : ScaffoldProvenance.OwnerSkillVersion))))

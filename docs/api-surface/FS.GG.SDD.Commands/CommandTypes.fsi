@@ -1001,16 +1001,17 @@ module CommandTypes =
         /// be read — an advisory, never a false drift (ADR-0002 / #266).
         | ReadPackageSurface of packageId: string * version: string
         | SetExecutable of path: string
-        /// FS.GG.SDD#1155: remove a file an owner pack no longer ships. Interpreted only when the
-        /// file's current digest still equals `expectedSha256`; an edited file is refused, never
-        /// deleted. A directory left empty by the removal is removed too.
-        | RemoveFile of path: string * expectedSha256: string
         /// Requests per-step confirmation for one reconciliation step (R7). Interpreted
         /// at the edge by a stdin read when `IsInteractive`; the pure `update` re-derives
         /// the next step from the confirmed results in the interpreted-effect log.
         | Confirm of stepId: string * prompt: string
         /// Read a regular file through contained, non-linked path components.
         | ReadContainedFile of path: string * observationId: string
+        /// FS.GG.SDD#1155: remove a file an owner pack no longer ships. Interpreted only when the
+        /// file's current digest still equals `expectedSha256`; an edited file is refused, never
+        /// deleted. A directory left empty by the removal is removed too. Declared LAST so the
+        /// published tag ordinals of every earlier case are unchanged.
+        | RemoveFile of path: string * expectedSha256: string
 
     /// Captured outcome of a `RunProcess` effect at the edge. `Started = false` means the
     /// process could not be launched (engine/command absent); its exit code is meaningless
