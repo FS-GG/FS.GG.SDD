@@ -126,20 +126,21 @@ module internal OwnerSkillRefresh =
         |> Set.ofList
 
     let private versionVerdict
-        (record: ScaffoldProvenanceRecord)
+        (state: OwnerSkillProvenance)
         (cliVersion: string)
         (embeddedFor: ArtifactOwner -> (string * string) option)
         (id: string)
         (owner: ArtifactOwner)
         : Result<(string * string) option, HeldReason> =
+        let record = state.Ownership
         match embeddedFor owner with
         | None -> Error(VersionUnprovable "this CLI build records no version for the owner package")
         // A record that claims version tracking but carries an entry nobody can read is not a
         // legacy record: it is unprovable, and holds, rather than quietly taking the weaker bound.
-        | Some _ when record.OwnerSkillVersions |> List.exists (fun entry -> entry.SkillId = "") ->
+        | Some _ when state.OwnerSkillVersions |> List.exists (fun entry -> entry.SkillId = "") ->
             Error(VersionUnprovable "the record's ownerSkillVersions has a malformed entry")
         | Some(package, version) ->
-            match record.OwnerSkillVersions |> List.tryFind (fun entry -> entry.SkillId = id) with
+            match state.OwnerSkillVersions |> List.tryFind (fun entry -> entry.SkillId = id) with
             | Some recorded when recorded.Channel = "" || recorded.Version = "" ->
                 Error(VersionUnprovable "the record's version entry for this skill is malformed")
             | Some recorded when recorded.Channel <> package ->
@@ -173,7 +174,7 @@ module internal OwnerSkillRefresh =
                 //    no such run is not proof of anything (two builds can share a version string), so it
                 //    holds.
                 let belowFloor =
-                    record.OwnerSkillVersions
+                    state.OwnerSkillVersions
                     |> List.tryPick (fun entry ->
                         if entry.Channel = package && entry.Version <> "" then
                             match CommandVersion.compare version entry.Version with
@@ -189,11 +190,11 @@ module internal OwnerSkillRefresh =
                 match belowFloor with
                 | Some verdict -> verdict
                 | None ->
-                    let lastWriter = defaultArg record.UpgradedBy record.Generator.Version
+                    let lastWriter = defaultArg state.UpgradedBy record.Generator.Version
 
                     match CommandVersion.compare cliVersion lastWriter with
                     | Some c when c > 0 -> Ok(Some(package, version))
-                    | Some 0 when record.UpgradedBy = Some cliVersion -> Ok(Some(package, version))
+                    | Some 0 when state.UpgradedBy = Some cliVersion -> Ok(Some(package, version))
                     | _ ->
                         Error(
                             VersionUnprovable
@@ -205,13 +206,14 @@ module internal OwnerSkillRefresh =
     /// `bodies` maps each on-disk skill-copy path to its decoded text (the same map `doctor` reads);
     /// a path absent from it is absent on disk. `unobserved` are paths that could not be read.
     let plan
-        (record: ScaffoldProvenanceRecord)
+        (state: OwnerSkillProvenance)
         (cliVersion: string)
         (desired: DesiredFile list)
         (embeddedFor: ArtifactOwner -> (string * string) option)
         (bodies: Map<string, string>)
         (unobserved: Set<string>)
         : Plan =
+        let record = state.Ownership
         let foreign = foreignIds record
         let desiredByPath = desired |> List.map (fun file -> file.Path, file) |> Map.ofList
 
@@ -288,7 +290,7 @@ module internal OwnerSkillRefresh =
                     if edited then
                         Some(Choice2Of2 { SkillId = id; Reason = LocallyEdited })
                     else
-                        match versionVerdict record cliVersion embeddedFor id owner with
+                        match versionVerdict state cliVersion embeddedFor id owner with
                         | Error reason -> Some(Choice2Of2 { SkillId = id; Reason = reason })
                         | Ok version ->
                             let removedPaths =

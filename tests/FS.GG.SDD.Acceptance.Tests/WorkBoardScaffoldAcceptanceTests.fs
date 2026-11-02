@@ -173,7 +173,7 @@ module WorkBoardScaffoldAcceptanceTests =
 
         let record =
             File.ReadAllText(Path.Combine(root, ".fsgg", "scaffold-provenance.json"))
-            |> FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse
+            |> FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParseOwnerSkillProvenance
             |> Option.get
 
         let versioned =

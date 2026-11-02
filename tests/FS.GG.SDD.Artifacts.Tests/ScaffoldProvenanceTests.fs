@@ -157,8 +157,6 @@ providers:
             DriverPaths = []
             GameSkillPaths = []
             RenderingSkillPaths = []
-            OwnerSkillVersions = []
-            UpgradedBy = None
             EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ]
         }
 
@@ -512,6 +510,44 @@ providers:
             Assert.Equal(Some "abc123", (parsed.ProducedPaths |> List.head).Sha256)
             Assert.Equal(Some "def456", (parsed.MirroredPaths |> List.head).Sha256)
         | None -> failwith "Expected the hashed record to round-trip."
+
+    [<Fact>]
+    let ``published ownership constructor remains available to old package consumers`` () =
+        let constructors = typeof<ScaffoldProvenanceRecord>.GetConstructors()
+        let parameters = constructors |> Array.exactlyOne |> fun ctor -> ctor.GetParameters()
+        Assert.Equal(14, parameters.Length)
+        Assert.Equal("effectiveParameters", parameters.[13].Name)
+
+    [<Fact>]
+    let ``owner envelope preserves metadata through ordinary copy and leaves legacy bytes intact`` () =
+        let empty = { Ownership = record; OwnerSkillVersions = []; UpgradedBy = None }
+        Assert.Equal(serialize record, serializeOwnerSkillProvenance empty)
+
+        let entry = { SkillId = "work-roadmap"; Channel = "driver"; Version = "0.114.4" }
+        let versioned = { empty with OwnerSkillVersions = [ entry ]; UpgradedBy = Some "2.6.0" }
+        let copied = { versioned with Ownership = { versioned.Ownership with Outcome = "refreshed" } }
+        let canonical = serializeOwnerSkillProvenance copied
+        let parsed = canonical |> tryParseOwnerSkillProvenance |> Option.get
+        Assert.Equal("refreshed", parsed.Ownership.Outcome)
+        Assert.Equal(canonical, serializeOwnerSkillProvenance parsed)
+        Assert.Equal<OwnerSkillVersion list>([ entry ], parsed.OwnerSkillVersions)
+        Assert.Equal(Some "2.6.0", parsed.UpgradedBy)
+        Assert.Equal(parsed.Ownership, canonical |> tryParse |> Option.get)
+
+    [<Fact>]
+    let ``claimed malformed writer and duplicate skill versions cannot become legacy bounds`` () =
+        let low = { SkillId = "work-roadmap"; Channel = "driver"; Version = "0.1.0" }
+        let high = { low with Version = "999.0.0" }
+        let state = { Ownership = record; OwnerSkillVersions = [ low ]; UpgradedBy = Some "2.6.0" }
+        let valid = serializeOwnerSkillProvenance state
+        let malformedWriter = valid.Replace("\"upgradedBy\": \"2.6.0\"", "\"upgradedBy\": 7")
+        Assert.NotEqual(valid, malformedWriter)
+        Assert.True(tryParseOwnerSkillProvenance malformedWriter |> Option.isNone)
+        Assert.True(tryParse malformedWriter |> Option.isNone)
+
+        let conflicting = serializeOwnerSkillProvenance { state with OwnerSkillVersions = [ low; high ] }
+        Assert.True(tryParseOwnerSkillProvenance conflicting |> Option.isNone)
+        Assert.True(tryParse conflicting |> Option.isNone)
 
     [<Fact>]
     let ``serialize omits sha256 for digest-free paths so 1_0_0 output is byte-identical`` () =

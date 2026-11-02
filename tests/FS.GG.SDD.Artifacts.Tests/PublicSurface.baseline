@@ -275,7 +275,9 @@ FS.GG.SDD.Artifacts.ScaffoldProvenance.devRepoRecord
 FS.GG.SDD.Artifacts.ScaffoldProvenance.isDevRepo
 FS.GG.SDD.Artifacts.ScaffoldProvenance.lifecycleLane
 FS.GG.SDD.Artifacts.ScaffoldProvenance.serialize
+FS.GG.SDD.Artifacts.ScaffoldProvenance.serializeOwnerSkillProvenance
 FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse
+FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParseOwnerSkillProvenance
 FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.ownershipProjection
 FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.parse
 FS.GG.SDD.Artifacts.SchemaVersion.classifyRaw

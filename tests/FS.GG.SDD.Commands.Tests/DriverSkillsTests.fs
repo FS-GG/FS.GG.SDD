@@ -51,7 +51,7 @@ module DriverSkillsTests =
         Map.ofList
             [
                 "agent-handoff", 2
-                "atlas", 509
+                "atlas", 536
                 "continue-from-handoff", 2
                 "padd-item", 3
                 "routine-decisions", 2

@@ -87,14 +87,6 @@ module ScaffoldProvenance =
             /// path, serialized immediately after `gameSkillPaths`; `tryParse` defaults absent/null
             /// to `[]` (schema stays v1, additive). Empty when none materialized.
             RenderingSkillPaths: ScaffoldProducedPath list
-            /// FS.GG.SDD#1155: per-skill owner-package versions, sorted ascending by skill id and
-            /// serialized after `renderingSkillPaths` ONLY when non-empty, so a record that carries
-            /// none stays byte-identical to its pre-#1155 form (schema stays v1, additive).
-            OwnerSkillVersions: OwnerSkillVersion list
-            /// FS.GG.SDD#1155: the CLI version that last ran `upgrade` against this workspace (`Generator`
-            /// is the CLI that PRODUCED it and never moves). The never-downgrade fallback for a skill with
-            /// no recorded version is bounded by this last writer. Serialized only when present.
-            UpgradedBy: string option
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none. Records the
@@ -102,6 +94,16 @@ module ScaffoldProvenance =
             /// (FR-003). Additive optional field; `tryParse` defaults it to `[]`
             /// for documents written before it (schema stays v1).
             EffectiveParameters: (string * string) list
+        }
+
+    /// Optional owner-skill version state for schema-v1 provenance. `Ownership` retains
+    /// the published fourteen-field record and its CLR constructor. The extra fields are
+    /// serialized only when present, and absent fields parse as `[]` and `None`.
+    type OwnerSkillProvenance =
+        {
+            Ownership: ScaffoldProvenanceRecord
+            OwnerSkillVersions: OwnerSkillVersion list
+            UpgradedBy: string option
         }
 
     /// The canonical project-relative path of the provenance artifact.
@@ -129,9 +131,16 @@ module ScaffoldProvenance =
     /// no clock/absolute-path/ANSI) per the scaffold-provenance schema contract.
     val serialize: record: ScaffoldProvenanceRecord -> string
 
+    /// Serialize the same schema-v1 document with optional owner version state.
+    val serializeOwnerSkillProvenance: state: OwnerSkillProvenance -> string
+
     /// Parse provenance JSON. Malformed or unsupported-schema content yields `None`
     /// (fail-safe: readers treat it as absent and surface the diagnostic).
     val tryParse: text: string -> ScaffoldProvenanceRecord option
+
+    /// Parse ownership and optional owner version state together. Malformed claimed
+    /// version entries are retained as unprovable entries for the downgrade guard.
+    val tryParseOwnerSkillProvenance: text: string -> OwnerSkillProvenance option
 
     /// Resolve the representation backend from the recorded lifecycle parameter.
     /// Absence deliberately remains Standard SDD until the P5 default flip.
