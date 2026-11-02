@@ -162,3 +162,45 @@ module WorkBoardScaffoldAcceptanceTests =
             let path = Path.Combine(root, skillRoot, "skills", "padd-item", "SKILL.md")
             Assert.True(File.Exists path, $"expected materialized padd-item at {path}")
             Assert.Equal(delivered, File.ReadAllText path)
+
+    // FS.GG.SDD#1155: a fresh scaffold records which owner-package version each owner skill came
+    // from (the never-downgrade bound `upgrade` compares against) and declares pack and skill files
+    // `-text` so `atlas.py`'s exact-byte hashing survives a checkout that rewrites line endings.
+    [<Fact>]
+    [<Trait("tier", "slow")>]
+    let ``a fresh product scaffold records owner skill versions and declares exact-byte attributes`` () =
+        let root = scaffoldWorkspace ()
+
+        let record =
+            File.ReadAllText(Path.Combine(root, ".fsgg", "scaffold-provenance.json"))
+            |> FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse
+            |> Option.get
+
+        let versioned =
+            record.OwnerSkillVersions |> List.map (fun entry -> entry.SkillId) |> Set.ofList
+
+        for id in [ "work-board"; "padd-item"; "work-roadmap" ] do
+            Assert.True(
+                versioned.Contains id,
+                $"no owner-package version was recorded for the materialized skill {id}."
+            )
+
+        for entry in record.OwnerSkillVersions do
+            Assert.False(System.String.IsNullOrWhiteSpace entry.Channel)
+            Assert.False(System.String.IsNullOrWhiteSpace entry.Version)
+
+        let attributes = File.ReadAllText(Path.Combine(root, ".gitattributes"))
+
+        // the skills SDD delivered and the archive: never a whole skill root, which also holds the
+        // workspace's own skills
+        for pattern in
+            [
+                ".agents/skills/work-board/**"
+                ".claude/skills/work-board/**"
+                ".agents/skills/padd-item/**"
+                "docs/atlas/**"
+            ] do
+            Assert.Contains(pattern + " -text", attributes)
+
+        Assert.DoesNotContain(".agents/skills/** -text", attributes)
+        Assert.DoesNotContain(".claude/skills/** -text", attributes)

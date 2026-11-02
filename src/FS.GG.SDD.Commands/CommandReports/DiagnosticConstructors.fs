@@ -1516,6 +1516,7 @@ module internal DiagnosticConstructors =
                     Ownership =
                         match kind with
                         | GeneratedView -> "generated"
+                        | OwnerSkillRefresh _ -> "generated"
                         | HybridArtifact _ -> "hybrid"
                         | _ -> "authored"
                     Operation = operation
@@ -1540,6 +1541,7 @@ module internal DiagnosticConstructors =
         | RunProcess _
         | ReadPackageSurface _
         | SetExecutable _
+        | RemoveFile _
         | Confirm _ -> None
 
     let governanceCompatibility: GovernanceCompatibilityFact list =

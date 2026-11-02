@@ -19,6 +19,14 @@ module ScaffoldProvenance =
             Sha256: string option
         }
 
+    // FS.GG.SDD#1155: the owner-package version a skill's files were last materialized from.
+    type OwnerSkillVersion =
+        {
+            SkillId: string
+            Channel: string
+            Version: string
+        }
+
     type ScaffoldProvenanceRecord =
         {
             SchemaVersion: int
@@ -47,6 +55,13 @@ module ScaffoldProvenance =
             // `sha256`. Externally owned like `GameSkillPaths`, so `refresh` excludes them. Additive;
             // empty when none materialized (schema stays v1).
             RenderingSkillPaths: ScaffoldProducedPath list
+            // FS.GG.SDD#1155: per-skill owner-package versions (the never-downgrade bound).
+            // Additive; serialized only when non-empty (schema stays v1).
+            OwnerSkillVersions: OwnerSkillVersion list
+            // FS.GG.SDD#1155: the CLI version that last ran `upgrade` against this workspace (`Generator`
+            // is the CLI that PRODUCED it and never moves). The never-downgrade fallback for a skill with
+            // no recorded version is bounded by the last writer. Serialized only when present.
+            UpgradedBy: string option
             EffectiveParameters: (string * string) list
         }
 
@@ -88,6 +103,8 @@ module ScaffoldProvenance =
             DriverPaths = []
             GameSkillPaths = []
             RenderingSkillPaths = []
+            OwnerSkillVersions = []
+            UpgradedBy = None
             EffectiveParameters = []
         }
 
@@ -239,6 +256,27 @@ module ScaffoldProvenance =
             writer.WriteEndObject())
 
         writer.WriteEndArray()
+
+        // FS.GG.SDD#1155: additive per-skill owner-package versions, emitted only when present so a
+        // record without them is byte-identical to its pre-#1155 form.
+        if not (List.isEmpty record.OwnerSkillVersions) then
+            writer.WriteStartArray("ownerSkillVersions")
+
+            record.OwnerSkillVersions
+            |> List.sortBy (fun entry -> entry.SkillId)
+            |> List.iter (fun entry ->
+                writer.WriteStartObject()
+                writer.WriteString("skill", entry.SkillId)
+                writer.WriteString("channel", entry.Channel)
+                writer.WriteString("version", entry.Version)
+                writer.WriteEndObject())
+
+            writer.WriteEndArray()
+
+        match record.UpgradedBy with
+        | Some version when not (String.IsNullOrWhiteSpace version) -> writer.WriteString("upgradedBy", version)
+        | _ -> ()
+
         writer.WriteStartArray("effectiveParameters")
 
         record.EffectiveParameters
@@ -389,6 +427,36 @@ module ScaffoldProvenance =
                                         }
                                 | _ -> None)
 
+                        // FS.GG.SDD#1155: absent/null ⇒ `[]` (a pre-#1155 record). A MALFORMED entry is
+                        // never dropped: it is kept with empty strings for what it lacks, and a value
+                        // that is not an array becomes one unnamed empty entry, so the never-downgrade
+                        // rule sees "this record claims version tracking and it is unreadable" and holds
+                        // instead of quietly falling back to the legacy bound.
+                        let ownerSkillVersions =
+                            let blank: OwnerSkillVersion =
+                                {
+                                    SkillId = ""
+                                    Channel = ""
+                                    Version = ""
+                                }
+
+                            let entries =
+                                jsonArray "ownerSkillVersions" root
+                                |> List.map (fun element ->
+                                    {
+                                        SkillId = jsonString "skill" element |> Option.defaultValue ""
+                                        Channel = jsonString "channel" element |> Option.defaultValue ""
+                                        Version = jsonString "version" element |> Option.defaultValue ""
+                                    })
+
+                            match tryJsonProperty "ownerSkillVersions" root with
+                            | Some element when
+                                element.ValueKind <> JsonValueKind.Array
+                                && element.ValueKind <> JsonValueKind.Null
+                                ->
+                                [ blank ]
+                            | _ -> entries
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -422,6 +490,8 @@ module ScaffoldProvenance =
                                 DriverPaths = driverPaths
                                 GameSkillPaths = gameSkillPaths
                                 RenderingSkillPaths = renderingSkillPaths
+                                OwnerSkillVersions = ownerSkillVersions
+                                UpgradedBy = jsonString "upgradedBy" root
                                 EffectiveParameters = effectiveParameters
                             }
                     | _ -> None

@@ -82,6 +82,8 @@ module CatalogSkillDigestTests =
                 GameSkillPaths = tag own.GameSkillPaths
                 RenderingSkillPaths = tag own.RenderingSkillPaths
                 SddOwnedPaths = []
+                OwnerSkillVersions = []
+                UpgradedBy = None
             }
 
         let all =

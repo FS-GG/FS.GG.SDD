@@ -199,6 +199,60 @@ module CommandEffects =
             with ex ->
                 Some ex.Message
 
+    /// FS.GG.SDD#1155. Owner-skill replacement and removal write and DELETE files that already exist, so
+    /// a path that reaches them through a symbolic link must not leave the workspace. A link that stays
+    /// inside it is allowed (a skill root may be a view onto another root); a link that resolves outside
+    /// it, or a symbolic link as the file itself, is refused. A preflight/recheck boundary, not a
+    /// race-free openat protocol, like `containedFileRefusal`.
+    let private ownerSkillPathRefusal (projectRoot: string) (path: string) : string option =
+        if not (OwnerGuidance.isContainedPath path) then
+            Some $"`{path}` is not a contained relative path"
+        else
+            try
+                let canonical (full: string) =
+                    let mutable current = string Path.DirectorySeparatorChar
+
+                    for part in full.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries) do
+                        let next = Path.Combine(current, part)
+                        let info = FileInfo next
+
+                        if isNull info.LinkTarget then
+                            current <- next
+                        else
+                            match info.ResolveLinkTarget true with
+                            | null -> current <- next
+                            | target -> current <- target.FullName
+
+                    current
+
+                let absolute = fullPath projectRoot path
+                let root = canonical (Path.GetFullPath projectRoot)
+                let resolved = canonical absolute
+
+                if not (isNull (FileInfo absolute).LinkTarget) then
+                    Some
+                        $"`{path}` is itself a symbolic link; the delivered skill file is never written or removed through one"
+                elif
+                    resolved <> root
+                    && not (resolved.StartsWith(root + string Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                then
+                    Some
+                        $"`{path}` resolves to `{resolved}`, outside the workspace `{root}`; a skill directory that is a symbolic link out of the workspace is never written or removed through"
+                else
+                    None
+            with ex ->
+                Some ex.Message
+
+    let private ownerSkillPathRefused (path: string) (reason: string) =
+        FS.GG.SDD.Artifacts.Diagnostics.create
+            "upgrade.ownerSkillPathRefused"
+            FS.GG.SDD.Artifacts.Diagnostics.DiagnosticError
+            None
+            None
+            $"Refusing to change owner skill file `{path}`: {reason}."
+            "Replace the symbolic link with a real directory inside the workspace (or move the skill out of the link target), then re-run `fsgg-sdd upgrade`. Nothing was written or removed."
+            [ path ]
+
     let private observedMergeRefusal projectRoot path existing expected prerequisites =
         let checks =
             (path, expected)
@@ -399,6 +453,11 @@ module CommandEffects =
         | Some snapshot, _ when snapshot.Text = text -> true
         | Some _, HybridArtifact _ -> true
         | Some _, GeneratedView -> true
+        // FS.GG.SDD#1155: replace an owner-skill file only if it is still byte-for-byte (in the
+        // recorded digest domain) what provenance attested, so an edit made after planning, or
+        // an unattested file, is never overwritten.
+        | Some snapshot, OwnerSkillRefresh expected ->
+            expected <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expected
         | Some _, _ -> false
 
     /// Exact-byte counterpart for the narrowly-scoped provider composition seam. A binary write
@@ -410,6 +469,8 @@ module CommandEffects =
         | Some snapshot, _ when snapshot.RawBytes |> Option.exists (fun current -> current = bytes) -> true
         | Some _, HybridArtifact _ -> true
         | Some _, GeneratedView -> true
+        | Some snapshot, OwnerSkillRefresh expected ->
+            expected <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expected
         | Some _, _ -> false
 
     /// `Snapshot` is DERIVED from `Read` here and nowhere else, so the two cannot drift apart —
@@ -993,6 +1054,10 @@ module CommandEffects =
                 // wrong for the only two callers that choose a diagnostic.
                 let writeRead =
                     match kind with
+                    | OwnerSkillRefresh _ ->
+                        match ownerSkillPathRefusal projectRoot path with
+                        | Some reason -> IoRefusal reason
+                        | None -> readFile projectRoot path
                     | HybridArtifact(ObservedMerge _) ->
                         match containedFileRefusal projectRoot path with
                         | Some reason -> IoRefusal reason
@@ -1000,6 +1065,12 @@ module CommandEffects =
                     | _ -> readFile projectRoot path
 
                 match writeRead with
+                | IoRefusal reason when
+                    (match kind with
+                     | OwnerSkillRefresh _ -> true
+                     | _ -> false)
+                    ->
+                    failure effect (Unreadable(path, reason)) (ownerSkillPathRefused path reason)
                 | IoRefusal reason ->
                     failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)
                 | DecodeRefusal byteOffset ->
@@ -1116,6 +1187,52 @@ module CommandEffects =
                             Confirmed = None
                             Diagnostic = None
                         }
+            | RemoveFile(path, expectedSha256) ->
+                // FS.GG.SDD#1155. A file an owner pack no longer ships is removed ONLY while it is
+                // still what provenance attested. Undecidable (unreadable, undecodable) means
+                // refuse, exactly as the write edge does; an absent file is already removed.
+                match ownerSkillPathRefusal projectRoot path with
+                | Some reason -> failure effect (Unreadable(path, reason)) (ownerSkillPathRefused path reason)
+                | None ->
+                    match readFile projectRoot path with
+                    | Missing -> success effect Absent
+                    | IoRefusal reason ->
+                        failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)
+                    | DecodeRefusal byteOffset ->
+                        failure
+                            effect
+                            (Unreadable(path, undecodableReason byteOffset))
+                            (Diagnostics.undecodableWriteTarget path byteOffset)
+                    | Body snapshot ->
+                        if expectedSha256 <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expectedSha256 then
+                            if not dryRun then
+                                File.Delete(fullPath projectRoot path)
+
+                                // Drop the directories the removal emptied, never above the skill's own
+                                // directory: `skillCopyOf` is `None` for `<root>/skills` itself.
+                                let rec prune (relativeDirectory: string) =
+                                    match Internal.OwnerSkillRefresh.skillCopyOf (relativeDirectory + "/x") with
+                                    | Some _ ->
+                                        let absolute = fullPath projectRoot relativeDirectory
+
+                                        if
+                                            Directory.Exists absolute
+                                            && Seq.isEmpty (Directory.EnumerateFileSystemEntries absolute)
+                                        then
+                                            Directory.Delete absolute
+
+                                            match relativeDirectory.LastIndexOf '/' with
+                                            | -1 -> ()
+                                            | cut -> prune (relativeDirectory.Substring(0, cut))
+                                    | None -> ()
+
+                                match path.Replace('\\', '/').LastIndexOf '/' with
+                                | -1 -> ()
+                                | cut -> prune (path.Replace('\\', '/').Substring(0, cut))
+
+                            success effect (Bytes snapshot)
+                        else
+                            failure effect (Bytes snapshot) (unsafeOverwrite path)
             | Confirm(_, prompt) -> confirm dryRun effect prompt
         with ex ->
             let path = CommandTypes.effectPath effect

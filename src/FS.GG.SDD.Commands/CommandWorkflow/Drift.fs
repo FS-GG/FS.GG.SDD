@@ -87,6 +87,15 @@ module internal Drift =
             // so they are folded into that step's `TargetPaths`; the field names them on their own for
             // observability. Sorted, deduped. Non-empty ⇒ actionable (re-seed WouldApply, not coherent).
             OwnerSkillBackfillPaths: string list
+            // FS.GG.SDD#1155: the destination paths `upgrade` would REPLACE or REMOVE because an
+            // owner-sourced skill changed upstream and is safe to replace as one unit (unedited,
+            // readable, not a downgrade). Folded into the `artifactReSeed` step's `TargetPaths`
+            // beside the backfill paths; named on their own for observability. Sorted, deduped.
+            OwnerSkillRefreshPaths: string list
+            // FS.GG.SDD#1155: owner-sourced skills that changed upstream and were deliberately NOT
+            // replaced (edited locally, would downgrade, version unprovable, unreadable). They keep
+            // today's behavior and warnings; the reason is only stated so the skip is never silent.
+            OwnerSkillHeld: OwnerSkillRefresh.HeldSkill list
             // FS-GG/FS.GG.SDD#747: the skill-copy files this run OBSERVED on disk and then EXCLUDED
             // from the comparison as OS/VCS junk (`junkFileNames` / `junkFileSuffixes`). Sorted,
             // deduped, and EMPTY unless the exclusion actually fired — it names files, never the rule.
@@ -136,31 +145,7 @@ module internal Drift =
     /// bodies (`HandlersDoctor.skillBodies`): a second spelling of "what counts as a skill copy" is
     /// how the collector and the verifier come to disagree about which files exist, which is the
     /// defect class ADR-0014 §Decision 2 exists to end.
-    let skillCopyOfPath (path: string) : (string * string * string) option =
-        let normalized = path.Replace('\\', '/')
-
-        let isConfinedSegment segment =
-            segment <> "" && segment <> "." && segment <> ".."
-
-        agentSkillRoots
-        |> List.tryPick (fun root ->
-            let prefix = root + "/skills/"
-
-            if normalized.StartsWith(prefix, System.StringComparison.Ordinal) then
-                let rest = normalized.Substring(prefix.Length)
-
-                match rest.IndexOf '/' with
-                | -1 -> None
-                | cut ->
-                    let id = rest.Substring(0, cut)
-                    let relative = rest.Substring(cut + 1)
-
-                    if isConfinedSegment id && relative.Split('/') |> Array.forall isConfinedSegment then
-                        Some(root, id, relative)
-                    else
-                        None
-            else
-                None)
+    let skillCopyOfPath (path: string) : (string * string * string) option = OwnerSkillRefresh.skillCopyOf path
 
     /// The provider *product* skills recorded in provenance, as `(id, recordedSha256)` — confined
     /// to the provider-owned source root's skill copies (`.agents/skills/<id>/SKILL.md`), so a
@@ -583,6 +568,16 @@ module internal Drift =
         // filtering only the root that HAS the file would leave the two roots that lack it in
         // `NotMirrored`, which is precisely the report #747 exists to stop.
         let skillBodies = skillBodies |> Map.filter (fun path _ -> not (isIgnoredJunk path))
+
+        // FS.GG.SDD#1155: the caller may also hand over the bodies of skills this fold does not verify
+        // (a delivered name that something else occupies); they decide a refresh, not content drift.
+        let verifiedIds = contentVerifiedSkillIds provenance |> Set.ofList
+
+        let skillBodies =
+            skillBodies
+            |> Map.filter (fun path _ ->
+                skillCopyOfPath path
+                |> Option.forall (fun (_, id, _) -> Set.contains id verifiedIds))
 
         // `(root, id)` -> the file set that copy carries. A (root, id) with no file at all has NO
         // entry, which `verifyFiles` reads as "this root carries no copy of the skill" — the same
@@ -1012,6 +1007,8 @@ module internal Drift =
                 SkillUndeclaredPaths = []
                 // No provenance ⇒ not a scaffold ⇒ nothing to backfill (#624).
                 OwnerSkillBackfillPaths = []
+                OwnerSkillRefreshPaths = []
+                OwnerSkillHeld = []
                 // No provenance ⇒ no skill drift computed at all ⇒ nothing was compared, so nothing
                 // was excluded. Reporting an exclusion here would claim a subtraction this arm never
                 // made (#747).
@@ -1047,14 +1044,40 @@ module internal Drift =
             // SEEDED-skeleton axis) so those report facts and their goldens are undisturbed. A
             // missing owner skill is still a missing expected artifact, so it is reconciled by the
             // same no-clobber `artifactReSeed` step (its `TargetPaths` union, below).
+            // FS.GG.SDD#1155: owner skills that changed upstream are replaced as a unit when safe.
+            let refreshPlan =
+                OwnerSkillRefresh.plan
+                    record
+                    installedVersion
+                    (OwnerSkillRefresh.embeddedDesired record)
+                    OwnerPackages.embeddedFor
+                    skillBodies
+                    (Set.ofList unobservedSubjects)
+
+            let refreshPaths =
+                refreshPlan.Refreshed
+                |> List.collect (OwnerSkillRefresh.changedPaths skillBodies)
+                |> List.distinct
+                |> List.sort
+
             let ownerBackfillMissing =
                 ownerSourcedBackfill record
                 |> List.map fst
                 |> List.filter (fun path -> not (Set.contains path presentArtifacts))
                 |> List.distinct
                 |> List.sort
+                // FS.GG.SDD#1155: a skill that changed upstream and was HELD (edited, a downgrade, or
+                // unprovable) is left entirely alone. Writing only its missing files would mix upstream
+                // bytes into a skill that is not being replaced, and attesting the rest of it would
+                // launder an edit: `preservedFilesVerified` would then refuse the WHOLE re-seed, failing
+                // every other skill's refresh because of one edited file.
+                |> List.filter (fun path ->
+                    OwnerSkillRefresh.skillCopyOf path
+                    |> Option.forall (fun (_, id, _) ->
+                        not (refreshPlan.Held |> List.exists (fun held -> held.SkillId = id))))
 
-            let reSeedTargets = missing @ ownerBackfillMissing |> List.distinct |> List.sort
+            let reSeedTargets =
+                missing @ ownerBackfillMissing @ refreshPaths |> List.distinct |> List.sort
 
             let minimumText = Option.defaultValue "" validMinimum
 
@@ -1076,7 +1099,23 @@ module internal Drift =
                     {
                         StepId = ReconciliationStepId.ArtifactReSeed
                         Kind = ReconciliationStepId.ArtifactReSeed
-                        DiffPreview = reSeedTargets |> List.map (fun path -> $"+ {path} (new)") |> String.concat "\n"
+                        DiffPreview =
+                            reSeedTargets
+                            |> List.map (fun path ->
+                                if
+                                    refreshPlan.Refreshed
+                                    |> List.exists (fun refresh ->
+                                        (refresh.Removals |> List.exists (fun (p, _) -> p = path))
+                                        || List.contains path refresh.Dropped)
+                                then
+                                    $"- {path} (removed upstream)"
+                                elif
+                                    not (List.contains path refreshPaths) || not (Map.containsKey path skillBodies)
+                                then
+                                    $"+ {path} (new)"
+                                else
+                                    $"~ {path} (changed upstream)")
+                            |> String.concat "\n"
                         Outcome = ReconciliationOutcome.WouldApply
                         TargetPaths = reSeedTargets
                     }
@@ -1114,6 +1153,8 @@ module internal Drift =
                 SkillDivergentPaths = skillDrift.Divergent
                 SkillUndeclaredPaths = skillDrift.Undeclared
                 OwnerSkillBackfillPaths = ownerBackfillMissing
+                OwnerSkillRefreshPaths = refreshPaths
+                OwnerSkillHeld = refreshPlan.Held
                 IgnoredSkillJunkPaths = skillDrift.IgnoredJunk
                 Steps = steps
                 IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All

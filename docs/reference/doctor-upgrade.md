@@ -116,7 +116,7 @@ is shown as a diff and applied only after its own confirmation (or all at once u
 |---|---|---|
 | `cliSelfUpdate` | `dotnet tool update` at the process edge | the CLI installation (takes effect on the *next* invocation) |
 | `templateRePin` | value-agnostic; currently a recognized-but-usually-inert step | consumer-owned `.fsgg/providers.yml` only |
-| `artifactReSeed` | re-materializes missing artifacts and merges declared owner guidance after preflight | missing skeleton/owner paths and declared root blocks |
+| `artifactReSeed` | re-materializes missing artifacts, **replaces owner-sourced skills that changed upstream** (see below) and merges declared owner guidance after preflight | missing skeleton/owner paths, unedited owner-skill files, and declared root blocks |
 
 `upgrade` is the **only** command permitted to mutate the CLI installation or consumer
 artifacts for remediation — no other command (`scaffold`, `refresh`, `agents`, a lifecycle
@@ -127,7 +127,8 @@ stage) ever self-updates or re-seeds as a side effect.
 - **Consumer-only writes.** Re-pin rewrites only the scaffold's own `.fsgg/providers.yml`;
   governed registry / provider-descriptor state is never touched.
 - **No-clobber re-seed.** Only *missing* artifacts are materialized; a present,
-  possibly author-edited artifact is never overwritten.
+  possibly author-edited artifact is never overwritten. The one exception is an owner-sourced
+  skill proved unedited by its recorded digests, replaced as a unit (next section).
 - **The tool manifest is not reconciled.** `fsgg-sdd scaffold` writes
   `.config/dotnet-tools.json` once, pinning `fsgg-sdd` at the scaffolding CLI's version
   (FS-GG/FS.GG.SDD#315), and preserves an existing manifest. Neither `doctor` nor `upgrade`
@@ -161,6 +162,52 @@ stage) ever self-updates or re-seeds as a side effect.
   being told their file will not be overwritten, and `chmod +r` against an already-readable file is
   an instruction they can carry out in full before the run refuses identically. Note the consequence:
   `upgrade` will not re-seed over a mis-encoded artifact. Re-encode it, then re-run.
+
+### Replacing owner-sourced skills that changed upstream (FS-GG/FS.GG.SDD#1155)
+
+Owner-sourced skills (driver skills such as `atlas`, and owner product skills such as Rendering,
+Audio and Game) are compiled into the CLI from pinned packages. Before #1155 `upgrade` only ever
+*filled in missing* files, so an owner skill whose text changed upstream stayed stale in every
+existing workspace. `upgrade` now replaces such a skill **as one unit** when, and only when, all of
+these hold, judged over every file of the skill in **every** skill root together (the `.claude` and
+`.agents` copies are one unit, never refreshed separately):
+
+| Condition | Rule |
+|---|---|
+| Changed upstream | a desired file's digest differs from the recorded one, a desired file is not recorded, or a recorded file is no longer shipped |
+| Not edited | every recorded file carries a digest (**a missing recorded digest counts as edited**), every present recorded file still matches it **or is already exactly the pack's bytes** (what an interrupted run leaves), and no file the new pack wants sits at a path the record does not attest unless it is exactly the pack's bytes |
+| Readable | every file of the skill was read |
+| Never a downgrade | the embedded package is **strictly newer** than the version recorded for the skill (`ownerSkillVersions` in `.fsgg/scaffold-provenance.json`, named by delivery channel). A record that predates versions falls back to the CLI that last wrote the workspace (`upgradedBy`, recorded only by an `upgrade` in which every file landed, else the producing CLI); the running CLI must not be older than it. An unreadable version entry is kept, counted unprovable, and holds the skill |
+
+A skill that fails any condition is **held**: nothing in it is touched, it keeps today's content-drift
+warning, and the closing `upgrade` advisory names it and the reason (`fsgg-sdd doctor` states the same
+as an informational `doctor.ownerSkillsNotRefreshable` advisory, without changing its verdict). A skill
+the pack no longer ships at all is never deleted.
+
+**A name collision is held, not failed.** A skill the pack delivers whose name a workspace skill already
+occupies with other bytes (the user's own `atlas`, say; the 0.114.3 pack added six always-installed
+names) is reported by name with the fix ("Rename or remove your skill, then re-run"), left untouched,
+and kept out of the backfill, so it cannot fail the re-seed of every other skill.
+
+When a skill is replaced:
+
+- every desired file is written in every root; a file that **disappeared from the new manifest** is
+  removed if it is still exactly what provenance attested (an edited one holds the whole skill);
+- the provenance is written **last**, only after every file write and removal of the step has been
+  interpreted, and it claims only what landed. A refreshed skill is recorded **all-or-nothing** (new
+  digests, dropped rows, package version): a read-only directory, a refused write or a killed process
+  records nothing for that skill, and the next `upgrade` completes it;
+- each write is **re-checked at the write edge** against the file's current digest (`OwnerSkillRefresh`
+  write kind, `RemoveFile` effect), so an edit made after planning is refused, not overwritten, and a
+  path that is, or sits under, a symbolic link resolving outside the workspace is refused with a
+  diagnostic naming it (`upgrade.ownerSkillPathRefused`); links that stay inside, such as a skill-view
+  root, are allowed;
+- the workspace's `.gitattributes` declares `-text` for the skills SDD delivered
+  (`<root>/skills/<name>/**`, per root) and `docs/atlas/**`, never a whole skill root, so a workspace's
+  own skills keep their own rules. SDD's own digest folds `\r\n`, but `atlas.py` hashes exact bytes, so a
+  checkout that rewrote line endings would corrupt a pack. A new workspace gets the rules at scaffold
+  time; for an existing one the missing rules are appended in the file's own line ending, keeping every
+  existing line and a leading byte-order mark.
 
 ## Exit codes
 

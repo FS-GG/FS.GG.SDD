@@ -534,6 +534,73 @@ TestResults/
 nuget-cache/
 """
 
+    // FS.GG.SDD#1155: pack and skill files are compared by EXACT bytes. `atlas.py` hashes the raw
+    // bytes of every record it reads, and SDD's own skill digest folds `\r\n` precisely so a
+    // checkout that converted line endings does not read as an edit. Those two answers disagree
+    // the moment git rewrites a pack or skill file on checkout (`core.autocrlf`, a `text=auto`
+    // default), so the paths that carry them are declared `-text`: never converted, never
+    // normalized.
+    //
+    // The rules name only what SDD delivers: the skill directories of the owner-sourced skills it
+    // materialized (`<root>/skills/<id>/**`) and the Atlas archive directory. They deliberately do
+    // NOT cover a whole skill root, because a workspace's own skills live there too and the owner of
+    // those keeps their own line-ending rules.
+    let gitattributesPath = ".gitattributes"
+
+    let atlasArchivePattern = "docs/atlas/**"
+
+    /// The `-text` patterns for a set of owner-delivered skill ids: both roots of each, then the archive.
+    let exactBytePatternsFor (skillIds: string list) =
+        (skillIds
+         |> List.distinct
+         |> List.sort
+         |> List.collect (fun id ->
+             Fsgg.Schemas.agentSkillRoots |> List.map (fun root -> $"{root}/skills/{id}/**")))
+        @ [ atlasArchivePattern ]
+
+    let private gitattributesHeader =
+        "# FS.GG.SDD: skill and knowledge-pack files it delivers are compared by exact bytes (FS.GG.SDD#1155).\n"
+
+    /// True when some line already gives `pattern` the `-text` (or `binary`) attribute.
+    let private declaresExactBytes (pattern: string) (existing: string) =
+        existing.Split('\n')
+        |> Array.exists (fun line ->
+            let tokens = line.Trim().Split([| ' '; '\t' |], System.StringSplitOptions.RemoveEmptyEntries)
+
+            tokens.Length >= 2
+            && tokens.[0] = pattern
+            && (tokens |> Array.exists (fun token -> token = "-text" || token = "binary")))
+
+    /// The `.gitattributes` text with the exact-byte rules for `skillIds` present: `None` when every rule
+    /// already is (nothing to write); otherwise the existing text, byte for byte, followed by only the
+    /// missing rules in the file's own line ending. Existing lines are never edited or reordered. The
+    /// caller owns the byte-order mark (the text here is BOM-free, as every decoded body is).
+    let gitattributesWithExactBytes (skillIds: string list) (existing: string option) : string option =
+        let current = defaultArg existing ""
+
+        match
+            exactBytePatternsFor skillIds
+            |> List.filter (fun pattern -> not (declaresExactBytes pattern current))
+        with
+        | [] -> None
+        | missing ->
+            let eol = if current.Contains "\r\n" then "\r\n" else "\n"
+
+            let separator =
+                if current = "" || current.EndsWith("\n", System.StringComparison.Ordinal) then
+                    ""
+                else
+                    eol
+
+            let header =
+                if current.Contains "FS.GG.SDD#1155" then
+                    ""
+                else
+                    gitattributesHeader.Replace("\n", eol)
+
+            let rules = missing |> List.map (fun pattern -> pattern + " -text" + eol) |> String.concat ""
+            Some(current + separator + header + rules)
+
     // Feature 085: the dev-repo provenance document `init` writes. Provider-less shape —
     // no provider/template pin — with the coherent seeded skeleton as its `producedPaths`
     // (owner `Sdd`, the one canonical set `Drift`/`doctor`/`upgrade` reconcile against).
@@ -1308,6 +1375,7 @@ nuget-cache/
             let renderedArgs = String.concat " " args
             $"run:{command} {renderedArgs}@{normalizeRelativePath workingDir}"
         | SetExecutable path -> "setexec:" + normalizeRelativePath path
+        | RemoveFile(path, _) -> "remove:" + normalizeRelativePath path
         | ReadPackageSurface(packageId, version) -> $"read-package-surface:{packageId}@{version}"
         | Confirm(stepId, _) -> "confirm:" + stepId
 

@@ -216,14 +216,62 @@ module internal HandlersUpgrade =
             let rendering = RenderingSkills.plan ownerParameters
             let audio = AudioSkills.plan ownerParameters
 
+            // FS.GG.SDD#1155: owner skills that changed upstream are replaced (and files the new
+            // pack dropped removed) as one unit, but only the skills the CURRENT reads still prove
+            // safe. This is re-derived from the same bodies the preview used, and every write below
+            // is re-checked against the on-disk digest at the write edge (`OwnerSkillRefresh`).
+            let bodies = skillBodies model
+
+            let refreshPlan =
+                OwnerSkillRefresh.plan
+                    record
+                    model.Request.GeneratorVersion.Version
+                    (OwnerSkillRefresh.embeddedDesired record)
+                    OwnerPackages.embeddedFor
+                    bodies
+                    (Set.ofList (unreadableSubjects model))
+
+            let refreshed =
+                refreshPlan.Refreshed
+                |> List.filter (fun refresh ->
+                    OwnerSkillRefresh.changedPaths bodies refresh |> List.exists targetSet.Contains)
+
+            let refreshWrites =
+                refreshed
+                |> List.collect (fun refresh ->
+                    (refresh.Writes
+                     |> List.filter (fun file -> targetSet.Contains file.Path)
+                     |> List.collect (fun file ->
+                         WriteFile(
+                             file.Path,
+                             file.Text,
+                             OwnerSkillRefresh(Map.find file.Path refresh.ExpectedBefore)
+                         )
+                         // The atomic replace creates a new inode, so the mode must be re-applied.
+                         :: (if file.Executable then [ SetExecutable file.Path ] else [])))
+                    @ (refresh.Removals
+                       |> List.filter (fun (path, _) -> targetSet.Contains path)
+                       |> List.map RemoveFile))
+
+            let refreshedPaths =
+                refreshed
+                |> List.collect (fun refresh -> refresh.Writes |> List.map (fun file -> file.Path))
+                |> Set.ofList
+
             let writes =
                 driver.Writes @ product.Writes @ rendering.Writes @ audio.Writes
                 |> List.distinctBy (fun effect -> effectPath effect)
-                |> List.filter (fun effect -> effectPath effect |> Option.exists targetSet.Contains)
+                |> List.filter (fun effect ->
+                    effectPath effect
+                    |> Option.exists (fun path -> targetSet.Contains path && not (Set.contains path refreshedPaths)))
+                |> fun backfill -> backfill @ refreshWrites
 
             let affectedSkillIds = targets |> List.choose ownerSkillIdOfPath |> Set.ofList
 
-            let newDriverPaths =
+            let heldIds = refreshPlan.Held |> List.map (fun held -> held.SkillId) |> Set.ofList
+
+            // The rows this step WOULD record, before the outcome of its writes is known.
+            let rawDriverPaths =
                 (ownerBackfillRows ArtifactOwner.Driver affectedSkillIds driver.ProvenancePaths)
                 @ (driver.ProvenancePaths
                    |> List.filter (fun (path, _) -> targetSet.Contains path && ownerSkillIdOfPath path |> Option.isNone)
@@ -235,12 +283,12 @@ module internal HandlersUpgrade =
                        }
                        : ScaffoldProvenance.ScaffoldProducedPath))
 
-            let newGameSkillPaths =
+            let rawGameSkillPaths =
                 ownerBackfillRows ArtifactOwner.GameSkill affectedSkillIds product.ProvenancePaths
 
             let gameOwnedPaths = product.ProvenancePaths |> List.map fst |> Set.ofList
 
-            let newRenderingSkillPaths =
+            let rawRenderingSkillPaths =
                 rendering.ProvenancePaths
                 |> List.filter (fun (path, _) -> not (gameOwnedPaths.Contains path))
                 |> ownerBackfillRows ArtifactOwner.RenderingSkill affectedSkillIds
@@ -250,7 +298,7 @@ module internal HandlersUpgrade =
                 |> List.map fst
                 |> Set.ofList
 
-            let newAudioSkillPaths =
+            let rawAudioSkillPaths =
                 audio.ProvenancePaths
                 |> List.filter (fun (path, _) -> not (earlierOwnedPaths.Contains path))
                 |> ownerBackfillRows ArtifactOwner.AudioSkill affectedSkillIds
@@ -279,50 +327,194 @@ module internal HandlersUpgrade =
                     | None -> [], None
                     | Some(Error _) -> failwith "unreachable: refused manifest amend handled above"
 
-                let refreshManifestDigests rows =
-                    match manifestDigest with
-                    | None -> rows
-                    | Some digest ->
-                        let manifestPaths = HandlersScaffold.productSkillManifestPaths |> Set.ofList
+                let ownerContentLaidDown =
+                    not (
+                        List.isEmpty rawDriverPaths
+                        && List.isEmpty rawGameSkillPaths
+                        && List.isEmpty rawRenderingSkillPaths
+                        && List.isEmpty rawAudioSkillPaths
+                    )
 
-                        rows
-                        |> List.map (fun (row: ScaffoldProvenance.ScaffoldProducedPath) ->
-                            if manifestPaths.Contains row.Path then
-                                { row with Sha256 = Some digest }
-                            else
-                                row)
-
-                // #798 AC2: EITHER class having new rows is a reason to record. The same write also
-                // advances the recorded digest of each manifest copy, so provenance and the manifest
-                // cannot disagree after one half of this transaction changes its bytes.
-                let provenanceWrite =
-                    if
-                        List.isEmpty newDriverPaths
-                        && List.isEmpty newGameSkillPaths
-                        && List.isEmpty newRenderingSkillPaths
-                        && List.isEmpty newAudioSkillPaths
-                    then
-                        Ok []
+                // FS.GG.SDD#1155: whenever this step lays down owner-skill files, make sure the
+                // workspace declares the skills it delivers (and the knowledge archive) `-text`. A
+                // merge result: the existing text is preserved byte for byte (its line ending and
+                // byte-order mark included) and only missing rules are appended. It is guarded by the
+                // exact bytes read, so a concurrent edit is refused rather than overwritten.
+                let attributesWrites =
+                    // Owner-sourced content only: re-seeding a missing SDD-seeded skill (which also
+                    // has a skill id) touches no pack and must not write the attributes file.
+                    if not ownerContentLaidDown then
+                        []
                     else
-                        let updated =
-                            { record with
-                                ProducedPaths = refreshManifestDigests record.ProducedPaths
-                                MirroredPaths = refreshManifestDigests record.MirroredPaths
-                                DriverPaths = mergeProducedRows record.DriverPaths newDriverPaths
-                                GameSkillPaths = mergeProducedRows record.GameSkillPaths newGameSkillPaths
-                                RenderingSkillPaths =
-                                    mergeProducedRows
-                                        record.RenderingSkillPaths
-                                        (newRenderingSkillPaths @ newAudioSkillPaths)
-                            }
+                        let existingFile = snapshot gitattributesPath model
+                        let existing = existingFile |> Option.map (fun file -> file.Text)
 
-                        match scaffoldProvenanceDocument model with
-                        | Ok(Some(FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.Legacy _)) ->
-                            Ok [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
-                        | _ ->
-                            Error "Catalog/source provenance binds original observed path hashes; owner backfill cannot rewrite those observations or downgrade the wrapper."
+                        let deliveredIds =
+                            (record.DriverPaths @ record.GameSkillPaths @ record.RenderingSkillPaths
+                             |> List.map (fun row -> row.Path))
+                            @ (rawDriverPaths @ rawGameSkillPaths @ rawRenderingSkillPaths @ rawAudioSkillPaths
+                               |> List.map (fun row -> row.Path))
+                            |> List.choose ownerSkillIdOfPath
 
-                provenanceWrite |> Result.map (fun effects -> writes @ manifestWrites @ effects)
+                        match gitattributesWithExactBytes deliveredIds existing with
+                        | Some text ->
+                            [
+                                WriteFile(
+                                    gitattributesPath,
+                                    text,
+                                    HybridArtifact(ObservedMerge(existingFile |> Option.bind (fun file -> file.RawBytes), []))
+                                )
+                            ]
+                        | None -> []
+
+                // Everything the record depends on is written first. The provenance is a CLAIM about
+                // those files, so it is emitted only once every one of them has been interpreted, and
+                // it then claims only what actually landed (FS.GG.SDD#1155: a partial apply must not
+                // record digests for files that were never written, or the next run sees a record that
+                // lies and fails permanently).
+                let primary = writes @ manifestWrites @ attributesWrites
+
+                let settled effect = hasInterpreted (effectKey effect) model
+
+                let landed (effect: CommandEffect) =
+                    model.InterpretedEffects
+                    |> List.exists (fun result -> effectKey result.Effect = effectKey effect && result.Succeeded)
+
+                if not (List.forall settled primary) then
+                    Ok primary
+                else
+                    // Mode changes do not decide the record; file writes and removals do.
+                    let failedPaths =
+                        writes
+                        |> List.filter (function
+                            | WriteFile _
+                            | RemoveFile _ -> true
+                            | _ -> false)
+                        |> List.filter (fun effect -> not (landed effect))
+                        |> List.choose effectPath
+                        |> Set.ofList
+
+                    // A refreshed skill is recorded all-or-nothing: one write that did not land and
+                    // none of its rows, its dropped rows or its version move.
+                    let failedRefreshIds =
+                        refreshed
+                        |> List.filter (fun refresh ->
+                            (refresh.Writes |> List.map (fun file -> file.Path))
+                            @ (refresh.Removals |> List.map fst)
+                            |> List.exists failedPaths.Contains)
+                        |> List.map (fun refresh -> refresh.SkillId)
+                        |> Set.ofList
+
+                    let keep (row: ScaffoldProvenance.ScaffoldProducedPath) =
+                        not (failedPaths.Contains row.Path)
+                        && (ownerSkillIdOfPath row.Path
+                            |> Option.forall (fun id -> not (failedRefreshIds.Contains id)))
+
+                    let newDriverPaths = rawDriverPaths |> List.filter keep
+                    let newGameSkillPaths = rawGameSkillPaths |> List.filter keep
+                    let newRenderingSkillPaths = rawRenderingSkillPaths |> List.filter keep
+                    let newAudioSkillPaths = rawAudioSkillPaths |> List.filter keep
+
+                    // The recorded manifest digest follows the manifest only if it was actually rewritten.
+                    let refreshManifestDigests rows =
+                        match manifestDigest with
+                        | Some digest when manifestWrites |> List.forall landed ->
+                            let manifestPaths = HandlersScaffold.productSkillManifestPaths |> Set.ofList
+
+                            rows
+                            |> List.map (fun (row: ScaffoldProvenance.ScaffoldProducedPath) ->
+                                if manifestPaths.Contains row.Path then
+                                    { row with Sha256 = Some digest }
+                                else
+                                    row)
+                        | _ -> rows
+
+                    // FS.GG.SDD#1155: a refreshed skill's rows are replaced wholesale (the new digests
+                    // are recorded), and the rows of files the new pack dropped go away with the files.
+                    let droppedPaths =
+                        refreshed
+                        |> List.filter (fun refresh -> not (failedRefreshIds.Contains refresh.SkillId))
+                        |> List.collect (fun refresh -> (refresh.Removals |> List.map fst) @ refresh.Dropped)
+                        |> Set.ofList
+
+                    let withoutDropped (rows: ScaffoldProvenance.ScaffoldProducedPath list) =
+                        rows |> List.filter (fun row -> not (Set.contains row.Path droppedPaths))
+
+                    // Record the owner-package version of every skill this step leaves wholly at the
+                    // embedded bytes (refreshed, or newly materialized/backfilled, not held and with
+                    // every write landed), so the never-downgrade rule has something to compare against.
+                    let failedIds =
+                        failedPaths
+                        |> Set.toList
+                        |> List.choose ownerSkillIdOfPath
+                        |> Set.ofList
+                        |> Set.union failedRefreshIds
+
+                    let versionedIds = Set.difference (Set.difference affectedSkillIds heldIds) failedIds
+
+                    let newVersions =
+                        OwnerSkillRefresh.embeddedDesired record
+                        |> List.choose (fun file ->
+                            OwnerSkillRefresh.skillCopyOf file.Path
+                            |> Option.bind (fun (_, id, _) ->
+                                if Set.contains id versionedIds then
+                                    OwnerPackages.embeddedFor file.Owner
+                                    |> Option.map (fun (package, version) ->
+                                        ({
+                                            SkillId = id
+                                            Channel = package
+                                            Version = version
+                                        }
+                                        : ScaffoldProvenance.OwnerSkillVersion))
+                                else
+                                    None))
+                        |> List.distinctBy (fun entry -> entry.SkillId)
+
+                    // #798 AC2: EITHER class having new rows is a reason to record. The same write also
+                    // advances the recorded digest of each manifest copy, so provenance and the manifest
+                    // cannot disagree after one half of this transaction changes its bytes.
+                    let provenanceWrite =
+                        if
+                            List.isEmpty newDriverPaths
+                            && List.isEmpty newGameSkillPaths
+                            && List.isEmpty newRenderingSkillPaths
+                            && List.isEmpty newAudioSkillPaths
+                            && Set.isEmpty droppedPaths
+                        then
+                            Ok []
+                        else
+                            let updated =
+                                { record with
+                                    ProducedPaths = refreshManifestDigests record.ProducedPaths
+                                    MirroredPaths = refreshManifestDigests record.MirroredPaths
+                                    DriverPaths = mergeProducedRows (withoutDropped record.DriverPaths) newDriverPaths
+                                    GameSkillPaths = mergeProducedRows (withoutDropped record.GameSkillPaths) newGameSkillPaths
+                                    RenderingSkillPaths =
+                                        mergeProducedRows
+                                            (withoutDropped record.RenderingSkillPaths)
+                                            (newRenderingSkillPaths @ newAudioSkillPaths)
+                                    OwnerSkillVersions =
+                                        (record.OwnerSkillVersions
+                                         |> List.filter (fun entry ->
+                                             not (newVersions |> List.exists (fun fresh -> fresh.SkillId = entry.SkillId))))
+                                        @ newVersions
+                                        |> List.sortBy (fun entry -> entry.SkillId)
+                                    // Only a run in which every file landed names its CLI as the last writer: a
+                                    // partial run that did so would bar its own completion.
+                                    UpgradedBy =
+                                        (if Set.isEmpty failedPaths then
+                                             Some model.Request.GeneratorVersion.Version
+                                         else
+                                             record.UpgradedBy)
+                                }
+
+                            match scaffoldProvenanceDocument model with
+                            | Ok(Some(FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.Legacy _)) ->
+                                Ok [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
+                            | _ ->
+                                Error "Catalog/source provenance binds original observed path hashes; owner backfill cannot rewrite those observations or downgrade the wrapper."
+
+                    provenanceWrite |> Result.map (fun effects -> primary @ effects)
         | None -> Ok []
 
     let applyEffectsFor model (request: CommandRequest) (step: ReconciliationStep) =
@@ -386,11 +578,26 @@ module internal HandlersUpgrade =
         + $"That exclusion is a fixed list built into the tool and is not configurable — these exact names ({names}), and these exact suffixes ({suffixes}). "
         + "A file recorded in this workspace's scaffold provenance is never excluded, whatever it is called, so a producer that genuinely ships one of these names is still compared and still reported."
 
+    /// FS.GG.SDD#1155: state, in the closing advisory, every owner skill that changed upstream and
+    /// was deliberately not replaced, so a skipped refresh is never silent. Adds nothing when none.
+    let private withHeldSkills (drift: Drift.DriftReport) (hint: string) =
+        match drift.OwnerSkillHeld with
+        | [] -> hint
+        | held ->
+            hint
+            + " Owner skills changed upstream but were not replaced: "
+            + (held |> List.map OwnerSkillRefresh.heldText |> String.concat "; ")
+            + "."
+
     /// Append the #747 exclusion to an advisory when — and only when — it actually fired.
     let private withIgnoredJunk (drift: Drift.DriftReport) (hint: string) =
-        match drift.IgnoredSkillJunkPaths with
-        | [] -> hint
-        | ignored -> hint + " " + ignoredJunkStatement ignored
+        let withJunk =
+            match drift.IgnoredSkillJunkPaths with
+            | [] -> hint
+            | ignored -> hint + " " + ignoredJunkStatement ignored
+
+        // FS.GG.SDD#1155: every closing advisory also states any owner skill left unreplaced.
+        withHeldSkills drift withJunk
 
     let private notMirroredHint =
         "Skill copies are not mirrored (advisory): each reported path is a file another root carries and that root does not. "
@@ -534,7 +741,9 @@ module internal HandlersUpgrade =
         let verificationReads =
             (match step.StepId with
              | ReconciliationStepId.ArtifactReSeed when not (List.isEmpty step.TargetPaths) ->
-                 (HandlersScaffold.productSkillManifestSourcePath, "") :: preservedFiles
+                 (HandlersScaffold.productSkillManifestSourcePath, "")
+                 :: (gitattributesPath, "")
+                 :: preservedFiles
              | _ -> preservedFiles)
             |> List.map (fst >> ReadFile)
             |> List.distinct
@@ -673,7 +882,7 @@ module internal HandlersUpgrade =
         // under a hint saying the lane cannot repair it — both false, and FR-013 inverted.
         let repairedMissing =
             if List.contains ReconciliationStepId.ArtifactReSeed applied then
-                drift.MissingArtifactPaths @ drift.OwnerSkillBackfillPaths
+                drift.MissingArtifactPaths @ drift.OwnerSkillBackfillPaths @ drift.OwnerSkillRefreshPaths
             else
                 []
 

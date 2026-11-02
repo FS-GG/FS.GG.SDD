@@ -331,7 +331,11 @@ module UpgradeCommandTests =
         let report = upgradeYes root
         let summary = upgrade report
 
-        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+        // FS.GG.SDD#1155: a skill that already occupies a delivered name with other bytes is HELD and
+        // named, rather than failing the whole re-seed; nothing is written around it or attested.
+        Assert.DoesNotContain(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+        Assert.Contains("work-roadmap", summary.NextActionHint)
+        Assert.Contains("Rename or remove your skill", summary.NextActionHint)
         Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root ".claude/skills/work-roadmap/SKILL.md")
         Assert.False(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
 
@@ -396,7 +400,9 @@ module UpgradeCommandTests =
         TestSupport.writeRelative root ".agents/skills/work-board/SKILL.md" "EDITED LEGACY BODY\n"
 
         let report = upgradeYes root
-        Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).FailedStepIds)
+        // FS.GG.SDD#1155: held and named (a delivered name already occupied by other bytes), not a failed step.
+        Assert.DoesNotContain(ReconciliationStepId.ArtifactReSeed, (upgrade report).FailedStepIds)
+        Assert.Contains("work-board", (upgrade report).NextActionHint)
 
         for skillRoot in [ ".agents"; ".claude" ] do
             Assert.False(
@@ -771,8 +777,12 @@ module UpgradeCommandTests =
 
             let summary = upgrade (upgradeYes root)
 
-            Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
-            // Verification finishes before any recovery write, so nothing was written…
+            // FS.GG.SDD#1155: a skill that changed upstream and has an edited file is HELD as a whole
+            // (so the missing sibling is not backfilled around the edit), rather than failing the
+            // re-seed of every other skill. The edit is preserved and the skill is named.
+            Assert.DoesNotContain(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+            Assert.Contains("edited locally", summary.NextActionHint)
+            // Nothing was written into the skill…
             Assert.False(TestSupport.existsRelative root missing)
             Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root preserved)
             // …and nothing was attested.
@@ -891,6 +901,7 @@ module UpgradeCommandTests =
                 || change.Path.StartsWith(".agents/skills/")
                 || change.Path = ".fsgg/early-stage-guidance.md"
                 || change.Path = ".gitignore"
+                || change.Path = ".gitattributes"
 
             Assert.True(allowed, $"upgrade wrote an unexpected path: {change.Path}")
 
