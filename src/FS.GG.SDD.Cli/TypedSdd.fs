@@ -38,6 +38,12 @@ module TypedSdd =
         && value <> ".."
         && value.IndexOfAny([| '/'; '\\' |]) < 0
 
+    let private syncAccepted args workId =
+        match optionValue "--cache" args, optionValue "--java-home" args, optionValue "--apalache-dist" args with
+        | Some cache, Some javaHome, Some apalacheDist ->
+            QuintSync.check (root args) workId cache javaHome apalacheDist
+        | _ -> Error "Profile-2 accepted authority requires --cache, --java-home and --apalache-dist for the fresh sync gate."
+
     let private containedPath (root: string) (relative: string) =
         if Path.IsPathRooted relative then
             None
@@ -917,15 +923,24 @@ module TypedSdd =
                     | Ok changed ->
                         FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
 
+                        let syncResult =
+                            if optionValue "--profile" args = Some QuintGeneralProfile.identity then
+                                syncAccepted args workId
+                            else Ok()
+
                         emit
                             {
                                 Operation = "author"
-                                Outcome = "succeeded"
+                                Outcome = if Result.isOk syncResult then "succeeded" else "blocked"
                                 Classification = Some "quint-specification-v1"
                                 ChangedPaths = changed
                                 SemanticDiff = []
                                 RollbackSourceSha256 = None
-                                Diagnostics = []
+                                Diagnostics =
+                                    match syncResult with
+                                    | Ok() -> []
+                                    | Error reason ->
+                                        [ diagnostic "typedSdd.syncBlocked" reason "Repair the declared tool closure or model and rerun typed-sdd sync." ]
                             }
                     | Error findings ->
                         emit
@@ -1912,6 +1927,8 @@ module TypedSdd =
                         "--profile"
                         "--source"
                         "--bindings"
+                        "--java-home"
+                        "--apalache-dist"
                     ],
                 set [ "--accept" ]
             | "inspect" -> set [ "--root"; "--work" ], Set.empty
@@ -1952,6 +1969,7 @@ module TypedSdd =
     let run args =
         match args with
         | "provision" :: rest -> QuintProvision.run rest
+        | "sync" :: rest -> QuintSync.run rest
         | operation :: rest when
             Set.contains operation (set [ "author"; "inspect"; "migrate"; "rollback"; "reconcile"; "correspond" ])
             ->
@@ -1996,6 +2014,6 @@ module TypedSdd =
                             diagnostic
                                 "typedSdd.unknownOperation"
                                 "Unknown Typed SDD operation."
-                                "Use provision, author, inspect, migrate, rollback, reconcile, or correspond."
+                                "Use provision, author, inspect, migrate, rollback, reconcile, correspond, or sync."
                         ]
                 }

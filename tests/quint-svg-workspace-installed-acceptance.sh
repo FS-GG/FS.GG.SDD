@@ -140,7 +140,28 @@ cp "$repo_root/src/FS.GG.SDD.Artifacts/TypedSpecifications/QuintAssets/workspace
   cd "$lifecycle_model"
   "$LMT_BIN" workspace-lifecycle.md
   "$QUINT_BIN" typecheck workspace-lifecycle.qnt >/dev/null
-  "$QUINT_BIN" test workspace-lifecycle.qnt --main WorkspaceLifecycleTests --seed=927 --backend typescript >/dev/null
+  # Quint 0.32 exits zero even when --main discovers no tests. Bind the seven
+  # declared runs explicitly and check their names and positive count.
+  test_names=(
+    filingDoesNotMutateAcceptedAuthority coherentDeltaCanReachAcceptance
+    noSemanticChangeCanReachAcceptance acceptedOpaqueCanReachAcceptance
+    ambiguousProposalRemainsNonAccepting contradictoryProposalRemainsNonAccepting
+    staleProposalRemainsNonAccepting
+  )
+  selector="$(IFS='|'; printf '%s' "${test_names[*]}")"
+  test_output="$("$QUINT_BIN" test workspace-lifecycle.qnt --main WorkspaceLifecycleTests \
+    --match "$selector" --seed=927 --backend typescript)" || fail 'lifecycle Quint scenarios failed'
+  grep -Eq '(^|[[:space:]])7 passing \(' <<<"$test_output" || fail 'lifecycle Quint scenarios were not all executed'
+  for test_name in "${test_names[@]}"; do
+    grep -F "ok $test_name passed 1 test(s)" <<<"$test_output" >/dev/null \
+      || fail "lifecycle Quint scenario $test_name was not discovered"
+  done
+  empty_output="$("$QUINT_BIN" test workspace-lifecycle.qnt --main WorkspaceLifecycleTests \
+    --match '^NoSuchWorkspaceLifecycleRun$' --seed=927 --backend typescript)" \
+    || fail 'empty-discovery control could not run'
+  if grep -Eq '(^|[[:space:]])7 passing \(' <<<"$empty_output"; then
+    fail 'empty-discovery control looked like a complete run'
+  fi
   "$QUINT_BIN" run workspace-lifecycle.qnt --main WorkspaceLifecycle --max-samples=100 --max-steps=6 --seed=927 \
     --backend typescript \
     --invariants filingIsImmutable acceptedAuthorityIsCoherent acceptedRevisionIsMonotonic \

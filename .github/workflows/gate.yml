@@ -359,6 +359,44 @@ jobs:
           Q3_TOOLCHAIN_OUT: artifacts/test-results/quint-q3-toolchain.json
         run: bash tests/quint-svg-workspace-installed-acceptance.sh
 
+      # The profile-2 sync journey exercises accepted authoring, fresh reducer
+      # replay and symbolic checking. Archive bytes are pinned before extraction;
+      # the CLI additionally checks the Java binary and complete Apalache tree.
+      - name: Accepted Typed SDD sync and failure controls
+        id: typed-sync
+        env:
+          QUINT_BIN: ${{ runner.temp }}/quint-q2-tools/quint
+          LMT_BIN: ${{ runner.temp }}/quint-q2-tools/lmt
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/typed-sdd-sync-tools"
+          mkdir -p "$tools/jre" "$tools/apalache-dist/apalache"
+          curl --fail --location --silent --show-error \
+            'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.9%2B10/OpenJDK21U-jre_x64_linux_hotspot_21.0.9_10.tar.gz' \
+            --output "$tools/temurin21-jre.tar.gz"
+          curl --fail --location --silent --show-error \
+            'https://github.com/apalache-mc/apalache/releases/download/v0.56.1/apalache-0.56.1.tgz' \
+            --output "$tools/apalache-0.56.1.tgz"
+          printf '%s  %s\n' \
+            'aeab55d064a1a27a3744b0880b9b414077b4ed2b1790817eea3df60aec946431' \
+            "$tools/temurin21-jre.tar.gz" | sha256sum --check --strict
+          printf '%s  %s\n' \
+            'a61c07569d7195ddc589f01037fa10fafef4fb0796af2f1c9cb45226375dfbfc' \
+            "$tools/apalache-0.56.1.tgz" | sha256sum --check --strict
+          tar -xzf "$tools/temurin21-jre.tar.gz" -C "$tools/jre"
+          tar -xzf "$tools/apalache-0.56.1.tgz" -C "$tools/apalache-dist/apalache" --strip-components=1
+          SYNC_JAVA_HOME="$tools/jre/jdk-21.0.9+10-jre" \
+          SYNC_APALACHE_DIST="$tools/apalache-dist" \
+          timeout -k 10s 10m bash tests/typed-sdd-sync-acceptance.sh
+
+      - name: Retain failed Typed SDD sync attempt
+        if: ${{ !cancelled() && steps.typed-sync.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: typed-sdd-sync-failure
+          path: ${{ runner.temp }}/typed-sdd-sync-acceptance.*
+          if-no-files-found: warn
+
       - name: Upload exact Q2/Q3 Quint acceptance reports (JUnit)
         uses: actions/upload-artifact@v7
         with:

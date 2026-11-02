@@ -194,6 +194,50 @@ provenance selects `typed-sdd`. V1 executes the F# compiler. V2 reads and valida
 artifact inventory and never falls back to F#. A package, profile, or toolchain identity change is an
 explicit upgrade boundary; it is never silently accepted. Standard SDD and `none` are unchanged.
 
+## Synchronize an accepted profile-2 workspace
+
+An accepted `fsgg-quint-profile/2` source can promote explicit workspace module,
+relationship, scenario, invariant, and finite-bound declarations. The source remains
+the authority; generated Quint and the compiled contract are validated against the
+accepted manifest. See the [profile-2 fixture](../tests/fixtures/typed-sdd-sync/specification.md)
+for the declaration shape.
+
+Provision the exact Quint and lmt objects, then author with `--profile fsgg-quint-profile/2`,
+`--source`, `--bindings`, `--cache`, `--java-home`, and `--apalache-dist`. After the
+authority transaction commits, authoring runs `typed-sdd sync` and writes
+`readiness/<work>/quint/sync-report.json`. A failed sync leaves the
+accepted revision available for repair and replaces any prior success receipt
+with a blocked result.
+To repeat the check explicitly, run:
+
+```sh
+fsgg-sdd typed-sdd sync --root . --work demo --cache /qualified/quint-cache \
+  --java-home /qualified/jre --apalache-dist /qualified/apalache-parent
+```
+
+`sync` validates the accepted artifact closure, derives the existing workspace
+model, and checks every declared evidence obligation. It runs Quint typecheck,
+named scenario tests, bounded simulation, and Apalache invariant checking, then
+replays a model-produced coherent-delta witness through the built
+`WorkspaceLifecycle.reduce` adapter. The adapter also checks stale-base refusal.
+The result records accepted, generated, contract, implementation, tool, host-tool,
+verifier, and correspondence hashes plus test counts and step output digests.
+Pass `--text` or `--rich` for a compact projection; JSON is the default.
+
+Normal `verify` and `ship` for this profile require `--sync-cache`,
+`--sync-java-home`, and `--sync-apalache-dist`. Each command runs the checks
+against current accepted and implementation bytes before its lifecycle effects.
+An old receipt or hand-authored correspondence observation cannot satisfy the
+gate. A changed source, test, or implementation input selects the full relevant
+obligation set until a narrower dependency closure is qualified.
+
+The parser and workspace validator automatically check declared types, schema,
+references, finite bounds, module identity, and cross-module assumption conflicts.
+Domain properties depend on the scenarios and invariants declared in the source;
+the reported samples, steps, and seed bound the execution claim. The initial
+production adapter covers the SDD `WorkspaceLifecycle` model. Other application
+reducers need their own declared adapter and cannot inherit this conformance result.
+
 ## Design consequences
 
 When preparation failures recur, consider an optional, proportionate preflight based on the actual

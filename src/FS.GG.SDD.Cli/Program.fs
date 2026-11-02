@@ -362,7 +362,7 @@ let printVersion () =
     Console.Out.WriteLine(SchemaVersionModule.currentGeneratorVersion().Version)
     0
 
-let run args =
+let runCore args =
     match args with
     | [] -> printUnknown ""
     | ("--version" | "-v" | "version") :: _ -> printVersion ()
@@ -535,6 +535,30 @@ let run args =
                 // `lint` with no summary (e.g. no `<artifact>` supplied) is unusable input.
                 | Lint, None -> 2
                 | _ -> exitCodeForReport report
+
+let run args =
+    match args with
+    | ("verify" | "ship") :: rest when
+        (Options.unrecognized (if List.head args = "verify" then Verify else Ship) rest).IsEmpty
+        && (Options.missingValue (if List.head args = "verify" then Verify else Ship) rest).IsNone
+        && not (hasFlag "--dry-run" rest || hasFlag "--help" rest || hasFlag "-h" rest)
+        ->
+        match optionValue "--work" rest with
+        | None -> runCore args
+        | Some work ->
+            match
+                FS.GG.SDD.Cli.QuintSync.checkSelected
+                    (optionValue "--root" rest |> Option.defaultValue ".")
+                    work
+                    (optionValue "--sync-cache" rest)
+                    (optionValue "--sync-java-home" rest)
+                    (optionValue "--sync-apalache-dist" rest)
+            with
+            | Ok() -> runCore args
+            | Error reason ->
+                Console.Error.WriteLine($"fsgg-sdd: typedSdd.syncBlocked — {reason}")
+                1
+    | _ -> runCore args
 
 [<EntryPoint>]
 let main argv = guarded run (Array.toList argv)

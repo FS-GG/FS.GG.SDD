@@ -1,0 +1,1 @@
+{"schema":"fsgg.quint.general-bindings/v1","profile":"fsgg-quint-profile/2","moduleName":"WorkspaceLifecycle","exports":[{"id":"EXPORT-AuthorityFacts","module":"WorkspaceLifecycle","declaration":"authorityFacts","promoteCatalogueRows":true,"source":{"path":"specification.md","start":{"line":32,"column":1},"end":{"line":54,"column":4}}}],"actions":[]}

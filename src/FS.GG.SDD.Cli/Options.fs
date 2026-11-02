@@ -56,7 +56,9 @@ module Options =
         // opt-out is `--no-require-observed`; the legacy `--require-observed` stays recognized as a
         // now-redundant explicit accept so pre-flip invocations do not become `unrecognized`.
         | Verify
-        | Ship -> [ work; title; flag "--require-observed"; flag "--no-require-observed" ]
+        | Ship ->
+            [ work; title; flag "--require-observed"; flag "--no-require-observed"
+              valued "--sync-cache"; valued "--sync-java-home"; valued "--sync-apalache-dist" ]
         | Checklist
         | Tasks
         | Analyze
