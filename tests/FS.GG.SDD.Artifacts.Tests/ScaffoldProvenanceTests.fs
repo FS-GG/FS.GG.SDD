@@ -535,6 +535,21 @@ providers:
         Assert.Equal(parsed.Ownership, canonical |> tryParse |> Option.get)
 
     [<Fact>]
+    let ``claimed malformed writer and duplicate skill versions cannot become legacy bounds`` () =
+        let low = { SkillId = "work-roadmap"; Channel = "driver"; Version = "0.1.0" }
+        let high = { low with Version = "999.0.0" }
+        let state = { Ownership = record; OwnerSkillVersions = [ low ]; UpgradedBy = Some "2.6.0" }
+        let valid = serializeOwnerSkillProvenance state
+        let malformedWriter = valid.Replace("\"upgradedBy\": \"2.6.0\"", "\"upgradedBy\": 7")
+        Assert.NotEqual(valid, malformedWriter)
+        Assert.True(tryParseOwnerSkillProvenance malformedWriter |> Option.isNone)
+        Assert.True(tryParse malformedWriter |> Option.isNone)
+
+        let conflicting = serializeOwnerSkillProvenance { state with OwnerSkillVersions = [ low; high ] }
+        Assert.True(tryParseOwnerSkillProvenance conflicting |> Option.isNone)
+        Assert.True(tryParse conflicting |> Option.isNone)
+
+    [<Fact>]
     let ``serialize omits sha256 for digest-free paths so 1_0_0 output is byte-identical`` () =
         // Every path in `record` has Sha256 = None, so no sha256 key may appear.
         let json = serialize record

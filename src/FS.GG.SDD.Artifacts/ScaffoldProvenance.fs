@@ -464,6 +464,44 @@ module ScaffoldProvenance =
                                 [ blank ]
                             | _ -> entries
 
+                        let metadataFieldsAreUnique =
+                            root.EnumerateObject()
+                            |> Seq.filter (fun field -> field.Name = "ownerSkillVersions" || field.Name = "upgradedBy")
+                            |> Seq.countBy _.Name
+                            |> Seq.forall (fun (_, count) -> count = 1)
+
+                        let versionEntriesAreUnambiguous =
+                            let distinctIds =
+                                ownerSkillVersions
+                                |> List.map _.SkillId
+                                |> List.distinct
+                                |> List.length = ownerSkillVersions.Length
+
+                            let distinctFields =
+                                jsonArray "ownerSkillVersions" root
+                                |> List.forall (fun element ->
+                                    element.ValueKind <> JsonValueKind.Object
+                                    || (element.EnumerateObject()
+                                        |> Seq.filter (fun field ->
+                                            field.Name = "skill" || field.Name = "channel" || field.Name = "version")
+                                        |> Seq.countBy _.Name
+                                        |> Seq.forall (fun (_, count) -> count = 1)))
+
+                            distinctIds && distinctFields
+
+                        // A claimed writer with an unsupported value must not become absent:
+                        // that would fall back to the producing CLI and could authorize downgrade.
+                        let upgradedBy =
+                            match tryJsonProperty "upgradedBy" root with
+                            | None -> Some None
+                            | Some value when value.ValueKind = JsonValueKind.Null -> Some None
+                            | Some value when value.ValueKind = JsonValueKind.String ->
+                                value.GetString()
+                                |> Option.ofObj
+                                |> Option.filter (String.IsNullOrWhiteSpace >> not)
+                                |> Option.map Some
+                            | Some _ -> None
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -499,10 +537,13 @@ module ScaffoldProvenance =
                                 RenderingSkillPaths = renderingSkillPaths
                                 EffectiveParameters = effectiveParameters
                             }
-                        Some
-                            { Ownership = ownership
-                              OwnerSkillVersions = ownerSkillVersions
-                              UpgradedBy = jsonString "upgradedBy" root }
+                        if not metadataFieldsAreUnique || not versionEntriesAreUnambiguous then None
+                        else
+                            upgradedBy
+                            |> Option.map (fun writer ->
+                                { Ownership = ownership
+                                  OwnerSkillVersions = ownerSkillVersions
+                                  UpgradedBy = writer })
                     | _ -> None
                 | None -> None
             | _ -> None
