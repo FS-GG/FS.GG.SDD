@@ -21,8 +21,9 @@ source ranges but must not duplicate semantic values from Quint. Keep facts, cat
 verification declarations, finite bounds, and external-algorithm registrations in the literate Quint
 source. The host accepts only the closed profile-2 value vocabulary and bounded resource envelope.
 
-For profile 2, also pass `--java-home` and `--apalache-dist`. Accepting the authority
-runs bounded Quint typecheck, explicitly named tests, simulation, Apalache verification,
+For profile 2, also pass `--java-home` and `--apalache-dist`. Authoring checks the
+proposed model before acceptance, then commits a revision link and runs a fresh
+bounded Quint typecheck, explicitly named tests, simulation, Apalache verification,
 and the production SDD reducer adapter. If the post-commit check blocks, repair and
 rerun `fsgg-sdd typed-sdd sync --root <root> --work <id> --cache <cache-root>
 --java-home <jre> --apalache-dist <distribution>`. Normal `verify` and `ship` require

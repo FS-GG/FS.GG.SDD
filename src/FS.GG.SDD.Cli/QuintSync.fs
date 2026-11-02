@@ -18,7 +18,7 @@ module internal QuintSync =
         { Outcome: string; AcceptedSha256: string; ContractSha256: string; GeneratedSha256: string
           ToolSha256: string; HostToolSha256: string; VerifierToolSha256: string
           ImplementationSha256: string; AdapterSha256: string; CorrespondenceSha256: string
-          RunSha256: string; PackageIdentity: string; Seed: int64; MaxSamples: int64; MaxSteps: int64
+          RunSha256: string; PackageIdentity: string; AcceptedRevision: int64; Seed: int64; MaxSamples: int64; MaxSteps: int64
           ScenarioCount: int; ActionCount: int; Steps: Step list; Diagnostics: string list }
 
     let private sha (bytes: byte array) =
@@ -31,7 +31,7 @@ module internal QuintSync =
         { Outcome = outcome; AcceptedSha256 = ""; ContractSha256 = ""; GeneratedSha256 = ""
           ToolSha256 = ""; HostToolSha256 = ""; VerifierToolSha256 = ""
           ImplementationSha256 = ""; AdapterSha256 = ""; CorrespondenceSha256 = ""
-          RunSha256 = ""; PackageIdentity = ""; Seed = 0L; MaxSamples = 0L; MaxSteps = 0L
+          RunSha256 = ""; PackageIdentity = ""; AcceptedRevision = 0L; Seed = 0L; MaxSamples = 0L; MaxSteps = 0L
           ScenarioCount = 0; ActionCount = 0; Steps = []; Diagnostics = diagnostics }
 
     let private render value =
@@ -52,6 +52,7 @@ module internal QuintSync =
         writer.WriteString("correspondenceSha256", value.CorrespondenceSha256)
         writer.WriteString("runSha256", value.RunSha256)
         writer.WriteString("packageIdentity", value.PackageIdentity)
+        writer.WriteNumber("acceptedRevision", value.AcceptedRevision)
         writer.WriteNumber("seed", value.Seed)
         writer.WriteNumber("maxSamples", value.MaxSamples)
         writer.WriteNumber("maxSteps", value.MaxSteps)
@@ -190,6 +191,67 @@ module internal QuintSync =
             | _, Error reason -> Error reason) (Ok [])
         |> Result.map List.rev
 
+    type private RevisionLink =
+        { ManifestSha256: string; Revision: int64; WorkspaceFingerprint: string; PriorManifestSha256: string }
+
+    let private revisionPath work = Path.Combine("readiness", work, "quint", "sync-authority.json")
+
+    let private encodeRevisionLink value =
+        use stream = new MemoryStream()
+        use writer = new Utf8JsonWriter(stream)
+        writer.WriteStartObject()
+        writer.WriteString("schema", "fsgg.typed-sdd-sync-authority/v1")
+        writer.WriteString("manifestSha256", value.ManifestSha256)
+        writer.WriteNumber("revision", value.Revision)
+        writer.WriteString("workspaceFingerprint", value.WorkspaceFingerprint)
+        writer.WriteString("priorManifestSha256", value.PriorManifestSha256)
+        writer.WriteEndObject()
+        writer.Flush()
+        stream.WriteByte(byte '\n')
+        stream.ToArray()
+
+    let private readRevisionLink root work expectedManifestSha =
+        let path = Path.Combine(root, revisionPath work)
+        if not (File.Exists path) then Ok None
+        else
+            try
+                use document = JsonDocument.Parse(File.ReadAllBytes path)
+                let value = document.RootElement
+                let fields = value.EnumerateObject() |> Seq.map _.Name |> Seq.toList
+                if value.ValueKind <> JsonValueKind.Object
+                   || fields <> [ "schema"; "manifestSha256"; "revision"; "workspaceFingerprint"; "priorManifestSha256" ] then
+                    Error "Accepted sync revision link has an unsupported shape."
+                elif value.GetProperty("schema").GetString() <> "fsgg.typed-sdd-sync-authority/v1" then
+                    Error "Accepted sync revision link schema mismatches."
+                else
+                    let readString (name: string) = value.GetProperty(name).GetString() |> Option.ofObj |> Option.defaultValue ""
+                    let link =
+                        { ManifestSha256 = readString "manifestSha256"
+                          Revision = value.GetProperty("revision").GetInt64()
+                          WorkspaceFingerprint = readString "workspaceFingerprint"
+                          PriorManifestSha256 = readString "priorManifestSha256" }
+                    if link.ManifestSha256 <> expectedManifestSha || link.Revision < 0L
+                       || not (Regex.IsMatch(link.WorkspaceFingerprint, "^[0-9a-f]{64}$")) then
+                        Error "Accepted sync revision link does not bind the current manifest and workspace."
+                    else Ok(Some link)
+            with ex -> Error $"Accepted sync revision link is unreadable: {ex.Message}"
+
+    let private deriveAccepted root work manifestBytes contract =
+        match readRevisionLink root work (sha manifestBytes) with
+        | Error reason -> Error reason
+        | Ok link ->
+            let revision = link |> Option.map _.Revision |> Option.defaultValue 0L
+            match WorkspaceSync.deriveModel revision contract with
+            | Error findings -> Error(sprintf "Workspace authority join refused: %s" (findings |> List.map _.Code |> String.concat ", "))
+            | Ok accepted ->
+                match WorkspaceLifecycle.fingerprint accepted with
+                | Error findings -> Error(sprintf "Workspace fingerprint refused: %A" findings)
+                | Ok fingerprint ->
+                    match link with
+                    | Some prior when prior.WorkspaceFingerprint <> fingerprint ->
+                        Error "Accepted sync revision link fingerprint differs from the compiled workspace."
+                    | _ -> Ok accepted
+
     let private correspondence (accepted: WorkspaceModel) contract sourcePath implementationPath testDigest verifyDigest =
         match WorkspaceLifecycle.fingerprint accepted with
         | Error findings -> Error(sprintf "Accepted workspace fingerprint failed: %A" findings)
@@ -246,6 +308,8 @@ module internal QuintSync =
         if not (File.Exists manifestPath) then Error "The accepted Typed SDD authority manifest is missing."
         else
             let manifestBytes = File.ReadAllBytes manifestPath
+            let linkPath = Path.Combine(root, revisionPath work)
+            let linkDigest = if File.Exists linkPath then sha (File.ReadAllBytes linkPath) else ""
             match Encoding.UTF8.GetString manifestBytes |> TypedAuthority.deserialize with
             | Error finding -> Error $"Authority is invalid: {finding.Id}: {finding.Message}"
             | Ok(FsharpSpecificationV1 _) -> Error "F# authority is not a selected Quint sync workspace."
@@ -271,8 +335,8 @@ module internal QuintSync =
                         match QuintContractV2.deserialize (Encoding.UTF8.GetString contractBytes) with
                         | Error findings -> Error(sprintf "Compiled contract invalid: %s" (findings |> List.map _.Code |> String.concat ", "))
                         | Ok contract ->
-                            match WorkspaceSync.deriveModel 0L contract with
-                            | Error findings -> Error(sprintf "Workspace authority join refused: %s" (findings |> List.map _.Code |> String.concat ", "))
+                            match deriveAccepted root work manifestBytes contract with
+                            | Error reason -> Error reason
                             | Ok accepted ->
                                 if contract.Specification <> "WorkspaceLifecycle" then
                                     Error "Only the selected WorkspaceLifecycle production reducer adapter is installed."
@@ -394,6 +458,7 @@ module internal QuintSync =
                                                                         | Ok QuintReplayResult.Equivalent, Ok() ->
                                                                             let unchanged =
                                                                                 sha (File.ReadAllBytes manifestPath) = sha manifestBytes
+                                                                                && (if File.Exists linkPath then sha (File.ReadAllBytes linkPath) else "") = linkDigest
                                                                                 && sha (File.ReadAllBytes(Path.Combine(root, sourceArtifact.Path))) = sha sourceBytes
                                                                                 && sha (File.ReadAllBytes(Path.Combine(root, generatedArtifact.Path))) = sha generatedBytes
                                                                                 && sha (File.ReadAllBytes(Path.Combine(root, contractArtifact.Path))) = sha contractBytes
@@ -435,6 +500,7 @@ module internal QuintSync =
                                                                                                 |> Encoding.UTF8.GetBytes
                                                                                                 |> sha
                                                                                             PackageIdentity = identity
+                                                                                            AcceptedRevision = accepted.Revision
                                                                                             Seed = seed
                                                                                             MaxSamples = maxSamples
                                                                                             MaxSteps = maxSteps
@@ -451,6 +517,71 @@ module internal QuintSync =
                                                     | Ok _ -> result
                                                     | Error reason -> Error $"{reason} Retained attempt: {temp}"
                     | _ -> Error "Accepted Quint source, generated module or contract is missing."
+
+    /// Check a proposed host transaction before it can replace accepted bytes.
+    /// The returned revision link is committed in the same authority transaction.
+    let prepareProposed root work cache javaHome apalacheDist (writes: (string * byte array) list) =
+        try
+            let root = Path.GetFullPath root
+            let manifestPath = TypedAuthorityManifest.path work
+            let proposedManifestBytes =
+                writes |> List.find (fst >> ((=) manifestPath)) |> snd
+            let priorManifestPath = Path.Combine(root, manifestPath)
+            let priorRevision, priorManifestSha =
+                if not (File.Exists priorManifestPath) then -1L, ""
+                else
+                    let bytes = File.ReadAllBytes priorManifestPath
+                    match Encoding.UTF8.GetString bytes |> TypedAuthority.deserialize with
+                    | Ok(QuintSpecificationV1 manifest) when manifest.ProfileIdentity = QuintGeneralProfile.identity ->
+                        match artifact root manifest "compiled-contract" with
+                        | None -> invalidOp "Prior accepted compiled contract is missing or changed."
+                        | Some(_, contractBytes) ->
+                            match QuintContractV2.deserialize (Encoding.UTF8.GetString contractBytes) with
+                            | Error _ -> invalidOp "Prior accepted compiled contract is invalid."
+                            | Ok contract ->
+                                match deriveAccepted root work bytes contract with
+                                | Ok accepted -> accepted.Revision, sha bytes
+                                | Error reason -> invalidOp reason
+                    | _ -> invalidOp "Prior accepted authority is not a supported profile-2 workspace."
+            let revision = priorRevision + 1L
+            let manifest =
+                match Encoding.UTF8.GetString proposedManifestBytes |> TypedAuthority.deserialize with
+                | Ok(QuintSpecificationV1 value) when value.ProfileIdentity = QuintGeneralProfile.identity -> value
+                | _ -> invalidOp "Proposed authority is not profile 2."
+            let contractPath =
+                manifest.Artifacts |> List.find (fun item -> item.Id = "compiled-contract") |> _.Path
+            let contractBytes = writes |> List.find (fst >> ((=) contractPath)) |> snd
+            let contract =
+                match QuintContractV2.deserialize (Encoding.UTF8.GetString contractBytes) with
+                | Ok value -> value
+                | Error _ -> invalidOp "Proposed compiled contract is invalid."
+            let model =
+                match WorkspaceSync.deriveModel revision contract with
+                | Ok value -> value
+                | Error findings -> invalidOp (sprintf "Proposed workspace join refused: %s" (findings |> List.map _.Code |> String.concat ", "))
+            let fingerprint =
+                WorkspaceLifecycle.fingerprint model |> Result.defaultWith (sprintf "%A" >> invalidOp)
+            let linkBytes =
+                encodeRevisionLink
+                    { ManifestSha256 = sha proposedManifestBytes; Revision = revision
+                      WorkspaceFingerprint = fingerprint; PriorManifestSha256 = priorManifestSha }
+            let linkWrite = revisionPath work, linkBytes
+            let staging = Path.Combine(Path.GetTempPath(), "fsgg-sync-proposed-" + Guid.NewGuid().ToString("N"))
+            Directory.CreateDirectory staging |> ignore
+            for relative, bytes in writes @ [ linkWrite ] do
+                match contained staging relative with
+                | None -> invalidOp $"Proposed authority emitted unsafe path {relative}."
+                | Some path ->
+                    Path.GetDirectoryName path
+                    |> Option.ofObj
+                    |> Option.iter (fun parent -> Directory.CreateDirectory parent |> ignore)
+                    File.WriteAllBytes(path, bytes)
+            match runAccepted staging work (Path.GetFullPath cache) (Path.GetFullPath javaHome) (Path.GetFullPath apalacheDist) with
+            | Error reason -> Error $"Proposed model sync refused: {reason}; retained staging: {staging}"
+            | Ok _ ->
+                Directory.Delete(staging, true)
+                Ok linkWrite
+        with ex -> Error $"Proposed model sync could not prepare: {ex.Message}"
 
     let private blockedReport root work cache javaHome apalacheDist reason =
         let fileDigest path =

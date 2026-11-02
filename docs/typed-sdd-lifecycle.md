@@ -204,7 +204,10 @@ for the declaration shape.
 
 Provision the exact Quint and lmt objects, then author with `--profile fsgg-quint-profile/2`,
 `--source`, `--bindings`, `--cache`, `--java-home`, and `--apalache-dist`. After the
-authority transaction commits, authoring runs `typed-sdd sync` and writes
+proposed output is staged and checked before it can replace accepted bytes.
+The authority transaction commits a revision link beside the manifest, advancing
+the prior accepted workspace revision by one. Authoring then runs a fresh
+`typed-sdd sync` and writes
 `readiness/<work>/quint/sync-report.json`. A failed sync leaves the
 accepted revision available for repair and replaces any prior success receipt
 with a blocked result.

@@ -18,8 +18,12 @@ assert_json() {
 import json, sys
 with open(sys.argv[1], encoding="utf-8-sig") as stream:
     report = json.load(stream)
-if report.get(sys.argv[2]) != sys.argv[3]:
-    raise SystemExit(f"{sys.argv[1]}: {sys.argv[2]}={report.get(sys.argv[2])!r}, expected {sys.argv[3]!r}")
+try:
+    expected = json.loads(sys.argv[3])
+except json.JSONDecodeError:
+    expected = sys.argv[3]
+if report.get(sys.argv[2]) != expected:
+    raise SystemExit(f"{sys.argv[1]}: {sys.argv[2]}={report.get(sys.argv[2])!r}, expected {expected!r}")
 PY
 }
 
@@ -37,8 +41,34 @@ author=(typed-sdd author --root "$scratch/work" --work sync --title 'Sync accept
 cli "${author[@]}" --session first >"$scratch/author.json" || fail 'accepted author did not synchronize'
 assert_json "$scratch/author.json" outcome succeeded
 receipt="$scratch/work/readiness/sync/quint/sync-report.json"
+link="$scratch/work/readiness/sync/quint/sync-authority.json"
+manifest="$scratch/work/readiness/sync/typed-authority.json"
 [[ -f "$receipt" ]] || fail 'accepted author omitted the fresh sync receipt'
 assert_json "$receipt" outcome satisfied
+assert_json "$link" revision 0
+assert_json "$receipt" acceptedRevision 0
+
+# A damaged accepted revision link cannot be used as the next transaction base.
+cp "$link" "$scratch/accepted-link.json"
+python3 - "$link" <<'PY'
+from pathlib import Path
+import json, sys
+path = Path(sys.argv[1])
+value = json.loads(path.read_text())
+value['workspaceFingerprint'] = '0' * 64
+path.write_text(json.dumps(value))
+PY
+if cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/damaged-link.json"; then
+  fail 'damaged accepted revision link passed'
+fi
+assert_json "$scratch/damaged-link.json" outcome blocked
+cp "$scratch/accepted-link.json" "$link"
+cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/repaired-link.json" || fail 'revision link repair did not restore fresh success'
+assert_json "$scratch/repaired-link.json" acceptedRevision 0
 
 # Move accepted bytes while a bounded model run is in flight. The temp model
 # directory appears only after initial authority closure validation, so this
@@ -88,20 +118,29 @@ if cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache
   fail 'missing verifier passed'
 fi
 assert_json "$scratch/no-verifier.json" outcome blocked
+cli typed-sdd sync --root "$scratch/work" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" \
+  >"$scratch/after-verifier-repair.json" || fail 'verifier repair did not restore fresh success'
+assert_json "$receipt" outcome satisfied
 
 # Keep the source valid Quint but make one declared invariant false. Authoring
-# commits the accepted revision, then its fresh execution gate must refuse it.
+# checks the proposed model before commit and must preserve accepted authority.
+before_invalid="$(sha256sum "$manifest" | cut -d' ' -f1)"
 sed -i 's/val acceptedAuthorityIsCoherent = acceptedCoherent/val acceptedAuthorityIsCoherent = false/' "$scratch/work/specification.md"
 if cli "${author[@]}" --accept --session broken-invariant >"$scratch/broken-invariant.json"; then
   fail 'type-valid broken invariant passed the accepted author path'
 fi
 assert_json "$scratch/broken-invariant.json" outcome blocked
-assert_json "$receipt" outcome blocked
+assert_json "$receipt" outcome satisfied
+[[ "$(sha256sum "$manifest" | cut -d' ' -f1)" == "$before_invalid" ]] || fail 'invalid proposed invariant replaced accepted authority'
+assert_json "$link" revision 0
 
 cp "$repo_root/tests/fixtures/typed-sdd-sync/specification.md" "$scratch/work/specification.md"
 cli "${author[@]}" --accept --session repaired >"$scratch/repaired.json" || fail 'repair did not synchronize'
 assert_json "$scratch/repaired.json" outcome succeeded
 assert_json "$receipt" outcome satisfied
+assert_json "$link" revision 1
+assert_json "$receipt" acceptedRevision 1
 
 # A declared new domain property that the unchanged reducer already satisfies
 # must pass; the accepted source and binding range both advance together.
@@ -127,10 +166,12 @@ PY
 cli "${author[@]}" --accept --session already-satisfied >"$scratch/already-satisfied.json" || fail 'new already-satisfied property was refused'
 assert_json "$scratch/already-satisfied.json" outcome succeeded
 assert_json "$receipt" outcome satisfied
+assert_json "$link" revision 2
 
 cp "$repo_root/tests/fixtures/typed-sdd-sync/specification.md" "$scratch/work/specification.md"
 cp "$repo_root/tests/fixtures/typed-sdd-sync/bindings.json" "$scratch/work/bindings.json"
 cli "${author[@]}" --accept --session restored >"$scratch/restored.json" || fail 'baseline restoration did not synchronize'
+assert_json "$link" revision 3
 
 # A syntactically valid scenario with a disabled acceptance transition is
 # vacuous/unreachable; a clean Quint typecheck cannot make the author pass.
@@ -148,9 +189,11 @@ if cli "${author[@]}" --accept --session unreachable >"$scratch/unreachable.json
   fail 'unreachable declared scenario passed'
 fi
 assert_json "$scratch/unreachable.json" outcome blocked
+assert_json "$link" revision 3
 
 cp "$repo_root/tests/fixtures/typed-sdd-sync/specification.md" "$scratch/work/specification.md"
 cli "${author[@]}" --accept --session restored-after-unreachable >"$scratch/restored-again.json" || fail 'unreachable-scenario repair did not synchronize'
+assert_json "$link" revision 4
 
 # Explicitly conflicting accepted modules must fail the authority join, even
 # though the model syntax and types remain valid.
@@ -169,6 +212,7 @@ if cli "${author[@]}" --accept --session conflicting >"$scratch/conflicting.json
   fail 'conflicting cross-module assumptions passed'
 fi
 assert_json "$scratch/conflicting.json" outcome blocked
+assert_json "$link" revision 4
 
 printf 'typed-sdd-sync acceptance: positive, invariant break, unreachable scenario, repair, already-satisfied property, stale in-flight source, forged receipt, missing verifier and conflicting assumptions passed\n'
 rm -rf -- "$scratch"

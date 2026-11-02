@@ -742,9 +742,27 @@ module TypedSdd =
                                     match containedPath rootPath relative with
                                     | Some path -> path, bytes
                                     | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
-
-                            atomicReplaceUnlocked rootPath writes []
-                            Ok(output.Writes |> List.map fst)
+                            let proposedSync =
+                                if profile = QuintGeneralProfile.identity then
+                                    match optionValue "--java-home" args, optionValue "--apalache-dist" args with
+                                    | Some javaHome, Some apalacheDist ->
+                                        QuintSync.prepareProposed rootPath workId cache javaHome apalacheDist output.Writes
+                                        |> Result.map Some
+                                    | _ -> Error "Profile-2 authoring requires --java-home and --apalache-dist before acceptance."
+                                else Ok None
+                            match proposedSync with
+                            | Error reason ->
+                                Error [ diagnostic "typedSdd.proposedSyncBlocked" reason "Repair the proposed model or declared tools before accepting it." ]
+                            | Ok link ->
+                                let linkWrites =
+                                    match link with
+                                    | None -> []
+                                    | Some(relative, bytes) ->
+                                        match containedPath rootPath relative with
+                                        | Some path -> [ path, bytes ]
+                                        | None -> invalidOp "Proposed sync link escaped the selected root."
+                                atomicReplaceUnlocked rootPath (writes @ linkWrites) []
+                                Ok((output.Writes |> List.map fst) @ (link |> Option.map fst |> Option.toList))
                         with ex ->
                             Error
                                 [
