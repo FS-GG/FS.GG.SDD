@@ -17,60 +17,96 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "b93acaf0145ab81ac5b6a888fd0fbfdb6205f3becc83e9cdd9d55de52b33419d"
+        "48ee31933a1eb4114cf177bda85d8b7bb5bf0310b396b3915ebb85c214ac3f2e"
 
     // work-board ships in FS.GG.Drivers, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "6717f8af6fc64cad57bdb10cb54a4c68cb1199163d9c8718dfee5996d6e5ca31"
+        "cef2662f1c1ec38321a0067e8cafd695f3fd0e6196f0463c0ae0eec62468b167"
 
     // padd-item is the product-workspace board filer added by FS.GG.Drivers (#703).
     let private paddItemSha256 =
-        "74025b26c92363fceca7a57aea3b295bfe2d47df74492717249e9715d9ca15ef"
+        "69d97af5d64e0290c95f72a309757ebb5ef316b483c103c3bd4be513d5e6e0d2"
 
     let private workBoardNormalSha256 =
-        "55f96951dc04fd02cdc3411dd72ce0f6fcaca9c64a2daafd6270fc0d45adf05b"
+        "b68325c5a86b3b7a68c8933f077569f86e3b89f4e7fc46925e9dfffa1ed4b8f2"
 
     let private workBoardBestSha256 =
-        "4b9c0fd59cfd68a16f7acc0acef726b10bb2903380af5cfd6cc2b0e5d7376868"
+        "d92ba9158f45989a3804da02d5a143681c42aa7efc96cd2cc0468eb38d92f406"
+
+    // FS.GG.SDD#1156: the `atlas` driver skill, whose helper and seed archive were absent from every
+    // workspace while the pin sat at 0.98.0. Its SKILL.md and `scripts/atlas.py` are pinned because
+    // `atlas.py` is what a workspace actually runs, and its digest must match the package's bytes.
+    let private atlasSha256 =
+        "a1383a9a8029f91930798e7624f5de87db68b0b6f575ea4d899761449e9fa423"
+
+    let private atlasHelperSha256 =
+        "3a5f5e7c1e9e239152b3ef39f9dd80b5ffc30c32ce5ae1f453ff4090d4f4f5e5"
 
     let private roots = [ ".agents"; ".claude" ]
 
-    let private deliveredFiles =
+    // Every `scope: driver`, `materializes-when: always` row of the pinned FS.GG.Drivers manifest,
+    // with the file count the package ships for it. A bump that adds, drops or reshapes a driver
+    // skill changes this table, so it is a reviewed change rather than a silent one.
+    let private alwaysOnFileCounts =
         Map.ofList
             [
-                "padd-item", [ "SKILL.md"; "agents/openai.yaml" ]
-                "work-board-best", [ "SKILL.md"; "agents/openai.yaml" ]
-                "work-board-normal", [ "SKILL.md"; "agents/openai.yaml" ]
-                "work-board",
-                [
-                    "SKILL.md"
-                    "agents/openai.yaml"
-                    "references/backlog-triage.md"
-                    "references/deep-detail.md"
-                    "references/feedback-contract.md"
-                    "references/host-loop.md"
-                    "references/workspace-scope.md"
-                ]
-                "work-roadmap",
-                [
-                    "SKILL.md"
-                    "agents/openai.yaml"
-                    "references/critique-contract.md"
-                    "references/deep-detail.md"
-                    "references/feedback-contract.md"
-                    "references/host-loop.md"
-                    "references/lifecycle-log.md"
-                    "references/roadmap-ledger.md"
-                ]
+                "agent-handoff", 2
+                "atlas", 509
+                "continue-from-handoff", 2
+                "padd-item", 3
+                "routine-decisions", 2
+                "stop-with-handoff", 2
+                "work-board", 22
+                "work-board-best", 2
+                "work-board-normal", 2
+                "work-programme", 12
+                "work-roadmap", 13
             ]
+
+    let private alwaysOnIds = alwaysOnFileCounts |> Map.keys |> Seq.sort |> List.ofSeq
+
+    // The file set each always-on driver skill delivers, read from the embedded manifest. The
+    // closed-directory verification (`planFiles`) already proves the embedded bytes are exactly this
+    // set, and `alwaysOnFileCounts` above pins its size independently.
+    let private deliveredFiles =
+        let manifestText =
+            DriverSkills.manifestText ()
+            |> Option.defaultWith (fun () -> failwith "the driver manifest must be embedded")
+
+        use document = System.Text.Json.JsonDocument.Parse manifestText
+
+        document.RootElement.GetProperty("skills").EnumerateArray()
+        |> Seq.filter (fun row -> row.GetProperty("materializes-when").ToString() = "always")
+        |> Seq.map (fun row ->
+            row.GetProperty("id").ToString(),
+            [
+                for file in row.GetProperty("files").EnumerateArray() -> file.GetProperty("path").ToString()
+            ])
+        |> Map.ofSeq
 
     let private workspacePaths =
         [
+            ".fsgg/atlas-guidance.md"
+            ".fsgg/atlas.json"
+            ".fsgg/owner-guidance.json"
             ".fsgg/routine-development.json"
             ".github/workflows/routine-eligibility.yml"
+            "contracts/process-efficiency/allocation-input-v1.schema.json"
+            "contracts/process-efficiency/analysis-attach-invocation-input-v1.schema.json"
+            "contracts/process-efficiency/analysis-claim-input-v1.schema.json"
+            "contracts/process-efficiency/analysis-request-input-v1.schema.json"
+            "contracts/process-efficiency/analysis-settle-input-v1.schema.json"
+            "contracts/process-efficiency/assessment-input-v1.schema.json"
+            "contracts/process-efficiency/assessment-v1.schema.json"
+            "contracts/process-efficiency/episode-input-v1.schema.json"
+            "contracts/process-efficiency/measurement-contract-v1.json"
+            "contracts/process-efficiency/metric-v1.schema.json"
             "scripts/check-claim-generation.py"
             "scripts/check-routine-eligibility-envelope.py"
             "scripts/lib/gate.py"
+            "tests/process-efficiency-requirements.txt"
+            "tools/pr-lane-admission.py"
+            "tools/process-efficiency-assessment.py"
             "tools/routine-delivery.py"
         ]
 
@@ -95,16 +131,7 @@ module DriverSkillsTests =
     let ``plan materializes the delivered always-on drivers into both runtime roots`` () =
         let outcome = DriverSkills.plan Set.empty
 
-        Assert.Equal<string list>(
-            [
-                "padd-item"
-                "work-board"
-                "work-board-best"
-                "work-board-normal"
-                "work-roadmap"
-            ],
-            outcome.MaterializedIds
-        )
+        Assert.Equal<string list>(alwaysOnIds, outcome.MaterializedIds)
 
         Assert.Empty outcome.VerifyFailedIds
         Assert.Empty outcome.PredicateUnevaluatedIds
@@ -113,17 +140,7 @@ module DriverSkillsTests =
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
 
-        Assert.Equal<string list>(
-            driverPathsFor
-                [
-                    "padd-item"
-                    "work-board"
-                    "work-board-best"
-                    "work-board-normal"
-                    "work-roadmap"
-                ],
-            writtenPaths |> List.except workspacePaths
-        )
+        Assert.Equal<string list>(driverPathsFor alwaysOnIds, writtenPaths |> List.except workspacePaths)
 
         for path in workspacePaths do
             Assert.Contains(path, writtenPaths)
@@ -231,7 +248,34 @@ module DriverSkillsTests =
         Assert.Contains(workBoardSha256, shas)
         Assert.Contains(workBoardNormalSha256, shas)
         Assert.Contains(workBoardBestSha256, shas)
-        Assert.True(shas.Count >= 21)
+        Assert.Contains(atlasSha256, shas)
+        Assert.Contains(atlasHelperSha256, shas)
+
+    // FS.GG.SDD#1156: the always-on set and each skill's file count are the package's, not an
+    // assumption of this repo. Pinned so a pin bump that reshapes a driver skill is a reviewed change.
+    [<Fact>]
+    let ``the pinned package ships the expected always-on driver skills and file counts`` () =
+        Assert.Equal<string list>(alwaysOnIds, deliveredFiles |> Map.keys |> Seq.sort |> List.ofSeq)
+
+        for KeyValue(id, count) in alwaysOnFileCounts do
+            Assert.Equal(count, deliveredFiles[id].Length)
+
+    // FS.GG.SDD#1156 proof, offline: the atlas skill materializes with its helper and seed archive
+    // into BOTH runtime roots, byte-identical to the package, so `atlas.py --archive <pack> search`
+    // can run in a freshly scaffolded workspace.
+    [<Fact>]
+    let ``the atlas skill materializes its helper and seed archive into both roots`` () =
+        let outcome = DriverSkills.plan Set.empty
+        let written = outcome.ProvenancePaths |> List.map fst |> Set.ofList
+
+        for root in roots do
+            Assert.Contains($"{root}/skills/atlas/scripts/atlas.py", written)
+            Assert.Contains($"{root}/skills/atlas/SKILL.md", written)
+            Assert.Contains($"{root}/skills/atlas/assets/seed/catalog.json", written)
+
+        let digests = outcome.ProvenancePaths |> Map.ofList
+        Assert.Equal(atlasHelperSha256, digests[".agents/skills/atlas/scripts/atlas.py"])
+        Assert.Equal(atlasHelperSha256, digests[".claude/skills/atlas/scripts/atlas.py"])
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -545,19 +589,16 @@ module DriverSkillsTests =
 
         Assert.DoesNotContain("work-roadmap", outcome.MaterializedIds)
 
-        Assert.Equal<string list>(
-            [ "padd-item"; "work-board"; "work-board-best"; "work-board-normal" ],
-            outcome.MaterializedIds
-        )
+        Assert.Equal<string list>(alwaysOnIds |> List.except [ "work-roadmap" ], outcome.MaterializedIds)
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
 
         Assert.Equal<string list>(
-            driverPathsFor [ "padd-item"; "work-board"; "work-board-best"; "work-board-normal" ],
+            driverPathsFor (alwaysOnIds |> List.except [ "work-roadmap" ]),
             writtenPaths |> List.except workspacePaths
         )
 
         for path in workspacePaths do
             Assert.Contains(path, writtenPaths)
 
-        Assert.True(outcome.Writes |> List.length >= 26 + workspacePaths.Length)
+        Assert.True(outcome.Writes |> List.length >= (writtenPaths |> List.length))

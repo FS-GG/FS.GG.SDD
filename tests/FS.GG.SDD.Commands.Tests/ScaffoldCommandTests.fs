@@ -1154,7 +1154,18 @@ providers:
             let fromInit =
                 File.ReadAllBytes(Path.Combine(initRoot, path.Replace('/', Path.DirectorySeparatorChar)))
 
-            Assert.Equal<byte>(fromInit, fromScaffold)
+            // FS.GG.SDD#1156: the pinned FS.GG.Drivers payload declares owner guidance, which a
+            // scaffold merges into the root guidance AFTER seeding it. Those two files therefore
+            // START with exactly the bytes init writes (the authored prose is preserved) and may
+            // carry the owner-managed block after it; every other skeleton file is byte-identical.
+            if path = "AGENTS.md" || path = "CLAUDE.md" then
+                Assert.True(
+                    fromScaffold.Length >= fromInit.Length
+                    && Array.forall2 (=) fromInit (Array.sub fromScaffold 0 fromInit.Length),
+                    $"{path} no longer begins with the bytes init seeds."
+                )
+            else
+                Assert.Equal<byte>(fromInit, fromScaffold)
 
     // T017 (P5, P6 / FR-006 / SC-004): two identical runs into clean targets yield
     // byte-identical provenance and byte-identical --json; provenance has sorted paths,

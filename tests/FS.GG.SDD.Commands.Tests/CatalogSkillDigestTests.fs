@@ -46,8 +46,12 @@ module CatalogSkillDigestTests =
         for relative in productSkillCopies do
             File.WriteAllBytes(path root relative, body variant)
 
+        // Only the skill copies take the line-ending variant. The workspace payload files and the
+        // `atlas` skill are the owner-guidance prerequisites, which are verified by EXACT bytes (that
+        // exactness is why a pack's workspace declares its files `-text`), so they stay as scaffolded.
         for relative, text in ownerSourcedCopies [] do
-            File.WriteAllBytes(path root relative, encoded variant text)
+            if relative.Contains "/skills/" && not (relative.Contains "/skills/atlas/") then
+                File.WriteAllBytes(path root relative, encoded variant text)
 
         let own =
             ScaffoldProvenance.tryParse (File.ReadAllText(path root provenancePath))
@@ -151,8 +155,18 @@ module CatalogSkillDigestTests =
                         |> List.map (fun relative -> File.ReadAllBytes(path root relative))
 
                     Assert.Empty((summary root).SkillDriftPaths)
-                    let upgrade = (upgradeYes root).Upgrade |> Option.get
-                    Assert.False upgrade.ResidualDrift
+                    let upgraded = upgradeYes root
+                    let upgrade = upgraded.Upgrade |> Option.get
+
+                    Assert.False(
+                        upgrade.ResidualDrift,
+                        sprintf
+                            "%s: %s | %A"
+                            variant
+                            upgrade.NextActionHint
+                            (upgraded.Diagnostics |> List.map (fun d -> d.Id, d.Message))
+                    )
+
                     Assert.True((provenance = File.ReadAllBytes(path root provenancePath)))
 
                     List.zip productSkillCopies before

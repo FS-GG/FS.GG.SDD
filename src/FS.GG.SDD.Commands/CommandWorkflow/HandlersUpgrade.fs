@@ -575,7 +575,16 @@ module internal HandlersUpgrade =
                 elif allInterpreted then
                     Resolved(applyOutcome model effects)
                 elif anyPlanned then
-                    Awaiting
+                    // FS.GG.SDD#1156. The effect set is recomputed every tick and can GROW once the
+                    // earlier writes are interpreted: the owner-guidance merge into AGENTS.md and
+                    // CLAUDE.md can only be planned after the owner skills it requires are installed
+                    // (a new observation of them). Waiting on "something is planned" then waits
+                    // forever on the two writes nobody has emitted, and the run ends with no
+                    // summary. Emit exactly the effects not yet planned; wait only when there are
+                    // none.
+                    match effects |> List.filter (fun effect -> not (hasPlanned (effectKey effect) model)) with
+                    | [] -> Awaiting
+                    | unplanned -> EmitEffects unplanned
                 else
                     EmitEffects effects
 

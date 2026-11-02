@@ -5,8 +5,10 @@
 ADR-0061 (structural scope; semantic enforcement at the consumer).*
 
 A **driver** skill is authored not by a producer repo but by `.github` itself, delivered as bytes
-and materialized into a scaffolded product's skill roots. The current always-on set is `padd-item`,
-`work-board`, `work-board-normal`, `work-board-best`, and `work-roadmap`. This page
+and materialized into a scaffolded product's skill roots. The always-on set is whatever the pinned package's manifest marks
+`materializes-when: always`; at `FS.GG.Drivers 0.114.3` that is `atlas`, `agent-handoff`,
+`continue-from-handoff`, `padd-item`, `routine-decisions`, `stop-with-handoff`, `work-board`,
+`work-board-best`, `work-board-normal`, `work-programme` and `work-roadmap`. This page
 describes how `fsgg-sdd scaffold` obtains and lays down those bytes. It embeds **no** `.github`- or
 provider-specific package id, skill id, or path as behavior (`scaffold` FR-002 / SC-005): the package
 identity is a pin, and the set of driver skills is read from the delivered manifest.
@@ -49,16 +51,18 @@ For each row in the embedded `driver-skill-manifest.json`, in id order
    members receive their executable bit. A provider-owned same-id skill owns its complete
    directory, so SDD never creates a mixed provider/driver tree.
 
-The delivered `FS.GG.Drivers 0.9.0` ships five `scope: driver`,
-`materializes-when: always` rows: `padd-item`, `work-board`, `work-board-normal`,
-`work-board-best`, and `work-roadmap`. It also carries `drive-board`, its routed variants,
-`p-add`, `lane-steward`, `publishing-and-deployment`, and `cut-nuget-release` as `scope: operator`,
-`materializes-when: false`; those operator commands are withheld from product workspaces.
+The delivered `FS.GG.Drivers 0.114.3` ships eleven `scope: driver`, `materializes-when: always` rows
+(listed above). It also carries `drive-board`, its routed variants, `work-board-coord`, `p-add`,
+`lane-steward`, `board-analyst`, `publishing-and-deployment` and `cut-nuget-release` as
+`scope: operator`, `materializes-when: false`; those operator commands are withheld from product
+workspaces. The `atlas` skill is the largest row (509 files, including its `scripts/atlas.py` helper
+and the `assets/seed` archive), so a freshly scaffolded workspace can run
+`python3 .agents/skills/atlas/scripts/atlas.py --archive <pack> search <term>` offline.
 `padd-item` files a described issue onto the product workspace's explicitly configured organization,
 named-user, or viewer GitHub Projects v2 board. Its package-delivered guidance refuses missing wiring
 without mutation and never falls back to the FS-GG organization board.
 
-The 0.9.0 payload is closed under product materialization: its real Markdown links target packaged
+The payload is closed under product materialization: its real Markdown links target packaged
 members or guaranteed product siblings. Conditional coordination-kit dependencies remain named
 requirements rather than filesystem links. The fresh-scaffold regression resolves every remaining
 relative link, including parent-relative targets; it has no prefix-based escape hatch.
@@ -82,6 +86,27 @@ byte-identical copies — so a `refresh` neither rewrites nor removes a material
 The scaffold report projects the materialized set additively in all three projections
 (`materializedDriverPaths` in json, `scaffoldMaterializedDriverPath` lines in text); an incomplete
 materialization is surfaced by its diagnostic and never reported as complete (FR-009).
+
+## Keeping the pin current (staleness target)
+
+The driver bytes are compiled into each CLI release, so a stale `FS.GG.Drivers` pin withholds new and
+changed skills from every workspace that CLI scaffolds or upgrades (FS.GG.SDD#1156 found the pin 16
+versions behind; the `atlas` skill was therefore absent from every workspace).
+
+- **Target.** The `FS.GG.Drivers` pin and each `FS.GG.*.Skills` owner-package pin trail their
+  published feed by **at most five stable versions**.
+- **When it is checked.** At SDD release preparation, with
+  `python3 scripts/check-skills-pin-staleness.py` (exit 1 on a pin beyond the bound; `--max-behind`
+  overrides). It reads `Directory.Packages.local.props` and the nuget.org flat-container index. It is
+  not a pull-request gate, because the feed moves independently of a PR and a gate would turn an
+  unrelated upstream publication into a red check; its offline controls
+  (`scripts/tests/check-skills-pin-staleness.test.py`) do run in `gate.yml`.
+- **How it is updated.** Renovate opens the bump, but the bump is not self-sufficient and the earlier
+  Renovate PRs were closed for that reason: the embedded-skill digests in `DriverSkillsTests` must be
+  re-pinned and the seven solution lockfiles regenerated (`dotnet restore --force-evaluate`). An
+  automatic merge would only turn those red, so the update stays a reviewed PR that performs both and
+  states the restored package's version. Existing workspaces receive a bumped pack through
+  `fsgg-sdd upgrade` once a CLI carrying it is installed (`doctor-upgrade.md`).
 
 ## Drift guard
 

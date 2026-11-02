@@ -270,7 +270,10 @@ module UpgradeCommandTests =
     let private upgrade (report: CommandReport) =
         match report.Upgrade with
         | Some summary -> summary
-        | None -> failwith "expected an upgrade summary"
+        | None ->
+            failwithf
+                "expected an upgrade summary; diagnostics: %A"
+                (report.Diagnostics |> List.map (fun d -> d.Id, d.Message))
 
     [<Fact>]
     let ``--yes on an at-or-above behind scaffold re-seeds and reports coherent afterward`` () =
