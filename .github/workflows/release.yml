@@ -117,6 +117,16 @@ jobs:
       - name: Check four-package release custody before evaluation
         run: python3 scripts/check-release-custody.py
 
+      # FS.GG.SDD#1156: the CLI embeds the bytes of FS.GG.Drivers and the FS.GG.*.Skills owner packages
+      # at build time, so a pin that trails its feed by more than five stable versions silently withholds
+      # new and changed skills from every workspace this release scaffolds or upgrades (the pin was 16
+      # behind). Enforced here, at release preparation, rather than as a pull-request gate: the feed
+      # moves independently of a PR. Skipped for a retained promotion, which publishes bytes that were
+      # already built and must not be blocked by a feed that moved afterward.
+      - name: Skills-package pins are within the staleness bound
+        if: inputs.promotion_candidate_run == ''
+        run: python3 -I -B scripts/check-skills-pin-staleness.py
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:

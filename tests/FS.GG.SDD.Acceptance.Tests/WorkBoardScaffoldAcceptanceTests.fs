@@ -15,17 +15,17 @@ open AcceptanceSupport
 /// padd-item's configured-board/no-mutation boundary.
 module WorkBoardScaffoldAcceptanceTests =
 
-    /// The current work-board body no longer owns workspace wiring; padd-item below owns and tests
-    /// that boundary. Pin work-board's host-loop and immediate two-line reporting contract here.
+    /// The work-board body owns the clearing loop and Status reconciliation (workspace wiring is
+    /// padd-item's, below). FS.GG.Drivers 0.114.3 replaced the earlier host-loop/two-line-report
+    /// wording with the V2 clearing loop; pin its load-bearing contract tokens here.
     let private documentedWorkBoardTokens =
         [
-            "check-board"
-            "backlog-triage"
+            "Continuous clearing loop"
             "pnext-item"
-            "On every material transition"
-            "line 1 — the material transition(s)"
-            "line 2 — the complete active inventory"
-            "<item>: <previous> -> <new> (<reason>)"
+            "Status lifecycle"
+            "reconcile Delivery Status"
+            "fsgg-dispatch: item=OWNER/REPO#N"
+            "Quiescence is not board completion"
         ]
 
     // ----- fixture: a real offline scaffold -----
@@ -140,14 +140,12 @@ module WorkBoardScaffoldAcceptanceTests =
         for token in
             [
                 "FSGG_COORD_OWNER_TYPE"
-                "FSGG_COORD_OWNER"
-                "FSGG_COORD_PROJECT"
-                "organization/named-user owner"
-                "authenticated viewer's board"
-                "Never silently fall back to the FS-GG organization board"
-                "stop non-zero without mutation"
-                "new-sdd-workspace retrofit"
-                "work-roadmap"
+                "Never silently fall back to organization defaults"
+                "Missing wiring leaves a concrete"
+                "canonical intake"
+                "do not run legacy intake/reconcile/apply/add/flush"
+                "File the requested work; do not implement it"
+                "work-board"
             ] do
             Assert.True(
                 body.Contains token,

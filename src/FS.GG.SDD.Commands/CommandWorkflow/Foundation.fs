@@ -1313,12 +1313,36 @@ nuget-cache/
 
     let readEffectKey path = "read:" + normalizeRelativePath path
 
+    // FS.GG.SDD#1156. `hasPlanned` / `hasInterpreted` are asked once per effect of a read phase, and
+    // each answer used to re-derive `effectKey` (a string build) for EVERY effect in the log: O(n) per
+    // question, so O(n^2) per phase and a fresh phase per interpreted result. That was invisible while
+    // a workspace carried a few dozen skill files; the `atlas` driver skill brings its seed archive (509
+    // files, two roots), and `doctor` over a fresh scaffold went from 0.3 s to 11.7 s. The log lists are
+    // immutable and a tick asks about the SAME list object many times, so the key set is built once per
+    // list instance (weakly held, so it dies with the list) and every question after the first is a
+    // lookup. Answers are exactly the old ones: membership of `effectKey` in the log.
+    let private pendingKeys =
+        System.Runtime.CompilerServices.ConditionalWeakTable<CommandEffect list, System.Collections.Generic.HashSet<string>>()
+
+    let private interpretedKeys =
+        System.Runtime.CompilerServices.ConditionalWeakTable<CommandEffectResult list, System.Collections.Generic.HashSet<string>>()
+
     let hasPlanned key model =
-        model.PendingEffects |> List.exists (fun effect -> effectKey effect = key)
+        pendingKeys
+            .GetValue(
+                model.PendingEffects,
+                fun effects -> System.Collections.Generic.HashSet<string>(effects |> List.map effectKey)
+            )
+            .Contains key
 
     let hasInterpreted key model =
-        model.InterpretedEffects
-        |> List.exists (fun result -> effectKey result.Effect = key)
+        interpretedKeys
+            .GetValue(
+                model.InterpretedEffects,
+                fun results ->
+                    System.Collections.Generic.HashSet<string>(results |> List.map (fun result -> effectKey result.Effect))
+            )
+            .Contains key
 
     let hasPlannedWrite model =
         model.PendingEffects

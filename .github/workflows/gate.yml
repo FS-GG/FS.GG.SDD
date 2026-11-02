@@ -63,6 +63,9 @@ jobs:
           python3 -I -B scripts/check-provider-schema-window.py
           python3 -I -B scripts/tests/provider-schema-window.test.py
 
+      - name: Skills-pin staleness controls (the live feed check is a release-preparation step)
+        run: python3 -I -B scripts/tests/check-skills-pin-staleness.test.py
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:

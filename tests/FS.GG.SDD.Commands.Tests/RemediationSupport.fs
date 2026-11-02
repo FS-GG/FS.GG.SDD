@@ -4,6 +4,7 @@ open System
 open System.IO
 open Fsgg.Provider
 open FS.GG.SDD.Artifacts.ScaffoldProvenance
+open FS.GG.SDD.Commands
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
@@ -48,6 +49,61 @@ module RemediationSupport =
         // One path, one body — the established channel keeps a doubly-shipped id, exactly as
         // `HandlersScaffold.plannedRenderingSkillOutcome` and `Drift.ownerSourcedBackfill` resolve it.
         |> List.distinctBy fst
+
+    /// FS.GG.SDD#1156: a current scaffold also leaves the agent configuration and the root guidance
+    /// (`AGENTS.md`, `CLAUDE.md`) carrying the owner guidance blocks the pinned `FS.GG.Drivers`
+    /// payload declares (`.fsgg/owner-guidance.json`, present since the atlas-bearing releases). A
+    /// fixture that models a coherent scaffold must carry them or `doctor` correctly reports owner
+    /// guidance incomplete. The merge is the product's own (`OwnerGuidance.plan`), not a hand copy.
+    /// A no-op when the embedded payload declares no owner guidance.
+    let writeAgentConfiguration (root: string) =
+        let files =
+            DriverSkills.plan (Set.ofList SeededSkills.skillNames)
+            |> Foundation.ownerGuidanceFiles
+
+        if Map.containsKey OwnerGuidance.descriptorPath files then
+            for effect in Foundation.initEffects (TestSupport.request Init root) do
+                match effect with
+                // No-clobber, like the seed itself: a fixture that already set a file (a declared tool
+                // floor in `.fsgg/project.yml`, say) keeps it.
+                | WriteFile(path, text, _) when
+                    Drift.skillCopyOfPath path |> Option.isNone
+                    && not (TestSupport.existsRelative root path)
+                    ->
+                    TestSupport.writeRelative root path text
+                | _ -> ()
+
+    let writeCurrentOwnerGuidance (root: string) =
+        let files =
+            DriverSkills.plan (Set.ofList SeededSkills.skillNames)
+            |> Foundation.ownerGuidanceFiles
+
+        if Map.containsKey OwnerGuidance.descriptorPath files then
+            writeAgentConfiguration root
+
+            let agents =
+                (CommandEffects.interpret root false (ReadFile ".fsgg/agents.yml")).Snapshot
+                |> Option.bind (fun snapshot ->
+                    FS.GG.SDD.Artifacts.Config.parseAgentGuidanceConfig snapshot |> Result.toOption)
+                |> Option.defaultWith (fun () -> failwith "fixture agent configuration must parse")
+
+            let observed =
+                OwnerGuidance.requiredReads files agents
+                |> Result.defaultWith failwith
+                |> List.map (fun path ->
+                    let result =
+                        CommandEffects.interpret root false (ReadContainedFile(path, "fixture"))
+
+                    path,
+                    (match result.Read with
+                     | Bytes snapshot -> Ok(Some snapshot)
+                     | Absent -> Ok None
+                     | Unreadable(_, reason) -> Error reason
+                     | Truncated _ -> Error "unexpected listing"))
+                |> Map.ofList
+
+            for write in (OwnerGuidance.plan files agents observed).Writes do
+                TestSupport.writeRelative root write.Path write.Text
 
     /// The seeded skeleton PLUS the owner-sourced copies — the present-set a pure `Drift.compute`
     /// test passes to assert a fully coherent scaffold now that owner-sourced skills are expected.
@@ -184,6 +240,8 @@ sdd:
             for path, body in ownerSourcedCopies [] do
                 TestSupport.writeRelative root path body
 
+            writeCurrentOwnerGuidance root
+
         for path in presentArtifacts do
             let body = canonicalSkillBody path |> Option.defaultValue "present\n"
             TestSupport.writeRelative root path body
@@ -219,12 +277,15 @@ sdd:
     /// DELIBERATELY not written (so this bypasses `makeFixture`, which now materializes them).
     let ownerMissingFixture () =
         let root = TestSupport.tempDirectory ()
+        // The agent configuration and root guidance exist, without the owner blocks `upgrade` adds:
+        // the tree predates the delivered guidance, not the workspace's own agent files.
         TestSupport.writeRelative root ".fsgg/providers.yml" (providersYml (Some farBehindMinimum))
         // #733: a tree that predates owner-sourced delivery recorded NOTHING about it, so this
         // provenance declares no `driverPaths`/`gameSkillPaths`. That is what makes the backfill the
         // ONLY axis here: with no recorded declaration there is no authority to content-verify
         // against, and the owner-sourced lane correctly says nothing.
         TestSupport.writeRelative root ".fsgg/scaffold-provenance.json" (provenanceJsonWith "" (Some farBehindMinimum))
+        writeAgentConfiguration root
 
         for path in Drift.expectedArtifactPaths do
             let body = canonicalSkillBody path |> Option.defaultValue "present\n"
@@ -294,6 +355,8 @@ sdd:
         // #624: the owner-sourced skills are part of a current-generator scaffold's coherent set.
         for path, body in ownerSourcedCopies [] do
             TestSupport.writeRelative root path body
+
+        writeCurrentOwnerGuidance root
 
         for path in productSkillCopies do
             TestSupport.writeRelative root path productSkillBody
