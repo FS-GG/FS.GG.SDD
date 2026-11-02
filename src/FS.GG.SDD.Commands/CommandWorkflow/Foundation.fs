@@ -1779,6 +1779,12 @@ nuget-cache/
                 |> List.exists (fun r ->
                     match r.Effect with
                     | WriteFile(_, _, AgentGuidanceTarget) -> r.Succeeded
+                    // FS.GG.SDD#1155: replacing or removing an owner skill's files installs/changes the very
+                    // bytes guidance requires, exactly as a backfill does, so it also starts the
+                    // after-reseed observation. Without it a run whose only writes are replacements judged
+                    // guidance against the pre-write reads and left it incomplete until the next run.
+                    | WriteFile(_, _, OwnerSkillRefresh _) -> r.Succeeded
+                    | RemoveFile _ -> r.Succeeded
                     | _ -> false))
         then
             "after-reseed"

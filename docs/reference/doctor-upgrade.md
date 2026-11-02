@@ -177,7 +177,7 @@ these hold, judged over every file of the skill in **every** skill root together
 | Changed upstream | a desired file's digest differs from the recorded one, a desired file is not recorded, or a recorded file is no longer shipped |
 | Not edited | every recorded file carries a digest (**a missing recorded digest counts as edited**), every present recorded file still matches it **or is already exactly the pack's bytes** (what an interrupted run leaves), and no file the new pack wants sits at a path the record does not attest unless it is exactly the pack's bytes |
 | Readable | every file of the skill was read |
-| Never a downgrade | the embedded package is **strictly newer** than the version recorded for the skill (`ownerSkillVersions` in `.fsgg/scaffold-provenance.json`, named by delivery channel). A record that predates versions falls back to the CLI that last wrote the workspace (`upgradedBy`, recorded only by an `upgrade` in which every file landed, else the producing CLI); the running CLI must not be older than it. An unreadable version entry is kept, counted unprovable, and holds the skill |
+| Never a downgrade | the embedded package is **strictly newer** than the version recorded for the skill (`ownerSkillVersions` in `.fsgg/scaffold-provenance.json`, named by delivery channel). A skill with **no** recorded version takes two bounds, both required: (1) the **channel floor**: the pack is not below the highest version the record already holds for that channel; (2) the **writer bound**: the running CLI is strictly newer than the CLI that last wrote the workspace (`upgradedBy`, recorded only by an `upgrade` in which every file landed, else the producing CLI), or **equal** to it only when `upgradedBy` names this very CLI (a complete run of this release already vouched for the workspace, so this run can finish a refresh that was blocked or interrupted). An equal version with no such run holds, because two builds can share a version string. An unreadable version entry is kept, counted unprovable, and holds the skill |
 
 A skill that fails any condition is **held**: nothing in it is touched, it keeps today's content-drift
 warning, and the closing `upgrade` advisory names it and the reason (`fsgg-sdd doctor` states the same
@@ -187,7 +187,9 @@ the pack no longer ships at all is never deleted.
 **A name collision is held, not failed.** A skill the pack delivers whose name a workspace skill already
 occupies with other bytes (the user's own `atlas`, say; the 0.114.3 pack added six always-installed
 names) is reported by name with the fix ("Rename or remove your skill, then re-run"), left untouched,
-and kept out of the backfill, so it cannot fail the re-seed of every other skill.
+and kept out of the backfill, so it cannot fail the re-seed of every other skill. It never "changed
+upstream" (it was never installed), and the advisories say so: it is listed under "Delivered skills not
+installed because the name is already taken", apart from the skills that changed upstream.
 
 When a skill is replaced:
 
@@ -198,10 +200,13 @@ When a skill is replaced:
   digests, dropped rows, package version): a read-only directory, a refused write or a killed process
   records nothing for that skill, and the next `upgrade` completes it;
 - each write is **re-checked at the write edge** against the file's current digest (`OwnerSkillRefresh`
-  write kind, `RemoveFile` effect), so an edit made after planning is refused, not overwritten, and a
-  path that is, or sits under, a symbolic link resolving outside the workspace is refused with a
-  diagnostic naming it (`upgrade.ownerSkillPathRefused`); links that stay inside, such as a skill-view
-  root, are allowed;
+  write kind, `RemoveFile` effect), so an edit made after planning is refused, not overwritten;
+- **containment** covers every write that lands in a skill root, the replacement, the removal and the
+  no-clobber backfill of a skill that is not there yet. A path that sits under a directory symbolic link
+  resolving outside the workspace, or whose file is itself a symbolic link (even one whose target stays
+  inside), is refused with `upgrade.ownerSkillPathRefused`, which names it. Nothing is written or removed
+  through it, and `upgrade` fails on every run until the link is replaced by a real directory or file;
+  a directory link that stays inside the workspace (a skill-view root) is allowed;
 - the workspace's `.gitattributes` declares `-text` for the skills SDD delivered
   (`<root>/skills/<name>/**`, per root) and `docs/atlas/**`, never a whole skill root, so a workspace's
   own skills keep their own rules. SDD's own digest folds `\r\n`, but `atlas.py` hashes exact bytes, so a

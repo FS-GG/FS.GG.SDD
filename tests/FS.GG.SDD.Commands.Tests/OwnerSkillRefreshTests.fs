@@ -1128,14 +1128,131 @@ module OwnerSkillRefreshTests =
         Assert.Contains("999.0.0 that last wrote it", summary.NextActionHint)
 
     [<Fact>]
-    let ``a record without versions is refreshed by the same CLI that wrote it`` () =
-        // The same release embeds the same packs, so equal is not older: it must be able to finish an
-        // interrupted run or a refresh the user has just unblocked.
+    let ``a dev build with the writer's version string and an older pack does not replace a legacy skill`` () =
+        // The review's `veryold` case: a 2.5.4 build carrying an OLDER pack against a workspace a 2.5.4
+        // produced. Equal version strings prove nothing (two builds share one), so it holds.
+        let root, paths, _ = aged installedVersion []
+        let summary = (upgradeYes root).Upgrade.Value
+
+        for path in paths do
+            Assert.Equal(oldBody path, read root path)
+
+        Assert.Contains("no complete upgrade by this CLI is recorded", summary.NextActionHint)
+
+    [<Fact>]
+    let ``the same CLI finishes a refresh once a complete upgrade by it is recorded`` () =
         let root, _, _ = aged installedVersion []
+        let record = recordOf root
+
+        TestSupport.writeRelative
+            root
+            provenanceFile
+            (serialize
+                { record with
+                    UpgradedBy = Some installedVersion
+                })
+
         upgradeYes root |> ignore
 
         for file in desiredOf (recordOf root) do
             Assert.Equal(file.Text, read root file.Path)
+
+    [<Fact>]
+    let ``the channel floor holds a legacy skill whose pack is below a version already recorded for its channel`` () =
+        let root, paths, _ = aged "0.1.0" []
+        let record = recordOf root
+        let package, _ = embeddedPackage ()
+
+        let floor: OwnerSkillVersion =
+            {
+                SkillId = "some-other-driver-skill"
+                Channel = package
+                Version = "999.0.0"
+            }
+
+        TestSupport.writeRelative
+            root
+            provenanceFile
+            (serialize
+                { record with
+                    OwnerSkillVersions = [ floor ]
+                })
+
+        let summary = (upgradeYes root).Upgrade.Value
+
+        for path in paths do
+            Assert.Equal(oldBody path, read root path)
+
+        Assert.Contains("older than the 999.0.0 already materialized", summary.NextActionHint)
+
+    [<Fact>]
+    let ``the planner applies the channel floor even when the CLI version equals its last upgrade`` () =
+        let old = [ ".agents/skills/s/SKILL.md", "old\n" ]
+
+        let record =
+            { baseRecord
+                  (rowsFor old)
+                  [
+                      {
+                          SkillId = "other"
+                          Channel = "Pkg"
+                          Version = "0.98.0"
+                      }
+                  ] with
+                Generator = { Id = "fsgg-sdd"; Version = "2.5.4" }
+                UpgradedBy = Some "2.5.4"
+            }
+
+        let plan =
+            OwnerSkillRefresh.plan
+                record
+                "2.5.4"
+                (ownerFiles [ ".agents/skills/s/SKILL.md", "new\n" ])
+                (embedded "0.97.1")
+                (Map.ofList old)
+                Set.empty
+
+        Assert.Empty plan.Refreshed
+
+        match (List.head plan.Held).Reason with
+        | OwnerSkillRefresh.WouldDowngrade("0.98.0", "0.97.1") -> ()
+        | other -> failwithf "expected a downgrade hold, got %A" other
+
+    [<Fact>]
+    let ``the planner allows an equal CLI version only with its own complete upgrade recorded and a pack at the floor``
+        ()
+        =
+        let old = [ ".agents/skills/s/SKILL.md", "old\n" ]
+
+        let run upgradedBy embeddedVersion =
+            let record =
+                { baseRecord
+                      (rowsFor old)
+                      [
+                          {
+                              SkillId = "other"
+                              Channel = "Pkg"
+                              Version = "0.98.0"
+                          }
+                      ] with
+                    Generator = { Id = "fsgg-sdd"; Version = "2.5.4" }
+                    UpgradedBy = upgradedBy
+                }
+
+            OwnerSkillRefresh.plan
+                record
+                "2.5.4"
+                (ownerFiles [ ".agents/skills/s/SKILL.md", "new\n" ])
+                (embedded embeddedVersion)
+                (Map.ofList old)
+                Set.empty
+
+        Assert.NotEmpty (run (Some "2.5.4") "0.98.0").Refreshed
+        Assert.NotEmpty (run (Some "2.5.4") "0.99.0").Refreshed
+        Assert.Empty (run None "0.99.0").Refreshed
+        Assert.Empty (run (Some "2.5.5") "0.99.0").Refreshed
+        // a CLI strictly newer than the last complete upgrade needs no run of its own to vouch for it
+        Assert.NotEmpty (run (Some "2.5.3") "0.99.0").Refreshed
 
     [<Fact>]
     let ``a skill the user reverted to its recorded bytes is refreshed by the next run`` () =
@@ -1283,3 +1400,140 @@ module OwnerSkillRefreshTests =
             OwnerSkillRefresh.plan (baseRecord [] []) "2.0.0" desired (embedded "2.0.0") bodies Set.empty
 
         Assert.Empty plan.Held
+
+    // ---------- a backfill (a skill that is not there yet) ----------
+
+    let private newSkill = "work-roadmap"
+
+    [<Fact>]
+    let ``a failed backfill write records no row for the unwritten files and does not name its CLI the last writer``
+        ()
+        =
+        if System.OperatingSystem.IsWindows() then
+            ()
+        else
+            let root = ownerMissingFixture ()
+            let skills = Path.Combine(root, ".agents/skills")
+            let original = File.GetUnixFileMode skills
+            // a new skill directory cannot be created under `.agents/skills`, while `.claude` is fine
+            File.SetUnixFileMode(skills, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
+
+            try
+                let summary = (upgradeYes root).Upgrade.Value
+                Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+
+                let record = recordOf root
+
+                // the record names only what is on disk: no row for a file nobody wrote
+                for row in record.DriverPaths do
+                    Assert.True(exists root row.Path, $"{row.Path} is recorded but was never written")
+
+                Assert.DoesNotContain(
+                    record.DriverPaths,
+                    fun row -> row.Path.StartsWith($".agents/skills/{newSkill}/", System.StringComparison.Ordinal)
+                )
+
+                // and the skill, which did not land in full, carries no version
+                Assert.DoesNotContain(record.OwnerSkillVersions, fun entry -> entry.SkillId = newSkill)
+                Assert.Equal(None, record.UpgradedBy)
+            finally
+                File.SetUnixFileMode(skills, original)
+
+            // permissions restored: the next run completes and the record is true
+            let report = upgradeYes root
+
+            Assert.False(
+                report.Upgrade.Value.ResidualDrift,
+                sprintf
+                    "%s | %A | %A"
+                    report.Upgrade.Value.NextActionHint
+                    (report.Diagnostics |> List.map (fun d -> d.Id, d.Message))
+                    report.Upgrade.Value.SkillDriftPaths
+                + sprintf
+                    " DOCTOR %A"
+                    ((doctorReport root).Diagnostics
+                     |> List.map (fun d -> d.Id, d.Message)
+                     |> List.truncate 3)
+            )
+
+            Assert.True((doctorReport root).Doctor.Value.IsCoherent)
+
+            for row in (recordOf root).DriverPaths do
+                Assert.True(exists root row.Path)
+
+    [<Fact>]
+    let ``a backfill never writes through a skill directory that is a link out of the workspace`` () =
+        if System.OperatingSystem.IsWindows() then
+            ()
+        else
+            let root = ownerMissingFixture ()
+            let outside = TestSupport.tempDirectory ()
+
+            Directory.CreateSymbolicLink(Path.Combine(root, ".claude/skills", newSkill), outside)
+            |> ignore
+
+            let report = upgradeYes root
+
+            let refused =
+                report.Diagnostics
+                |> List.filter (fun d -> d.Id = "upgrade.ownerSkillPathRefused")
+
+            Assert.NotEmpty refused
+            Assert.Contains("outside the workspace", (List.head refused).Message)
+
+            // nothing was written outside, in a pack of hundreds of files
+            Assert.Empty(Directory.GetFileSystemEntries(outside, "*", SearchOption.AllDirectories))
+
+            // and it fails on every run until the link is replaced
+            let again = upgradeYes root
+
+            Assert.NotEmpty(
+                again.Diagnostics
+                |> List.filter (fun d -> d.Id = "upgrade.ownerSkillPathRefused")
+            )
+
+    [<Fact>]
+    let ``a file that is itself a link is refused even when its target stays inside`` () =
+        if System.OperatingSystem.IsWindows() then
+            ()
+        else
+            let root, _, _ = aged "0.1.0" []
+            let relative = $".claude/skills/{skillId}/SKILL.md"
+            let target = Path.Combine(root, "elsewhere.md")
+            // the link's content is exactly the recorded bytes, so the skill is otherwise unedited
+            File.WriteAllText(target, oldBody relative)
+            let leaf = Path.Combine(root, relative)
+            File.Delete leaf
+            File.CreateSymbolicLink(leaf, target) |> ignore
+
+            let report = upgradeYes root
+
+            Assert.NotEmpty(
+                report.Diagnostics
+                |> List.filter (fun d -> d.Id = "upgrade.ownerSkillPathRefused")
+            )
+
+            Assert.Equal(oldBody relative, File.ReadAllText target)
+
+    // ---------- the wording of what is left ----------
+
+    [<Fact>]
+    let ``a colliding skill is not described as having changed upstream`` () =
+        let root, own, _ = collisionFixture ()
+        let hint = (upgradeYes root).Upgrade.Value.NextActionHint
+
+        let start =
+            hint.IndexOf(
+                "Delivered skills not installed because the name is already taken",
+                System.StringComparison.Ordinal
+            )
+
+        Assert.True(start >= 0, hint)
+        Assert.DoesNotContain("changed upstream", hint.Substring start)
+        Assert.Contains(own, hint.Substring start)
+
+        let advisory =
+            (doctorReport root).Diagnostics
+            |> List.find (fun d -> d.Id = "doctor.ownerSkillsNotRefreshable")
+
+        Assert.DoesNotContain("changed upstream", advisory.Message)

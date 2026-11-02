@@ -478,7 +478,7 @@ module internal HandlersDoctor =
                                 FS.GG.SDD.Artifacts.Diagnostics.DiagnosticInfo
                                 None
                                 None
-                                ("Owner skills changed upstream but `fsgg-sdd upgrade` will not replace them: "
+                                ("Owner skills that `fsgg-sdd upgrade` will not install or replace: "
                                  + (held |> List.map OwnerSkillRefresh.heldText |> String.concat "; ")
                                  + ".")
                                 "Resolve each reason named above (restore or move your edits, rename a colliding skill, or update the CLI), then run `fsgg-sdd upgrade`."
