@@ -79,6 +79,7 @@ module CatalogSkillDigestTests =
                 RenderingSkillPaths = tag own.RenderingSkillPaths
                 SddOwnedPaths = []
                 OwnerSkillVersions = []
+                UpgradedBy = None
             }
 
         let all =
@@ -152,8 +153,18 @@ module CatalogSkillDigestTests =
                         |> List.map (fun relative -> File.ReadAllBytes(path root relative))
 
                     Assert.Empty((summary root).SkillDriftPaths)
-                    let upgrade = (upgradeYes root).Upgrade |> Option.get
-                    Assert.False upgrade.ResidualDrift
+                    let upgraded = upgradeYes root
+                    let upgrade = upgraded.Upgrade |> Option.get
+
+                    Assert.False(
+                        upgrade.ResidualDrift,
+                        sprintf
+                            "%s: %s | %A"
+                            variant
+                            upgrade.NextActionHint
+                            (upgraded.Diagnostics |> List.map (fun d -> d.Id, d.Message))
+                    )
+
                     Assert.True((provenance = File.ReadAllBytes(path root provenancePath)))
 
                     List.zip productSkillCopies before

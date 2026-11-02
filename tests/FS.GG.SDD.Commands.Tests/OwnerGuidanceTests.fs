@@ -606,8 +606,10 @@ module OwnerGuidancePayloadTests =
                 model.InterpretedEffects,
                 fun result ->
                     match result.Effect with
-                    | ReadContainedFile _
-                    | WriteFile(_, _, HybridArtifact(ObservedMerge _)) -> true
+                    | ReadContainedFile _ -> true
+                    // `.gitattributes` is guarded by the same exact-byte merge kind but is the
+                    // skill delivery's own file (FS.GG.SDD#1155), not an owner-guidance write.
+                    | WriteFile(path, _, HybridArtifact(ObservedMerge _)) -> path <> ".gitattributes"
                     | _ -> false
             )
 

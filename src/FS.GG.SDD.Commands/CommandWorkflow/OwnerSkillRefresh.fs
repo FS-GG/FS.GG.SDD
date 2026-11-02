@@ -77,6 +77,9 @@ module internal OwnerSkillRefresh =
         | VersionUnprovable of detail: string
         /// A file of the skill could not be read, so no verdict over the whole unit is possible.
         | Unreadable
+        /// A skill of the same name already exists in the workspace and is not the one SDD delivers
+        /// (these are the paths whose bytes differ from the pack's). Nothing is installed around it.
+        | NameCollision of paths: string list
 
     type HeldSkill = { SkillId: string; Reason: HeldReason }
 
@@ -95,6 +98,10 @@ module internal OwnerSkillRefresh =
             /// Recorded files that disappeared upstream and are already absent (only the record row
             /// has to go).
             Dropped: string list
+            /// Desired files whose record row is missing or differs from the pack's digest. They are
+            /// targets even when the disk already holds the pack's bytes, so an interrupted run's
+            /// record is completed on the next one.
+            Stale: string list
             /// The `(channel, version)` the skill will be recorded as materialized from.
             Version: (string * string) option
         }
@@ -126,8 +133,14 @@ module internal OwnerSkillRefresh =
         : Result<(string * string) option, HeldReason> =
         match embeddedFor owner with
         | None -> Error(VersionUnprovable "this CLI build records no version for the owner package")
+        // A record that claims version tracking but carries an entry nobody can read is not a
+        // legacy record: it is unprovable, and holds, rather than quietly taking the weaker bound.
+        | Some _ when record.OwnerSkillVersions |> List.exists (fun entry -> entry.SkillId = "") ->
+            Error(VersionUnprovable "the record's ownerSkillVersions has a malformed entry")
         | Some(package, version) ->
             match record.OwnerSkillVersions |> List.tryFind (fun entry -> entry.SkillId = id) with
+            | Some recorded when recorded.Channel = "" || recorded.Version = "" ->
+                Error(VersionUnprovable "the record's version entry for this skill is malformed")
             | Some recorded when recorded.Channel <> package ->
                 Error(
                     VersionUnprovable
@@ -143,14 +156,18 @@ module internal OwnerSkillRefresh =
                     )
                 | None -> Error(VersionUnprovable $"version {recorded.Version} or {version} is not comparable")
             | None ->
-                // A record that predates version tracking. The CLI that wrote it is the only bound
-                // available: a strictly newer CLI cannot be an older pack than the one it wrote.
-                match CommandVersion.compare cliVersion record.Generator.Version with
+                // A record that predates version tracking. The CLI that last wrote the workspace is the
+                // only bound available (`Generator` is the one that produced it and never moves;
+                // `UpgradedBy` is the last `upgrade`): a strictly newer CLI cannot be an older pack
+                // than the one it wrote.
+                let lastWriter = defaultArg record.UpgradedBy record.Generator.Version
+
+                match CommandVersion.compare cliVersion lastWriter with
                 | Some c when c > 0 -> Ok(Some(package, version))
                 | _ ->
                     Error(
                         VersionUnprovable
-                            $"the record carries no package version and CLI {cliVersion} is not newer than the {record.Generator.Version} that wrote it"
+                            $"the record carries no package version and CLI {cliVersion} is not newer than the {lastWriter} that last wrote it"
                     )
 
     /// Decide, per recorded owner-sourced skill, whether it is replaced as a unit or held.
@@ -195,7 +212,18 @@ module internal OwnerSkillRefresh =
                          | _ -> true))
                     || (recorded |> Map.exists (fun path _ -> not (Map.containsKey path desiredByPath))))
 
-            if not changed then
+            // Catalogue/source provenance (schema 2/3) records RAW tagged digests (`sha256:...`) over exact
+            // bytes: a different domain from the canonical one the pack digests are in, so the two cannot
+            // be compared, and that wrapper cannot be rewritten by `upgrade` anyway (see
+            // `ownerBackfillEffects`). Such a skill is not a refresh candidate; the existing behavior
+            // for that provenance applies unchanged.
+            let rawDomain =
+                recorded
+                |> Map.exists (fun _ sha ->
+                    sha
+                    |> Option.exists (fun value -> value.StartsWith("sha256:", StringComparison.Ordinal)))
+
+            if not changed || rawDomain then
                 None
             else
                 let touched =
@@ -206,16 +234,25 @@ module internal OwnerSkillRefresh =
                 if touched |> Set.exists unobserved.Contains then
                     Some(Choice2Of2 { SkillId = id; Reason = Unreadable })
                 else
+                    // A file already at the PACK's digest is the pack's own bytes whatever the record
+                    // says: it is what an earlier run that was interrupted (a crash, a read-only
+                    // directory) left behind, and treating it as an edit would hold that skill forever.
+                    let atPack path text =
+                        Map.tryFind path desiredByPath
+                        |> Option.exists (fun file -> file.Sha256 = Fsgg.SkillMirror.sha256 text)
+
                     let edited =
                         touched
                         |> Set.exists (fun path ->
                             match Map.tryFind path recorded, Map.tryFind path bodies with
                             // Recorded without a digest: nothing to judge by, so it is edited.
                             | Some None, _ -> true
-                            | Some(Some sha), Some text -> Fsgg.SkillMirror.sha256 text <> sha
+                            | Some(Some sha), Some text ->
+                                Fsgg.SkillMirror.sha256 text <> sha && not (atPack path text)
                             | Some(Some _), None -> false
-                            // Wanted by the new pack, present on disk, not attested by the record.
-                            | None, Some _ -> true
+                            // Wanted by the new pack, present on disk, not attested by the record:
+                            // ours only if it is exactly the pack's bytes.
+                            | None, Some text -> not (atPack path text)
                             | None, None -> false)
 
                     if edited then
@@ -246,7 +283,9 @@ module internal OwnerSkillRefresh =
                                 |> List.map (fun file ->
                                     file.Path,
                                     (match Map.tryFind file.Path recorded, Map.tryFind file.Path bodies with
-                                     | Some(Some sha), Some _ -> sha
+                                     | Some(Some sha), Some text when Fsgg.SkillMirror.sha256 text = sha -> sha
+                                     // At the pack's digest (an interrupted run), so the write is a no-op.
+                                     | _, Some text -> Fsgg.SkillMirror.sha256 text
                                      | _ -> ""))
                                 |> Map.ofList
 
@@ -259,6 +298,12 @@ module internal OwnerSkillRefresh =
                                         ExpectedBefore = expectedBefore
                                         Removals = removals |> List.sortBy fst
                                         Dropped = dropped |> List.sort
+                                        Stale =
+                                            desiredFiles
+                                            |> List.filter (fun file ->
+                                                Map.tryFind file.Path recorded <> Some(Some file.Sha256))
+                                            |> List.map (fun file -> file.Path)
+                                            |> List.sort
                                         Version = version
                                     }
                             )
@@ -269,6 +314,43 @@ module internal OwnerSkillRefresh =
                 not (Set.contains id foreign)
                 && not (id.StartsWith("fs-gg-sdd-", StringComparison.Ordinal)))
             |> List.choose (fun (id, rows) -> decide id rows)
+
+        // A skill the pack delivers that the record does NOT attest, whose name is already taken in
+        // the workspace by files that are not the pack's: the user's (or a provider's) own skill.
+        // Reported by name with the fix, and left out of the backfill so it cannot fail the re-seed
+        // of every other skill. Files that are exactly the pack's bytes are not a collision: they are
+        // what an interrupted install left behind, and the backfill completes them.
+        let recordedIds = recordedById |> List.map fst |> Set.ofList
+
+        let collisions =
+            desired
+            |> List.choose (fun file -> skillCopyOf file.Path |> Option.map (fun (_, id, _) -> id))
+            |> List.distinct
+            |> List.filter (fun id ->
+                not (Set.contains id recordedIds)
+                && not (id.StartsWith("fs-gg-sdd-", StringComparison.Ordinal)))
+            |> List.choose (fun id ->
+                let differing =
+                    desired
+                    |> List.filter (fun file ->
+                        skillCopyOf file.Path |> Option.exists (fun (_, i, _) -> i = id)
+                        && (match Map.tryFind file.Path bodies with
+                            | Some text -> Fsgg.SkillMirror.sha256 text <> file.Sha256
+                            | None -> false))
+                    |> List.map (fun file -> file.Path)
+
+                if List.isEmpty differing then
+                    None
+                else
+                    Some(
+                        Choice2Of2
+                            {
+                                SkillId = id
+                                Reason = NameCollision(List.sort differing)
+                            }
+                    ))
+
+        let results = results @ collisions
 
         {
             Refreshed =
@@ -285,9 +367,10 @@ module internal OwnerSkillRefresh =
                 |> List.sortBy (fun held -> held.SkillId)
         }
 
-    /// The destination paths a refresh would actually CHANGE on disk: desired files that are absent
-    /// or differ from the desired digest, plus the removals. This is the `artifactReSeed` target
-    /// contribution; a file already at the desired bytes is a no-op and not a target.
+    /// The destination paths a refresh must act on: desired files that are absent, differ from the
+    /// pack's digest or whose record row is stale; the removals; and the dropped rows. This is the
+    /// `artifactReSeed` target contribution. A file already at the pack's bytes with a current record
+    /// is a no-op and not a target.
     let changedPaths (bodies: Map<string, string>) (refresh: SkillRefresh) : string list =
         (refresh.Writes
          |> List.filter (fun file ->
@@ -295,7 +378,9 @@ module internal OwnerSkillRefresh =
              | Some text -> Fsgg.SkillMirror.sha256 text <> file.Sha256
              | None -> true)
          |> List.map (fun file -> file.Path))
+        @ refresh.Stale
         @ (refresh.Removals |> List.map fst)
+        @ refresh.Dropped
         |> List.distinct
         |> List.sort
 
@@ -308,6 +393,10 @@ module internal OwnerSkillRefresh =
             $"{held.SkillId}: this CLI embeds {embedded}, older than the {recorded} already materialized; not replaced"
         | VersionUnprovable detail -> $"{held.SkillId}: not replaced, newer-ness unprovable ({detail})"
         | Unreadable -> $"{held.SkillId}: a file could not be read; not replaced"
+        | NameCollision paths ->
+            let shown = paths |> List.truncate 3 |> String.concat ", "
+
+            $"{held.SkillId}: a skill with this name already exists here and is not the one SDD delivers ({shown}); it was left alone and the delivered skill was not installed. Rename or remove your skill, then re-run `fsgg-sdd upgrade`"
 
     /// The desired owner-skill files, from the SAME embedded, content-verified plans scaffold and the
     /// missing-file backfill use, with their precedence (a path has one owner: drivers, then the

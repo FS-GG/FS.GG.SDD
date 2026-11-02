@@ -539,15 +539,27 @@ nuget-cache/
     // checkout that converted line endings does not read as an edit. Those two answers disagree
     // the moment git rewrites a pack or skill file on checkout (`core.autocrlf`, a `text=auto`
     // default), so the paths that carry them are declared `-text`: never converted, never
-    // normalized. The rule is generic over WHAT those files are; it names only the declared skill
-    // roots and the Atlas archive directory.
+    // normalized.
+    //
+    // The rules name only what SDD delivers: the skill directories of the owner-sourced skills it
+    // materialized (`<root>/skills/<id>/**`) and the Atlas archive directory. They deliberately do
+    // NOT cover a whole skill root, because a workspace's own skills live there too and the owner of
+    // those keeps their own line-ending rules.
     let gitattributesPath = ".gitattributes"
 
-    let exactBytePatterns =
-        (Fsgg.Schemas.agentSkillRoots |> List.map (fun root -> root + "/skills/**")) @ [ "docs/atlas/**" ]
+    let atlasArchivePattern = "docs/atlas/**"
+
+    /// The `-text` patterns for a set of owner-delivered skill ids: both roots of each, then the archive.
+    let exactBytePatternsFor (skillIds: string list) =
+        (skillIds
+         |> List.distinct
+         |> List.sort
+         |> List.collect (fun id ->
+             Fsgg.Schemas.agentSkillRoots |> List.map (fun root -> $"{root}/skills/{id}/**")))
+        @ [ atlasArchivePattern ]
 
     let private gitattributesHeader =
-        "# FS.GG.SDD: skill and knowledge-pack files are compared by exact bytes (FS.GG.SDD#1155).\n"
+        "# FS.GG.SDD: skill and knowledge-pack files it delivers are compared by exact bytes (FS.GG.SDD#1155).\n"
 
     /// True when some line already gives `pattern` the `-text` (or `binary`) attribute.
     let private declaresExactBytes (pattern: string) (existing: string) =
@@ -559,23 +571,34 @@ nuget-cache/
             && tokens.[0] = pattern
             && (tokens |> Array.exists (fun token -> token = "-text" || token = "binary")))
 
-    /// The `.gitattributes` text with the exact-byte rules present: `None` when every rule already
-    /// is (nothing to write); otherwise the existing text, byte for byte, followed by only the
-    /// missing rules. Existing lines are never edited or reordered.
-    let gitattributesWithExactBytes (existing: string option) : string option =
+    /// The `.gitattributes` text with the exact-byte rules for `skillIds` present: `None` when every rule
+    /// already is (nothing to write); otherwise the existing text, byte for byte, followed by only the
+    /// missing rules in the file's own line ending. Existing lines are never edited or reordered. The
+    /// caller owns the byte-order mark (the text here is BOM-free, as every decoded body is).
+    let gitattributesWithExactBytes (skillIds: string list) (existing: string option) : string option =
         let current = defaultArg existing ""
 
-        match exactBytePatterns |> List.filter (fun pattern -> not (declaresExactBytes pattern current)) with
+        match
+            exactBytePatternsFor skillIds
+            |> List.filter (fun pattern -> not (declaresExactBytes pattern current))
+        with
         | [] -> None
         | missing ->
+            let eol = if current.Contains "\r\n" then "\r\n" else "\n"
+
             let separator =
                 if current = "" || current.EndsWith("\n", System.StringComparison.Ordinal) then
                     ""
                 else
-                    "\n"
+                    eol
 
-            let header = if current.Contains "FS.GG.SDD#1155" then "" else gitattributesHeader
-            let rules = missing |> List.map (fun pattern -> pattern + " -text\n") |> String.concat ""
+            let header =
+                if current.Contains "FS.GG.SDD#1155" then
+                    ""
+                else
+                    gitattributesHeader.Replace("\n", eol)
+
+            let rules = missing |> List.map (fun pattern -> pattern + " -text" + eol) |> String.concat ""
             Some(current + separator + header + rules)
 
     // Feature 085: the dev-repo provenance document `init` writes. Provider-less shape —

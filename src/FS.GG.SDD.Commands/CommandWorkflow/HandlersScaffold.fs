@@ -1160,6 +1160,7 @@ module internal HandlersScaffold =
                                 : ScaffoldProvenance.OwnerSkillVersion))))
                     |> List.distinctBy (fun entry -> entry.SkillId)
                     |> List.sortBy (fun entry -> entry.SkillId)
+                UpgradedBy = None
                 // `Map.toList` is already ascending by key — the FR-003 effective set
                 // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
                 EffectiveParameters = Map.toList effective
@@ -1969,7 +1970,15 @@ module internal HandlersScaffold =
                     if providerOwnsIt || List.isEmpty driverOutcome.ProvenancePaths then
                         []
                     else
-                        match gitattributesWithExactBytes None with
+                        let deliveredIds =
+                            driverOutcome.ProvenancePaths
+                            @ gameSkillOutcome.ProvenancePaths
+                            @ renderingSkillOutcome.ProvenancePaths
+                            @ audioSkillOutcome.ProvenancePaths
+                            |> List.choose (fun (path, _) ->
+                                OwnerSkillRefresh.skillCopyOf path |> Option.map (fun (_, id, _) -> id))
+
+                        match gitattributesWithExactBytes deliveredIds None with
                         | Some text -> [ WriteFile(gitattributesPath, text, AgentGuidanceTarget) ]
                         | None -> []
 

@@ -475,6 +475,14 @@ module OwnerSkillRefreshTests =
 
         Assert.Equal("foreign\n", read root desired.Path)
 
+        // held as a whole: every other file of the skill is untouched, nothing was recorded for it,
+        // and the reason is named (this is what distinguishes "unattested file holds the skill" from a
+        // skill that merely happens to keep one preserved file)
+        for row in others do
+            Assert.Equal(oldBody row.Path, read root row.Path)
+
+        Assert.DoesNotContain((recordOf root).OwnerSkillVersions, fun entry -> entry.SkillId = skillId)
+
     [<Fact>]
     let ``a skill the pack no longer ships at all is never deleted`` () =
         let root, record = embeddedRecord ()
@@ -772,47 +780,431 @@ module OwnerSkillRefreshTests =
 
     // ---------- .gitattributes ----------
 
+    let private ids = [ "atlas"; "work-board" ]
+
     [<Fact>]
     let ``the exact-byte rules are appended to an existing gitattributes without touching its lines`` () =
         let existing = "* text=auto\n*.png binary\n"
 
-        let merged = Foundation.gitattributesWithExactBytes (Some existing) |> Option.get
+        let merged =
+            Foundation.gitattributesWithExactBytes ids (Some existing) |> Option.get
 
         Assert.StartsWith(existing, merged)
 
-        for pattern in Foundation.exactBytePatterns do
+        for pattern in Foundation.exactBytePatternsFor ids do
             Assert.Contains(pattern + " -text", merged)
 
     [<Fact>]
     let ``the exact-byte rules are idempotent and respect rules already present`` () =
-        let once = Foundation.gitattributesWithExactBytes None |> Option.get
-        Assert.Equal(None, Foundation.gitattributesWithExactBytes (Some once))
+        let once = Foundation.gitattributesWithExactBytes ids None |> Option.get
+        Assert.Equal(None, Foundation.gitattributesWithExactBytes ids (Some once))
 
-        let partial = ".agents/skills/** -text\n"
-        let completed = Foundation.gitattributesWithExactBytes (Some partial) |> Option.get
+        let partial = ".agents/skills/atlas/** -text\n"
+
+        let completed =
+            Foundation.gitattributesWithExactBytes ids (Some partial) |> Option.get
+
         Assert.StartsWith(partial, completed)
-        Assert.Equal(1, completed.Split(".agents/skills/** -text").Length - 1)
+        Assert.Equal(1, completed.Split(".agents/skills/atlas/** -text").Length - 1)
 
     [<Fact>]
-    let ``the rules cover skill roots and the knowledge archive`` () =
-        Assert.Contains(".claude/skills/**", Foundation.exactBytePatterns)
-        Assert.Contains(".agents/skills/**", Foundation.exactBytePatterns)
-        Assert.Contains("docs/atlas/**", Foundation.exactBytePatterns)
+    let ``the rules name the delivered skills and the archive, never a whole skill root`` () =
+        let patterns = Foundation.exactBytePatternsFor ids
+        Assert.Contains(".claude/skills/atlas/**", patterns)
+        Assert.Contains(".agents/skills/work-board/**", patterns)
+        Assert.Contains("docs/atlas/**", patterns)
+        Assert.DoesNotContain(".claude/skills/**", patterns)
+        Assert.DoesNotContain(".agents/skills/**", patterns)
+
+        // a user's own skill rule is neither replaced nor shadowed by a broader one
+        let own = ".agents/skills/mine/** text eol=crlf\n"
+        let merged = Foundation.gitattributesWithExactBytes ids (Some own) |> Option.get
+        Assert.StartsWith(own, merged)
+        Assert.DoesNotContain("mine", merged.Substring own.Length)
+
+    [<Fact>]
+    let ``appended rules follow the file's own line ending`` () =
+        let merged =
+            Foundation.gitattributesWithExactBytes ids (Some "* text=auto\r\n")
+            |> Option.get
+
+        Assert.StartsWith("* text=auto\r\n", merged)
+        Assert.DoesNotContain("\n", merged.Replace("\r\n", ""))
 
     [<Fact>]
     let ``a text file with no trailing newline gets one before the appended rules`` () =
         let merged =
-            Foundation.gitattributesWithExactBytes (Some "* text=auto") |> Option.get
+            Foundation.gitattributesWithExactBytes ids (Some "* text=auto") |> Option.get
 
         Assert.StartsWith("* text=auto\n", merged)
 
     [<Fact>]
-    let ``upgrade declares the exact-byte rules and keeps existing gitattributes lines`` () =
+    let ``upgrade scopes the rules to the delivered skills and keeps existing lines and the byte-order mark`` () =
         let root, _, _ = aged "0.1.0" []
-        TestSupport.writeRelative root ".gitattributes" "* text=auto eol=lf\n"
-        upgradeYes root |> ignore
-        let text = read root ".gitattributes"
-        Assert.StartsWith("* text=auto eol=lf\n", text)
+        let own = "* text=auto eol=lf\n.agents/skills/mine/** text eol=crlf\n"
 
-        for pattern in Foundation.exactBytePatterns do
-            Assert.Contains(pattern + " -text", text)
+        File.WriteAllBytes(
+            Path.Combine(root, ".gitattributes"),
+            Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (System.Text.Encoding.UTF8.GetBytes own)
+        )
+
+        upgradeYes root |> ignore
+        let bytes = File.ReadAllBytes(Path.Combine(root, ".gitattributes"))
+        Assert.Equal<byte>([| 0xEFuy; 0xBBuy; 0xBFuy |], bytes.[0..2])
+        let text = System.Text.Encoding.UTF8.GetString(bytes.[3..])
+        Assert.StartsWith(own, text)
+        Assert.Contains($".agents/skills/{skillId}/** -text", text)
+        Assert.Contains("docs/atlas/** -text", text)
+        Assert.DoesNotContain(".agents/skills/** -text", text)
+        Assert.DoesNotContain(".claude/skills/** -text", text)
+
+    // ---------- an interrupted or partial apply ----------
+
+    let private recordedDigest root path =
+        (recordOf root).DriverPaths
+        |> List.find (fun row -> row.Path = path)
+        |> fun row -> row.Sha256
+
+    let private versionOf root =
+        (recordOf root).OwnerSkillVersions
+        |> List.tryFind (fun entry -> entry.SkillId = skillId)
+
+    let private assertConverged root =
+        let report = upgradeYes root
+        Assert.False(report.Upgrade.Value.ResidualDrift, sprintf "%s" report.Upgrade.Value.NextActionHint)
+        let record = recordOf root
+
+        for file in desiredOf record do
+            Assert.Equal(file.Text, read root file.Path)
+            Assert.Equal(Some file.Sha256, recordedDigest root file.Path)
+
+        Assert.True((versionOf root).IsSome)
+        Assert.True((doctorReport root).Doctor.Value.IsCoherent)
+        Assert.True((upgradeYes root).Upgrade.Value.AlreadyCoherent)
+
+    [<Fact>]
+    let ``a read-only directory mid-skill records nothing for the skill and the next run completes it`` () =
+        if System.OperatingSystem.IsWindows() then
+            ()
+        else
+            let root, paths, retired = aged "0.1.0" []
+            let before = read root provenanceFile
+            let blocked = Path.Combine(root, ".claude/skills", skillId, "references")
+            Assert.True(Directory.Exists blocked)
+            let original = File.GetUnixFileMode blocked
+            File.SetUnixFileMode(blocked, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
+
+            try
+                let summary = (upgradeYes root).Upgrade.Value
+                Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+
+                // The record must not claim files that were never written: no new digest, no version,
+                // and the rows of files that could not be removed are still there.
+                let record = recordOf root
+
+                for row in skillRows record do
+                    Assert.Equal(Some(Fsgg.SkillMirror.sha256 (oldBody row.Path)), row.Sha256)
+
+                Assert.Equal(None, versionOf root)
+
+                for path in retired do
+                    Assert.Contains(record.DriverPaths, fun row -> row.Path = path)
+            finally
+                File.SetUnixFileMode(blocked, original)
+
+            ignore (before, paths)
+            // permissions restored: the very next run completes the skill and the record is true
+            assertConverged root
+
+            for path in retired do
+                Assert.False(exists root path)
+
+    [<Fact>]
+    let ``a run killed mid-skill is completed by the next run`` () =
+        let root, paths, _ = aged "0.1.0" []
+        let desired = desiredOf (recordOf root)
+
+        // some files already carry the pack's bytes, the record still describes the old ones
+        for file in desired |> List.take (desired.Length / 2) do
+            TestSupport.writeRelative root file.Path file.Text
+
+        Assert.NotEmpty paths
+        assertConverged root
+
+    [<Fact>]
+    let ``a skill fully written but never recorded has its record completed`` () =
+        let root, _, _ = aged "0.1.0" []
+
+        for file in desiredOf (recordOf root) do
+            TestSupport.writeRelative root file.Path file.Text
+
+        assertConverged root
+
+    [<Fact>]
+    let ``a refused write through a symbolic link out of the workspace is named and records nothing`` () =
+        if System.OperatingSystem.IsWindows() then
+            ()
+        else
+            let root, _, _ = aged "0.1.0" []
+            let outside = TestSupport.tempDirectory ()
+            let dir = Path.Combine(root, ".claude/skills", skillId, "references")
+            let moved = Path.Combine(outside, "references")
+            Directory.Move(dir, moved)
+            Directory.CreateSymbolicLink(dir, moved) |> ignore
+
+            let outsideBefore =
+                Directory.GetFiles moved |> Array.map (fun f -> f, File.ReadAllBytes f)
+
+            let report = upgradeYes root
+
+            let diagnostic =
+                report.Diagnostics
+                |> List.tryFind (fun d -> d.Id = "upgrade.ownerSkillPathRefused")
+
+            Assert.True(diagnostic.IsSome, sprintf "%A" (report.Diagnostics |> List.map (fun d -> d.Id)))
+            Assert.Contains("outside the workspace", diagnostic.Value.Message)
+            Assert.Contains("references", diagnostic.Value.Message)
+
+            // nothing outside the workspace was written or deleted
+            for f, bytes in outsideBefore do
+                Assert.Equal<byte>(bytes, File.ReadAllBytes f)
+
+            Assert.Equal(outsideBefore.Length, Directory.GetFiles(moved).Length)
+            Assert.Equal(None, versionOf root)
+
+            for row in skillRows (recordOf root) do
+                Assert.Equal(Some(Fsgg.SkillMirror.sha256 (oldBody row.Path)), row.Sha256)
+
+    [<Fact>]
+    let ``a symbolic link that stays inside the workspace is not refused`` () =
+        if System.OperatingSystem.IsWindows() then
+            ()
+        else
+            let root, _, _ = aged "0.1.0" []
+            // `.agents/skills` as a view onto `.claude/skills`, as a skill-view workspace has it
+            let agents = Path.Combine(root, ".agents/skills")
+            Directory.Delete(agents, true)
+
+            Directory.CreateSymbolicLink(agents, Path.Combine(root, ".claude/skills"))
+            |> ignore
+
+            let report = upgradeYes root
+            Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "upgrade.ownerSkillPathRefused")
+
+    // ---------- a name collision ----------
+
+    let private collisionFixture () =
+        let root, record = embeddedRecord ()
+        // another aged, unedited skill proves the collision does not block unrelated skills
+        let victim = "work-board"
+
+        let victimRows =
+            record.DriverPaths
+            |> List.filter (fun row ->
+                OwnerSkillRefresh.skillCopyOf row.Path
+                |> Option.exists (fun (_, id, _) -> id = victim))
+
+        // `padd-item` becomes the user's own skill: unrecorded, different bytes, a different file set
+        let own = "padd-item"
+
+        let ownRows =
+            record.DriverPaths
+            |> List.filter (fun row ->
+                OwnerSkillRefresh.skillCopyOf row.Path
+                |> Option.exists (fun (_, id, _) -> id = own))
+
+        for row in ownRows do
+            File.Delete(Path.Combine(root, row.Path))
+
+        for skillRoot in Fsgg.Schemas.agentSkillRoots do
+            TestSupport.writeRelative root $"{skillRoot}/skills/{own}/SKILL.md" "my own padd-item skill\n"
+
+        for row in victimRows do
+            TestSupport.writeRelative root row.Path (oldBody row.Path)
+
+        let agedVictim =
+            victimRows
+            |> List.map (fun row ->
+                { row with
+                    Sha256 = Some(Fsgg.SkillMirror.sha256 (oldBody row.Path))
+                })
+
+        let ownPaths = ownRows |> List.map (fun row -> row.Path) |> Set.ofList
+        let victimPaths = agedVictim |> List.map (fun row -> row.Path) |> Set.ofList
+
+        let updated =
+            { record with
+                Generator =
+                    { record.Generator with
+                        Version = "0.1.0"
+                    }
+                DriverPaths =
+                    (record.DriverPaths
+                     |> List.filter (fun row -> not (ownPaths.Contains row.Path) && not (victimPaths.Contains row.Path)))
+                    @ agedVictim
+            }
+
+        TestSupport.writeRelative root provenanceFile (serialize updated)
+        root, own, victim
+
+    [<Fact>]
+    let ``a user's skill with a delivered name is named with the fix and does not block other skills`` () =
+        let root, own, victim = collisionFixture ()
+        let report = upgradeYes root
+        let summary = report.Upgrade.Value
+
+        Assert.True(
+            not (List.contains ReconciliationStepId.ArtifactReSeed summary.FailedStepIds),
+            sprintf "%A %s" (report.Diagnostics |> List.map (fun d -> d.Id, d.Message)) summary.NextActionHint
+        )
+
+        Assert.Contains(own, summary.NextActionHint)
+        Assert.Contains("Rename or remove your skill", summary.NextActionHint)
+
+        for skillRoot in Fsgg.Schemas.agentSkillRoots do
+            Assert.Equal("my own padd-item skill\n", read root $"{skillRoot}/skills/{own}/SKILL.md")
+            Assert.False(exists root $"{skillRoot}/skills/{own}/agents/openai.yaml")
+
+        // the unrelated aged skill was still refreshed
+        let record = recordOf root
+
+        for file in
+            OwnerSkillRefresh.embeddedDesired record
+            |> List.filter (fun f ->
+                OwnerSkillRefresh.skillCopyOf f.Path
+                |> Option.exists (fun (_, id, _) -> id = victim)) do
+            Assert.Equal(file.Text, read root file.Path)
+
+    // ---------- doctor names what upgrade will not replace ----------
+
+    [<Fact>]
+    let ``doctor states held skills as an advisory without changing its verdict`` () =
+        let root, paths, _ = aged "0.1.0" []
+        let edited = List.head paths
+        TestSupport.writeRelative root edited (oldBody edited + "mine\n")
+
+        let report = doctorReport root
+
+        let advisory =
+            report.Diagnostics
+            |> List.tryFind (fun d -> d.Id = "doctor.ownerSkillsNotRefreshable")
+
+        Assert.True(advisory.IsSome)
+        Assert.Contains("edited locally", advisory.Value.Message)
+        Assert.Contains(skillId, advisory.Value.Message)
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticInfo, advisory.Value.Severity)
+
+    [<Fact>]
+    let ``doctor has no held-skills advisory for a workspace with nothing held`` () =
+        let report = doctorReport (coherentFixture ())
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "doctor.ownerSkillsNotRefreshable")
+
+    // ---------- the legacy bound and malformed versions ----------
+
+    [<Fact>]
+    let ``upgrade records the CLI that last wrote the workspace`` () =
+        let root, _, _ = aged "0.1.0" []
+        upgradeYes root |> ignore
+        Assert.Equal(Some installedVersion, (recordOf root).UpgradedBy)
+
+    [<Fact>]
+    let ``a record with no versions is bounded by the last upgrade, not only the producing CLI`` () =
+        let root, paths, _ = aged "0.1.0" []
+        let record = recordOf root
+
+        TestSupport.writeRelative
+            root
+            provenanceFile
+            (serialize
+                { record with
+                    UpgradedBy = Some "999.0.0"
+                })
+
+        let summary = (upgradeYes root).Upgrade.Value
+
+        for path in paths do
+            Assert.Equal(oldBody path, read root path)
+
+        Assert.Contains("999.0.0 that last wrote it", summary.NextActionHint)
+
+    [<Fact>]
+    let ``a malformed version entry is kept, counted unprovable, and holds every owner skill`` () =
+        let root, paths, _ = aged "0.1.0" []
+        let text = read root provenanceFile
+
+        let broken =
+            text.Replace(
+                "\"effectiveParameters\"",
+                "\"ownerSkillVersions\": [ { \"skill\": \"x\" }, 7 ],\n  \"effectiveParameters\""
+            )
+
+        Assert.NotEqual<string>(text, broken)
+        TestSupport.writeRelative root provenanceFile broken
+        let parsed = recordOf root
+        Assert.Equal(2, parsed.OwnerSkillVersions.Length)
+
+        let summary = (upgradeYes root).Upgrade.Value
+
+        for path in paths do
+            Assert.Equal(oldBody path, read root path)
+
+        Assert.Contains("malformed", summary.NextActionHint)
+
+    [<Fact>]
+    let ``an entry that is not an array is still a malformed marker`` () =
+        let root, _, _ = aged "0.1.0" []
+        let text = read root provenanceFile
+
+        let broken =
+            text.Replace("\"effectiveParameters\"", "\"ownerSkillVersions\": \"oops\",\n  \"effectiveParameters\"")
+
+        TestSupport.writeRelative root provenanceFile broken
+        Assert.Equal(1, (recordOf root).OwnerSkillVersions.Length)
+
+    [<Fact>]
+    let ``the planner treats a file already at the pack's digest as unedited`` () =
+        let old =
+            [ ".agents/skills/s/SKILL.md", "old\n"; ".agents/skills/s/b.md", "old b\n" ]
+
+        let desired =
+            ownerFiles [ ".agents/skills/s/SKILL.md", "new\n"; ".agents/skills/s/b.md", "new b\n" ]
+        // the first file was already replaced by an interrupted run
+        let bodies =
+            Map.ofList [ ".agents/skills/s/SKILL.md", "new\n"; ".agents/skills/s/b.md", "old b\n" ]
+
+        let plan =
+            OwnerSkillRefresh.plan (baseRecord (rowsFor old) []) "2.0.0" desired (embedded "2.0.0") bodies Set.empty
+
+        let refresh = List.head plan.Refreshed
+        // the already-replaced file is a no-op write, expected at the pack's own digest
+        Assert.Equal(Fsgg.SkillMirror.sha256 "new\n", refresh.ExpectedBefore[".agents/skills/s/SKILL.md"])
+        Assert.Equal(Fsgg.SkillMirror.sha256 "old b\n", refresh.ExpectedBefore[".agents/skills/s/b.md"])
+        Assert.Equal<string list>([ ".agents/skills/s/SKILL.md"; ".agents/skills/s/b.md" ], refresh.Stale)
+
+    [<Fact>]
+    let ``the planner holds a colliding name and leaves its files out of the plan`` () =
+        let desired =
+            ownerFiles [ ".agents/skills/s/SKILL.md", "pack\n"; ".agents/skills/s/b.md", "pack b\n" ]
+
+        let bodies = Map.ofList [ ".agents/skills/s/SKILL.md", "user's own\n" ]
+
+        let plan =
+            OwnerSkillRefresh.plan (baseRecord [] []) "2.0.0" desired (embedded "2.0.0") bodies Set.empty
+
+        Assert.Empty plan.Refreshed
+
+        match (List.head plan.Held).Reason with
+        | OwnerSkillRefresh.NameCollision paths -> Assert.Equal<string list>([ ".agents/skills/s/SKILL.md" ], paths)
+        | other -> failwithf "expected a name collision, got %A" other
+
+    [<Fact>]
+    let ``files that are exactly the pack's bytes at an unrecorded name are not a collision`` () =
+        let desired =
+            ownerFiles [ ".agents/skills/s/SKILL.md", "pack\n"; ".agents/skills/s/b.md", "pack b\n" ]
+
+        let bodies = Map.ofList [ ".agents/skills/s/SKILL.md", "pack\n" ]
+
+        let plan =
+            OwnerSkillRefresh.plan (baseRecord [] []) "2.0.0" desired (embedded "2.0.0") bodies Set.empty
+
+        Assert.Empty plan.Held

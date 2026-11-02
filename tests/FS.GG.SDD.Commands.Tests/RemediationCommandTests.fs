@@ -328,7 +328,11 @@ module UpgradeCommandTests =
         let report = upgradeYes root
         let summary = upgrade report
 
-        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+        // FS.GG.SDD#1155: a skill that already occupies a delivered name with other bytes is HELD and
+        // named, rather than failing the whole re-seed; nothing is written around it or attested.
+        Assert.DoesNotContain(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+        Assert.Contains("work-roadmap", summary.NextActionHint)
+        Assert.Contains("Rename or remove your skill", summary.NextActionHint)
         Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root ".claude/skills/work-roadmap/SKILL.md")
         Assert.False(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
 
@@ -393,7 +397,9 @@ module UpgradeCommandTests =
         TestSupport.writeRelative root ".agents/skills/work-board/SKILL.md" "EDITED LEGACY BODY\n"
 
         let report = upgradeYes root
-        Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).FailedStepIds)
+        // FS.GG.SDD#1155: held and named (a delivered name already occupied by other bytes), not a failed step.
+        Assert.DoesNotContain(ReconciliationStepId.ArtifactReSeed, (upgrade report).FailedStepIds)
+        Assert.Contains("work-board", (upgrade report).NextActionHint)
 
         for skillRoot in [ ".agents"; ".claude" ] do
             Assert.False(

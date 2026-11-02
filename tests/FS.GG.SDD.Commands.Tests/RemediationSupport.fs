@@ -359,6 +359,7 @@ sdd:
             GameSkillPaths = []
             RenderingSkillPaths = []
             OwnerSkillVersions = []
+            UpgradedBy = None
             EffectiveParameters = []
         }
 

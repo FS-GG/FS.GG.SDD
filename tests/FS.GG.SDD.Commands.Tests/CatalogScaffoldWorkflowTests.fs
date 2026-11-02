@@ -210,6 +210,7 @@ module internal CatalogWorkflowFixture =
                 GameSkillPaths = []
                 RenderingSkillPaths = []
                 OwnerSkillVersions = []
+                UpgradedBy = None
                 EffectiveParameters = prepared.EffectiveParameters
             }
 

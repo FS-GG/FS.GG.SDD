@@ -149,8 +149,22 @@ module internal HandlersDoctor =
         // union `Drift.computeSkillDrift` verifies across its two entry points. The owner-sourced
         // arm was the gap: its ids were in neither expected set, so its bodies were never collected
         // and its per-file digests arbitrated nothing.
+        // FS.GG.SDD#1155: plus the ids the embedded owner packs would DELIVER here, so a skill that
+        // already occupies a delivered name (the user's own `atlas`, say) is read and can be reported
+        // as a collision instead of being written around. Those bodies feed only the refresh decision;
+        // `Drift.computeSkillDrift` confines the content fold to the ids it verifies.
+        let provenance = resolveProvenance model
+
+        let deliveredIds =
+            match provenance with
+            | Some record ->
+                OwnerSkillRefresh.embeddedDesired record
+                |> List.choose (fun file ->
+                    OwnerSkillRefresh.skillCopyOf file.Path |> Option.map (fun (_, id, _) -> id))
+            | None -> []
+
         let expectedIds =
-            Drift.contentVerifiedSkillIds (resolveProvenance model) |> Set.ofList
+            Set.union (Drift.contentVerifiedSkillIds provenance |> Set.ofList) (Set.ofList deliveredIds)
 
         skillRootEnumerations
         |> List.collect (fun effect ->
@@ -378,9 +392,14 @@ module internal HandlersDoctor =
 
         { drift with
             Steps = steps
-            HasProvenance = drift.HasProvenance || Option.isSome (snapshot FS.GG.SDD.Artifacts.ScaffoldProvenance.provenancePath model)
-            IsCoherent = drift.IsCoherent && List.isEmpty targets && List.isEmpty guidance.Problems
-                         && List.isEmpty (scaffoldProvenanceDiagnostics DiagnosticWarning model)
+            HasProvenance =
+                drift.HasProvenance
+                || Option.isSome (snapshot FS.GG.SDD.Artifacts.ScaffoldProvenance.provenancePath model)
+            IsCoherent =
+                drift.IsCoherent
+                && List.isEmpty targets
+                && List.isEmpty guidance.Problems
+                && List.isEmpty (scaffoldProvenanceDiagnostics DiagnosticWarning model)
         }
 
     let doctorSummaryOf (drift: Drift.DriftReport) : DoctorSummary =
@@ -445,11 +464,33 @@ module internal HandlersDoctor =
                     else
                         []
 
+                // FS.GG.SDD#1155: a workspace can read "coherent" while an owner skill is stale upstream
+                // and `upgrade` will not replace it (edited locally, would downgrade, version unprovable,
+                // name collision). Say so, as an advisory that changes neither the verdict nor the exit
+                // code, so a coherent answer is never silent about skills left behind.
+                let heldAdvisory =
+                    match drift.OwnerSkillHeld with
+                    | [] -> []
+                    | held ->
+                        [
+                            FS.GG.SDD.Artifacts.Diagnostics.create
+                                "doctor.ownerSkillsNotRefreshable"
+                                FS.GG.SDD.Artifacts.Diagnostics.DiagnosticInfo
+                                None
+                                None
+                                ("Owner skills changed upstream but `fsgg-sdd upgrade` will not replace them: "
+                                 + (held |> List.map OwnerSkillRefresh.heldText |> String.concat "; ")
+                                 + ".")
+                                "Resolve each reason named above (restore or move your edits, rename a colliding skill, or update the CLI), then run `fsgg-sdd upgrade`."
+                                (held |> List.map (fun h -> h.SkillId))
+                        ]
+
                 { model with
                     Doctor = Some summary
                     Diagnostics =
                         model.Diagnostics
                         @ diagnostics
+                        @ heldAdvisory
                         @ provenanceProblems
                         @ ownerGuidanceDiagnostics DiagnosticWarning (selectedOwnerGuidanceFiles model) model
                 },

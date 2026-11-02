@@ -569,6 +569,16 @@ module internal Drift =
         // `NotMirrored`, which is precisely the report #747 exists to stop.
         let skillBodies = skillBodies |> Map.filter (fun path _ -> not (isIgnoredJunk path))
 
+        // FS.GG.SDD#1155: the caller may also hand over the bodies of skills this fold does not verify
+        // (a delivered name that something else occupies); they decide a refresh, not content drift.
+        let verifiedIds = contentVerifiedSkillIds provenance |> Set.ofList
+
+        let skillBodies =
+            skillBodies
+            |> Map.filter (fun path _ ->
+                skillCopyOfPath path
+                |> Option.forall (fun (_, id, _) -> Set.contains id verifiedIds))
+
         // `(root, id)` -> the file set that copy carries. A (root, id) with no file at all has NO
         // entry, which `verifyFiles` reads as "this root carries no copy of the skill" — the same
         // skill-level fact `verify` reported when the single `SKILL.md` body was `None`.
@@ -1092,14 +1102,17 @@ module internal Drift =
                         DiffPreview =
                             reSeedTargets
                             |> List.map (fun path ->
-                                if not (List.contains path refreshPaths) || not (Map.containsKey path skillBodies) then
-                                    $"+ {path} (new)"
-                                elif
+                                if
                                     refreshPlan.Refreshed
                                     |> List.exists (fun refresh ->
-                                        refresh.Removals |> List.exists (fun (p, _) -> p = path))
+                                        (refresh.Removals |> List.exists (fun (p, _) -> p = path))
+                                        || List.contains path refresh.Dropped)
                                 then
                                     $"- {path} (removed upstream)"
+                                elif
+                                    not (List.contains path refreshPaths) || not (Map.containsKey path skillBodies)
+                                then
+                                    $"+ {path} (new)"
                                 else
                                     $"~ {path} (changed upstream)")
                             |> String.concat "\n"

@@ -91,6 +91,10 @@ module ScaffoldProvenance =
             /// serialized after `renderingSkillPaths` ONLY when non-empty, so a record that carries
             /// none stays byte-identical to its pre-#1155 form (schema stays v1, additive).
             OwnerSkillVersions: OwnerSkillVersion list
+            /// FS.GG.SDD#1155: the CLI version that last ran `upgrade` against this workspace (`Generator`
+            /// is the CLI that PRODUCED it and never moves). The never-downgrade fallback for a skill with
+            /// no recorded version is bounded by this last writer. Serialized only when present.
+            UpgradedBy: string option
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none. Records the

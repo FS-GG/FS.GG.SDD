@@ -193,5 +193,16 @@ module WorkBoardScaffoldAcceptanceTests =
 
         let attributes = File.ReadAllText(Path.Combine(root, ".gitattributes"))
 
-        for pattern in [ ".agents/skills/**"; ".claude/skills/**"; "docs/atlas/**" ] do
+        // the skills SDD delivered and the archive: never a whole skill root, which also holds the
+        // workspace's own skills
+        for pattern in
+            [
+                ".agents/skills/work-board/**"
+                ".claude/skills/work-board/**"
+                ".agents/skills/padd-item/**"
+                "docs/atlas/**"
+            ] do
             Assert.Contains(pattern + " -text", attributes)
+
+        Assert.DoesNotContain(".agents/skills/** -text", attributes)
+        Assert.DoesNotContain(".claude/skills/** -text", attributes)

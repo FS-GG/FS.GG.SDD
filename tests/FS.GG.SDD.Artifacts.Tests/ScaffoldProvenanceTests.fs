@@ -158,6 +158,7 @@ providers:
             GameSkillPaths = []
             RenderingSkillPaths = []
             OwnerSkillVersions = []
+            UpgradedBy = None
             EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ]
         }
 
