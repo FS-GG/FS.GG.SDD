@@ -28,11 +28,20 @@ PY
 dotnet tool install FS.GG.SDD.Cli --version "$version" --tool-path "$scratch/tool" --configfile "$scratch/NuGet.Config" --no-cache
 sdk_version="$(dotnet --version)"
 sdk_root="$(dotnet --list-sdks | awk -v version="$sdk_version" '$1 == version {gsub(/[][]/, "", $2); print $2}')"
-python3 - "$scratch" "$sdk_root/$sdk_version/FSharp" <<'PY'
+core_version="$(python3 - "$repo/Directory.Packages.props" <<'PY'
+import re, sys, xml.etree.ElementTree as E
+rows = [row.get('Version') for row in E.parse(sys.argv[1]).iter('PackageVersion')
+        if row.get('Include') == 'FSharp.Core']
+if len(rows) != 1 or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', rows[0] or ''):
+    raise SystemExit('expected exactly one literal central FSharp.Core stable version')
+print(rows[0])
+PY
+)"
+python3 - "$scratch" "$sdk_root/$sdk_version/FSharp" "$core_version" <<'PY'
 import hashlib, io, json, pathlib, shutil, sys, urllib.request, zipfile
-root=pathlib.Path(sys.argv[1]); mirror=root/'official-core-fsi'
+root=pathlib.Path(sys.argv[1]); mirror=root/'official-core-fsi'; version=sys.argv[3]
 shutil.copytree(sys.argv[2],mirror)
-url='https://api.nuget.org/v3-flatcontainer/fsharp.core/10.1.401/fsharp.core.10.1.401.nupkg'
+url=f'https://api.nuget.org/v3-flatcontainer/fsharp.core/{version}/fsharp.core.{version}.nupkg'
 data=urllib.request.urlopen(url,timeout=30).read()
 with zipfile.ZipFile(io.BytesIO(data)) as archive:
  core=archive.read('lib/netstandard2.0/FSharp.Core.dll')
