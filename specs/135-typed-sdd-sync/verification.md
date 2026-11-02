@@ -98,6 +98,13 @@ claim is made from that timed-out attempt. API surface projection was checked
 coherent with 98 mirrored declarations after adding the public `.fsi` mirrors.
 After the adoption repair, full local CLI tests passed 246/246 and Artifacts
 tests passed 759/759 under separate one CPU/two GiB caps.
+Independent review caught a stale embedded skill producer after the adoption
+guidance edit: the first regenerated manifest still carried the prior
+`562b48...` digest and the golden still carried the earlier `154030...`
+digest. Rebuilding the producer and regenerating both gave the tracked skill
+SHA-256 `577d9911df91a0d43b97af41e131cd3af52a1bbbf95eabffd15bb857c1400f57`
+in the manifest and both current-version command-report digest operands.
+Named command-report and process skill manifest tests passed 1/1 and 13/13.
 The old pushed-head hosted gate completed in 17m58s with a synthetic public
 `QuintSync` method and two skill-content digests in the command-report golden
 as the only failures: CLI 245 passed/1 failed; Commands 1671 passed/1 failed/13
