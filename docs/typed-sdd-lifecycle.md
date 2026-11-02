@@ -194,6 +194,81 @@ provenance selects `typed-sdd`. V1 executes the F# compiler. V2 reads and valida
 artifact inventory and never falls back to F#. A package, profile, or toolchain identity change is an
 explicit upgrade boundary; it is never silently accepted. Standard SDD and `none` are unchanged.
 
+## Synchronize an accepted profile-2 workspace
+
+An accepted `fsgg-quint-profile/2` source can promote explicit workspace module,
+relationship, scenario, invariant, and finite-bound declarations. The source remains
+the authority; generated Quint and the compiled contract are validated against the
+accepted manifest. See the [profile-2 fixture](../tests/fixtures/typed-sdd-sync/specification.md)
+for the declaration shape.
+
+Provision the exact Quint and lmt objects, then author with `--profile fsgg-quint-profile/2`,
+`--source`, `--bindings`, `--cache`, `--java-home`, and `--apalache-dist`. The
+proposed output is staged for model-only checks (typecheck, named scenarios,
+simulation and required symbolic verification) before it can replace accepted
+bytes. This stage produces no implementation-alignment success receipt.
+The authority transaction commits a revision link beside the manifest, advancing
+the prior accepted workspace revision by one. Authoring then runs a fresh
+`typed-sdd sync` and writes
+`readiness/<work>/quint/sync-report.json`. A failed sync leaves the
+accepted revision available for repair and replaces any prior success receipt
+with a blocked result. The manifest inventories the revision link; restore its
+exact accepted bytes if it is lost.
+
+A valid accepted specification may expose a production defect. In that case,
+the accepted manifest and revision link remain advanced while the fresh sync
+receipt blocks verify and ship. Repair implementation or tests, then rerun
+`typed-sdd sync` against that same accepted manifest. Do not change the
+accepted property to make the code pass.
+
+A retained profile-2 root with the closed pre-sync 2.5.4 producer inventory
+can be adopted in place:
+
+```sh
+fsgg-sdd typed-sdd sync --adopt-legacy --root . --work demo \
+  --cache /qualified/quint-cache --java-home /qualified/jre \
+  --apalache-dist /qualified/apalache-parent
+```
+
+Adoption validates the original source and artifact closure, runs the full
+model/reducer gate against staged upgraded authority, then atomically commits
+only the manifest and revision link through the normal authority journal. The
+link records the old manifest digest and revision zero as a newly observed
+baseline; historical revision count is unknown. A failed precheck leaves the
+old authority intact. A current manifest whose link was deleted or whose link
+role was stripped cannot enter this legacy path.
+These local hashes identify accepted bytes; they do not authenticate an attacker
+who can rewrite the complete manifest, authoring receipt, and source together.
+To repeat the check explicitly, run:
+
+```sh
+fsgg-sdd typed-sdd sync --root . --work demo --cache /qualified/quint-cache \
+  --java-home /qualified/jre --apalache-dist /qualified/apalache-parent
+```
+
+`sync` validates the accepted artifact closure, derives the existing workspace
+model, and checks every declared evidence obligation. It runs Quint typecheck,
+named scenario tests, bounded simulation, and Apalache invariant checking, then
+replays a model-produced coherent-delta witness through the built
+`WorkspaceLifecycle.reduce` adapter. The adapter also checks stale-base refusal.
+The result records accepted, generated, contract, implementation, tool, host-tool,
+verifier, and correspondence hashes plus test counts and step output digests.
+Pass `--text` or `--rich` for a compact projection; JSON is the default.
+
+Normal `verify` and `ship` for this profile require `--sync-cache`,
+`--sync-java-home`, and `--sync-apalache-dist`. Each command runs the checks
+against current accepted and implementation bytes before its lifecycle effects.
+An old receipt or hand-authored correspondence observation cannot satisfy the
+gate. A changed source, test, or implementation input selects the full relevant
+obligation set until a narrower dependency closure is qualified.
+
+The parser and workspace validator automatically check declared types, schema,
+references, finite bounds, module identity, and cross-module assumption conflicts.
+Domain properties depend on the scenarios and invariants declared in the source;
+the reported samples, steps, and seed bound the execution claim. The initial
+production adapter covers the SDD `WorkspaceLifecycle` model. Other application
+reducers need their own declared adapter and cannot inherit this conformance result.
+
 ## Design consequences
 
 When preparation failures recur, consider an optional, proportionate preflight based on the actual

@@ -47,6 +47,10 @@
     <Compile Include="TypedSpecifications/TypedLifecycleV2.fs" />
     <Compile Include="TypedSpecifications/WorkspaceLifecycle.fsi" />
     <Compile Include="TypedSpecifications/WorkspaceLifecycle.fs" />
+    <Compile Include="TypedSpecifications/WorkspaceSync.fsi" />
+    <Compile Include="TypedSpecifications/WorkspaceSync.fs" />
+    <Compile Include="TypedSpecifications/WorkspaceReducerAdapter.fsi" />
+    <Compile Include="TypedSpecifications/WorkspaceReducerAdapter.fs" />
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />

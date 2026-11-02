@@ -92,6 +92,17 @@ provenance fields, which a record without them parses and serializes unchanged. 
 stable versions). Public 2.5.4 bytes and receipts are retained; this source preparation does not
 establish 2.6.0 publication.
 
+The same 2.6.0 minor adds profile-2 Typed SDD synchronization
+([#1164](https://github.com/FS-GG/FS.GG.SDD/issues/1164)): the new `typed-sdd sync`
+command and additive typed sync API join an accepted Quint authority to bounded
+model checks and actual reducer observations. Proposed authoring checks the model
+before acceptance; implementation alignment runs after the accepted transaction
+and is required by verify and ship. An exact pre-sync profile-2 workspace can be
+adopted in place with a newly observed revision-zero baseline and unknown earlier
+revision history. The authority manifest gains a revision-link artifact and sync
+result; existing profile-1 behavior remains supported. This source preparation
+does not establish package publication or installed-workspace acceptance.
+
 ## Change class to bump rule
 
 A **public contract** is any public schema, generated-view shape, command-output

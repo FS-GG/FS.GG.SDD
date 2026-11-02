@@ -38,6 +38,12 @@ module TypedSdd =
         && value <> ".."
         && value.IndexOfAny([| '/'; '\\' |]) < 0
 
+    let private syncAccepted args workId =
+        match optionValue "--cache" args, optionValue "--java-home" args, optionValue "--apalache-dist" args with
+        | Some cache, Some javaHome, Some apalacheDist ->
+            QuintSync.check (root args) workId cache javaHome apalacheDist
+        | _ -> Error "Profile-2 accepted authority requires --cache, --java-home and --apalache-dist for the fresh sync gate."
+
     let private containedPath (root: string) (relative: string) =
         if Path.IsPathRooted relative then
             None
@@ -730,15 +736,25 @@ module TypedSdd =
                     | Error findings -> Error findings
                     | Ok output ->
                         try
-                            let writes =
-                                output.Writes
-                                |> List.map (fun (relative, bytes) ->
-                                    match containedPath rootPath relative with
-                                    | Some path -> path, bytes
-                                    | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
-
-                            atomicReplaceUnlocked rootPath writes []
-                            Ok(output.Writes |> List.map fst)
+                            let proposedSync =
+                                if profile = QuintGeneralProfile.identity then
+                                    match optionValue "--java-home" args, optionValue "--apalache-dist" args with
+                                    | Some javaHome, Some apalacheDist ->
+                                        QuintSync.prepareProposed rootPath workId cache javaHome apalacheDist output.Writes
+                                    | _ -> Error "Profile-2 authoring requires --java-home and --apalache-dist before acceptance."
+                                else Ok output.Writes
+                            match proposedSync with
+                            | Error reason ->
+                                Error [ diagnostic "typedSdd.proposedSyncBlocked" reason "Repair the proposed model or declared tools before accepting it." ]
+                            | Ok finalWrites ->
+                                let writes =
+                                    finalWrites
+                                    |> List.map (fun (relative, bytes) ->
+                                        match containedPath rootPath relative with
+                                        | Some path -> path, bytes
+                                        | None -> invalidOp $"Quint host emitted an unsafe path: {relative}")
+                                atomicReplaceUnlocked rootPath writes []
+                                Ok(finalWrites |> List.map fst)
                         with ex ->
                             Error
                                 [
@@ -917,15 +933,24 @@ module TypedSdd =
                     | Ok changed ->
                         FS.GG.SDD.Knowledge.Workspace.initialize (root args) |> ignore
 
+                        let syncResult =
+                            if optionValue "--profile" args = Some QuintGeneralProfile.identity then
+                                syncAccepted args workId
+                            else Ok()
+
                         emit
                             {
                                 Operation = "author"
-                                Outcome = "succeeded"
+                                Outcome = if Result.isOk syncResult then "succeeded" else "blocked"
                                 Classification = Some "quint-specification-v1"
                                 ChangedPaths = changed
                                 SemanticDiff = []
                                 RollbackSourceSha256 = None
-                                Diagnostics = []
+                                Diagnostics =
+                                    match syncResult with
+                                    | Ok() -> []
+                                    | Error reason ->
+                                        [ diagnostic "typedSdd.syncBlocked" reason "Repair the declared tool closure or model and rerun typed-sdd sync." ]
                             }
                     | Error findings ->
                         emit
@@ -1912,6 +1937,8 @@ module TypedSdd =
                         "--profile"
                         "--source"
                         "--bindings"
+                        "--java-home"
+                        "--apalache-dist"
                     ],
                 set [ "--accept" ]
             | "inspect" -> set [ "--root"; "--work" ], Set.empty
@@ -1949,9 +1976,58 @@ module TypedSdd =
 
         loop Set.empty args
 
+    let private adoptLegacySync (args: string list) =
+        let required = [ "--root"; "--work"; "--cache"; "--java-home"; "--apalache-dist" ]
+        let validShape =
+            args.Length = 11
+            && (args |> List.filter ((=) "--adopt-legacy") |> List.length) = 1
+            && (required |> List.forall (fun key -> args |> List.filter ((=) key) |> List.length = 1))
+            && (required |> List.forall (fun key ->
+                optionValue key args
+                |> Option.exists (fun value -> not (value.StartsWith("-", StringComparison.Ordinal)))))
+        let blocked reason =
+            emit
+                { Operation = "sync-adopt-legacy"; Outcome = "blocked"; Classification = Some "quint-specification-v1"
+                  ChangedPaths = []; SemanticDiff = []; RollbackSourceSha256 = None
+                  Diagnostics = [ diagnostic "typedSdd.legacySyncBlocked" reason "Restore the exact legacy authority and qualified tool closure." ] }
+        if not validShape then blocked "Pass --adopt-legacy and each required sync path exactly once."
+        else
+            let rootPath = root args
+            let workId = optionValue "--work" args |> Option.get
+            if not (validWorkId workId) then blocked "Work id must be one contained path segment."
+            else
+                try
+                    use transactionLock = acquireAuthorityLock rootPath
+                    let cache = optionValue "--cache" args |> Option.get
+                    let javaHome = optionValue "--java-home" args |> Option.get
+                    let apalacheDist = optionValue "--apalache-dist" args |> Option.get
+                    match QuintSync.prepareLegacyAdoption rootPath workId cache javaHome apalacheDist with
+                    | Error reason -> blocked reason
+                    | Ok(originalClosure, finalWrites) ->
+                        let unchanged =
+                            originalClosure
+                            |> List.forall (fun (relative, digest) ->
+                                match containedPath rootPath relative with
+                                | Some path when File.Exists path ->
+                                    TypedAuthorityManifest.sha256 (File.ReadAllBytes path) = digest
+                                | _ -> false)
+                        if not unchanged then blocked "Legacy accepted manifest or source closure changed during adoption."
+                        else
+                            let writes =
+                                finalWrites
+                                |> List.map (fun (relative, bytes) ->
+                                    match containedPath rootPath relative with
+                                    | Some path -> path, bytes
+                                    | None -> invalidOp "Legacy adoption produced an unsafe path.")
+                            atomicReplaceUnlocked rootPath writes []
+                            QuintSync.run (args |> List.filter ((<>) "--adopt-legacy"))
+                with ex -> blocked $"Legacy sync adoption failed: {ex.Message}"
+
     let run args =
         match args with
         | "provision" :: rest -> QuintProvision.run rest
+        | "sync" :: rest when has "--adopt-legacy" rest -> adoptLegacySync rest
+        | "sync" :: rest -> QuintSync.run rest
         | operation :: rest when
             Set.contains operation (set [ "author"; "inspect"; "migrate"; "rollback"; "reconcile"; "correspond" ])
             ->
@@ -1996,6 +2072,6 @@ module TypedSdd =
                             diagnostic
                                 "typedSdd.unknownOperation"
                                 "Unknown Typed SDD operation."
-                                "Use provision, author, inspect, migrate, rollback, reconcile, or correspond."
+                                "Use provision, author, inspect, migrate, rollback, reconcile, correspond, or sync."
                         ]
                 }

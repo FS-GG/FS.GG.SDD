@@ -1453,7 +1453,14 @@ module TypedAuthority =
                         "The effect edge supplied duplicate path observations."
                         "Observe every declared path exactly once."
 
-            let requiredArtifactIds = requiredArtifactIds manifest.ProfileIdentity
+            let syncSelected =
+                manifest.ProfileIdentity = QuintGeneralProfile.identity
+                && not (String.IsNullOrEmpty manifest.AuthoringSession)
+                && manifest.AuthoringSession.StartsWith("fsgg-sync-authority/v1:", StringComparison.Ordinal)
+
+            let requiredArtifactIds =
+                let ids = requiredArtifactIds manifest.ProfileIdentity
+                if syncSelected then Set.add "sync-revision" ids else ids
 
             if offered <> requiredArtifactIds then
                 let missing = Set.difference requiredArtifactIds offered |> String.concat ", "
@@ -1464,6 +1471,21 @@ module TypedAuthority =
                         "typedSdd.v2.artifactInventory"
                         $"Artifact inventory differs (missing: {missing}; extra: {extra})."
                         "Regenerate the complete closed manifest-v2 inventory."
+
+            if syncSelected then
+                match manifest.Artifacts |> List.tryFind (fun item -> item.Id = "sync-revision") with
+                | Some item when
+                    System.Text.RegularExpressions.Regex.IsMatch(
+                        item.Path,
+                        "^readiness/[^/\\\\]+/quint/sync-authority[.]json$"
+                    )
+                    -> ()
+                | _ ->
+                    yield
+                        diagnostic
+                            "typedSdd.v2.syncRevisionPath"
+                            "Sync revision role is missing or has a noncanonical path."
+                            "Restore the exact accepted sync revision artifact."
 
             for artifact in manifest.Artifacts |> List.sortBy _.Id do
                 if not (safeRelativePath artifact.Path) then
@@ -1484,7 +1506,10 @@ module TypedAuthority =
                     | Some Missing ->
                         yield
                             diagnostic
-                                "typedSdd.v2.artifactMissing"
+                                (if artifact.Id = "sync-revision" then
+                                     "typedSdd.v2.syncRevisionMissing"
+                                 else
+                                     "typedSdd.v2.artifactMissing")
                                 $"Artifact '{artifact.Id}' is missing."
                                 "Restore or re-author the complete v2 authority."
                     | Some(Unreadable detail) ->

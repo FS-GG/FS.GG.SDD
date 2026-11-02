@@ -21,4 +21,19 @@ source ranges but must not duplicate semantic values from Quint. Keep facts, cat
 verification declarations, finite bounds, and external-algorithm registrations in the literate Quint
 source. The host accepts only the closed profile-2 value vocabulary and bounded resource envelope.
 
-Omitting `--backend` preserves manifest-v1 F# authoring. Never hand-edit generated authority files.
+For profile 2, also pass `--java-home` and `--apalache-dist`. Authoring checks the
+proposed model before acceptance without issuing alignment success, then commits
+a revision link and runs fresh bounded Quint typecheck, explicitly named tests,
+simulation, Apalache verification,
+and the production SDD reducer adapter. If the post-commit check blocks, retain
+the accepted revision, repair the implementation or tests, and rerun
+`fsgg-sdd typed-sdd sync --root <root> --work <id> --cache <cache-root>
+--java-home <jre> --apalache-dist <distribution>`. Normal `verify` and `ship` require
+`--sync-cache`, `--sync-java-home`, and `--sync-apalache-dist`; both run a fresh check.
+A prior sync JSON never supplies current evidence.
+For an exact pre-sync profile-2 2.5.4 authority, use `typed-sdd sync --adopt-legacy`
+with the same paths; it preserves source bytes and records a new revision-zero
+baseline with unknown earlier history. A missing link in current authority blocks.
+
+Omitting `--backend` selects Quint. Pass `--backend fsharp-specification-v1` for
+manifest-v1 compatibility authoring. Never hand-edit generated authority files.

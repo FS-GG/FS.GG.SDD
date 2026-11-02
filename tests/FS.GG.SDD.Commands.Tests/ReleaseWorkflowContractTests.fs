@@ -228,7 +228,7 @@ module ReleaseWorkflowContractTests =
         Assert.Contains("/usr/bin/unshare --user --map-root-user --net", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"16\" failures=\"0\"", svgWorkspaceQuintAcceptance)
         Assert.Contains("tests=\"20\" failures=\"0\"", svgWorkspaceQuintAcceptance)
-        Assert.Contains("tests=\"22\" failures=\"0\"", svgWorkspaceQuintAcceptance)
+        Assert.Contains("tests=\"23\" failures=\"0\"", svgWorkspaceQuintAcceptance)
         Assert.Contains("17 fail-closed mutations passed", svgWorkspaceQuintAcceptance)
         Assert.Contains("offline acceptance requires a real user and network namespace", svgWorkspaceQuintAcceptance)
         Assert.Contains("FSGG_TYPED_SDD_TEST_CRASH_AFTER_MOVE", svgWorkspaceQuintAcceptance)
