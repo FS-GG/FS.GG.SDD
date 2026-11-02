@@ -287,7 +287,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "2.5.4"
+        "version": "2.6.0"
       },
       "sources": [
         {
@@ -341,7 +341,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "26abf565eacc5fd05b56ea316bfa862e11d65a8a4dfca89b9488d9f580fd31b7"
+        "value": "9f7884668d75a143929a0bef86547a3625992b93b0db051dfda6aca86166e2ce"
       },
       "currency": "current"
     }
