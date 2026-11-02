@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportVersion": "2.6.0",
-  "toolVersion": "2.5.4",
+  "toolVersion": "2.6.0",
   "command": {
     "name": "init",
     "stage": "project"
@@ -659,7 +659,7 @@
       "beforeDigest": null,
       "afterDigest": {
         "algorithm": "sha256",
-        "value": "35d3dc2735b62d36cf3a536a8e244859ee3cfdb46e37e9f1a9d92f2645aec5a0"
+        "value": "0af79ee390c2c5fca2c56cfad7a9583eeccf22acab46bca515534d2bc74b0aee"
       },
       "safeWriteDecision": "dryRunOnly",
       "diagnosticIds": []

@@ -19,7 +19,7 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.4`**:
+sourced from `Directory.Build.local.props` `<Version>` — currently **`2.6.0`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
@@ -27,8 +27,8 @@ sourced from `Directory.Build.local.props` `<Version>` — currently **`2.5.4`**
 - `FS.GG.SDD.Knowledge` (the standalone concise findings SDK)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "2.5.4"` and
-`generatorVersion.version = "2.5.4"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "2.6.0"` and
+`generatorVersion.version = "2.6.0"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
@@ -67,7 +67,7 @@ glibc 2.44 carrier and actual same-archive qualification remain required. Public
 persisted provenance stay unchanged, as does published Contracts 7.6.0. Public 2.5.2 bytes and accepted
 receipts are retained.
 
-The prepared 2.5.4 patch carries SDK-PATCH-01
+The 2.5.4 patch carried SDK-PATCH-01
 ([FS-GG/FS.GG.SDD#1144](https://github.com/FS-GG/FS.GG.SDD/pull/1144), FS-GG/.github#4935). The
 repository builds on SDK 10.0.403. The catalog transport and provider-source host profile accept exactly
 one SDK and runtime pair from a closed set: SDK 10.0.401 with .NET 10.0.12, or SDK 10.0.403 with
@@ -75,7 +75,33 @@ one SDK and runtime pair from a closed set: SDK 10.0.401 with .NET 10.0.12, or S
 tests; its native catalog qualification is not claimed (see `docs/validation/catalog-runtime.md`).
 Test projects also pin the published Execution pair 0.3.1; no shipped package gains a dependency.
 Public API, schema and persisted provenance are unchanged, as is published Contracts 7.6.0. Public
-2.5.3 bytes and receipts are retained; this source preparation does not establish 2.5.4 publication.
+2.5.3 bytes and receipts are retained.
+
+The prepared 2.6.0 minor carries the FS.GG.Drivers 0.114.3 pin
+([FS-GG/FS.GG.SDD#1157](https://github.com/FS-GG/FS.GG.SDD/pull/1157): the `atlas` driver skill and
+the newer driver skills reach every new workspace) and the owner-skill refresh of `fsgg-sdd upgrade`
+([#1158](https://github.com/FS-GG/FS.GG.SDD/pull/1158), hardened in
+[#1161](https://github.com/FS-GG/FS.GG.SDD/pull/1161)): an unedited driver or owner product skill that
+changed upstream is replaced as one unit, never downgraded, contained to the workspace, crash-safe and
+recorded per skill. Minor because the public surface and persisted provenance grow additively: the
+`OwnerSkillRefresh` write kind and `RemoveFile` effect (appended last, so earlier union tag ordinals are
+unchanged), `ScaffoldProvenance.OwnerSkillVersion`, and the optional `ownerSkillVersions` and `upgradedBy`
+provenance fields, which a record without them parses and serializes unchanged. Published Contracts
+7.6.0 is unchanged. The release also enforces the skills-package pin staleness bound in
+`resolve-versions` (the `FS.GG.Drivers` and `FS.GG.*.Skills` pins may trail their feeds by at most five
+stable versions). Public 2.5.4 bytes and receipts are retained; this source preparation does not
+establish 2.6.0 publication.
+
+The same 2.6.0 minor adds profile-2 Typed SDD synchronization
+([#1164](https://github.com/FS-GG/FS.GG.SDD/issues/1164)): the new `typed-sdd sync`
+command and additive typed sync API join an accepted Quint authority to bounded
+model checks and actual reducer observations. Proposed authoring checks the model
+before acceptance; implementation alignment runs after the accepted transaction
+and is required by verify and ship. An exact pre-sync profile-2 workspace can be
+adopted in place with a newly observed revision-zero baseline and unknown earlier
+revision history. The authority manifest gains a revision-link artifact and sync
+result; existing profile-1 behavior remains supported. This source preparation
+does not establish package publication or installed-workspace acceptance.
 
 ## Change class to bump rule
 

@@ -11,6 +11,19 @@ repo_root="$(git rev-parse --show-toplevel)"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/typed-sdd-sync-acceptance.XXXXXX")"
 mkdir -p "$scratch/tmp"
 export TMPDIR="$scratch/tmp"
+retain_failure() {
+  local status=$?
+  if (( status != 0 )) && [[ -n "${RUNNER_TEMP:-}" ]]; then
+    local capture="$RUNNER_TEMP/$(basename "$scratch")"
+    if mkdir -p "$capture"; then
+      printf 'exitStatus=%s\nscratch=%s\n' "$status" "$scratch" >"$capture/attempt.txt"
+      find "$scratch" -maxdepth 1 -type f -name '*.json' -exec cp -t "$capture" -- {} + || true
+    fi
+  fi
+  trap - EXIT
+  exit "$status"
+}
+trap retain_failure EXIT
 fail() { printf 'typed-sdd-sync acceptance: %s; retained attempt: %s\n' "$*" "$scratch" >&2; exit 1; }
 cli() { dotnet "$SYNC_CLI_DLL" "$@"; }
 assert_json() {
@@ -70,7 +83,7 @@ legacy_sync=(typed-sdd sync --root "$scratch/legacy" --work sync --cache "$scrat
 if cli "${legacy_sync[@]}" >"$scratch/legacy-normal.json"; then
   fail 'legacy inventory silently passed normal sync'
 fi
-grep -F 'legacy inventory' "$scratch/legacy-normal.json" >/dev/null || fail 'legacy refusal had another cause'
+grep -F 'typedSdd.v2.packageIdentityMismatch' "$scratch/legacy-normal.json" >/dev/null || fail 'cross-version legacy refusal had another cause'
 if cli typed-sdd sync --adopt-legacy --root "$scratch/legacy" --work sync --cache "$scratch/cache" \
   --java-home "$SYNC_JAVA_HOME" --apalache-dist "$scratch/unavailable" >"$scratch/legacy-no-verifier.json"; then
   fail 'legacy adoption passed without verifier'
@@ -118,6 +131,12 @@ value['artifacts'] = [row for row in value['artifacts'] if row['id'] != 'sync-re
 path.write_text(json.dumps(value, indent=2) + '\n')
 PY
 rm "$scratch/stripped-current/readiness/sync/quint/sync-authority.json"
+if cli typed-sdd sync --root "$scratch/stripped-current" --work sync --cache "$scratch/cache" \
+  --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" >"$scratch/stripped-current-normal.json"; then
+  fail 'stripped current authority passed normal sync'
+fi
+grep -F 'typedSdd.v2.artifactInventory' "$scratch/stripped-current-normal.json" >/dev/null || fail 'stripped-current inventory refusal had another cause'
+grep -F 'typedSdd.v2.syncRevisionPath' "$scratch/stripped-current-normal.json" >/dev/null || fail 'stripped-current revision refusal had another cause'
 if cli typed-sdd sync --adopt-legacy --root "$scratch/stripped-current" --work sync --cache "$scratch/cache" \
   --java-home "$SYNC_JAVA_HOME" --apalache-dist "$SYNC_APALACHE_DIST" >"$scratch/stripped-current.json"; then
   fail 'stripped current authority adopted as legacy'
