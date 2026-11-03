@@ -9,6 +9,18 @@ def check(text):
     jobs={m[1]:text[m.start():starts[i+1].start() if i+1<len(starts) else len(text)] for i,m in enumerate(starts)}
     def require(ok,message):
         if not ok: raise ValueError(message)
+    for name in ['qualify-public','qualify-published']:
+        job=jobs.get(name,'')
+        provision='      - name: Provision exact Typed SDD sync verifier tools\n'
+        execution='      - name: Qualify neutral Q2 and Q3 receiver boundaries from the public CLI package\n'
+        require(job.count(provision)==1 and job.count(execution)==1, name+': missing unique verifier setup/execution')
+        require(job.index(provision)<job.index(execution), name+': verifier setup follows execution')
+        setup=job.split(provision,1)[1].split(execution,1)[0]
+        for digest in ['aeab55d064a1a27a3744b0880b9b414077b4ed2b1790817eea3df60aec946431','a61c07569d7195ddc589f01037fa10fafef4fb0796af2f1c9cb45226375dfbfc']:
+            require(digest in setup and 'sha256sum --check --strict' in setup, name+': symbolic verifier identity unverified')
+        acceptance=job.split(execution,1)[1]
+        for binding in ['SYNC_JAVA_HOME: ${{ runner.temp }}/typed-sdd-sync-tools/jre/jdk-21.0.9+10-jre','SYNC_APALACHE_DIST: ${{ runner.temp }}/typed-sdd-sync-tools/apalache-dist']:
+            require(binding in acceptance, name+': symbolic verifier environment binding missing')
     candidate=jobs.get('publish-artifacts','');publish=jobs.get('publish-cli','');resolver=jobs.get('resolve-versions','')
     gates='needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]'
     require('publish-contracts' not in jobs,'Contracts has an independent publisher')
