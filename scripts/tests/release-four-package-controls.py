@@ -19,6 +19,18 @@ def verdict(action,expected):
     else:assert expected
     count+=1
 verdict(lambda:static.check(text),True)
+for job_name in ['qualify-public','qualify-published']:
+    begin=text.index('  '+job_name+':\n');end=text.find('\n  ',begin+3)
+    # Find the next job, not a nested step/setting.
+    import re
+    next_job=re.search(r'^  [a-z][a-z-]+:\n',text[begin+3:],re.M)
+    end=begin+3+next_job.start() if next_job else len(text)
+    job=text[begin:end]
+    for old,new in [('Provision exact Typed SDD sync verifier tools','Missing verifier setup'),('SYNC_JAVA_HOME:','IGNORED_JAVA_HOME:'),('SYNC_APALACHE_DIST:','IGNORED_APALACHE_DIST:'),('aeab55d064a1a27a3744b0880b9b414077b4ed2b1790817eea3df60aec946431','0'*64),('a61c07569d7195ddc589f01037fa10fafef4fb0796af2f1c9cb45226375dfbfc','0'*64)]:
+        assert old in job
+        mutated=text[:begin]+job.replace(old,new,1)+text[end:]
+        verdict(lambda mutated=mutated:static.check(mutated),False)
+
 for old,new in [
  ('needs: [resolve-versions, contracts-tests, artifacts-tests, commands-tests, cli-tests, knowledge-tests]','needs: [resolve-versions, artifacts-tests, cli-tests, knowledge-tests]'),
  ("needs.resolve-versions.outputs.push == 'true'","needs.resolve-versions.outputs.push == 'false'"),
