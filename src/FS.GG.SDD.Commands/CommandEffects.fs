@@ -436,7 +436,8 @@ module CommandEffects =
             let relative = Path.GetRelativePath(root, parent)
 
             if
-                relative = ".."
+                Path.IsPathRooted relative
+                || relative = ".."
                 || relative.StartsWith(".." + string Path.DirectorySeparatorChar, StringComparison.Ordinal)
             then
                 refuse "resolved skill parent is outside the physical workspace"
@@ -455,7 +456,7 @@ module CommandEffects =
                     own (OwnerNative.openRoot (root, directoryFlags))
                 else
                     let volume =
-                        match Path.GetPathRoot parent with
+                        match Path.GetPathRoot root with
                         | null
                         | "" -> refuse "physical volume root is unavailable"
                         | root -> root
