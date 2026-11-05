@@ -250,8 +250,455 @@ module CommandEffects =
             None
             None
             $"Refusing to change owner skill file `{path}`: {reason}."
-            "Replace the symbolic link with a real directory inside the workspace (or move the skill out of the link target), then re-run `fsgg-sdd upgrade`. Nothing was written or removed."
+            "Repair the path or access capability inside the workspace, preserve any inside-workspace partial result, then re-run `fsgg-sdd upgrade`. Refusal does not advance provenance."
             [ path ]
+
+    // Only the owner-skill edge uses this custody. Other artifact IO keeps its existing contract.
+    exception private OwnerSkillIoRefused of string
+
+    module private OwnerNative =
+        open System.Runtime.InteropServices
+        open Microsoft.Win32.SafeHandles
+
+        [<DllImport("libc", SetLastError = true, EntryPoint = "open")>]
+        extern int openRoot(string path, int flags)
+
+        [<DllImport("libc", SetLastError = true, EntryPoint = "openat")>]
+        extern int openAt(int parent, string path, int flags, uint32 mode)
+
+        [<DllImport("libc", SetLastError = true, EntryPoint = "mkdirat")>]
+        extern int mkdirAt(int parent, string path, uint32 mode)
+
+        [<DllImport("libc", SetLastError = true, EntryPoint = "renameat")>]
+        extern int renameAt(int parent, string source, int destinationParent, string destination)
+
+        [<DllImport("libc", SetLastError = true, EntryPoint = "unlinkat")>]
+        extern int unlinkAt(int parent, string path, int flags)
+
+        [<DllImport("libc", SetLastError = true, EntryPoint = "fchmod")>]
+        extern int chmod(int file, uint32 mode)
+
+        [<DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)>]
+        extern SafeFileHandle CreateFileW(
+            string path,
+            uint32 access,
+            uint32 share,
+            nativeint security,
+            uint32 disposition,
+            uint32 flags,
+            nativeint template
+        )
+
+        [<DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)>]
+        extern bool GetFileInformationByHandleEx(SafeFileHandle file, int infoClass, nativeint data, uint32 size)
+
+    [<AllowNullLiteral>]
+    type private OwnerSkillAccess
+        (
+            read: unit -> FileRead,
+            write: byte[] -> unit,
+            remove: unit -> unit,
+            executable: unit -> unit,
+            validate: unit -> unit,
+            close: unit -> unit
+        ) =
+        member _.Read() = read ()
+        member _.Write(bytes) = write bytes
+        member _.Remove() = remove ()
+        member _.SetExecutable() = executable ()
+        member _.Validate() = validate ()
+
+        interface IDisposable with
+            member _.Dispose() = close ()
+
+    let private canonicalOwnerPath (full: string) : string =
+        let mutable current =
+            match Path.GetPathRoot full with
+            | null
+            | "" -> raise (OwnerSkillIoRefused "physical workspace root is unavailable")
+            | root -> root
+
+        for part in
+            full.Substring(current.Length).Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries) do
+            let next = Path.Combine(current, part)
+            let info = FileInfo next
+
+            if isNull info.LinkTarget then
+                current <- next
+            else
+                match info.ResolveLinkTarget true with
+                | null -> raise (OwnerSkillIoRefused "linked component could not be resolved")
+                | target -> current <- target.FullName
+
+        current
+
+    let private openOwnerSkillAccess projectRoot path createParents =
+        let handles = ResizeArray<Microsoft.Win32.SafeHandles.SafeFileHandle>()
+
+        let close () =
+            for index in [ handles.Count - 1 .. -1 .. 0 ] do
+                handles[index].Dispose()
+
+        let refuse reason = raise (OwnerSkillIoRefused reason)
+
+        let nativeFailure operation =
+            let code = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
+            refuse $"{operation} refused (native error {code})"
+
+        let fd (handle: Microsoft.Win32.SafeHandles.SafeFileHandle) = int (handle.DangerousGetHandle())
+
+        let own descriptor =
+            if descriptor < 0 then
+                nativeFailure "no-follow open"
+
+            let handle =
+                new Microsoft.Win32.SafeHandles.SafeFileHandle(nativeint descriptor, true)
+
+            handles.Add handle
+            handle
+
+        let windowsKind handle =
+            let data = System.Runtime.InteropServices.Marshal.AllocHGlobal 8
+
+            try
+                if not (OwnerNative.GetFileInformationByHandleEx(handle, 9, data, 8u)) then
+                    nativeFailure "file attribute observation"
+
+                uint32 (System.Runtime.InteropServices.Marshal.ReadInt32(data, 0))
+            finally
+                System.Runtime.InteropServices.Marshal.FreeHGlobal data
+
+        let openWindowsDirectory absolute =
+            // FILE_LIST_DIRECTORY participates in sharing checks; an attributes-only open does not.
+            // No FILE_SHARE_DELETE holds the physical component against delete/rename during the edge.
+            let handle = OwnerNative.CreateFileW(absolute, 0x81u, 3u, 0n, 3u, 0x02200000u, 0n)
+
+            if handle.IsInvalid then
+                let code = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
+                handle.Dispose()
+                refuse $"non-reparse directory open refused (native error {code})"
+
+            handles.Add handle
+            let attributes = windowsKind handle
+
+            if attributes &&& 0x400u <> 0u || attributes &&& 0x10u = 0u then
+                refuse "physical parent is linked or is not a directory"
+
+            handle
+
+        let leafLinux parent name =
+            let descriptor =
+                OwnerNative.openAt (fd parent, name, 0x20000 ||| 0x80000 ||| 0x800, 0u)
+
+            if descriptor < 0 then
+                if System.Runtime.InteropServices.Marshal.GetLastPInvokeError() = 2 then
+                    None
+                else
+                    nativeFailure "no-follow skill file open"
+            else
+                Some(new Microsoft.Win32.SafeHandles.SafeFileHandle(nativeint descriptor, true))
+
+        let linuxStat handle =
+            let data = System.Runtime.InteropServices.Marshal.AllocHGlobal 256
+
+            try
+                if GenerationSourceSnapshot.statx (fd handle, "", 0x1000, 0x7ffu, data) <> 0 then
+                    nativeFailure "opened skill file observation"
+
+                let mode = uint16 (System.Runtime.InteropServices.Marshal.ReadInt16(data, 28))
+
+                if int mode &&& 0xf000 <> 0x8000 then
+                    refuse "opened skill target is not a regular file"
+
+                uint32 mode &&& 0xfffu, System.Runtime.InteropServices.Marshal.ReadInt32(data, 16)
+            finally
+                System.Runtime.InteropServices.Marshal.FreeHGlobal data
+
+        try
+            match ownerSkillPathRefusal projectRoot path with
+            | Some reason -> refuse reason
+            | None -> ()
+
+            if not (OperatingSystem.IsLinux() || OperatingSystem.IsWindows()) then
+                refuse "held-parent skill writes are unsupported on this platform"
+
+            let root = canonicalOwnerPath (Path.GetFullPath projectRoot)
+            let absolute = fullPath projectRoot path
+            // Resolve only parent aliases. The leaf is opened no-follow, never resolved through a link.
+            let name =
+                match Path.GetFileName absolute with
+                | null
+                | "" -> refuse "skill leaf name is unavailable"
+                | name -> name
+
+            let parent = canonicalOwnerPath (parentDirectory absolute)
+            let physical = Path.Combine(parent, name)
+            let relative = Path.GetRelativePath(root, parent)
+
+            if
+                relative = ".."
+                || relative.StartsWith(".." + string Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            then
+                refuse "resolved skill parent is outside the physical workspace"
+
+            let parts =
+                if relative = "." then
+                    [||]
+                else
+                    relative.Split(Path.DirectorySeparatorChar)
+
+            let chain = ResizeArray<Microsoft.Win32.SafeHandles.SafeFileHandle * string>()
+            let directoryFlags = 0x10000 ||| 0x20000 ||| 0x80000
+
+            let mutable current =
+                if OperatingSystem.IsLinux() then
+                    own (OwnerNative.openRoot (root, directoryFlags))
+                else
+                    let volume =
+                        match Path.GetPathRoot parent with
+                        | null
+                        | "" -> refuse "physical volume root is unavailable"
+                        | root -> root
+
+                    let mutable directory = openWindowsDirectory volume
+                    // Hold every ancestor, not only the selected workspace name.
+                    let mutable prefix = volume
+
+                    for part in
+                        root
+                            .Substring(volume.Length)
+                            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries) do
+                        prefix <- Path.Combine(prefix, part)
+                        directory <- openWindowsDirectory prefix
+
+                    directory
+
+            let mutable prefix = root
+            let mutable missing = false
+
+            for part in parts do
+                if not missing then
+                    prefix <- Path.Combine(prefix, part)
+
+                    if OperatingSystem.IsLinux() then
+                        let mutable child = OwnerNative.openAt (fd current, part, directoryFlags, 0u)
+
+                        if child < 0 && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() = 2 then
+                            if createParents then
+                                if
+                                    OwnerNative.mkdirAt (fd current, part, 511u) <> 0
+                                    && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() <> 17
+                                then
+                                    nativeFailure "contained directory creation"
+
+                                child <- OwnerNative.openAt (fd current, part, directoryFlags, 0u)
+                            else
+                                missing <- true
+
+                        if not missing then
+                            let previous = current
+                            current <- own child
+                            chain.Add(previous, part)
+                    else
+                        if not (Directory.Exists prefix) && createParents then
+                            Directory.CreateDirectory prefix |> ignore
+
+                        if Directory.Exists prefix then
+                            let previous = current
+                            current <- openWindowsDirectory prefix
+                            chain.Add(previous, part)
+                        else
+                            missing <- true
+
+            let validate () =
+                let currentParent = canonicalOwnerPath (parentDirectory absolute)
+
+                if
+                    canonicalOwnerPath (Path.GetFullPath projectRoot) <> root
+                    || currentParent <> parent
+                then
+                    refuse "the skill path binding changed; an inside-workspace partial result may remain"
+
+                if not (isNull (FileInfo absolute).LinkTarget) then
+                    refuse "the skill leaf is itself a symbolic link"
+
+            let openLeaf () =
+                if missing then
+                    None
+                elif OperatingSystem.IsLinux() then
+                    leafLinux current name
+                else
+                    let handle =
+                        OwnerNative.CreateFileW(physical, 0x80000000u, 7u, 0n, 3u, 0x00200000u, 0n)
+
+                    if handle.IsInvalid then
+                        let code = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
+                        handle.Dispose()
+
+                        if code = 2 || code = 3 then
+                            None
+                        else
+                            refuse $"skill file open refused (native error {code})"
+                    else
+                        let attributes = windowsKind handle
+
+                        if attributes &&& (0x400u ||| 0x10u) <> 0u then
+                            handle.Dispose()
+                            refuse "skill leaf is linked or is not a regular file"
+
+                        Some handle
+
+            let mutable priorMode = None
+            let mutable observedBytes: byte[] option option = None
+
+            let readPinnedBytes () =
+                match openLeaf () with
+                | None -> None
+                | Some handle ->
+                    use held = handle
+
+                    if OperatingSystem.IsLinux() then
+                        priorMode <- Some(fst (linuxStat held))
+
+                    use stream = new FileStream(held, FileAccess.Read)
+                    use memory = new MemoryStream()
+                    stream.CopyTo memory
+                    Some(memory.ToArray())
+
+            let read () =
+                validate ()
+                let bytes = readPinnedBytes ()
+                observedBytes <- Some bytes
+
+                match bytes with
+                | None -> Missing
+                | Some bytes ->
+                    match Fsgg.SkillMirror.decodeBody bytes with
+                    | Ok text ->
+                        Body
+                            {
+                                Path = path
+                                Text = text
+                                RawBytes = Some bytes
+                            }
+                    | Error(Fsgg.SkillMirror.NotDecodable offset) -> DecodeRefusal offset
+
+            let verifyRegularLeaf () =
+                // Recheck the held parent's current leaf, including a new no-clobber collision.
+                // This is not a filesystem CAS against arbitrary edits after this observation.
+                let current = readPinnedBytes ()
+
+                match observedBytes with
+                | Some expected when expected <> current -> refuse "skill leaf changed after its recorded-byte read"
+                | _ -> ()
+
+            let write bytes =
+                if missing then
+                    refuse "skill parent is absent"
+
+                verifyRegularLeaf ()
+                let temp = $".{name}.{Guid.NewGuid():N}.tmp"
+
+                if OperatingSystem.IsLinux() then
+                    try
+                        let descriptor =
+                            OwnerNative.openAt (fd current, temp, 1 ||| 64 ||| 128 ||| 0x20000 ||| 0x80000, 438u)
+
+                        if descriptor < 0 then
+                            nativeFailure "exclusive contained temporary file creation"
+
+                        use held =
+                            new Microsoft.Win32.SafeHandles.SafeFileHandle(nativeint descriptor, true)
+
+                        use stream = new FileStream(held, FileAccess.Write)
+                        stream.Write(bytes: byte[])
+                        stream.Flush()
+
+                        match priorMode with
+                        | Some mode when OwnerNative.chmod (fd held, mode) <> 0 ->
+                            nativeFailure "contained mode preservation"
+                        | _ -> ()
+
+                        if OwnerNative.renameAt (fd current, temp, fd current, name) <> 0 then
+                            nativeFailure "contained atomic replacement"
+                    finally
+                        OwnerNative.unlinkAt (fd current, temp, 0) |> ignore
+                else
+                    let tempPath = Path.Combine(parent, temp)
+
+                    try
+                        use stream =
+                            new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)
+
+                        stream.Write(bytes: byte[])
+                        stream.Dispose()
+                        File.Move(tempPath, physical, true)
+                    finally
+                        if File.Exists tempPath then
+                            File.Delete tempPath
+
+            let prune () =
+                // An inside-root alias remains supported; do not prune its shared physical destination.
+                if String.Equals(absolute, physical, StringComparison.Ordinal) then
+                    let mutable logical = parentDirectory path
+                    let mutable index = chain.Count - 1
+                    let mutable proceed = true
+
+                    while proceed
+                          && index >= 0
+                          && (Internal.OwnerSkillRefresh.skillCopyOf (logical + "/x")).IsSome do
+                        let parentHandle, childName = chain[index]
+
+                        if OperatingSystem.IsLinux() then
+                            if OwnerNative.unlinkAt (fd parentHandle, childName, 0x200) <> 0 then
+                                proceed <- false
+                        else
+                            // Release only the directory being removed; its physical parent stays held.
+                            handles[handles.Count - (chain.Count - index)].Dispose()
+
+                            try
+                                Directory.Delete(fullPath projectRoot logical, false)
+                            with :? IOException ->
+                                proceed <- false
+
+                        logical <- parentDirectory logical
+                        index <- index - 1
+
+            let remove () =
+                if not missing then
+                    verifyRegularLeaf ()
+
+                    if OperatingSystem.IsLinux() then
+                        if
+                            OwnerNative.unlinkAt (fd current, name, 0) <> 0
+                            && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() <> 2
+                        then
+                            nativeFailure "contained skill removal"
+                    else
+                        File.Delete physical
+
+                    prune ()
+
+            let executable () =
+                if not (OperatingSystem.IsLinux()) then
+                    refuse "Unix executable mode is unsupported on this platform"
+
+                match openLeaf () with
+                | None -> refuse "executable skill file is absent"
+                | Some handle ->
+                    use held = handle
+                    let mode, links = linuxStat held
+
+                    if links <> 1 then
+                        refuse "executable skill file has multiple hard links"
+
+                    if OwnerNative.chmod (fd held, mode ||| 73u) <> 0 then
+                        nativeFailure "contained executable mode change"
+
+            new OwnerSkillAccess(read, write, remove, executable, validate, close)
+        with _ ->
+            close ()
+            reraise ()
 
     let private observedMergeRefusal projectRoot path existing expected prerequisites =
         let checks =
@@ -896,7 +1343,12 @@ module CommandEffects =
             Diagnostic = None
         }
 
-    let interpret (projectRoot: string) (dryRun: bool) (effect: CommandEffect) =
+    let internal interpretWithOwnerSkillCheckpoint
+        (checkpoint: unit -> unit)
+        (projectRoot: string)
+        (dryRun: bool)
+        (effect: CommandEffect)
+        =
         try
             match effect with
             // THE READ EDGE (FS.GG.SDD#745, decision #754; the fourth state, FS.GG.SDD#743). Every
@@ -1060,14 +1512,17 @@ module CommandEffects =
                     match kind with
                     | OwnerSkillRefresh _ -> true
                     | AgentGuidanceTarget -> (Internal.OwnerSkillRefresh.skillCopyOf path).IsSome
-                    | _ -> false
+                    | _ -> List.contains (path.Replace('\\', '/')) Internal.HandlersScaffold.productSkillManifestPaths
+
+                use ownerAccess =
+                    if ownerSkillGuarded then
+                        openOwnerSkillAccess projectRoot path (not dryRun)
+                    else
+                        null
 
                 let writeRead =
                     match kind with
-                    | _ when ownerSkillGuarded ->
-                        match ownerSkillPathRefusal projectRoot path with
-                        | Some reason -> IoRefusal reason
-                        | None -> readFile projectRoot path
+                    | _ when ownerSkillGuarded -> ownerAccess.Read()
                     | HybridArtifact(ObservedMerge _) ->
                         match containedFileRefusal projectRoot path with
                         | Some reason -> IoRefusal reason
@@ -1136,22 +1591,33 @@ module CommandEffects =
                                 [])
                     elif canOverwrite kind existing text then
                         if not dryRun && not unchanged then
-                            let absolute = fullPath projectRoot path
-                            Directory.CreateDirectory(parentDirectory absolute) |> ignore
+                            if ownerSkillGuarded then
+                                // The checkpoint is parameterized and internal; production supplies ignore.
+                                // Every mutation after it uses the held physical parent, never the logical alias.
+                                checkpoint ()
 
-                            match rawBytes with
-                            | Some bytes -> writeBytesAtomic absolute bytes
-                            | None ->
-                                match kind, existing with
-                                | HybridArtifact(ObservedMerge _), Some snapshot when
-                                    snapshot.RawBytes
-                                    |> Option.exists (fun bytes ->
-                                        bytes.Length >= 3 && bytes.[0..2] = [| 0xEFuy; 0xBBuy; 0xBFuy |])
-                                    ->
-                                    writeBytesAtomic
-                                        absolute
-                                        (Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes text))
-                                | _ -> writeFileAtomic absolute text
+                                ownerAccess.Write(
+                                    rawBytes |> Option.defaultWith (fun () -> Encoding.UTF8.GetBytes text)
+                                )
+
+                                ownerAccess.Validate()
+                            else
+                                let absolute = fullPath projectRoot path
+                                Directory.CreateDirectory(parentDirectory absolute) |> ignore
+
+                                match rawBytes with
+                                | Some bytes -> writeBytesAtomic absolute bytes
+                                | None ->
+                                    match kind, existing with
+                                    | HybridArtifact(ObservedMerge _), Some snapshot when
+                                        snapshot.RawBytes
+                                        |> Option.exists (fun bytes ->
+                                            bytes.Length >= 3 && bytes.[0..2] = [| 0xEFuy; 0xBBuy; 0xBFuy |])
+                                        ->
+                                        writeBytesAtomic
+                                            absolute
+                                            (Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes text))
+                                    | _ -> writeFileAtomic absolute text
 
                         success effect existingRead
                     else
@@ -1170,17 +1636,27 @@ module CommandEffects =
                     success effect Absent
                 else
                     try
-                        let absolute = fullPath projectRoot path
+                        if (Internal.OwnerSkillRefresh.skillCopyOf path).IsSome then
+                            use ownerAccess = openOwnerSkillAccess projectRoot path false
+                            checkpoint ()
+                            ownerAccess.SetExecutable()
+                            ownerAccess.Validate()
+                        else
+                            let absolute = fullPath projectRoot path
 
-                        let executable =
-                            File.GetUnixFileMode absolute
-                            ||| UnixFileMode.UserExecute
-                            ||| UnixFileMode.GroupExecute
-                            ||| UnixFileMode.OtherExecute
+                            let executable =
+                                File.GetUnixFileMode absolute
+                                ||| UnixFileMode.UserExecute
+                                ||| UnixFileMode.GroupExecute
+                                ||| UnixFileMode.OtherExecute
 
-                        File.SetUnixFileMode(absolute, executable)
+                            File.SetUnixFileMode(absolute, executable)
+
                         success effect Absent
-                    with _ ->
+                    with
+                    | OwnerSkillIoRefused reason ->
+                        failure effect (Unreadable(path, reason)) (ownerSkillPathRefused path reason)
+                    | _ ->
                         // Read-only FS, non-Unix host, or a missing file: reported as a
                         // skipped/partial make-executable (FR-005, US2-AC3), never a tool
                         // defect. Caught here so the outer handler never escalates it.
@@ -1194,55 +1670,40 @@ module CommandEffects =
                             Diagnostic = None
                         }
             | RemoveFile(path, expectedSha256) ->
-                // FS.GG.SDD#1155. A file an owner pack no longer ships is removed ONLY while it is
-                // still what provenance attested. Undecidable (unreadable, undecodable) means
-                // refuse, exactly as the write edge does; an absent file is already removed.
-                match ownerSkillPathRefusal projectRoot path with
-                | Some reason -> failure effect (Unreadable(path, reason)) (ownerSkillPathRefused path reason)
-                | None ->
-                    match readFile projectRoot path with
-                    | Missing -> success effect Absent
-                    | IoRefusal reason ->
-                        failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)
-                    | DecodeRefusal byteOffset ->
-                        failure
-                            effect
-                            (Unreadable(path, undecodableReason byteOffset))
-                            (Diagnostics.undecodableWriteTarget path byteOffset)
-                    | Body snapshot ->
-                        if expectedSha256 <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expectedSha256 then
-                            if not dryRun then
-                                File.Delete(fullPath projectRoot path)
+                use ownerAccess = openOwnerSkillAccess projectRoot path false
 
-                                // Drop the directories the removal emptied, never above the skill's own
-                                // directory: `skillCopyOf` is `None` for `<root>/skills` itself.
-                                let rec prune (relativeDirectory: string) =
-                                    match Internal.OwnerSkillRefresh.skillCopyOf (relativeDirectory + "/x") with
-                                    | Some _ ->
-                                        let absolute = fullPath projectRoot relativeDirectory
+                match ownerAccess.Read() with
+                | Missing -> success effect Absent
+                | IoRefusal reason ->
+                    failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)
+                | DecodeRefusal byteOffset ->
+                    failure
+                        effect
+                        (Unreadable(path, undecodableReason byteOffset))
+                        (Diagnostics.undecodableWriteTarget path byteOffset)
+                | Body snapshot ->
+                    if expectedSha256 <> "" && Fsgg.SkillMirror.sha256 snapshot.Text = expectedSha256 then
+                        if not dryRun then
+                            checkpoint ()
+                            ownerAccess.Remove()
+                            ownerAccess.Validate()
 
-                                        if
-                                            Directory.Exists absolute
-                                            && Seq.isEmpty (Directory.EnumerateFileSystemEntries absolute)
-                                        then
-                                            Directory.Delete absolute
-
-                                            match relativeDirectory.LastIndexOf '/' with
-                                            | -1 -> ()
-                                            | cut -> prune (relativeDirectory.Substring(0, cut))
-                                    | None -> ()
-
-                                match path.Replace('\\', '/').LastIndexOf '/' with
-                                | -1 -> ()
-                                | cut -> prune (path.Replace('\\', '/').Substring(0, cut))
-
-                            success effect (Bytes snapshot)
-                        else
-                            failure effect (Bytes snapshot) (unsafeOverwrite path)
+                        success effect (Bytes snapshot)
+                    else
+                        failure effect (Bytes snapshot) (unsafeOverwrite path)
             | Confirm(_, prompt) -> confirm dryRun effect prompt
-        with ex ->
+        with
+        | OwnerSkillIoRefused reason ->
+            let path =
+                CommandTypes.effectPath effect |> Option.defaultValue "<owner-skill target>"
+
+            failure effect (Unreadable(path, reason)) (ownerSkillPathRefused path reason)
+        | ex ->
             let path = CommandTypes.effectPath effect
             failure effect Absent (toolDefect path ex.Message)
+
+    let interpret projectRoot dryRun effect =
+        interpretWithOwnerSkillCheckpoint ignore projectRoot dryRun effect
 
     let interpretAll (projectRoot: string) (dryRun: bool) (effects: CommandEffect list) =
         effects |> List.map (interpret projectRoot dryRun)

@@ -8,6 +8,14 @@ module CommandEffects =
     /// the stream's truncation flag records the drop (FR-005 / SC-005).
     val providerOutputCapChars: int
 
+    /// Deterministic owner-skill mutation boundary for friend-assembly causal controls; no global hook.
+    val internal interpretWithOwnerSkillCheckpoint:
+        checkpoint: (unit -> unit) ->
+        projectRoot: string ->
+        dryRun: bool ->
+        effect: CommandEffect ->
+            CommandEffectResult
+
     val interpret: projectRoot: string -> dryRun: bool -> effect: CommandEffect -> CommandEffectResult
     val interpretAll: projectRoot: string -> dryRun: bool -> effects: CommandEffect list -> CommandEffectResult list
 

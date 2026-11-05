@@ -194,9 +194,12 @@ module internal HandlersUpgrade =
             let ownerState: ScaffoldProvenance.OwnerSkillProvenance =
                 resolveOwnerSkillState model
                 |> Option.defaultValue
-                    { Ownership = record
-                      OwnerSkillVersions = []
-                      UpgradedBy = None }
+                    {
+                        Ownership = record
+                        OwnerSkillVersions = []
+                        UpgradedBy = None
+                    }
+
             let targetSet = targets |> Set.ofList
 
             let presentIds =
@@ -248,11 +251,7 @@ module internal HandlersUpgrade =
                     (refresh.Writes
                      |> List.filter (fun file -> targetSet.Contains file.Path)
                      |> List.collect (fun file ->
-                         WriteFile(
-                             file.Path,
-                             file.Text,
-                             OwnerSkillRefresh(Map.find file.Path refresh.ExpectedBefore)
-                         )
+                         WriteFile(file.Path, file.Text, OwnerSkillRefresh(Map.find file.Path refresh.ExpectedBefore))
                          // The atomic replace creates a new inode, so the mode must be re-applied.
                          :: (if file.Executable then [ SetExecutable file.Path ] else [])))
                     @ (refresh.Removals
@@ -368,7 +367,9 @@ module internal HandlersUpgrade =
                                 WriteFile(
                                     gitattributesPath,
                                     text,
-                                    HybridArtifact(ObservedMerge(existingFile |> Option.bind (fun file -> file.RawBytes), []))
+                                    HybridArtifact(
+                                        ObservedMerge(existingFile |> Option.bind (fun file -> file.RawBytes), [])
+                                    )
                                 )
                             ]
                         | None -> []
@@ -456,7 +457,8 @@ module internal HandlersUpgrade =
                         |> Set.ofList
                         |> Set.union failedRefreshIds
 
-                    let versionedIds = Set.difference (Set.difference affectedSkillIds heldIds) failedIds
+                    let versionedIds =
+                        Set.difference (Set.difference affectedSkillIds heldIds) failedIds
 
                     let newVersions =
                         OwnerSkillRefresh.embeddedDesired record
@@ -494,7 +496,8 @@ module internal HandlersUpgrade =
                                     ProducedPaths = refreshManifestDigests record.ProducedPaths
                                     MirroredPaths = refreshManifestDigests record.MirroredPaths
                                     DriverPaths = mergeProducedRows (withoutDropped record.DriverPaths) newDriverPaths
-                                    GameSkillPaths = mergeProducedRows (withoutDropped record.GameSkillPaths) newGameSkillPaths
+                                    GameSkillPaths =
+                                        mergeProducedRows (withoutDropped record.GameSkillPaths) newGameSkillPaths
                                     RenderingSkillPaths =
                                         mergeProducedRows
                                             (withoutDropped record.RenderingSkillPaths)
@@ -507,7 +510,10 @@ module internal HandlersUpgrade =
                                     OwnerSkillVersions =
                                         (ownerState.OwnerSkillVersions
                                          |> List.filter (fun entry ->
-                                             not (newVersions |> List.exists (fun fresh -> fresh.SkillId = entry.SkillId))))
+                                             not (
+                                                 newVersions
+                                                 |> List.exists (fun fresh -> fresh.SkillId = entry.SkillId)
+                                             )))
                                         @ newVersions
                                         |> List.sortBy (fun entry -> entry.SkillId)
                                     // Only a run in which every file landed names its CLI as the last writer: a
@@ -516,13 +522,22 @@ module internal HandlersUpgrade =
                                         (if Set.isEmpty failedPaths then
                                              Some model.Request.GeneratorVersion.Version
                                          else
-                                             ownerState.UpgradedBy) }
+                                             ownerState.UpgradedBy)
+                                }
 
                             match scaffoldProvenanceDocument model with
                             | Ok(Some(FS.GG.SDD.Artifacts.ScaffoldProvenanceDocument.Legacy _)) ->
-                                Ok [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serializeOwnerSkillProvenance updated, GeneratedView) ]
+                                Ok
+                                    [
+                                        WriteFile(
+                                            ScaffoldProvenance.provenancePath,
+                                            ScaffoldProvenance.serializeOwnerSkillProvenance updated,
+                                            GeneratedView
+                                        )
+                                    ]
                             | _ ->
-                                Error "Catalog/source provenance binds original observed path hashes; owner backfill cannot rewrite those observations or downgrade the wrapper."
+                                Error
+                                    "Catalog/source provenance binds original observed path hashes; owner backfill cannot rewrite those observations or downgrade the wrapper."
 
                     provenanceWrite |> Result.map (fun effects -> primary @ effects)
         | None -> Ok []
@@ -600,7 +615,9 @@ module internal HandlersUpgrade =
                 | _ -> false
 
             let collisions, others = held |> List.partition isCollision
-            let render hs = hs |> List.map OwnerSkillRefresh.heldText |> String.concat "; "
+
+            let render hs =
+                hs |> List.map OwnerSkillRefresh.heldText |> String.concat "; "
 
             // A colliding skill was never installed, so it did not "change upstream": say what is true.
             hint
@@ -611,7 +628,9 @@ module internal HandlersUpgrade =
             + (if List.isEmpty collisions then
                    ""
                else
-                   " Delivered skills not installed because the name is already taken: " + render collisions + ".")
+                   " Delivered skills not installed because the name is already taken: "
+                   + render collisions
+                   + ".")
 
     /// Append the #747 exclusion to an advisory when — and only when — it actually fired.
     let private withIgnoredJunk (drift: Drift.DriftReport) (hint: string) =
@@ -906,7 +925,9 @@ module internal HandlersUpgrade =
         // under a hint saying the lane cannot repair it — both false, and FR-013 inverted.
         let repairedMissing =
             if List.contains ReconciliationStepId.ArtifactReSeed applied then
-                drift.MissingArtifactPaths @ drift.OwnerSkillBackfillPaths @ drift.OwnerSkillRefreshPaths
+                drift.MissingArtifactPaths
+                @ drift.OwnerSkillBackfillPaths
+                @ drift.OwnerSkillRefreshPaths
             else
                 []
 
@@ -1043,11 +1064,13 @@ module internal HandlersUpgrade =
             | SetExecutable _ -> not (hasInterpreted (effectKey effect) model)
             | _ -> false)
 
-    let computeUpgradeNext model =
+    let internal computeUpgradeNextWithObserver (observe: unit -> unit) model =
         match model.Upgrade with
         | Some _ -> model, []
         | None when writesInFlight model -> model, []
         | None ->
+            // Count the actual derivation, after the in-flight guard, without mutable runtime state.
+            observe ()
 
             // 058/ADR-0014 P1: bring the provider product-skill copies into snapshots (read-only)
             // before the content-addressed drift is computed — the same provenance-driven gate
@@ -1207,3 +1230,7 @@ module internal HandlersUpgrade =
                         effects
                     | Some(Choice2Of2()) -> model, []
                     | None -> finalizeApply model request drift actionable
+
+
+    let computeUpgradeNext model =
+        computeUpgradeNextWithObserver ignore model
