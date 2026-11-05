@@ -540,13 +540,17 @@ module CommandEffects =
                         else
                             refuse $"skill file open refused (native error {code})"
                     else
-                        let attributes = windowsKind handle
+                        // Ownership transfers only after validation; dispose even if attribute lookup fails.
+                        try
+                            let attributes = windowsKind handle
 
-                        if attributes &&& (0x400u ||| 0x10u) <> 0u then
+                            if attributes &&& (0x400u ||| 0x10u) <> 0u then
+                                refuse "skill leaf is linked or is not a regular file"
+
+                            Some handle
+                        with _ ->
                             handle.Dispose()
-                            refuse "skill leaf is linked or is not a regular file"
-
-                        Some handle
+                            reraise ()
 
             let mutable priorMode = None
             let mutable observedBytes: byte[] option option = None
