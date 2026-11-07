@@ -72,6 +72,7 @@
     <Compile Include="RemediationCommandTests.fs" />
     <Compile Include="CatalogSkillDigestTests.fs" />
     <Compile Include="MultiFileSkillDriftTests.fs" />
+    <Compile Include="LinuxOpenFlagsTests.fs" />
     <Compile Include="OwnerSkillRefreshTests.fs" />
     <Compile Include="SeededSkillsTests.fs" />
     <Compile Include="DriverSkillsTests.fs" />

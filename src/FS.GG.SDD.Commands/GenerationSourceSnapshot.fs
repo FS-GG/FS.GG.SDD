@@ -57,8 +57,18 @@ module internal GenerationSourceSnapshot =
 
     // Linux open flags. O_NONBLOCK prevents a FIFO swapped into the final slot
     // from hanging the reader before the descriptor's type can be checked.
-    let private directoryFlags = 0x10000 ||| 0x20000 ||| 0x80000
-    let private fileFlags = 0x20000 ||| 0x80000 ||| 0x800
+    // Flag numbers differ by architecture (see LinuxOpenFlags); an uncovered architecture has none and
+    // refuses as an unsupported platform before any descriptor is opened.
+    let private flagsOrRefuse () =
+        match LinuxOpenFlags.current with
+        | Some flags -> flags
+        | None -> raise (CaptureRefused UnsupportedPlatform)
+
+    let private directoryFlags () =
+        LinuxOpenFlags.directoryOpen (flagsOrRefuse ())
+
+    let private fileFlags () =
+        LinuxOpenFlags.fileOpen (flagsOrRefuse ())
 
     let private refuse issue = raise (CaptureRefused issue)
 
@@ -192,7 +202,7 @@ module internal GenerationSourceSnapshot =
         | Directory -> ()
         | _ -> refuse InvalidRoot
 
-        let handle = nativeOpenAt (parent, name, directoryFlags)
+        let handle = nativeOpenAt (parent, name, directoryFlags ())
 
         if handle < 0 then
             refuse (Unreadable relative)
@@ -209,7 +219,7 @@ module internal GenerationSourceSnapshot =
 
     let private readPinnedRegular directory name path beforeOpen afterOpen afterRead =
         beforeOpen path
-        let handle = nativeOpenAt (directory, name, fileFlags)
+        let handle = nativeOpenAt (directory, name, fileFlags ())
 
         if handle < 0 then
             refuse (Unreadable path)
@@ -306,7 +316,7 @@ module internal GenerationSourceSnapshot =
                     refuse (DuplicatePath path)
 
             let workspace = Path.GetFullPath workspaceRoot
-            let rootHandle = nativeOpen ("/", directoryFlags)
+            let rootHandle = nativeOpen ("/", directoryFlags ())
 
             if rootHandle < 0 then
                 refuse InvalidRoot
@@ -417,7 +427,7 @@ module internal GenerationSourceSnapshot =
             let parts = relativePath.Split('/') |> Array.toList
             let fileName = List.last parts
             let parentParts = parts |> List.take (List.length parts - 1)
-            let rootHandle = nativeOpen ("/", directoryFlags)
+            let rootHandle = nativeOpen ("/", directoryFlags ())
 
             if rootHandle < 0 then
                 refuse InvalidRoot

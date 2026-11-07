@@ -341,6 +341,13 @@ module CommandEffects =
 
         let refuse reason = raise (OwnerSkillIoRefused reason)
 
+        // Open flag numbers differ by Linux architecture (LinuxOpenFlags); an uncovered one refuses
+        // instead of opening with another architecture's numbers, which would drop the no-follow guarantee.
+        let linuxFlags () =
+            match LinuxOpenFlags.current with
+            | Some flags -> flags
+            | None -> refuse "held-parent skill writes are unsupported on this Linux architecture"
+
         let nativeFailure operation =
             let code = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
             refuse $"{operation} refused (native error {code})"
@@ -394,7 +401,7 @@ module CommandEffects =
 
         let leafLinux parent name =
             let descriptor =
-                OwnerNative.openAt (fd parent, name, 0x20000 ||| 0x80000 ||| 0x800, 0u)
+                OwnerNative.openAt (fd parent, name, LinuxOpenFlags.fileOpen (linuxFlags ()), 0u)
 
             if descriptor < 0 then
                 if System.Runtime.InteropServices.Marshal.GetLastPInvokeError() = 2 then
@@ -433,6 +440,9 @@ module CommandEffects =
             if not (OperatingSystem.IsLinux() || OperatingSystem.IsWindows()) then
                 refuse "held-parent skill writes are unsupported on this platform"
 
+            if OperatingSystem.IsLinux() then
+                linuxFlags () |> ignore
+
             let root = canonicalOwnerPath (Path.GetFullPath projectRoot)
             let absolute = fullPath projectRoot path
             // Resolve only parent aliases. The leaf is opened no-follow, never resolved through a link.
@@ -460,11 +470,13 @@ module CommandEffects =
                     relative.Split(Path.DirectorySeparatorChar)
 
             let chain = ResizeArray<Microsoft.Win32.SafeHandles.SafeFileHandle * string>()
-            let directoryFlags = 0x10000 ||| 0x20000 ||| 0x80000
+
+            let directoryFlags () =
+                LinuxOpenFlags.directoryOpen (linuxFlags ())
 
             let mutable current =
                 if OperatingSystem.IsLinux() then
-                    own (OwnerNative.openRoot (root, directoryFlags))
+                    own (OwnerNative.openRoot (root, directoryFlags ()))
                 else
                     let volume =
                         match Path.GetPathRoot root with
@@ -493,7 +505,7 @@ module CommandEffects =
                     prefix <- Path.Combine(prefix, part)
 
                     if OperatingSystem.IsLinux() then
-                        let mutable child = OwnerNative.openAt (fd current, part, directoryFlags, 0u)
+                        let mutable child = OwnerNative.openAt (fd current, part, directoryFlags (), 0u)
 
                         if child < 0 && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() = 2 then
                             if createParents then
@@ -503,7 +515,7 @@ module CommandEffects =
                                 then
                                     mutationFailure "contained directory creation"
 
-                                child <- OwnerNative.openAt (fd current, part, directoryFlags, 0u)
+                                child <- OwnerNative.openAt (fd current, part, directoryFlags (), 0u)
                             else
                                 missing <- true
 
@@ -641,7 +653,7 @@ module CommandEffects =
                 if OperatingSystem.IsLinux() then
                     try
                         let descriptor =
-                            OwnerNative.openAt (fd current, temp, 1 ||| 64 ||| 128 ||| 0x20000 ||| 0x80000, 438u)
+                            OwnerNative.openAt (fd current, temp, LinuxOpenFlags.exclusiveCreate (linuxFlags ()), 438u)
 
                         if descriptor < 0 then
                             mutationFailure "exclusive contained temporary file creation"
