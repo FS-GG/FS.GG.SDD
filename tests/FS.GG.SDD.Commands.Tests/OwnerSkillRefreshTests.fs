@@ -1854,6 +1854,39 @@ module OwnerSkillRefreshTests =
             Assert.Empty(Directory.EnumerateFileSystemEntries absolute)
 
     [<Fact>]
+    let ``a regular file blocking a skill directory remains a failed apply rather than a refusal`` () =
+        if System.OperatingSystem.IsLinux() then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let blocker = Path.Combine(root, ".agents", "skills", "x")
+            Directory.CreateDirectory(Path.Combine(root, ".agents", "skills")) |> ignore
+            File.WriteAllText(blocker, "not a directory\n")
+
+            let result =
+                CommandEffects.interpret root false (WriteFile(path, "new\n", AgentGuidanceTarget))
+
+            Assert.False result.Succeeded
+            Assert.Equal("toolDefect", result.Diagnostic.Value.Id)
+            Assert.Equal("not a directory\n", File.ReadAllText blocker)
+
+    [<Fact>]
+    let ``a symbolic link blocking a skill directory is still refused`` () =
+        if System.OperatingSystem.IsLinux() then
+            let root = TestSupport.tempDirectory ()
+            let outside = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let link = Path.Combine(root, ".agents", "skills", "x")
+            Directory.CreateDirectory(Path.Combine(root, ".agents", "skills")) |> ignore
+            File.CreateSymbolicLink(link, Path.Combine(outside, "missing")) |> ignore
+
+            let result =
+                CommandEffects.interpret root false (WriteFile(path, "new\n", AgentGuidanceTarget))
+
+            Assert.False result.Succeeded
+            Assert.Equal("upgrade.ownerSkillPathRefused", result.Diagnostic.Value.Id)
+            Assert.Empty(Directory.EnumerateFileSystemEntries outside)
+
+    [<Fact>]
     let ``a contained temporary write failure remains an apply defect after a successful read`` () =
         if System.OperatingSystem.IsLinux() && System.Environment.UserName <> "root" then
             let root = TestSupport.tempDirectory ()

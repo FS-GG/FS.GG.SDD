@@ -507,6 +507,27 @@ module CommandEffects =
                             else
                                 missing <- true
 
+                        if
+                            child < 0
+                            && not missing
+                            && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() = 20
+                        then
+                            // ENOTDIR is shared by regular files and symbolic links under O_NOFOLLOW. A regular file
+                            // blocking a skill directory is an apply defect (as before containment); a link refuses.
+                            let data = System.Runtime.InteropServices.Marshal.AllocHGlobal 256
+
+                            try
+                                if
+                                    GenerationSourceSnapshot.statx (fd current, part, 0x100, 1u, data) = 0
+                                    && int (uint16 (System.Runtime.InteropServices.Marshal.ReadInt16(data, 28)))
+                                       &&& 0xf000
+                                        =
+                                        0x8000
+                                then
+                                    raise (IOException("owner skill parent component is a regular file"))
+                            finally
+                                System.Runtime.InteropServices.Marshal.FreeHGlobal data
+
                         if not missing then
                             let previous = current
                             current <- own child
