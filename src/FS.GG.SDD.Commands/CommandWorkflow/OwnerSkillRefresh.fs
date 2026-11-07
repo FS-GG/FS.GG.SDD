@@ -133,6 +133,7 @@ module internal OwnerSkillRefresh =
         (owner: ArtifactOwner)
         : Result<(string * string) option, HeldReason> =
         let record = state.Ownership
+
         match embeddedFor owner with
         | None -> Error(VersionUnprovable "this CLI build records no version for the owner package")
         // A record that claims version tracking but carries an entry nobody can read is not a
@@ -422,7 +423,7 @@ module internal OwnerSkillRefresh =
         | LocallyEdited ->
             $"{held.SkillId}: changed upstream but edited locally (or its recorded digest is missing); not replaced"
         | WouldDowngrade(recorded, embedded) ->
-            $"{held.SkillId}: this CLI embeds {embedded}, older than the {recorded} already materialized; not replaced"
+            $"{held.SkillId}: this CLI embeds {embedded}, below the channel's recorded version {recorded}; not replaced"
         | VersionUnprovable detail -> $"{held.SkillId}: not replaced, newer-ness unprovable ({detail})"
         | Unreadable -> $"{held.SkillId}: a file could not be read; not replaced"
         | NameCollision paths ->

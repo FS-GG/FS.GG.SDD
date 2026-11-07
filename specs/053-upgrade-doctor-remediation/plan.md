@@ -226,3 +226,23 @@ surface (spec Assumption "No registry surface change").
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | New `Confirm` effect + a `Confirmed` result field + edge-interpreter stdin read | ADR-0009 requires per-step diff **and confirmation** before any mutation; the CLI is otherwise a non-interactive batch pipeline with no stdin path. Modelling confirmation as an `Effect` keeps the MVU boundary (Principle V) and lets the pure `update` re-derive step staging from the interpreted-effect log. | Prompting ad-hoc inside the edge/`Program.fs` outside the effect model was rejected: it would hide I/O and a state transition from `update`, break the "pure transition + edge interpreter" contract, and make the interactive loop untestable through the standard model harness. |
+
+## FS.GG.SDD#1162 boundary and verification
+
+Keep this repair inside the existing effect interpreter and upgrade plan; add no generic filesystem,
+provider, persisted-model or effect-union contract. Resolve an allowed inside-workspace alias and
+hold the physical parent chain: Linux uses no-follow descriptor-relative opens and mutations;
+Windows uses non-reparse directory handles that deny delete sharing while physical-path operations
+run. Refuse unsupported capabilities and changed bindings without a path-based fallback. Include
+skill manifests in the same boundary. Preserve exact bytes, no-clobber/digest checks, file modes and
+all-or-nothing per-skill provenance. Directory relocation beyond the selected physical root and
+concurrent arbitrary file-content replacement remain outside a global filesystem-CAS claim.
+
+Use an internal parameterized checkpoint at the actual mutation edge for deterministic link-swap
+controls (no global mutable hook), covering replacement, backfill, manifest, removal and mode paths.
+Observe the actual upgrade derivation branch through an internal callback; pending partial batches
+must cause zero recomputations and resumption must recompute only after the last result. Plant the
+old path-following write and disabled-wait defects to prove those controls are causal. Exercise
+inside-root aliases, outside/root/leaf links, permissions, byte/mode preservation, partial failure
+and explicit resume. Run focused private filesystem tests under 2 CPU / 2 GiB / zero swap. Keep
+platform-native and hosted qualification separate from compiled/source success.

@@ -82,18 +82,24 @@ module OwnerSkillRefreshTests =
                     @ agedRows
             }
 
-        TestSupport.writeRelative root provenanceFile
+        TestSupport.writeRelative
+            root
+            provenanceFile
             (serializeOwnerSkillProvenance
-                { Ownership = updated
-                  OwnerSkillVersions = versions
-                  UpgradedBy = None })
+                {
+                    Ownership = updated
+                    OwnerSkillVersions = versions
+                    UpgradedBy = None
+                })
+
         root, rows |> List.map (fun row -> row.Path), retired
 
     let private recordOf root =
         tryParse (File.ReadAllText(Path.Combine(root, provenanceFile))) |> Option.get
 
     let private stateOf root =
-        tryParseOwnerSkillProvenance (File.ReadAllText(Path.Combine(root, provenanceFile))) |> Option.get
+        tryParseOwnerSkillProvenance (File.ReadAllText(Path.Combine(root, provenanceFile)))
+        |> Option.get
 
     let private hint root =
         (upgradeYes root).Upgrade.Value.NextActionHint
@@ -151,7 +157,8 @@ module OwnerSkillRefreshTests =
         let package, version = embeddedPackage ()
 
         let entry =
-            (stateOf root).OwnerSkillVersions |> List.find (fun entry -> entry.SkillId = skillId)
+            (stateOf root).OwnerSkillVersions
+            |> List.find (fun entry -> entry.SkillId = skillId)
 
         Assert.Equal(package, entry.Channel)
         Assert.Equal(version, entry.Version)
@@ -316,7 +323,7 @@ module OwnerSkillRefreshTests =
         for path in paths do
             Assert.Equal(oldBody path, read root path)
 
-        Assert.Contains("older than the 999.0.0 already materialized", summary.NextActionHint)
+        Assert.Contains("below the channel's recorded version 999.0.0", summary.NextActionHint)
 
         Assert.Equal(
             "999.0.0",
@@ -631,17 +638,20 @@ module OwnerSkillRefreshTests =
             })
 
     let private baseRecord rows versions =
-        { Ownership =
-            { (embeddedRecord () |> snd) with
-                Generator = { Id = "fsgg-sdd"; Version = "1.0.0" }
-                ProducedPaths = []
-                MirroredPaths = []
-                SddOwnedPaths = []
-                DriverPaths = rows
-                GameSkillPaths = []
-                RenderingSkillPaths = [] }
-          OwnerSkillVersions = versions
-          UpgradedBy = None }
+        {
+            Ownership =
+                { (embeddedRecord () |> snd) with
+                    Generator = { Id = "fsgg-sdd"; Version = "1.0.0" }
+                    ProducedPaths = []
+                    MirroredPaths = []
+                    SddOwnedPaths = []
+                    DriverPaths = rows
+                    GameSkillPaths = []
+                    RenderingSkillPaths = []
+                }
+            OwnerSkillVersions = versions
+            UpgradedBy = None
+        }
 
     let private embedded version =
         fun (_: ArtifactOwner) -> Some("Pkg", version)
@@ -731,7 +741,10 @@ module OwnerSkillRefreshTests =
         let plan =
             OwnerSkillRefresh.plan
                 { record with
-                    Ownership = { record.Ownership with ProducedPaths = [ provider ] }
+                    Ownership =
+                        { record.Ownership with
+                            ProducedPaths = [ provider ]
+                        }
                 }
                 "2.0.0"
                 (ownerFiles [ ".agents/skills/s/SKILL.md", "new\n" ])
@@ -778,12 +791,21 @@ module OwnerSkillRefreshTests =
 
         let withVersions =
             serializeOwnerSkillProvenance
-                { Ownership = record
-                  OwnerSkillVersions = [ entry ]
-                  UpgradedBy = None }
+                {
+                    Ownership = record
+                    OwnerSkillVersions = [ entry ]
+                    UpgradedBy = None
+                }
 
-        Assert.Equal<OwnerSkillVersion list>([ entry ], (tryParseOwnerSkillProvenance withVersions |> Option.get).OwnerSkillVersions)
-        Assert.Equal(withVersions, serializeOwnerSkillProvenance (tryParseOwnerSkillProvenance withVersions |> Option.get))
+        Assert.Equal<OwnerSkillVersion list>(
+            [ entry ],
+            (tryParseOwnerSkillProvenance withVersions |> Option.get).OwnerSkillVersions
+        )
+
+        Assert.Equal(
+            withVersions,
+            serializeOwnerSkillProvenance (tryParseOwnerSkillProvenance withVersions |> Option.get)
+        )
 
     // ---------- .gitattributes ----------
 
@@ -1123,9 +1145,11 @@ module OwnerSkillRefreshTests =
             root
             provenanceFile
             (serializeOwnerSkillProvenance
-                { Ownership = record
-                  OwnerSkillVersions = []
-                  UpgradedBy = Some "999.0.0" })
+                {
+                    Ownership = record
+                    OwnerSkillVersions = []
+                    UpgradedBy = Some "999.0.0"
+                })
 
         let summary = (upgradeYes root).Upgrade.Value
 
@@ -1155,9 +1179,11 @@ module OwnerSkillRefreshTests =
             root
             provenanceFile
             (serializeOwnerSkillProvenance
-                { Ownership = record
-                  OwnerSkillVersions = []
-                  UpgradedBy = Some installedVersion })
+                {
+                    Ownership = record
+                    OwnerSkillVersions = []
+                    UpgradedBy = Some installedVersion
+                })
 
         upgradeYes root |> ignore
 
@@ -1181,16 +1207,18 @@ module OwnerSkillRefreshTests =
             root
             provenanceFile
             (serializeOwnerSkillProvenance
-                { Ownership = record
-                  OwnerSkillVersions = [ floor ]
-                  UpgradedBy = None })
+                {
+                    Ownership = record
+                    OwnerSkillVersions = [ floor ]
+                    UpgradedBy = None
+                })
 
         let summary = (upgradeYes root).Upgrade.Value
 
         for path in paths do
             Assert.Equal(oldBody path, read root path)
 
-        Assert.Contains("older than the 999.0.0 already materialized", summary.NextActionHint)
+        Assert.Contains("below the channel's recorded version 999.0.0", summary.NextActionHint)
 
     [<Fact>]
     let ``the planner applies the channel floor even when the CLI version equals its last upgrade`` () =
@@ -1200,10 +1228,21 @@ module OwnerSkillRefreshTests =
             let state =
                 baseRecord
                     (rowsFor old)
-                    [ { SkillId = "other"; Channel = "Pkg"; Version = "0.98.0" } ]
+                    [
+                        {
+                            SkillId = "other"
+                            Channel = "Pkg"
+                            Version = "0.98.0"
+                        }
+                    ]
+
             { state with
-                Ownership = { state.Ownership with Generator = { Id = "fsgg-sdd"; Version = "2.5.4" } }
-                UpgradedBy = Some "2.5.4" }
+                Ownership =
+                    { state.Ownership with
+                        Generator = { Id = "fsgg-sdd"; Version = "2.5.4" }
+                    }
+                UpgradedBy = Some "2.5.4"
+            }
 
         let plan =
             OwnerSkillRefresh.plan
@@ -1231,10 +1270,21 @@ module OwnerSkillRefreshTests =
                 let state =
                     baseRecord
                         (rowsFor old)
-                        [ { SkillId = "other"; Channel = "Pkg"; Version = "0.98.0" } ]
+                        [
+                            {
+                                SkillId = "other"
+                                Channel = "Pkg"
+                                Version = "0.98.0"
+                            }
+                        ]
+
                 { state with
-                    Ownership = { state.Ownership with Generator = { Id = "fsgg-sdd"; Version = "2.5.4" } }
-                    UpgradedBy = upgradedBy }
+                    Ownership =
+                        { state.Ownership with
+                            Generator = { Id = "fsgg-sdd"; Version = "2.5.4" }
+                        }
+                    UpgradedBy = upgradedBy
+                }
 
             OwnerSkillRefresh.plan
                 record
@@ -1534,3 +1584,362 @@ module OwnerSkillRefreshTests =
             |> List.find (fun d -> d.Id = "doctor.ownerSkillsNotRefreshable")
 
         Assert.DoesNotContain("changed upstream", advisory.Message)
+
+    // FS.GG.SDD#1162: mutate the actual logical binding after its recorded-byte read. A path-based
+    // write would now reach outside; held-parent IO may change only the retained inside object and
+    // must refuse to claim the rebound logical target as landed.
+    let private swapAtMutation (path: string) (effect: CommandEffect) (initial: string option) =
+        let root = TestSupport.tempDirectory ()
+        let outside = TestSupport.tempDirectory ()
+        let absolute = Path.Combine(root, path)
+        let parent = Path.GetDirectoryName absolute |> Option.ofObj |> Option.get
+        Directory.CreateDirectory parent |> ignore
+        initial |> Option.iter (fun text -> File.WriteAllText(absolute, text))
+        let leaf = Path.GetFileName absolute |> Option.ofObj |> Option.get
+        let outsideFile = Path.Combine(outside, leaf)
+        initial |> Option.iter (fun text -> File.WriteAllText(outsideFile, text))
+        let retained = Path.Combine(root, "retained-inside-parent")
+        let mutable checkpoints = 0
+
+        let checkpoint () =
+            checkpoints <- checkpoints + 1
+            Directory.Move(parent, retained)
+            Directory.CreateSymbolicLink(parent, outside) |> ignore
+
+        let result =
+            CommandEffects.interpretWithOwnerSkillCheckpoint checkpoint root false effect
+
+        Assert.Equal(1, checkpoints)
+        Assert.False(result.Succeeded, "a changed logical path must not be recorded as landed")
+        Assert.True(result.Diagnostic.IsSome)
+
+        match initial with
+        | Some text -> Assert.Equal(text, File.ReadAllText outsideFile)
+        | None -> Assert.False(File.Exists outsideFile)
+        // Restore only this fixture's alias; the original inside partial result remains available.
+        Directory.Delete(parent, false)
+        Directory.Move(retained, parent)
+        root, result
+
+    [<Fact>]
+    let ``held parent closes the actual replacement link swap`` () =
+        if System.OperatingSystem.IsLinux() then
+            let path = ".agents/skills/x/SKILL.md"
+
+            let root, _ =
+                swapAtMutation
+                    path
+                    (WriteFile(path, "pack\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+                    (Some "old\n")
+            // The only partial write landed inside. Once its binding is restored the explicit retry
+            // is an unchanged no-op, not an overwrite of the outside target or a fake provenance row.
+            let resumed =
+                CommandEffects.interpret
+                    root
+                    false
+                    (WriteFile(path, "pack\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+            Assert.True resumed.Succeeded
+            Assert.Equal("pack\n", read root path)
+
+    [<Fact>]
+    let ``held parent closes the actual no clobber backfill link swap`` () =
+        if System.OperatingSystem.IsLinux() then
+            let path = ".agents/skills/x/SKILL.md"
+
+            let root, _ =
+                swapAtMutation path (WriteFile(path, "pack\n", AgentGuidanceTarget)) None
+
+            Assert.Equal("pack\n", read root path)
+
+    [<Fact>]
+    let ``both derived skill manifests have the actual held parent mutation guard`` () =
+        if System.OperatingSystem.IsLinux() then
+            for skillRoot in Fsgg.Schemas.agentSkillRoots do
+                let path = skillRoot + "/skills/skill-manifest.json"
+
+                let root, _ =
+                    swapAtMutation path (WriteFile(path, "new manifest\n", GeneratedView)) (Some "old manifest\n")
+
+                Assert.Equal("new manifest\n", read root path)
+
+    [<Fact>]
+    let ``an entire skill root already linked outside cannot receive a manifest`` () =
+        if System.OperatingSystem.IsLinux() then
+            for skillRoot in Fsgg.Schemas.agentSkillRoots do
+                let root = TestSupport.tempDirectory ()
+                let outside = TestSupport.tempDirectory ()
+                Directory.CreateDirectory(Path.Combine(root, skillRoot)) |> ignore
+
+                Directory.CreateSymbolicLink(Path.Combine(root, skillRoot, "skills"), outside)
+                |> ignore
+
+                let path = skillRoot + "/skills/skill-manifest.json"
+
+                let result =
+                    CommandEffects.interpret root false (WriteFile(path, "must not land\n", GeneratedView))
+
+                Assert.False result.Succeeded
+                Assert.False(File.Exists(Path.Combine(outside, "skill-manifest.json")))
+
+    [<Fact>]
+    let ``held parent closes the actual removal link swap`` () =
+        if System.OperatingSystem.IsLinux() then
+            let path = ".agents/skills/x/retired.md"
+
+            let root, _ =
+                swapAtMutation path (RemoveFile(path, Fsgg.SkillMirror.sha256 "old\n")) (Some "old\n")
+
+            Assert.False(exists root path)
+
+            Assert.True(
+                (CommandEffects.interpret root false (RemoveFile(path, Fsgg.SkillMirror.sha256 "old\n"))).Succeeded
+            )
+
+    [<Fact>]
+    let ``mode change is descriptor bound while the logical parent is swapped`` () =
+        if System.OperatingSystem.IsLinux() then
+            let path = ".agents/skills/x/run.sh"
+            let root, _ = swapAtMutation path (SetExecutable path) (Some "old\n")
+            let mode = File.GetUnixFileMode(Path.Combine(root, path))
+            Assert.True(mode.HasFlag UnixFileMode.UserExecute)
+
+    [<Fact>]
+    let ``a leaf swapped to a link after the read is refused without following it`` () =
+        if System.OperatingSystem.IsLinux() then
+            let root = TestSupport.tempDirectory ()
+            let outside = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            TestSupport.writeRelative root path "old\n"
+            let target = Path.Combine(outside, "unchanged.md")
+            File.WriteAllText(target, "old\n")
+
+            let checkpoint () =
+                File.Delete(Path.Combine(root, path))
+                File.CreateSymbolicLink(Path.Combine(root, path), target) |> ignore
+
+            let result =
+                CommandEffects.interpretWithOwnerSkillCheckpoint
+                    checkpoint
+                    root
+                    false
+                    (WriteFile(path, "new\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+            Assert.False result.Succeeded
+            Assert.Equal("old\n", File.ReadAllText target)
+
+    [<Fact>]
+    let ``a replacement preserves the original private mode`` () =
+        if System.OperatingSystem.IsLinux() then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            TestSupport.writeRelative root path "old\n"
+            File.SetUnixFileMode(Path.Combine(root, path), UnixFileMode.UserRead ||| UnixFileMode.UserWrite)
+
+            let result =
+                CommandEffects.interpret
+                    root
+                    false
+                    (WriteFile(path, "new\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+            Assert.True result.Succeeded
+
+            Assert.Equal(
+                UnixFileMode.UserRead ||| UnixFileMode.UserWrite,
+                File.GetUnixFileMode(Path.Combine(root, path))
+            )
+
+    [<Fact>]
+    let ``partially interpreted actual write batches do zero planning until their last result`` () =
+        let root, _, _ = aged "0.1.0" []
+
+        let request =
+            { TestSupport.request SddCommand.Upgrade root with
+                AssumeYes = true
+            }
+
+        let initial, first = CommandWorkflow.init request
+
+        let isMutation =
+            function
+            | WriteFile _
+            | RemoveFile _
+            | SetExecutable _ -> true
+            | _ -> false
+
+        let rec beforeWrites state pending remaining =
+            Assert.True(remaining > 0, "fixture did not reach a mutation batch")
+
+            if List.exists isMutation pending then
+                state, pending
+            else
+                Assert.NotEmpty pending
+
+                let next, emitted =
+                    pending
+                    |> List.fold
+                        (fun (state, all) effect ->
+                            match effect with
+                            | RunProcess _ -> failwith "the upgrade fixture must not launch an external process"
+                            | _ -> ()
+
+                            let result = CommandEffects.interpret root false effect
+                            let next, effects = CommandWorkflow.update (EffectInterpreted result) state
+                            next, all @ effects)
+                        (state, [])
+
+                beforeWrites next emitted (remaining - 1)
+
+        let state, batch = beforeWrites initial first 100
+        Assert.True(batch.Length >= 4, "the control must observe a real multi-file batch")
+        let mutable state = state
+        let mutable computations = 0
+        let observe () = computations <- computations + 1
+        let results = batch |> List.map (CommandEffects.interpret root false)
+
+        for index in 0 .. results.Length - 1 do
+            let result = results[index]
+            Assert.True(result.Succeeded, sprintf "%A" result.Diagnostic)
+
+            state <-
+                { state with
+                    InterpretedEffects = state.InterpretedEffects @ [ result ]
+                }
+
+            let next, _ = HandlersUpgrade.computeUpgradeNextWithObserver observe state
+            state <- next
+
+            if index < results.Length - 1 then
+                Assert.Equal(0, computations)
+
+        Assert.Equal(1, computations)
+        Assert.True(computations < results.Length)
+
+    [<Fact>]
+    let ``a concurrent authored leaf change is rechecked on the held parent before replacement`` () =
+        if System.OperatingSystem.IsLinux() then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            TestSupport.writeRelative root path "old\n"
+
+            let checkpoint () =
+                TestSupport.writeRelative root path "authored after read\n"
+
+            let result =
+                CommandEffects.interpretWithOwnerSkillCheckpoint
+                    checkpoint
+                    root
+                    false
+                    (WriteFile(path, "pack\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+            Assert.False result.Succeeded
+            Assert.Equal("authored after read\n", read root path)
+
+
+    [<Fact>]
+    let ``a directory blocking a skill file remains a failed apply rather than an unreadable body`` () =
+        if System.OperatingSystem.IsLinux() || System.OperatingSystem.IsWindows() then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let absolute = Path.Combine(root, path)
+            Directory.CreateDirectory absolute |> ignore
+
+            let result =
+                CommandEffects.interpret root false (WriteFile(path, "new\n", AgentGuidanceTarget))
+
+            Assert.False result.Succeeded
+            Assert.Equal(Absent, result.Read)
+            Assert.Equal("toolDefect", result.Diagnostic.Value.Id)
+            Assert.True(Directory.Exists absolute)
+            Assert.Empty(Directory.EnumerateFileSystemEntries absolute)
+
+    [<Fact>]
+    let ``a regular file blocking a skill directory remains a failed apply rather than a refusal`` () =
+        if System.OperatingSystem.IsLinux() then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let blocker = Path.Combine(root, ".agents", "skills", "x")
+            Directory.CreateDirectory(Path.Combine(root, ".agents", "skills")) |> ignore
+            File.WriteAllText(blocker, "not a directory\n")
+
+            let result =
+                CommandEffects.interpret root false (WriteFile(path, "new\n", AgentGuidanceTarget))
+
+            Assert.False result.Succeeded
+            Assert.Equal("toolDefect", result.Diagnostic.Value.Id)
+            Assert.Equal("not a directory\n", File.ReadAllText blocker)
+
+    [<Fact>]
+    let ``a symbolic link blocking a skill directory is still refused`` () =
+        if System.OperatingSystem.IsLinux() then
+            let root = TestSupport.tempDirectory ()
+            let outside = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let link = Path.Combine(root, ".agents", "skills", "x")
+            Directory.CreateDirectory(Path.Combine(root, ".agents", "skills")) |> ignore
+            File.CreateSymbolicLink(link, Path.Combine(outside, "missing")) |> ignore
+
+            let result =
+                CommandEffects.interpret root false (WriteFile(path, "new\n", AgentGuidanceTarget))
+
+            Assert.False result.Succeeded
+            Assert.Equal("upgrade.ownerSkillPathRefused", result.Diagnostic.Value.Id)
+            Assert.Empty(Directory.EnumerateFileSystemEntries outside)
+
+    [<Fact>]
+    let ``a contained temporary write failure remains an apply defect after a successful read`` () =
+        if System.OperatingSystem.IsLinux() && System.Environment.UserName <> "root" then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let parent = Path.Combine(root, ".agents", "skills", "x")
+            TestSupport.writeRelative root path "old\n"
+            let mode = File.GetUnixFileMode parent
+
+            let checkpoint () =
+                File.SetUnixFileMode(parent, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
+
+            try
+                let result =
+                    CommandEffects.interpretWithOwnerSkillCheckpoint
+                        checkpoint
+                        root
+                        false
+                        (WriteFile(path, "new\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+                Assert.False result.Succeeded
+                Assert.Equal(Absent, result.Read)
+                Assert.Equal("toolDefect", result.Diagnostic.Value.Id)
+                Assert.Equal("old\n", read root path)
+                Assert.Equal(1, Directory.EnumerateFiles parent |> Seq.length)
+            finally
+                File.SetUnixFileMode(parent, mode)
+
+    [<Fact>]
+    let ``an unreadable skill precondition retains refusal classification rather than becoming an apply defect`` () =
+        if System.OperatingSystem.IsLinux() && System.Environment.UserName <> "root" then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            TestSupport.writeRelative root path "old\n"
+            let absolute = Path.Combine(root, path)
+            let mode = File.GetUnixFileMode absolute
+
+            try
+                File.SetUnixFileMode(absolute, enum<UnixFileMode> 0)
+
+                let result =
+                    CommandEffects.interpret
+                        root
+                        false
+                        (WriteFile(path, "new\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+                Assert.False result.Succeeded
+
+                match result.Read with
+                | Unreadable _ -> ()
+                | other -> failwithf "expected unreadable precondition, got %A" other
+
+                Assert.Equal("upgrade.ownerSkillPathRefused", result.Diagnostic.Value.Id)
+            finally
+                File.SetUnixFileMode(absolute, mode)
+
+            Assert.Equal("old\n", read root path)

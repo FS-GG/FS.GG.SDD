@@ -333,3 +333,23 @@ implicitly in the pipeline.
 - **No registry surface change.** Per ADR-0009, this feature constrains *how* the ADR-0008
   minimum field is enforced, not *what* it is; it introduces no new versioned cross-repo
   contract surface.
+
+## Owner-skill write boundary hardening (FS.GG.SDD#1162)
+
+Confirmed owner-skill replacement, backfill, removal, executable-mode changes and both derived product
+skill-manifest writes must not follow a concurrently substituted directory link outside the workspace.
+Existing directory aliases whose resolved targets are inside the workspace remain supported; a leaf
+file that is itself a link remains refused. The write edge retains the recorded-digest/no-clobber
+decision and provenance claims only successful effects. A refused binding change leaves the step
+incomplete and must remain resumable; no automatic replay or provenance advance follows a refusal.
+
+The supported threat is substitution of descendant links during an operation in a caller-selected
+physical workspace. The workspace and held physical directories must not be relocated outside that
+workspace during the operation; this is not a filesystem-wide compare-and-swap, protection from a
+process that can relocate the workspace itself, or a cross-file transaction. Platform-specific
+handle capabilities are checked before writing; source or Linux evidence does not qualify Windows.
+
+While already-emitted writes/removals/mode changes remain in flight, upgrade must not recompute its
+plan. A deterministic observer of the actual computation branch must detect removing that wait,
+including a partially interpreted batch followed by its explicit continuation. A rollback hold is
+phrased as below the channel's recorded version, not as evidence of what is currently materialized.
