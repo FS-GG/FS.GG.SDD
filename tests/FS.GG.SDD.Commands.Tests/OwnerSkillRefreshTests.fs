@@ -1834,3 +1834,79 @@ module OwnerSkillRefreshTests =
 
             Assert.False result.Succeeded
             Assert.Equal("authored after read\n", read root path)
+
+
+    [<Fact>]
+    let ``a directory blocking a skill file remains a failed apply rather than an unreadable body`` () =
+        if System.OperatingSystem.IsLinux() || System.OperatingSystem.IsWindows() then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let absolute = Path.Combine(root, path)
+            Directory.CreateDirectory absolute |> ignore
+
+            let result =
+                CommandEffects.interpret root false (WriteFile(path, "new\n", AgentGuidanceTarget))
+
+            Assert.False result.Succeeded
+            Assert.Equal(Absent, result.Read)
+            Assert.Equal("toolDefect", result.Diagnostic.Value.Id)
+            Assert.True(Directory.Exists absolute)
+            Assert.Empty(Directory.EnumerateFileSystemEntries absolute)
+
+    [<Fact>]
+    let ``a contained temporary write failure remains an apply defect after a successful read`` () =
+        if System.OperatingSystem.IsLinux() && System.Environment.UserName <> "root" then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            let parent = Path.Combine(root, ".agents", "skills", "x")
+            TestSupport.writeRelative root path "old\n"
+            let mode = File.GetUnixFileMode parent
+
+            let checkpoint () =
+                File.SetUnixFileMode(parent, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
+
+            try
+                let result =
+                    CommandEffects.interpretWithOwnerSkillCheckpoint
+                        checkpoint
+                        root
+                        false
+                        (WriteFile(path, "new\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+                Assert.False result.Succeeded
+                Assert.Equal(Absent, result.Read)
+                Assert.Equal("toolDefect", result.Diagnostic.Value.Id)
+                Assert.Equal("old\n", read root path)
+                Assert.Equal(1, Directory.EnumerateFiles parent |> Seq.length)
+            finally
+                File.SetUnixFileMode(parent, mode)
+
+    [<Fact>]
+    let ``an unreadable skill precondition retains refusal classification rather than becoming an apply defect`` () =
+        if System.OperatingSystem.IsLinux() && System.Environment.UserName <> "root" then
+            let root = TestSupport.tempDirectory ()
+            let path = ".agents/skills/x/SKILL.md"
+            TestSupport.writeRelative root path "old\n"
+            let absolute = Path.Combine(root, path)
+            let mode = File.GetUnixFileMode absolute
+
+            try
+                File.SetUnixFileMode(absolute, enum<UnixFileMode> 0)
+
+                let result =
+                    CommandEffects.interpret
+                        root
+                        false
+                        (WriteFile(path, "new\n", OwnerSkillRefresh(Fsgg.SkillMirror.sha256 "old\n")))
+
+                Assert.False result.Succeeded
+
+                match result.Read with
+                | Unreadable _ -> ()
+                | other -> failwithf "expected unreadable precondition, got %A" other
+
+                Assert.Equal("upgrade.ownerSkillPathRefused", result.Diagnostic.Value.Id)
+            finally
+                File.SetUnixFileMode(absolute, mode)
+
+            Assert.Equal("old\n", read root path)

@@ -345,6 +345,12 @@ module CommandEffects =
             let code = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
             refuse $"{operation} refused (native error {code})"
 
+        // A failed apply remains an apply defect. Do not label it as an unreadable precondition:
+        // that would suppress upgrade.stepFailed and change the established exit-2 contract to 1.
+        let mutationFailure operation =
+            let code = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
+            raise (IOException($"{operation} failed (native error {code})"))
+
         let fd (handle: Microsoft.Win32.SafeHandles.SafeFileHandle) = int (handle.DangerousGetHandle())
 
         let own descriptor =
@@ -407,7 +413,12 @@ module CommandEffects =
 
                 let mode = uint16 (System.Runtime.InteropServices.Marshal.ReadInt16(data, 28))
 
-                if int mode &&& 0xf000 <> 0x8000 then
+                let kind = int mode &&& 0xf000
+
+                if kind = 0x4000 then
+                    // File.Exists previously treated this as missing; the admitted file apply then failed.
+                    raise (IOException("owner skill file target is a directory"))
+                elif kind <> 0x8000 then
                     refuse "opened skill target is not a regular file"
 
                 uint32 mode &&& 0xfffu, System.Runtime.InteropServices.Marshal.ReadInt32(data, 16)
@@ -490,7 +501,7 @@ module CommandEffects =
                                     OwnerNative.mkdirAt (fd current, part, 511u) <> 0
                                     && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() <> 17
                                 then
-                                    nativeFailure "contained directory creation"
+                                    mutationFailure "contained directory creation"
 
                                 child <- OwnerNative.openAt (fd current, part, directoryFlags, 0u)
                             else
@@ -530,7 +541,7 @@ module CommandEffects =
                     leafLinux current name
                 else
                     let handle =
-                        OwnerNative.CreateFileW(physical, 0x80000000u, 7u, 0n, 3u, 0x00200000u, 0n)
+                        OwnerNative.CreateFileW(physical, 0x80000000u, 7u, 0n, 3u, 0x02200000u, 0n)
 
                     if handle.IsInvalid then
                         let code = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
@@ -545,8 +556,10 @@ module CommandEffects =
                         try
                             let attributes = windowsKind handle
 
-                            if attributes &&& (0x400u ||| 0x10u) <> 0u then
-                                refuse "skill leaf is linked or is not a regular file"
+                            if attributes &&& 0x400u <> 0u then
+                                refuse "skill leaf is linked"
+                            elif attributes &&& 0x10u <> 0u then
+                                raise (IOException("owner skill file target is a directory"))
 
                             Some handle
                         with _ ->
@@ -610,7 +623,7 @@ module CommandEffects =
                             OwnerNative.openAt (fd current, temp, 1 ||| 64 ||| 128 ||| 0x20000 ||| 0x80000, 438u)
 
                         if descriptor < 0 then
-                            nativeFailure "exclusive contained temporary file creation"
+                            mutationFailure "exclusive contained temporary file creation"
 
                         use held =
                             new Microsoft.Win32.SafeHandles.SafeFileHandle(nativeint descriptor, true)
@@ -621,11 +634,11 @@ module CommandEffects =
 
                         match priorMode with
                         | Some mode when OwnerNative.chmod (fd held, mode) <> 0 ->
-                            nativeFailure "contained mode preservation"
+                            mutationFailure "contained mode preservation"
                         | _ -> ()
 
                         if OwnerNative.renameAt (fd current, temp, fd current, name) <> 0 then
-                            nativeFailure "contained atomic replacement"
+                            mutationFailure "contained atomic replacement"
                     finally
                         OwnerNative.unlinkAt (fd current, temp, 0) |> ignore
                 else
@@ -678,7 +691,7 @@ module CommandEffects =
                             OwnerNative.unlinkAt (fd current, name, 0) <> 0
                             && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() <> 2
                         then
-                            nativeFailure "contained skill removal"
+                            mutationFailure "contained skill removal"
                     else
                         File.Delete physical
 
@@ -698,7 +711,7 @@ module CommandEffects =
                         refuse "executable skill file has multiple hard links"
 
                     if OwnerNative.chmod (fd held, mode ||| 73u) <> 0 then
-                        nativeFailure "contained executable mode change"
+                        mutationFailure "contained executable mode change"
 
             new OwnerSkillAccess(read, write, remove, executable, validate, close)
         with _ ->
